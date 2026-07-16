@@ -1,0 +1,27 @@
+id: example-task-v1
+version: 1
+track: practice-effectiveness
+source:
+  kind: real-lorelum-task
+  task_reference: task-guid-or-issue-url
+  baseline_commit: replace-with-immutable-commit
+runtime:
+  command: bun test
+agent_input:
+  prompt: task.md
+  starter: starter
+evaluator:
+  command: bun test evaluator
+  oracle: oracle.yaml
+applicable_conditions:
+  - baseline
+  - oracle-practice
+  - lorelum-retrieval
+  - irrelevant-practice
+oracle_practices:
+  - replace-with-practice-id
+review:
+  requires_blind_review: true
+  assertions:
+    - functional
+    - practice-compliance

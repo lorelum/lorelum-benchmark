@@ -1,0 +1,3 @@
+.run-workspaces/
+suites/*/runs/*
+!suites/*/runs/.gitkeep
