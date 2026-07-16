@@ -1,6 +1,6 @@
 id: format-frontmatter-contract-v1
 version: 1
-status: frozen
+status: calibration-nondiscriminative
 track: practice-effectiveness
 source:
   kind: contract-derived-seed

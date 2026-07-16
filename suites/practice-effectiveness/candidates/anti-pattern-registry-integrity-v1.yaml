@@ -1,6 +1,6 @@
 id: anti-pattern-registry-integrity-v1
 version: 1
-status: candidate
+status: design-ready
 source:
   kind: contract-derived-seed
   references:
