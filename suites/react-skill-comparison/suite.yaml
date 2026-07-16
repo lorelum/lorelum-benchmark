@@ -1,0 +1,21 @@
+id: react-skill-comparison
+version: 0.1.0
+track: performance-skill-comparison
+protocol: ../../BENCHMARK_PROTOCOL.md
+baseline:
+  repository: vercel-labs/agent-skills
+  revision: f8a72b9603728bb92a217a879b7e62e43ad76c81
+  skill: skills/react-best-practices
+conditions:
+  - baseline
+  - vercel-skill
+  - lorelum-retrieval
+tasks:
+  - id: async-dashboard-v1
+    profile: spa
+    category: async
+    status: ready
+  - id: bundle-advanced-panel-v1
+    profile: spa
+    category: bundle
+    status: ready

@@ -1,0 +1,13 @@
+id: bundle-advanced-panel-v1
+expected_baseline_rules:
+  - bundle-dynamic-imports
+  - bundle-conditional
+checks:
+  - id: bundle.defer-conditional-module
+    description: Importing the settings shell does not evaluate the advanced panel.
+  - id: bundle.load-on-explicit-open
+    description: Opening the panel loads it and preserves its behavior.
+scoring:
+  functional: required
+  scope: required
+  knowledge_retrieval: G2-only

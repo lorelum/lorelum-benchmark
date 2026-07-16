@@ -1,0 +1,17 @@
+id: bundle-advanced-panel-v1
+version: 1
+track: performance-skill-comparison
+source:
+  kind: synthetic-smoke-task
+runtime:
+  command: bun run test:bundle-advanced-panel
+agent_input:
+  prompt: task.md
+  starter: starter
+evaluator:
+  command: bun run test:bundle-advanced-panel
+  oracle: oracle.yaml
+applicable_conditions:
+  - baseline
+  - vercel-skill
+  - lorelum-retrieval

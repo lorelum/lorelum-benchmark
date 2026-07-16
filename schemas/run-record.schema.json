@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum benchmark run record",
+  "type": "object",
+  "required": [
+    "run_id",
+    "suite_version",
+    "task_id",
+    "task_version",
+    "track",
+    "condition",
+    "model",
+    "started_at",
+    "outcome"
+  ],
+  "properties": {
+    "run_id": { "type": "string" },
+    "suite_version": { "type": "string" },
+    "task_id": { "type": "string" },
+    "task_version": { "type": "integer", "minimum": 1 },
+    "track": {
+      "enum": ["practice-effectiveness", "performance-skill-comparison"]
+    },
+    "condition": {
+      "enum": [
+        "baseline",
+        "oracle-practice",
+        "lorelum-retrieval",
+        "irrelevant-practice",
+        "vercel-skill"
+      ]
+    },
+    "model": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "parameters": { "type": "object" }
+      }
+    },
+    "source_commit": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "retrieval": {
+      "type": "object",
+      "properties": {
+        "query_count": { "type": "integer", "minimum": 0 },
+        "practice_ids": { "type": "array", "items": { "type": "string" } },
+        "injected_tokens": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "properties": {
+        "input_tokens": { "type": "integer", "minimum": 0 },
+        "output_tokens": { "type": "integer", "minimum": 0 },
+        "duration_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "required": ["automated_checks_passed"],
+      "properties": {
+        "automated_checks_passed": { "type": "boolean" },
+        "blind_review": { "enum": ["pass", "partial", "fail", "pending"] },
+        "diff_path": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": false
+}
