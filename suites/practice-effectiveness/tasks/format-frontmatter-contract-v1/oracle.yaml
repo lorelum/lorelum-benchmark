@@ -1,0 +1,14 @@
+id: format-frontmatter-contract-v1
+expected_practices:
+  - lorelum.format.validation-boundary
+checks:
+  - id: format.valid-model-only
+    description: A returned metadata model contains only validated fields and values.
+  - id: format.accumulated-issues
+    description: Independent malformed fields are reported together as typed issues.
+  - id: format.unknown-key-rejected
+    description: An unknown metadata key is visible to the caller as an issue.
+scoring:
+  functional: required
+  practice_compliance: required
+  knowledge_retrieval: oracle-only

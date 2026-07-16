@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test:async-dashboard": "bun test suites/react-skill-comparison/tasks/async-dashboard-v1/evaluator",
-    "test:bundle-advanced-panel": "bun test suites/react-skill-comparison/tasks/bundle-advanced-panel-v1/evaluator"
+    "test:bundle-advanced-panel": "bun test suites/react-skill-comparison/tasks/bundle-advanced-panel-v1/evaluator",
+    "test:format-frontmatter": "bun test suites/practice-effectiveness/tasks/format-frontmatter-contract-v1/evaluator"
   },
   "engines": {
     "bun": ">=1.1.0"

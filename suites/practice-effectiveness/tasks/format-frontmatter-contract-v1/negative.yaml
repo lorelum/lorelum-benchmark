@@ -1,0 +1,8 @@
+id: format-frontmatter-contract-v1-negative-control
+practice_id: lorelum.retrieval.ranking-explanation
+selection_rationale: |
+  The control is unrelated to metadata parsing but has similar prose, code, and
+  tradeoff density to the relevant Practice. It must be injected unchanged.
+matching:
+  relevant_practice: lorelum.format.validation-boundary
+  compared_dimensions: [language, code-samples, sections, approximate-length]

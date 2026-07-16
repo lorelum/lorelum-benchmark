@@ -1,0 +1,28 @@
+id: format-frontmatter-contract-v1
+version: 1
+status: approved-pending-commit
+track: practice-effectiveness
+source:
+  kind: contract-derived-seed
+  task_reference: suites/practice-effectiveness/sources.yaml#lorelum-packs-content-contract
+  baseline_commit: bb5284a
+runtime:
+  command: bun run test:format-frontmatter
+agent_input:
+  prompt: task.md
+  starter: starter
+evaluator:
+  command: bun run test:format-frontmatter
+  oracle: oracle.yaml
+applicable_conditions:
+  - baseline
+  - oracle-practice
+  - irrelevant-practice
+oracle_practices:
+  - lorelum.format.validation-boundary
+review:
+  requires_blind_review: true
+  assertions:
+    - functional
+    - practice-compliance
+    - no-answer-leakage
