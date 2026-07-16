@@ -1,11 +1,11 @@
 id: format-frontmatter-contract-v1
 version: 1
-status: approved-pending-commit
+status: frozen
 track: practice-effectiveness
 source:
   kind: contract-derived-seed
   task_reference: suites/practice-effectiveness/sources.yaml#lorelum-packs-content-contract
-  baseline_commit: bb5284a
+  baseline_commit: 24f6f528cd26f73d2276a01d73e20c38eec7c1b3
 runtime:
   command: bun run test:format-frontmatter
 agent_input:

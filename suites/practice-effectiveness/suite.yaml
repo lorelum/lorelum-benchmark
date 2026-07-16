@@ -13,6 +13,9 @@ dataset:
   candidate_pool_target: 6
   pilot_task_target: 6
   formal_task_target: 8-12
-tasks: []
+tasks:
+  - id: format-frontmatter-contract-v1
+    version: 1
+    status: frozen
 candidate_directory: candidates
 source_manifest: sources.yaml
