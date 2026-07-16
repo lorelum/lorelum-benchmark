@@ -1,0 +1,13 @@
+id: bundle-command-palette-v1
+expected_baseline_rules:
+  - bundle-dynamic-imports
+  - bundle-conditional
+checks:
+  - id: bundle.command-index-is-deferred
+    description: Importing the project shell does not evaluate the command index.
+  - id: bundle.command-palette-loads-on-demand
+    description: Opening the palette loads and returns the command index.
+scoring:
+  functional: required
+  scope: required
+  knowledge_retrieval: G2-only

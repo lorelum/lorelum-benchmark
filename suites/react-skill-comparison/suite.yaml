@@ -19,3 +19,27 @@ tasks:
     profile: spa
     category: bundle
     status: ready
+  - id: async-product-route-v1
+    profile: spa
+    category: async
+    status: ready
+  - id: bundle-command-palette-v1
+    profile: spa
+    category: bundle
+    status: ready
+  - id: rerender-stable-row-actions-v1
+    profile: spa
+    category: rerender
+    status: ready
+  - id: rendering-deferred-dialog-v1
+    profile: spa
+    category: rendering
+    status: ready
+  - id: client-search-shortcut-cleanup-v1
+    profile: spa
+    category: client
+    status: ready
+  - id: server-request-viewer-dedup-v1
+    profile: rsc
+    category: server
+    status: ready
