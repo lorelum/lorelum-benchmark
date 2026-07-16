@@ -17,5 +17,8 @@ tasks:
   - id: format-frontmatter-contract-v1
     version: 1
     status: calibration-nondiscriminative
+  - id: anti-pattern-registry-integrity-v1
+    version: 1
+    status: review-required
 candidate_directory: candidates
 source_manifest: sources.yaml

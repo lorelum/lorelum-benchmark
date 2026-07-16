@@ -1,0 +1,10 @@
+id: anti-pattern-registry-integrity-v1
+expected_practices: [lorelum.format.cross-reference-integrity]
+checks:
+  - id: format.registry-duplicates-collected
+  - id: format.references-resolved-globally
+  - id: format.diagnostics-deterministic
+scoring:
+  functional: required
+  practice_compliance: required
+  knowledge_retrieval: oracle-only

@@ -1,0 +1,21 @@
+id: anti-pattern-registry-integrity-v1
+version: 1
+status: review-required
+track: practice-effectiveness
+source:
+  kind: contract-derived-seed
+  task_reference: suites/practice-effectiveness/sources.yaml#lorelum-packs-content-contract
+  baseline_commit: pending-freeze
+runtime:
+  command: bun run test:anti-pattern-registry
+agent_input:
+  prompt: task.md
+  starter: starter
+evaluator:
+  command: bun run test:anti-pattern-registry
+  oracle: oracle.yaml
+applicable_conditions: [baseline, oracle-practice, irrelevant-practice]
+oracle_practices: [lorelum.format.cross-reference-integrity]
+review:
+  requires_blind_review: true
+  assertions: [functional, practice-compliance, no-answer-leakage]

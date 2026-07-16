@@ -5,7 +5,8 @@
   "scripts": {
     "test:async-dashboard": "bun test suites/react-skill-comparison/tasks/async-dashboard-v1/evaluator",
     "test:bundle-advanced-panel": "bun test suites/react-skill-comparison/tasks/bundle-advanced-panel-v1/evaluator",
-    "test:format-frontmatter": "bun test suites/practice-effectiveness/tasks/format-frontmatter-contract-v1/evaluator"
+    "test:format-frontmatter": "bun test suites/practice-effectiveness/tasks/format-frontmatter-contract-v1/evaluator",
+    "test:anti-pattern-registry": "bun test suites/practice-effectiveness/tasks/anti-pattern-registry-integrity-v1/evaluator"
   },
   "engines": {
     "bun": ">=1.1.0"
