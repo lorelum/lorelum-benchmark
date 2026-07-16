@@ -1,0 +1,89 @@
+# Lorelum react-fullstack pack — auth seed anti-pattern registry.
+# Detection hints are deliberately omitted: these are structural concerns that
+# require engine-level context rather than unreliable text matching.
+
+- id: auth.token-in-web-storage
+  domain: auth
+  summary: Persisting a durable browser credential in localStorage or sessionStorage
+  why_bad: |
+    Any script that runs in the page origin can read Web Storage. A successful
+    XSS vulnerability can therefore exfiltrate the credential and replay the
+    session elsewhere. Prefer an HttpOnly, Secure cookie for a browser session
+    when the application controls the API, and treat XSS prevention as essential
+    regardless of the session mechanism.
+  relates_to: [react.auth.cookie-session-boundary]
+  severity: critical
+
+- id: auth.cookie-session-without-csrf
+  domain: auth
+  summary: Sending cookie-authenticated state-changing requests without CSRF protection
+  why_bad: |
+    Browsers attach eligible cookies automatically. Without an explicit CSRF
+    defence, another site may be able to cause an authenticated user's browser
+    to submit a state-changing request. SameSite settings reduce exposure but
+    are not a complete replacement for a verified origin policy or CSRF token
+    strategy in every deployment topology.
+  relates_to: [react.auth.cookie-session-boundary]
+  severity: critical
+
+- id: auth.parallel-refresh
+  domain: auth
+  summary: Starting a separate token-refresh request for every concurrent 401 response
+  why_bad: |
+    Concurrent refreshes race to update the current credential. A later request
+    can invalidate the credential used by an earlier retry, causing sporadic
+    logout loops and unnecessary load. Coalesce refreshes into one shared
+    in-flight promise.
+  relates_to: [react.auth.single-flight-token-refresh]
+  severity: major
+
+- id: auth.retry-401-forever
+  domain: auth
+  summary: Retrying an unauthorized request without a strict one-retry limit
+  why_bad: |
+    A revoked session, expired refresh credential, or authorization failure does
+    not repair itself through repetition. Unbounded retries hide the actual
+    failure, amplify traffic, and can leave the UI permanently pending.
+  relates_to: [react.auth.single-flight-token-refresh]
+  severity: major
+
+- id: auth.refresh-in-component
+  domain: auth
+  summary: Implementing token refresh and protected-request retries inside React components
+  why_bad: |
+    Components can mount more than once and should not own transport-wide
+    coordination. Duplicating refresh logic in UI code produces inconsistent
+    retries, makes non-React callers unsafe, and couples session transport to
+    a particular screen.
+  relates_to: [react.auth.single-flight-token-refresh]
+  severity: major
+
+- id: auth.client-only-authorization
+  domain: auth
+  summary: Treating a client-side route guard as the only authorization check
+  why_bad: |
+    Client code is a presentation layer under the user's control. It can hide a
+    route or button, but it cannot protect an API or resource. The server must
+    authenticate and authorize every protected operation independently.
+  relates_to: [react.auth.route-guard-boundaries]
+  severity: critical
+
+- id: routing.redirect-before-session-resolves
+  domain: routing
+  summary: Redirecting a protected route before the session query has resolved
+  why_bad: |
+    An unknown session is not an anonymous session. Redirecting while the
+    bootstrap request is pending causes login flashes and can send a valid user
+    away from the page they requested.
+  relates_to: [react.auth.route-guard-boundaries]
+  severity: major
+
+- id: routing.untrusted-return-url
+  domain: routing
+  summary: Redirecting to an arbitrary return URL supplied by query parameters or external input
+  why_bad: |
+    An attacker can turn a post-login redirect into an open redirect. Preserve
+    only an internal location assembled by the router, or validate any return
+    target against a strict same-origin allowlist.
+  relates_to: [react.auth.route-guard-boundaries]
+  severity: critical

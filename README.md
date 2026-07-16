@@ -47,3 +47,10 @@ Run the conditional bundle evaluator with the path to a candidate
 $env:CANDIDATE_PATH = 'D:\path\to\candidate\src\settings.ts'
 bun run test:bundle-advanced-panel
 ```
+
+## Draft Practice Content
+
+`react-fullstack/` contains original, draft-ready React authentication
+Practices and their anti-pattern registry. They are content assets for Oracle
+injection experiments, not yet a released Lorelum pack or a replacement for the
+suite task-card contract.
