@@ -1,0 +1,23 @@
+id: format-frontmatter-contract-v1
+version: 1
+status: candidate
+source:
+  kind: contract-derived-seed
+  references:
+    - lorelum-packs-content-contract: DESIGN.md#6.1
+    - lorelum-core-product-contract: README.md
+work_item:
+  summary: Validate required Practice frontmatter fields and report all actionable errors.
+  expected_module: packages/format
+  bounded_change: parser and validation result only
+acceptance_oracle:
+  - valid bilingual Practice metadata parses successfully
+  - missing required fields produce typed, field-specific errors
+  - unknown fields are rejected or reported according to the frozen contract
+practice_gap:
+  relevant_topic: format.validation-boundary
+  unrelated_control_topic: retrieval.ranking-explanation
+  status: requires-independent-practice-review
+confounders:
+  - Do not name frontmatter fields in the agent prompt beyond product behavior.
+  - Evaluator must not import Practice prose.

@@ -2,8 +2,8 @@ id: example-task-v1
 version: 1
 track: practice-effectiveness
 source:
-  kind: real-lorelum-task
-  task_reference: task-guid-or-issue-url
+  kind: real-lorelum-task-or-contract-derived-seed
+  task_reference: task-guid-issue-url-or-frozen-contract-reference
   baseline_commit: replace-with-immutable-commit
 runtime:
   command: bun test

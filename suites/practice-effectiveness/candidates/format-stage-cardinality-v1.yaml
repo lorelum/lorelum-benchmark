@@ -1,0 +1,21 @@
+id: format-stage-cardinality-v1
+version: 1
+status: candidate
+source:
+  kind: contract-derived-seed
+  references:
+    - lorelum-packs-content-contract: DESIGN.md#6.1
+work_item:
+  summary: Enforce the allowed stage vocabulary and a maximum of three stages per Practice.
+  expected_module: packages/format
+  bounded_change: metadata schema validation
+acceptance_oracle:
+  - one to three valid stages parse successfully
+  - an unknown stage is rejected with its location
+  - a fourth stage is rejected without truncating data
+practice_gap:
+  relevant_topic: format.bounded-metadata-validation
+  unrelated_control_topic: api.dto-boundary
+  status: requires-independent-practice-review
+confounders:
+  - The task prompt must not state the maximum cardinality.

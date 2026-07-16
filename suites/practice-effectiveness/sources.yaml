@@ -1,0 +1,30 @@
+# Frozen inputs for the contract-derived seed phase.
+# A candidate must cite one or more entries here; changing a source commit
+# requires a new candidate revision rather than silently changing its contract.
+
+- id: lorelum-core-product-contract
+  kind: product-contract
+  repository: https://github.com/lorelum/lorelum
+  commit: 36b6a86328ed857199d204922f41759a192cfbe3
+  files:
+    - README.md
+    - AGENTS.md
+    - docs/adr/0002-bun-typescript-toolchain.md
+  supports:
+    - practice format boundaries
+    - retrieval and injection scope
+    - typed-error and test conventions
+
+- id: lorelum-packs-content-contract
+  kind: pack-content-contract
+  repository: https://github.com/AzMilabo/lorelum-packs
+  commit: 7b904ec5253efdc758d837d8f6673a90384f9ab0
+  files:
+    - DESIGN.md
+    - AGENTS.md
+    - react-fullstack/anti-patterns/index.yaml
+  supports:
+    - Practice frontmatter
+    - stage cardinality
+    - anti-pattern registry integrity
+    - pack/domain consistency

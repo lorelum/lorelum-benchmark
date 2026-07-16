@@ -1,0 +1,22 @@
+id: retrieval-metadata-filter-v1
+version: 1
+status: candidate
+source:
+  kind: contract-derived-seed
+  references:
+    - lorelum-core-product-contract: README.md
+    - lorelum-packs-content-contract: DESIGN.md#6.1
+work_item:
+  summary: Filter Practice candidates by task stage and technology metadata before semantic ranking.
+  expected_module: packages/engine
+  bounded_change: deterministic pre-ranking candidate selection
+acceptance_oracle:
+  - matching stage and stack candidates remain eligible
+  - incompatible stage or stack candidates are excluded
+  - empty metadata is handled by a frozen, explicit fallback rule
+practice_gap:
+  relevant_topic: retrieval.metadata-boundaries
+  unrelated_control_topic: auth.single-flight-refresh
+  status: requires-independent-practice-review
+confounders:
+  - Do not use semantic similarity as an acceptance proxy for this deterministic task.

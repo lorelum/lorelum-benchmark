@@ -55,10 +55,19 @@ not eligible.
 
 ## Dataset Growth
 
-Maintain a candidate pool of real Lorelum tasks, then freeze six pilot cards
-before expanding to 8–12 formal Practice-effectiveness tasks. The performance
-track begins with eight category smoke tasks and expands only when
+When Lorelum has a representative issue, PR, or regression history, maintain a
+candidate pool of real Lorelum tasks, then freeze six pilot cards before
+expanding to 8–12 formal Practice-effectiveness tasks. The performance track
+begins with eight category smoke tasks and expands only when
 `coverage-manifest.yaml` maps every external baseline rule to at least one task.
+
+Before that history exists, the Practice-effectiveness suite may use a
+**contract-derived seed phase**. Each seed task must cite an immutable product
+or pack contract, be authored without quoting its eventual Practice, and be
+labeled `contract-derived-seed` in its task card and all run records. Seed
+results support only the contract-derived implementation claim; they do not
+substitute for production-task evidence. Replace seed tasks with real Lorelum
+tasks as the project accumulates representative work.
 
 Changing a prompt, starter code, evaluator, Oracle mapping, or model setup
 creates a new task or suite revision. Existing run records are immutable.

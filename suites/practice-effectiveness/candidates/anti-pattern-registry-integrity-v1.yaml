@@ -1,0 +1,22 @@
+id: anti-pattern-registry-integrity-v1
+version: 1
+status: candidate
+source:
+  kind: contract-derived-seed
+  references:
+    - lorelum-packs-content-contract: DESIGN.md#5
+    - lorelum-packs-content-contract: DESIGN.md#6.3
+work_item:
+  summary: Check that every anti-pattern referenced by a Practice exists once in the registry.
+  expected_module: packages/format
+  bounded_change: cross-file pack validation
+acceptance_oracle:
+  - registered references pass
+  - dangling references name the missing id and Practice source
+  - duplicate registry ids fail deterministically
+practice_gap:
+  relevant_topic: format.cross-reference-integrity
+  unrelated_control_topic: routing.code-splitting
+  status: requires-independent-practice-review
+confounders:
+  - Checks must use fixture packs that do not reveal registry rules in the prompt.

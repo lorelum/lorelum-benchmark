@@ -1,0 +1,22 @@
+id: pack-domain-consistency-v1
+version: 1
+status: candidate
+source:
+  kind: contract-derived-seed
+  references:
+    - lorelum-packs-content-contract: DESIGN.md#5.1
+    - lorelum-packs-content-contract: DESIGN.md#7
+work_item:
+  summary: Validate that a pack manifest domain declaration matches Practice locations and metadata.
+  expected_module: packages/format
+  bounded_change: pack-level validation
+acceptance_oracle:
+  - declared domain and matching Practice path pass
+  - undeclared or mismatched domain reports the manifest and Practice locations
+  - empty declared domains are handled according to the frozen manifest contract
+practice_gap:
+  relevant_topic: format.pack-boundary-validation
+  unrelated_control_topic: state.server-vs-client-state
+  status: requires-independent-practice-review
+confounders:
+  - Freeze manifest semantics before writing the starter repository.

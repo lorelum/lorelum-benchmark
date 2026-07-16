@@ -1,0 +1,21 @@
+id: typed-error-boundary-v1
+version: 1
+status: candidate
+source:
+  kind: contract-derived-seed
+  references:
+    - lorelum-core-product-contract: AGENTS.md#Code-style
+work_item:
+  summary: Convert parser failures into typed errors at the CLI boundary without silent fallback.
+  expected_module: packages/cli
+  bounded_change: error translation and exit behavior
+acceptance_oracle:
+  - malformed input returns a typed, user-actionable error
+  - success output remains unchanged
+  - no parser failure is converted to null, empty output, or a bare string throw
+practice_gap:
+  relevant_topic: cli.typed-error-boundary
+  unrelated_control_topic: performance.bundle-splitting
+  status: requires-independent-practice-review
+confounders:
+  - Starter must include a real parser error path before the task is frozen.
