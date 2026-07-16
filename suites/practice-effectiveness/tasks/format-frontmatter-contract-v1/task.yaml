@@ -5,7 +5,7 @@ track: practice-effectiveness
 source:
   kind: contract-derived-seed
   task_reference: suites/practice-effectiveness/sources.yaml#lorelum-packs-content-contract
-  baseline_commit: 24f6f528cd26f73d2276a01d73e20c38eec7c1b3
+  baseline_commit: 24f6f5225b9d1710cf21e62906a6866396ddda20
 runtime:
   command: bun run test:format-frontmatter
 agent_input:
