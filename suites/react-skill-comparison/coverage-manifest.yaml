@@ -1,0 +1,50 @@
+version: 1
+baseline:
+  repository: vercel-labs/agent-skills
+  revision: f8a72b9603728bb92a217a879b7e62e43ad76c81
+  skill: skills/react-best-practices
+coverage_status: partial
+covered_rules:
+  - id: async-parallel
+    tasks:
+      - async-dashboard-v1
+      - async-product-route-v1
+  - id: async-parallel-nested-fetching
+    tasks:
+      - async-product-route-v1
+  - id: bundle-dynamic-imports
+    tasks:
+      - bundle-advanced-panel-v1
+      - bundle-command-palette-v1
+  - id: bundle-conditional
+    tasks:
+      - bundle-advanced-panel-v1
+      - bundle-command-palette-v1
+  - id: rerender-memo
+    tasks:
+      - rerender-stable-row-actions-v1
+  - id: rendering-conditional-render
+    tasks:
+      - rendering-deferred-dialog-v1
+  - id: client-event-listeners
+    tasks:
+      - client-search-shortcut-cleanup-v1
+  - id: server-dedup-props
+    tasks:
+      - server-request-viewer-dedup-v1
+  - id: server-cache-react
+    tasks:
+      - server-request-viewer-dedup-v1
+coverage_gaps:
+  status: intentional
+  reason: This issue establishes discriminative fixtures before attempting complete rule coverage.
+  categories:
+    - advanced
+    - js
+    - server-streaming
+    - client-storage
+    - rendering-hydration
+    - bundle-import-shape
+acceptance:
+  each_task_must_distinguish_functional_from_compliant: true
+  complete_rule_coverage_required_before_claiming_parity: true

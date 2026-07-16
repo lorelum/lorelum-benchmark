@@ -1,0 +1,12 @@
+id: rendering-deferred-dialog-v1
+expected_baseline_rules:
+  - rendering-conditional-render
+checks:
+  - id: rendering.defer-hidden-dialog
+    description: A closed billing view does not construct the dialog.
+  - id: rendering.reuse-open-dialog
+    description: Open renders keep the dialog behavior and avoid redundant setup.
+scoring:
+  functional: required
+  scope: required
+  knowledge_retrieval: G2-only

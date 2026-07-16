@@ -19,10 +19,11 @@ The shared task-card, evaluator, and run-record contract is defined in
 - `schemas/` and `BENCHMARK_PROTOCOL.md` are shared by both suites.
 
 The first smoke fixtures are `async-dashboard-v1` and
-`bundle-advanced-panel-v1`. Their starter code intentionally serializes
-independent dashboard requests or eagerly loads a conditional module. The
-evaluator is kept separate from the task materials so the same task can be run
-under every condition.
+`bundle-advanced-panel-v1`. The discriminative fixture set adds nested async
+data loading, deferred commands, stable list actions, hidden-dialog rendering,
+client listener cleanup, and per-request server deduplication. Their evaluators
+are kept separate from the task materials so the same task can be run under
+every condition.
 
 ## Run the first evaluator
 
@@ -47,3 +48,8 @@ Run the conditional bundle evaluator with the path to a candidate
 $env:CANDIDATE_PATH = 'D:\path\to\candidate\src\settings.ts'
 bun run test:bundle-advanced-panel
 ```
+
+The discriminative task-to-rule mapping is recorded in
+`suites/react-skill-comparison/coverage-manifest.yaml`. It is intentionally
+partial: it must not be used to claim full coverage of the external Skill until
+all rules in the pinned external Skill have a mapped task.

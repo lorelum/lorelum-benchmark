@@ -1,0 +1,12 @@
+id: rerender-stable-row-actions-v1
+expected_baseline_rules:
+  - rerender-memo
+checks:
+  - id: rerender.stable-row-action
+    description: Unchanged rows keep the same callback identity across renders.
+  - id: rerender.row-action-behavior
+    description: A stable callback still opens its original issue.
+scoring:
+  functional: required
+  scope: required
+  knowledge_retrieval: G2-only
