@@ -7,7 +7,23 @@
     "version": { "type": "integer", "minimum": 1 },
     "baseline": { "type": "object", "required": ["repository", "revision", "skill"] },
     "coverage_status": { "enum": ["partial", "complete"] },
-    "covered_rules": { "type": "array" },
+    "covered_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "tasks"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "tasks": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[a-z0-9-]+-v[1-9][0-9]*$" }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
     "acceptance": { "type": "object" }
   },
   "additionalProperties": true
