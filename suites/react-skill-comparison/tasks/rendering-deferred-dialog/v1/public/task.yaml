@@ -1,16 +1,15 @@
 id: rendering-deferred-dialog-v1
 version: 1
 track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 1
 source:
   kind: synthetic-discriminative-task
 runtime:
-  command: bun run test:rendering-deferred-dialog
+  command: bun run evaluate -- react-skill-comparison rendering-deferred-dialog/v1
 agent_input:
   prompt: task.md
   starter: starter
-evaluator:
-  command: bun run test:rendering-deferred-dialog
-  oracle: oracle.yaml
 applicable_conditions:
   - baseline
   - vercel-skill

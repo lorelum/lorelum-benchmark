@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 
 interface BillingDialog {
   render(): string;
@@ -19,9 +17,9 @@ interface BillingViewModule {
 }
 
 const candidatePath =
-  process.env.CANDIDATE_PATH ??
-  "suites/react-skill-comparison/tasks/rendering-deferred-dialog-v1/starter/src/billing-view.ts";
-const candidateUrl = `${pathToFileURL(resolve(candidatePath)).href}?run=${Date.now()}`;
+  Bun.env.CANDIDATE_PATH ??
+  "suites/react-skill-comparison/tasks/rendering-deferred-dialog/v1/public/starter/src/billing-view.ts";
+const candidateUrl = `${Bun.pathToFileURL(candidatePath).href}?run=${Date.now()}`;
 const { createBillingView } = (await import(candidateUrl)) as BillingViewModule;
 
 describe("rendering-deferred-dialog-v1", () => {
