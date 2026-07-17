@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 
 interface ShortcutEvent {
   key: string;
@@ -38,9 +36,9 @@ class FakeShortcutTarget implements ShortcutTarget {
 }
 
 const candidatePath =
-  process.env.CANDIDATE_PATH ??
-  "suites/react-skill-comparison/tasks/client-search-shortcut-cleanup-v1/starter/src/search-shortcut.ts";
-const candidateUrl = `${pathToFileURL(resolve(candidatePath)).href}?run=${Date.now()}`;
+  Bun.env.CANDIDATE_PATH ??
+  "suites/react-skill-comparison/tasks/client-search-shortcut-cleanup/v1/public/starter/src/search-shortcut.ts";
+const candidateUrl = `${Bun.pathToFileURL(candidatePath).href}?run=${Date.now()}`;
 const { installSearchShortcut } = (await import(candidateUrl)) as ShortcutModule;
 
 describe("client-search-shortcut-cleanup-v1", () => {
