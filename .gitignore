@@ -1,4 +1,4 @@
 .run-workspaces/
 **/node_modules/
-suites/*/runs/*
-!suites/*/runs/.gitkeep
+schemas/suites/*/runs/*
+!schemas/suites/*/runs/.gitkeep

@@ -4,7 +4,7 @@ status: calibration-nondiscriminative
 track: practice-effectiveness
 source:
   kind: contract-derived-seed
-  task_reference: suites/practice-effectiveness/sources.yaml#lorelum-packs-content-contract
+  task_reference: schemas/suites/practice-effectiveness/sources.yaml#lorelum-packs-content-contract
   baseline_commit: 24f6f5225b9d1710cf21e62906a6866396ddda20
 runtime:
   command: bun run test:format-frontmatter

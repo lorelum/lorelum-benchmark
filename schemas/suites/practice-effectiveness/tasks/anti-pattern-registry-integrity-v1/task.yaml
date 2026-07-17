@@ -4,7 +4,7 @@ status: frozen
 track: practice-effectiveness
 source:
   kind: contract-derived-seed
-  task_reference: suites/practice-effectiveness/sources.yaml#lorelum-packs-content-contract
+  task_reference: schemas/suites/practice-effectiveness/sources.yaml#lorelum-packs-content-contract
   baseline_commit: e0a2cf2541390301490b36af88d72883162c598b
 runtime:
   command: bun run test:anti-pattern-registry

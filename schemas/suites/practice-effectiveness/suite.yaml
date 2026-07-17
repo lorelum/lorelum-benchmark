@@ -2,7 +2,7 @@ id: practice-effectiveness
 version: 0.1.0
 track: practice-effectiveness
 status: seed-design
-protocol: ../../BENCHMARK_PROTOCOL.md
+protocol: ../../../BENCHMARK_PROTOCOL.md
 conditions:
   - baseline
   - oracle-practice

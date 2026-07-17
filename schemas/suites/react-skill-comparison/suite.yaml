@@ -1,7 +1,7 @@
 id: react-skill-comparison
 version: 0.1.0
 track: performance-skill-comparison
-protocol: ../../BENCHMARK_PROTOCOL.md
+protocol: ../../../BENCHMARK_PROTOCOL.md
 baseline:
   repository: vercel-labs/agent-skills
   revision: f8a72b9603728bb92a217a879b7e62e43ad76c81

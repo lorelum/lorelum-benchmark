@@ -16,7 +16,7 @@ interface BenchmarkGlobal {
 
 const candidatePath =
   process.env.CANDIDATE_PATH ??
-  "suites/react-skill-comparison/tasks/bundle-advanced-panel-v1/starter/src/settings.ts";
+  "schemas/suites/react-skill-comparison/tasks/bundle-advanced-panel-v1/starter/src/settings.ts";
 const candidateUrl = `${pathToFileURL(resolve(candidatePath)).href}?run=${Date.now()}`;
 
 describe("bundle-advanced-panel-v1", () => {

@@ -20,7 +20,7 @@ interface DashboardModule {
 
 const candidatePath =
   process.env.CANDIDATE_PATH ??
-  "suites/react-skill-comparison/tasks/async-dashboard-v1/starter/src/dashboard.ts";
+  "schemas/suites/react-skill-comparison/tasks/async-dashboard-v1/starter/src/dashboard.ts";
 const candidateUrl = pathToFileURL(resolve(candidatePath)).href;
 const { loadDashboard } = (await import(candidateUrl)) as DashboardModule;
 

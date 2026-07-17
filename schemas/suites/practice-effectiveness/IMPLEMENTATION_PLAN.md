@@ -33,7 +33,7 @@ Freeze model id, system prompt hash, parameters, tool permissions, time/token
 budget, task version, starter digest, and injected-content hash before a run.
 Run baseline, Oracle, and irrelevant-Practice conditions at least three times
 per frozen task; use five repetitions for the formal pilot. Store every run as
-one JSONL object conforming to `../../schemas/run-record.schema.json`.
+one JSONL object conforming to `../../run-record.schema.json`.
 
 ## Decision rule
 

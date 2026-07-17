@@ -11,7 +11,7 @@ directories inside the coding agent's visible filesystem. After the task is
 frozen, use `scripts/prepare-condition.sh` rather than copying files manually.
 
 ```bash
-task_root=/home/theleeying/lorelum-benchmark/suites/practice-effectiveness/tasks/format-frontmatter-contract-v1
+task_root=/home/theleeying/lorelum-benchmark/schemas/suites/practice-effectiveness/tasks/format-frontmatter-contract-v1
 workspace=/tmp/format-frontmatter-baseline
 
 test ! -e "$workspace"

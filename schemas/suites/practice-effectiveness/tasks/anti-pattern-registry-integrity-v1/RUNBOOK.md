@@ -7,7 +7,7 @@ task prompt; only the injected Practice differs.
 ## Prepare one condition
 
 ```bash
-task_root=/home/theleeying/lorelum-benchmark/suites/practice-effectiveness/tasks/anti-pattern-registry-integrity-v1
+task_root=/home/theleeying/lorelum-benchmark/schemas/suites/practice-effectiveness/tasks/anti-pattern-registry-integrity-v1
 workspace=/tmp/anti-pattern-registry-baseline
 
 bash "$task_root/scripts/prepare-condition.sh" baseline "$workspace"

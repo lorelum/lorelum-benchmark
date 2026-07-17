@@ -12,9 +12,10 @@ The shared task-card, evaluator, and run-record contract is defined in
 
 ## Layout
 
-- `suites/practice-effectiveness/` holds real Lorelum tasks used for the
-  baseline / Oracle / retrieval / irrelevant-context experiment.
-- `suites/react-skill-comparison/` holds performance tasks used for the
+- `schemas/suites/practice-effectiveness/` holds contract-derived seed tasks
+  and future real Lorelum tasks for the baseline / Oracle / retrieval /
+  irrelevant-context experiment.
+- `schemas/suites/react-skill-comparison/` holds performance tasks used for the
   baseline / Vercel Skill / Lorelum retrieval comparison.
 - `schemas/` and `BENCHMARK_PROTOCOL.md` are shared by both suites.
 
