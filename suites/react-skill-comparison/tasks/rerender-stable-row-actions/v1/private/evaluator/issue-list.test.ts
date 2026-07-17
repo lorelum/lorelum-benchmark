@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 
 interface Issue {
   id: string;
@@ -22,9 +20,9 @@ interface IssueListModule {
 }
 
 const candidatePath =
-  process.env.CANDIDATE_PATH ??
-  "suites/react-skill-comparison/tasks/rerender-stable-row-actions-v1/starter/src/issue-list.ts";
-const candidateUrl = `${pathToFileURL(resolve(candidatePath)).href}?run=${Date.now()}`;
+  Bun.env.CANDIDATE_PATH ??
+  "suites/react-skill-comparison/tasks/rerender-stable-row-actions/v1/public/starter/src/issue-list.ts";
+const candidateUrl = `${Bun.pathToFileURL(candidatePath).href}?run=${Date.now()}`;
 const { createIssueList } = (await import(candidateUrl)) as IssueListModule;
 
 describe("rerender-stable-row-actions-v1", () => {
