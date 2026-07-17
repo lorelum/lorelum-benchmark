@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "5db89923964f543bc3fd52bb5181af60b3aba991a834485f7a45995ea21ca175",
+  "files": {
+    "private/evaluator/dashboard.test.ts": "e1eace9d66a289b537cde890a82c17213dca62015b0ca9dc7fecc76118e1cfc2",
+    "private/oracle.yaml": "cc1cf3bbc8990e4715474caf4508870aa50fdc832e76d503018057fd34a9ad0f",
+    "public/starter/src/dashboard.ts": "e24ad1fc7cd9938427f8618604921a9cba2f7edab48631dc6a8475c5a3e49bd3",
+    "public/task.md": "959b878c8f62ef4e0631a35b8871307d6872122647ecf1b9fde55292ecbd9989",
+    "public/task.yaml": "2e5abe8ee9e3d4f9b5e29c30bd22d136e2f2f6d43dd62f869af708023dfd828c"
+  }
+}

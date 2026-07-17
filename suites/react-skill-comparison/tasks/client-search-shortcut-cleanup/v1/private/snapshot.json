@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "55812dfd87d1119856f5f860871776de12c6b493c61d93a95b905796d7e03b7c",
+  "files": {
+    "private/evaluator/search-shortcut.test.ts": "ece6218ddd99e6dbf6c76a6eac4f80f5340eb14d00282e224d51e23eefed3058",
+    "private/oracle.yaml": "23a41c5fb4f59dd45a6ffb86c1414ffd4a2e93b5fc5f2acc23d1934aeadcddb5",
+    "public/starter/src/search-shortcut.ts": "2f98c66c54516ffd2271925f6387993c83fae42ebd6f5efaad026d59dbbbb1b7",
+    "public/task.md": "bf3a4d4fbfcf670c534afcc0950e888c56bfe81587cd3f06c8a66f7e6c09f618",
+    "public/task.yaml": "92cd1719550c8a7eef67a73c8c1071489ce2fbdf2f410836dc885e50143f68a7"
+  }
+}
