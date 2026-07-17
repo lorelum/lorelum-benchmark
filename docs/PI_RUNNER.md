@@ -1,20 +1,23 @@
 # Pi Runner 契约
 
-Pi 是用于执行 benchmark 任务的自动化 runner。本仓库不假定某一种 Pi 命令行接口，
-而是由 adapter 接收一个版本化 JSON 请求；请求中包含 Pi 集成所选定的确切命令和参数：
+Pi 是用于执行 benchmark 任务的自动化 runner。默认 adapter 为 `pi/v2`：它接收版本化
+JSON 请求，但不接受用户提供的工作目录。adapter 会核对 suite、task card、正式 snapshot、
+treatment manifest 和 environment manifest，随后在 `.run-workspaces/<run-id>/` 创建全新的
+工作区。
+
+工作区只包含 `public/task.md` 和 `public/starter/`；`private/`、evaluator、oracle 与
+snapshot 永远不会复制给 Pi。请求中的 Pi 命令和参数仍保持显式，但命令必须与 environment
+manifest 中固定的 agent runtime command 一致。adapter 约束命令的工作目录；正式环境还
+必须由 environment manifest 指定的 sandbox 阻止 Pi 逃逸到宿主文件系统。
 
 ```sh
-bun run pi -- path/to/pi-run-request.json --dry-run
-bun run pi -- path/to/pi-run-request.json
+bun run pi -- docs/examples/pi-run-request-v2.example.json --dry-run
+bun run pi -- path/to/pi-run-request-v2.json
 ```
 
-`src/benchmark/runner/pi/v1/types.ts` 定义请求结构。它要求提供 suite/task 版本和
-snapshot、treatment、环境、scorer、Agent/模型、随机种子、预算、工具策略 hash、输入
-hash 和 artifact 位置。请求中的命令刻意保持显式，以免 adapter 擅自拼装 Pi flags。
-`--dry-run` 会校验请求并输出命令而不执行。请从
-`docs/examples/pi-run-request.example.json` 开始，替换所有占位符，并在执行 Pi 前将
-不可变的正式 manifest 保存到声明的 artifact 位置。
+`--dry-run` 会验证全部契约并输出将要使用的隔离工作区，不创建目录也不执行 Pi。正式运行
+会在 `artifacts/runs/<run-id>/<manifest_name>` 写入 `pi-run-artifact/v2` manifest，记录经过
+核验的输入、实际工作区、公开文件 hash、命令、状态和退出码。大体积 trace、输出与 diff
+应从该目录上传到 artifact storage；仓库只提交其索引和校验和。
 
-正式运行应将完整不可变 manifest 和所有大体积输出存入 artifact storage，然后在
-`results/records/` 提交运行记录索引和 artifact 校验和。这样无需将大 trace 或私有
-oracle 内容放入 Git，也能独立审计一次运行。
+`pi/v1` 保留为历史兼容入口：`bun run pi:v1 -- <request> [--dry-run]`。新运行不得使用它。
