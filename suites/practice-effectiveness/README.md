@@ -1,10 +1,8 @@
 # Practice Effectiveness Suite
 
-This suite will contain real Lorelum tasks selected for the experiment defined
-in `../../BENCHMARK_PROTOCOL.md`. Each task must have one or two reviewer-
-selected Oracle Practices, a comparable unrelated-Practice control, and
-reproducible acceptance checks.
+本 suite 将收录为 `../../docs/BENCHMARK_PROTOCOL.md` 中实验挑选的真实 Lorelum
+任务。每个任务必须具备一到两条由评审者选定的 Oracle Practice、可比的无关 Practice
+对照，以及可复现的验收检查。
 
-Start from `../../schemas/task-card.example.yaml`. Maintain a candidate pool of
-20 tasks, freeze 6 pilot tasks, then expand only after the pilot protocol is
-stable.
+从 `../../schemas/task-card.example.yaml` 开始。维护 20 个任务的候选池，冻结 6 个
+pilot 任务；仅在 pilot 协议稳定后扩展任务规模。
