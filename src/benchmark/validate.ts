@@ -73,8 +73,26 @@ async function findForbiddenPublicFiles(path: string): Promise<void> {
   }
 }
 
+async function validateVersionedManifests(path: string, manifestName: string, schema: string, label: string): Promise<void> {
+  for (const id of await listDirectories(path)) {
+    const idPath = joinPath(path, id);
+    for (const version of await listDirectories(idPath)) {
+      if (!/^v[1-9][0-9]*$/.test(version)) {
+        failures.push(`${label} version must be v<number>: ${relativePath(joinPath(idPath, version))}`);
+        continue;
+      }
+      const manifestPath = joinPath(idPath, version, manifestName);
+      await requirePath(manifestPath);
+      const document = await validateYaml(manifestPath, schema);
+      if (document && (document.id !== id || document.version !== version)) {
+        failures.push(`${label} identity must match path: ${relativePath(manifestPath)}`);
+      }
+    }
+  }
+}
+
 const suitesPath = joinPath(workspaceRoot, "suites");
-for (const schema of ["suite.schema.json", "task-card.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json"]) {
+for (const schema of ["suite.schema.json", "task-card.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json"]) {
   await requirePath(joinPath(workspaceRoot, "schemas", schema));
 }
 
@@ -164,7 +182,10 @@ for (const suite of await listDirectories(suitesPath)) {
   }
 }
 
-for (const path of [joinPath(workspaceRoot, "schemas"), suitesPath, joinPath(workspaceRoot, "src")]) await findNodeModules(path);
+await validateVersionedManifests(joinPath(workspaceRoot, "treatments"), "treatment.yaml", "treatment.schema.json", "Treatment");
+await validateVersionedManifests(joinPath(workspaceRoot, "environments"), "environment.yaml", "environment.schema.json", "Environment");
+
+for (const path of [joinPath(workspaceRoot, "schemas"), suitesPath, joinPath(workspaceRoot, "treatments"), joinPath(workspaceRoot, "environments"), joinPath(workspaceRoot, "src")]) await findNodeModules(path);
 
 if (failures.length > 0) {
   console.error("Workspace validation failed:");

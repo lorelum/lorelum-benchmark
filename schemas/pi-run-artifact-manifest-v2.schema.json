@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum Pi run artifact manifest v2",
+  "type": "object",
+  "required": ["schema_version", "run_id", "source_commit", "suite", "task", "treatment", "environment", "scorer", "agent", "execution", "inputs", "workspace", "status", "completed_at"],
+  "properties": {
+    "schema_version": { "const": "pi-run-artifact/v2" },
+    "run_id": { "type": "string" },
+    "source_commit": { "type": "string", "minLength": 1 },
+    "suite": { "type": "object" },
+    "task": { "type": "object" },
+    "treatment": { "type": "object" },
+    "environment": { "type": "object" },
+    "scorer": { "type": "object" },
+    "agent": { "type": "object" },
+    "execution": { "type": "object" },
+    "inputs": { "type": "object" },
+    "workspace": {
+      "type": "object",
+      "required": ["path", "task_md_sha256", "starter_files"],
+      "properties": {
+        "path": { "type": "string" },
+        "task_md_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "starter_files": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+      },
+      "additionalProperties": false
+    },
+    "status": { "enum": ["prepared", "completed", "failed"] },
+    "exit_code": { "type": ["integer", "null"] },
+    "completed_at": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "pi-run/v2",
+  "run_id": "local-async-dashboard-v2",
+  "suite": { "id": "react-skill-comparison", "version": "0.1.0" },
+  "task": {
+    "id": "async-dashboard-v1",
+    "revision": "v1",
+    "snapshot_id": "5db89923964f543bc3fd52bb5181af60b3aba991a834485f7a45995ea21ca175"
+  },
+  "treatment": { "id": "baseline", "version": "v1" },
+  "environment": { "id": "local-pi", "version": "v1" },
+  "scorer": { "id": "async-dashboard", "version": "v1" },
+  "agent": {
+    "id": "pi",
+    "version": "operator-managed",
+    "model": "operator-selected",
+    "system_prompt_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "execution": {
+    "command": "pi",
+    "args": ["replace-with-pi-arguments"],
+    "seed": 1,
+    "budget": { "max_turns": 20, "max_duration_ms": 600000 },
+    "tool_policy_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "inputs": {
+    "task_prompt": "959b878c8f62ef4e0631a35b8871307d6872122647ecf1b9fde55292ecbd9989"
+  },
+  "artifacts": { "manifest_name": "run-manifest.json" }
+}
