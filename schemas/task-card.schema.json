@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum benchmark public task card",
+  "type": "object",
+  "required": ["id", "version", "track", "lifecycle_stage", "source", "runtime", "evaluator_version", "agent_input", "applicable_conditions"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+-v[1-9][0-9]*$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "track": { "enum": ["practice-effectiveness", "performance-skill-comparison"] },
+    "lifecycle_stage": { "enum": ["candidate", "pilot", "frozen", "official", "published", "retired"] },
+    "source": { "type": "object" },
+    "runtime": { "type": "object", "required": ["command"] },
+    "evaluator_version": { "type": "integer", "minimum": 1 },
+    "agent_input": { "type": "object", "required": ["prompt", "starter"] },
+    "applicable_conditions": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

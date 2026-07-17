@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum benchmark artifact reference",
+  "type": "object",
+  "required": ["kind", "uri", "sha256"],
+  "properties": {
+    "kind": { "enum": ["trace", "patch", "raw-output", "evaluator-output", "environment", "review"] },
+    "uri": { "type": "string", "minLength": 1 },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "additionalProperties": false
+}

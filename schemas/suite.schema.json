@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum benchmark suite",
+  "type": "object",
+  "required": ["id", "version", "track", "lifecycle_stage", "conditions", "tasks"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "version": { "type": "string" },
+    "track": { "enum": ["practice-effectiveness", "performance-skill-comparison"] },
+    "lifecycle_stage": { "enum": ["candidate", "pilot", "frozen", "official", "published", "retired"] },
+    "conditions": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "tasks": { "type": "array", "items": { "type": "object" } }
+  },
+  "additionalProperties": true
+}

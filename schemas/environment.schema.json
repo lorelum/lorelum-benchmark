@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum benchmark environment",
+  "type": "object",
+  "required": ["id", "version", "bun", "agent_runtime", "model", "sandbox"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "version": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
+    "bun": { "type": "string" },
+    "agent_runtime": { "type": "object", "required": ["id", "version"] },
+    "model": { "type": "object", "required": ["id"] },
+    "sandbox": { "type": "object", "required": ["policy_hash"] }
+  },
+  "additionalProperties": true
+}

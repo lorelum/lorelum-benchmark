@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum benchmark report",
+  "type": "object",
+  "required": ["id", "suite", "release", "run_records", "summary"],
+  "properties": {
+    "id": { "type": "string" },
+    "suite": { "type": "object", "required": ["id", "version"] },
+    "release": { "type": "string" },
+    "run_records": { "type": "array", "items": { "type": "string" } },
+    "summary": { "type": "object" }
+  },
+  "additionalProperties": true
+}

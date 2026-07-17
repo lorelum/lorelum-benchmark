@@ -7,6 +7,10 @@
     "suite_version",
     "task_id",
     "task_version",
+    "evaluator_version",
+    "source_commit",
+    "snapshot_id",
+    "run_manifest",
     "track",
     "condition",
     "model",
@@ -18,6 +22,7 @@
     "suite_version": { "type": "string" },
     "task_id": { "type": "string" },
     "task_version": { "type": "integer", "minimum": 1 },
+    "evaluator_version": { "type": "integer", "minimum": 1 },
     "track": {
       "enum": ["practice-effectiveness", "performance-skill-comparison"]
     },
@@ -38,7 +43,17 @@
         "parameters": { "type": "object" }
       }
     },
-    "source_commit": { "type": "string" },
+    "source_commit": { "type": "string", "minLength": 1 },
+    "snapshot_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "run_manifest": {
+      "type": "object",
+      "required": ["uri", "sha256"],
+      "properties": {
+        "uri": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
     "started_at": { "type": "string", "format": "date-time" },
     "retrieval": {
       "type": "object",

@@ -1,7 +1,8 @@
 id: react-skill-comparison
 version: 0.1.0
 track: performance-skill-comparison
-protocol: ../../BENCHMARK_PROTOCOL.md
+lifecycle_stage: pilot
+protocol: ../../docs/BENCHMARK_PROTOCOL.md
 baseline:
   repository: vercel-labs/agent-skills
   revision: f8a72b9603728bb92a217a879b7e62e43ad76c81
@@ -12,34 +13,42 @@ conditions:
   - lorelum-retrieval
 tasks:
   - id: async-dashboard-v1
+    path: tasks/async-dashboard/v1
     profile: spa
     category: async
-    status: ready
+    lifecycle_stage: pilot
   - id: bundle-advanced-panel-v1
+    path: tasks/bundle-advanced-panel/v1
     profile: spa
     category: bundle
-    status: ready
+    lifecycle_stage: pilot
   - id: async-product-route-v1
+    path: tasks/async-product-route/v1
     profile: spa
     category: async
-    status: ready
+    lifecycle_stage: pilot
   - id: bundle-command-palette-v1
+    path: tasks/bundle-command-palette/v1
     profile: spa
     category: bundle
-    status: ready
+    lifecycle_stage: pilot
   - id: rerender-stable-row-actions-v1
+    path: tasks/rerender-stable-row-actions/v1
     profile: spa
     category: rerender
-    status: ready
+    lifecycle_stage: pilot
   - id: rendering-deferred-dialog-v1
+    path: tasks/rendering-deferred-dialog/v1
     profile: spa
     category: rendering
-    status: ready
+    lifecycle_stage: pilot
   - id: client-search-shortcut-cleanup-v1
+    path: tasks/client-search-shortcut-cleanup/v1
     profile: spa
     category: client
-    status: ready
+    lifecycle_stage: pilot
   - id: server-request-viewer-dedup-v1
+    path: tasks/server-request-viewer-dedup/v1
     profile: rsc
     category: server
-    status: ready
+    lifecycle_stage: pilot
