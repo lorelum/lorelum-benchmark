@@ -8,6 +8,9 @@
     "evaluate": "bun run src/benchmark/evaluate.ts",
     "pi": "bun run src/benchmark/runner/pi/v1/execute.ts"
   },
+  "dependencies": {
+    "ajv": "^8.17.1"
+  },
   "engines": {
     "bun": ">=1.1.0"
   }
