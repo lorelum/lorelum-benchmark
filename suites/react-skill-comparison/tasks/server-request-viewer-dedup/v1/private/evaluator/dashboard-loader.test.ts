@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 
 interface Viewer {
   id: string;
@@ -36,9 +34,9 @@ function deferred<Value>(): Deferred<Value> {
 }
 
 const candidatePath =
-  process.env.CANDIDATE_PATH ??
-  "suites/react-skill-comparison/tasks/server-request-viewer-dedup-v1/starter/src/dashboard-loader.ts";
-const candidateUrl = `${pathToFileURL(resolve(candidatePath)).href}?run=${Date.now()}`;
+  Bun.env.CANDIDATE_PATH ??
+  "suites/react-skill-comparison/tasks/server-request-viewer-dedup/v1/public/starter/src/dashboard-loader.ts";
+const candidateUrl = `${Bun.pathToFileURL(candidatePath).href}?run=${Date.now()}`;
 const { createDashboardLoader } =
   (await import(candidateUrl)) as DashboardLoaderModule;
 
