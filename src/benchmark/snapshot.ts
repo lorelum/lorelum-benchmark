@@ -14,7 +14,9 @@ const [suite, reference] = argumentsList.filter((argument) => !argument.startsWi
 const failures: string[] = [];
 
 async function snapshotFiles(task: TaskLocation): Promise<Record<string, string>> {
-  const files = await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: task.path, onlyFiles: true }));
+  const files = (await Array.fromAsync(
+    new Bun.Glob("**/*").scan({ cwd: task.path, onlyFiles: true }),
+  )).map((file) => file.replaceAll("\\", "/"));
   const included = files.filter((file) => file !== "private/snapshot.json").sort();
   return Object.fromEntries(await Promise.all(included.map(async (file) => [file, await sha256File(joinPath(task.path, file))])));
 }
