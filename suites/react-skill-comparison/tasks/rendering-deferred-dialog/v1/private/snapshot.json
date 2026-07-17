@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "cb3c5a6f418f7fdb220bdbb09afa6a1129fedc1b12bfd85a19ea801ec53458f3",
+  "files": {
+    "private/evaluator/billing-view.test.ts": "e40be300ec72cc92a398a33d983c83159ff732f7aa1168909f180e59778df08f",
+    "private/oracle.yaml": "1ce5a51ba128c32612fd369f9172c95991752b40ad8428b1e45a2559d189687d",
+    "public/starter/src/billing-view.ts": "4ef8483375b97172041f8f8b308bfa4719f1d94468d166c3343add8bf45f4057",
+    "public/task.md": "d2d55e043952d9b814af8b170060cdb0847d1e3fc504bba6f0c7907601429bb2",
+    "public/task.yaml": "f25fdf237c00cc591e6f67ef2c83410088b4c138bae9811d8e7a90e9867ebfeb"
+  }
+}

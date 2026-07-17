@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "7115fb25d2212d0ad4499016a0c4cfd062bf5921f7e0b5f6b9cb181bbbf2585d",
+  "files": {
+    "private/evaluator/project-shell.test.ts": "36128230c4180e6a6211f65c02458336e121d363c02b009bd730096fc77ed54d",
+    "private/oracle.yaml": "21dcf967274fcd293e4cfaf31029da24f8ef0188cd23741b8e7fcf3b6075bf06",
+    "public/starter/src/command-index.ts": "7da28605c23224521fd3a5fb95c5eb93213cc6952f0c88be09762174464d7618",
+    "public/starter/src/project-shell.ts": "4115674c4944da9efa864fbaf5bcf8a78960b4928152636d00f094aae1d692d1",
+    "public/task.md": "dc48c43075b08d4b3ebafa29aa4cbff5ae04fac3d24463b62b4281443a65a6a9",
+    "public/task.yaml": "7236e531b632dfa2dd91c2fcd9c87e3e0161c0b952e8077afd7f22eadfa1b2ef"
+  }
+}
