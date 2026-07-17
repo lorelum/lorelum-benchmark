@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 
 interface ProjectShellModule {
   openCommandPalette(query: string): Promise<string[]>;
@@ -11,9 +9,9 @@ interface BenchmarkGlobal {
 }
 
 const candidatePath =
-  process.env.CANDIDATE_PATH ??
-  "suites/react-skill-comparison/tasks/bundle-command-palette-v1/starter/src/project-shell.ts";
-const candidateUrl = `${pathToFileURL(resolve(candidatePath)).href}?run=${Date.now()}`;
+  Bun.env.CANDIDATE_PATH ??
+  "suites/react-skill-comparison/tasks/bundle-command-palette/v1/public/starter/src/project-shell.ts";
+const candidateUrl = `${Bun.pathToFileURL(candidatePath).href}?run=${Date.now()}`;
 
 describe("bundle-command-palette-v1", () => {
   test("does not load the command index until the palette opens", async () => {
