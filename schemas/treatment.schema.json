@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum benchmark treatment",
+  "type": "object",
+  "required": ["id", "version", "kind"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "version": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
+    "kind": { "enum": ["baseline", "oracle", "skill", "retrieval", "control"] },
+    "prompt_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "tool_policy_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "additionalProperties": true
+}

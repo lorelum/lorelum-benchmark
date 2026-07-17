@@ -1,8 +1,8 @@
 id: practice-effectiveness
 version: 0.1.0
 track: practice-effectiveness
-status: planned
-protocol: ../../BENCHMARK_PROTOCOL.md
+lifecycle_stage: candidate
+protocol: ../../docs/BENCHMARK_PROTOCOL.md
 conditions:
   - baseline
   - oracle-practice

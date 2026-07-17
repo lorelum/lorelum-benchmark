@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum benchmark coverage manifest",
+  "type": "object",
+  "required": ["version", "baseline", "coverage_status", "covered_rules", "acceptance"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "baseline": { "type": "object", "required": ["repository", "revision", "skill"] },
+    "coverage_status": { "enum": ["partial", "complete"] },
+    "covered_rules": { "type": "array" },
+    "acceptance": { "type": "object" }
+  },
+  "additionalProperties": true
+}
