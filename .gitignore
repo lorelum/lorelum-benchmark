@@ -1,3 +1,4 @@
+**/node_modules/
 .run-workspaces/
-suites/*/runs/*
-!suites/*/runs/.gitkeep
+artifacts/
+scratch/

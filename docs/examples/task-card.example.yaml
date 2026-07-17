@@ -1,18 +1,16 @@
 id: example-task-v1
 version: 1
 track: practice-effectiveness
+evaluator_version: 1
 source:
   kind: real-lorelum-task
   task_reference: task-guid-or-issue-url
   baseline_commit: replace-with-immutable-commit
 runtime:
-  command: bun test
+  command: bun run evaluate -- practice-effectiveness example-task/v1
 agent_input:
   prompt: task.md
   starter: starter
-evaluator:
-  command: bun test evaluator
-  oracle: oracle.yaml
 applicable_conditions:
   - baseline
   - oracle-practice
