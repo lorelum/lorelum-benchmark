@@ -89,7 +89,9 @@ test("creates an isolated public-only workspace and artifact manifest", async ()
   expect(result.exitCode).toBe(0);
   expect(await Bun.file(join(workspacePath, "task.md")).exists()).toBe(true);
   expect(await Bun.file(join(workspacePath, "starter", "src", "dashboard.ts")).exists()).toBe(true);
+  expect(await Bun.file(join(workspacePath, "task.yaml")).exists()).toBe(false);
   expect(await Bun.file(join(workspacePath, "private", "oracle.yaml")).exists()).toBe(false);
+  expect(await Bun.file(join(workspacePath, "private", "evaluator", "dashboard.test.ts")).exists()).toBe(false);
   const artifact = await Bun.file(join(artifactPath, "run-manifest.json")).json() as Record<string, unknown>;
   expect(artifact.status).toBe("completed");
   expect(Object.keys((artifact.workspace as Record<string, unknown>).starter_files as Record<string, unknown>)).toContain("src/dashboard.ts");
@@ -104,4 +106,48 @@ test("rejects caller-provided execution directories", async () => {
 
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain("must NOT have additional properties");
+});
+
+test("rejects a task snapshot that does not match the formal snapshot", async () => {
+  const document = request(runId(), "unused-environment");
+  (document.task as Record<string, unknown>).snapshot_id = "0".repeat(64);
+
+  const result = await execute(document, true);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("Task snapshot_id does not match");
+});
+
+test("rejects an unknown environment manifest", async () => {
+  const document = request(runId(), "missing-environment");
+
+  const result = await execute(document, true);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("Missing environment manifest");
+});
+
+test("rejects artifact names that escape the adapter-managed directory", async () => {
+  const document = request(runId(), "unused-environment");
+  document.artifacts = { manifest_name: "../run-manifest.json" };
+
+  const result = await execute(document, true);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("must match pattern");
+});
+
+test("rejects a run identifier that already has workspace artifacts", async () => {
+  const id = runId();
+  const environmentId = runId();
+  await writeEnvironment(environmentId);
+  cleanupPaths.add(join(root, ".run-workspaces", id));
+  cleanupPaths.add(join(root, "artifacts", "runs", id));
+  const document = request(id, environmentId);
+
+  expect((await execute(document)).exitCode).toBe(0);
+  const result = await execute(document, true);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("Run id already has a workspace or artifacts");
 });
