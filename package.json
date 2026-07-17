@@ -5,8 +5,8 @@
   "scripts": {
     "test:async-dashboard": "bun test suites/react-skill-comparison/tasks/async-dashboard-v1/evaluator",
     "test:bundle-advanced-panel": "bun test suites/react-skill-comparison/tasks/bundle-advanced-panel-v1/evaluator",
-    "test:async-product-route": "bun test suites/react-skill-comparison/tasks/async-product-route-v1/evaluator",
-    "test:bundle-command-palette": "bun test suites/react-skill-comparison/tasks/bundle-command-palette-v1/evaluator",
+    "test:async-product-route": "bun test suites/react-skill-comparison/tasks/async-product-route/v1/private/evaluator",
+    "test:bundle-command-palette": "bun test suites/react-skill-comparison/tasks/bundle-command-palette/v1/private/evaluator",
     "test:rerender-stable-row-actions": "bun test suites/react-skill-comparison/tasks/rerender-stable-row-actions-v1/evaluator",
     "test:rendering-deferred-dialog": "bun test suites/react-skill-comparison/tasks/rendering-deferred-dialog-v1/evaluator",
     "test:client-search-shortcut-cleanup": "bun test suites/react-skill-comparison/tasks/client-search-shortcut-cleanup-v1/evaluator",

@@ -1,16 +1,15 @@
-id: async-product-route-v1
+id: bundle-command-palette-v1
 version: 1
 track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 1
 source:
   kind: synthetic-discriminative-task
 runtime:
-  command: bun run test:async-product-route
+  command: bun run evaluate -- react-skill-comparison bundle-command-palette/v1
 agent_input:
   prompt: task.md
   starter: starter
-evaluator:
-  command: bun run test:async-product-route
-  oracle: oracle.yaml
 applicable_conditions:
   - baseline
   - vercel-skill

@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 
 interface Product {
   id: string;
@@ -42,9 +40,9 @@ function deferred<Value>(): Deferred<Value> {
 }
 
 const candidatePath =
-  process.env.CANDIDATE_PATH ??
-  "suites/react-skill-comparison/tasks/async-product-route-v1/starter/src/product-route.ts";
-const candidateUrl = `${pathToFileURL(resolve(candidatePath)).href}?run=${Date.now()}`;
+  Bun.env.CANDIDATE_PATH ??
+  "suites/react-skill-comparison/tasks/async-product-route/v1/public/starter/src/product-route.ts";
+const candidateUrl = `${Bun.pathToFileURL(candidatePath).href}?run=${Date.now()}`;
 const { loadProductRoute } = (await import(candidateUrl)) as ProductRouteModule;
 
 describe("async-product-route-v1", () => {
