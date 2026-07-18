@@ -4,6 +4,7 @@ import { lstat, mkdir, readdir } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { joinPath, listFiles, pathExists, relativePath, sha256File, sha256Text, workspaceRoot } from "../../../fs";
 import { findTask } from "../../../task-discovery";
+import { containerCommand, containerEnvironment, containerImageInspectCommand, containerRemoveCommand, containerVersionCommand, formalContainerSandbox, type FormalContainerSandbox } from "./sandbox";
 import type { PiRunArtifactManifestV2, PiRunRequestV2, PiRunResultV2 } from "./types";
 
 const [requestPath, ...options] = Bun.argv.slice(2);
@@ -147,7 +148,7 @@ async function verifyFormalExperiment(request: PiRunRequestV2): Promise<void> {
   if (request.run_id !== expectedRunId) fail(`Experiment run ID does not match request: ${relativePath(path)}`);
 }
 
-async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: string; treatmentPath: string; treatment: Record<string, unknown>; treatmentSkillPath?: string; environmentPath: string; environment: Record<string, unknown> }> {
+async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: string; treatmentPath: string; treatment: Record<string, unknown>; treatmentSkillPath?: string; environmentPath: string; environment: Record<string, unknown>; containerSandbox?: FormalContainerSandbox }> {
   await verifyFormalExperiment(request);
   const suitePath = repositoryPath("suites", request.suite.id);
   const suiteManifestPath = joinPath(suitePath, "suite.yaml");
@@ -234,7 +235,8 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
     if ((await sha256File(lockfilePath)) !== dependencies.lockfile_sha256) fail(`Environment lockfile hash does not match: ${relativePath(lockfilePath)}`);
   }
 
-  return { taskPath: task.path, treatmentPath, treatment, treatmentSkillPath, environmentPath, environment };
+  const containerSandbox = request.environment.id === "formal-pi-deepseek-v4-pro" ? formalContainerSandbox(environment) : undefined;
+  return { taskPath: task.path, treatmentPath, treatment, treatmentSkillPath, environmentPath, environment, containerSandbox };
 }
 
 async function copyFile(source: string, destination: string): Promise<void> {
@@ -327,12 +329,28 @@ async function terminateProcessTree(pid: number): Promise<void> {
   try { process.kill(pid, "SIGTERM"); } catch { }
 }
 
-async function verifyRuntime(environment: Record<string, unknown>, request: PiRunRequestV2): Promise<void> {
+async function runSandboxCommand(command: string[], env: Record<string, string>, label: string): Promise<string> {
+  const child = Bun.spawn(command, { cwd: workspaceRoot, env, stdout: "pipe", stderr: "pipe" });
+  const exitCode = await child.exited;
+  const stdout = await new Response(child.stdout).text();
+  const stderr = await new Response(child.stderr).text();
+  if (exitCode !== 0) fail(`${label} failed: ${stderr.trim() || stdout.trim()}`);
+  return stdout.trim();
+}
+
+async function verifyRuntime(environment: Record<string, unknown>, request: PiRunRequestV2, containerSandbox?: FormalContainerSandbox): Promise<void> {
   if (typeof environment.bun === "string" && /^\d+\.\d+\.\d+$/.test(environment.bun) && environment.bun !== Bun.version) {
     fail(`Bun version does not match environment: expected ${environment.bun}, received ${Bun.version}`);
   }
   const agentRuntime = environment.agent_runtime;
   if (!isRecord(agentRuntime) || agentRuntime.id !== "pi" || typeof agentRuntime.version !== "string") return;
+  if (containerSandbox) {
+    const sandboxEnv = { PATH: Bun.env.PATH ?? "", ...containerEnvironment(Bun.env.DEEPSEEK_API_KEY, containerSandbox) };
+    const image = await runSandboxCommand(containerImageInspectCommand(containerSandbox), sandboxEnv, "Formal container image inspection");
+    if (image !== containerSandbox.image) fail("Formal container image digest does not match the configured image");
+    await runSandboxCommand(containerVersionCommand(containerSandbox), sandboxEnv, "Formal container runtime version check");
+    return;
+  }
   const versionCheck = Bun.spawn([request.execution.command, "--version"], { cwd: workspaceRoot, env: Bun.env, stdout: "pipe", stderr: "pipe" });
   if ((await versionCheck.exited) !== 0) fail(`Unable to resolve Pi version: ${(await new Response(versionCheck.stderr).text()).trim()}`);
   const actualVersion = (await new Response(versionCheck.stdout).text()).trim();
@@ -363,7 +381,7 @@ try {
   if (!candidateRelative || candidateRelative.startsWith("..") || isAbsolute(candidateRelative)) fail(`Candidate path must stay inside the workspace: ${request.candidate_path}`);
   const effectiveExecution = {
     ...request.execution,
-    args: contracts.treatmentSkillPath ? [...request.execution.args, "--skill", contracts.treatmentSkillPath] : request.execution.args
+    args: contracts.treatmentSkillPath ? [...request.execution.args, "--skill", contracts.containerSandbox?.skill_path ?? contracts.treatmentSkillPath] : request.execution.args
   };
   if (await pathExists(workspacePath) || await pathExists(artifactPath)) {
     fail(`Run id already has a workspace or artifacts: ${request.run_id}`);
@@ -377,13 +395,15 @@ try {
   if (request.environment.id === "formal-pi-deepseek-v4-pro" && !hasResolvedModelVersion(request.agent.model_version)) {
     fail("Formal Pi execution requires an immutable provider model snapshot ID");
   }
-  await verifyRuntime(contracts.environment, request);
+  await verifyRuntime(contracts.environment, request, contracts.containerSandbox);
   await ensureCleanFormalWorktree(contracts.environment);
   const sandbox = contracts.environment.sandbox;
-  if (isRecord(sandbox) && typeof sandbox.policy_path === "string" && (sandbox.enforcement !== "protected-runner-required" || Bun.env.LORELUM_SANDBOX_ENFORCED !== "1")) {
+  if (isRecord(sandbox) && typeof sandbox.policy_path === "string" && (sandbox.enforcement !== "protected-runner-required" || Bun.env.LORELUM_SANDBOX_ENFORCED !== "1" || !contracts.containerSandbox)) {
     fail("Formal Pi execution requires the protected sandbox runner");
   }
   const workspace = await createWorkspace(request.run_id, contracts.taskPath);
+  const stagedSkillPath = contracts.treatmentSkillPath ? joinPath(artifactPath, "treatment", "SKILL.md") : undefined;
+  if (stagedSkillPath) await copyFile(contracts.treatmentSkillPath, stagedSkillPath);
   const manifest: PiRunArtifactManifestV2 = {
     schema_version: "pi-run-artifact/v2",
     run_id: request.run_id,
@@ -414,9 +434,14 @@ try {
   let exitCode: number | null = null;
   let timedOut = false;
   try {
-    const executionEnv = { ...Bun.env, CANDIDATE_PATH: candidatePath, LORELUM_RUN_ID: request.run_id };
-    const child = Bun.spawn([effectiveExecution.command, ...effectiveExecution.args], {
-      cwd: workspace.path,
+    const executionEnv = contracts.containerSandbox
+      ? { PATH: Bun.env.PATH ?? "", ...containerEnvironment(Bun.env.DEEPSEEK_API_KEY, contracts.containerSandbox) }
+      : { ...Bun.env, CANDIDATE_PATH: candidatePath, LORELUM_RUN_ID: request.run_id };
+    const executionCommand = contracts.containerSandbox
+      ? containerCommand(request, contracts.containerSandbox, workspace.path, stagedSkillPath, effectiveExecution.command, effectiveExecution.args)
+      : [effectiveExecution.command, ...effectiveExecution.args];
+    const child = Bun.spawn(executionCommand, {
+      cwd: contracts.containerSandbox ? workspaceRoot : workspace.path,
       env: executionEnv,
       stdin: "inherit",
       stdout: "inherit",
@@ -424,7 +449,13 @@ try {
     });
     const timeout = setTimeout(() => {
       timedOut = true;
-      void terminateProcessTree(child.pid).finally(() => child.kill());
+      void terminateProcessTree(child.pid).finally(async () => {
+        if (contracts.containerSandbox) {
+          const cleanup = Bun.spawn(containerRemoveCommand(request.run_id), { cwd: workspaceRoot, env: executionEnv, stdout: "ignore", stderr: "ignore" });
+          await cleanup.exited;
+        }
+        child.kill();
+      });
     }, request.execution.budget.max_duration_ms);
     exitCode = await child.exited;
     clearTimeout(timeout);
