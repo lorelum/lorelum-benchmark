@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const emptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+const formalToolPolicyHash = "095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2";
 const snapshotId = "2a8c08b6765ace825185b5b252974427cf38dcade88ccd21a964f02436322c10";
 const cleanupPaths = new Set<string>();
 
@@ -32,7 +33,7 @@ function request(id: string, environmentId: string): Record<string, unknown> {
       args: ["-e", 'if (!(await Bun.file("task.md").exists()) || !(await Bun.file("starter/src/workspace-overview.ts").exists()) || await Bun.file("private/oracle.yaml").exists()) process.exit(1);'],
       seed: 1,
       budget: { max_turns: 1, max_duration_ms: 1000 },
-      tool_policy_hash: emptyHash
+      tool_policy_hash: formalToolPolicyHash
     },
     inputs: { task_prompt: "959b878c8f62ef4e0631a35b8871307d6872122647ecf1b9fde55292ecbd9989" },
     artifacts: { manifest_name: "run-manifest.json" }
@@ -54,7 +55,7 @@ async function writeEnvironment(id: string): Promise<void> {
     "model:",
     "  id: test-model",
     "sandbox:",
-    `  policy_hash: ${emptyHash}`,
+    `  policy_hash: ${formalToolPolicyHash}`,
     ""
   ].join("\n"));
 }

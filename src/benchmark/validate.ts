@@ -1,6 +1,7 @@
 import Ajv2020 from "ajv/dist/2020";
 import type { ErrorObject, ValidateFunction } from "ajv";
-import { directoryExists, joinPath, listDirectories, listFiles, pathExists, relativePath, workspaceRoot } from "./fs";
+import { isAbsolute, relative, resolve } from "node:path";
+import { directoryExists, joinPath, listDirectories, listFiles, pathExists, relativePath, sha256File, workspaceRoot } from "./fs";
 
 const failures: string[] = [];
 const lifecycleStages = new Set(["candidate", "pilot", "frozen", "official", "published", "retired"]);
@@ -59,6 +60,99 @@ async function validateYaml(path: string, schema: string): Promise<Record<string
   return document;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function insideWorkspace(path: string): boolean {
+  const root = resolve(workspaceRoot);
+  const candidate = resolve(path);
+  const fromRoot = relative(root, candidate);
+  return !fromRoot.startsWith("..") && !isAbsolute(fromRoot);
+}
+
+async function commitIsAncestor(commit: string): Promise<boolean> {
+  const check = Bun.spawn(["git", "merge-base", "--is-ancestor", commit, "HEAD"], { cwd: workspaceRoot, stdout: "ignore", stderr: "ignore" });
+  return (await check.exited) === 0;
+}
+
+async function validateExperimentPlan(path: string, plan: Record<string, unknown>): Promise<void> {
+  const suite = plan.suite;
+  if (!isRecord(suite) || typeof suite.id !== "string" || typeof suite.version !== "string") return;
+  const suitePath = joinPath(workspaceRoot, "suites", suite.id);
+  const suiteManifestPath = joinPath(suitePath, "suite.yaml");
+  await requirePath(suiteManifestPath);
+  const suiteDocument = await validateYaml(suiteManifestPath, "suite.schema.json");
+  if (!suiteDocument) return;
+  if (suiteDocument.id !== suite.id || suiteDocument.version !== suite.version) failures.push(`Experiment suite does not match suite manifest: ${relativePath(path)}`);
+
+  const declaredTasks = new Map<string, Record<string, unknown>>();
+  if (Array.isArray(suiteDocument.tasks)) {
+    for (const task of suiteDocument.tasks) {
+      if (!isRecord(task) || typeof task.id !== "string") continue;
+      if (declaredTasks.has(task.id)) failures.push(`Experiment suite has duplicate task id: ${suite.id}/${task.id}`);
+      declaredTasks.set(task.id, task);
+    }
+  }
+  const taskSets = ["smoke_tasks", "full_tasks"] as const;
+  for (const setName of taskSets) {
+    const tasks = plan[setName];
+    if (!Array.isArray(tasks)) continue;
+    for (const taskId of tasks) {
+      if (typeof taskId !== "string") continue;
+      const declared = declaredTasks.get(taskId);
+      if (!declared) {
+        failures.push(`Experiment ${setName} references undeclared task: ${suite.id}/${taskId}`);
+        continue;
+      }
+      if (typeof declared.path !== "string") continue;
+      const taskCardPath = joinPath(suitePath, declared.path, "public", "task.yaml");
+      const taskCard = await validateYaml(taskCardPath, "task-card.schema.json");
+      if (!taskCard || taskCard.id !== taskId) failures.push(`Experiment task does not match task card: ${suite.id}/${taskId}`);
+    }
+  }
+
+  const conditionIds = new Set<string>();
+  if (Array.isArray(plan.conditions)) {
+    for (const condition of plan.conditions) {
+      if (!isRecord(condition) || typeof condition.id !== "string" || typeof condition.treatment !== "string") continue;
+      if (!conditionIds.add(condition.id)) failures.push(`Experiment has duplicate condition: ${relativePath(path)}/${condition.id}`);
+      if (!Array.isArray(suiteDocument.conditions) || !suiteDocument.conditions.includes(condition.id)) failures.push(`Experiment condition is not declared by suite: ${suite.id}/${condition.id}`);
+      const [treatmentId, treatmentVersion] = condition.treatment.split("/");
+      if (!treatmentId || !treatmentVersion) {
+        failures.push(`Experiment treatment reference is invalid: ${condition.treatment}`);
+        continue;
+      }
+      const treatmentPath = joinPath(workspaceRoot, "treatments", treatmentId, treatmentVersion, "treatment.yaml");
+      await requirePath(treatmentPath);
+      const treatment = await validateYaml(treatmentPath, "treatment.schema.json");
+      if (treatment && (treatment.id !== treatmentId || treatment.version !== treatmentVersion)) failures.push(`Experiment treatment does not match path: ${condition.treatment}`);
+    }
+  }
+
+  const environment = plan.environment;
+  if (isRecord(environment) && typeof environment.id === "string" && typeof environment.version === "string") {
+    const environmentPath = joinPath(workspaceRoot, "environments", environment.id, environment.version, "environment.yaml");
+    await requirePath(environmentPath);
+    const environmentDocument = await validateYaml(environmentPath, "environment.schema.json");
+    if (environmentDocument && (environmentDocument.id !== environment.id || environmentDocument.version !== environment.version)) failures.push(`Experiment environment does not match path: ${environment.id}/${environment.version}`);
+    const dependencies = environmentDocument?.dependencies;
+    if (isRecord(dependencies) && typeof dependencies.lockfile === "string" && typeof dependencies.lockfile_sha256 === "string") {
+      const lockfilePath = joinPath(workspaceRoot, dependencies.lockfile);
+      await requirePath(lockfilePath);
+      if (await pathExists(lockfilePath) && (await sha256File(lockfilePath)) !== dependencies.lockfile_sha256) failures.push(`Environment lockfile hash does not match: ${relativePath(lockfilePath)}`);
+    }
+  }
+
+  if (typeof plan.source_commit === "string" && !(await commitIsAncestor(plan.source_commit))) failures.push(`Experiment source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
+  if (typeof plan.system_prompt_path === "string" && typeof plan.system_prompt_hash === "string") {
+    const promptPath = resolve(workspaceRoot, plan.system_prompt_path);
+    if (!insideWorkspace(promptPath)) failures.push(`Experiment system prompt escapes workspace: ${plan.system_prompt_path}`);
+    else if (!(await pathExists(promptPath))) failures.push(`Experiment system prompt is missing: ${relativePath(promptPath)}`);
+    else if ((await sha256File(promptPath)) !== plan.system_prompt_hash) failures.push(`Experiment system prompt hash does not match: ${relativePath(promptPath)}`);
+  }
+}
+
 async function findNodeModules(path: string): Promise<void> {
   for (const file of await listFiles(path)) {
     if (file.split("/").includes("node_modules")) failures.push(`Installed dependency directory is not allowed: ${relativePath(joinPath(path, file))}`);
@@ -92,7 +186,7 @@ async function validateVersionedManifests(path: string, manifestName: string, sc
 }
 
 const suitesPath = joinPath(workspaceRoot, "suites");
-for (const schema of ["suite.schema.json", "task-card.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json"]) {
+for (const schema of ["suite.schema.json", "task-card.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
   await requirePath(joinPath(workspaceRoot, "schemas", schema));
 }
 
@@ -182,10 +276,20 @@ for (const suite of await listDirectories(suitesPath)) {
   }
 }
 
+const experimentsPath = joinPath(workspaceRoot, "experiments");
+await requirePath(experimentsPath);
+for (const file of await listFiles(experimentsPath)) {
+  if (file.endsWith(".yaml")) {
+    const planPath = joinPath(experimentsPath, file);
+    const plan = await validateYaml(planPath, "experiment-plan.schema.json");
+    if (plan) await validateExperimentPlan(planPath, plan);
+  }
+}
+
 await validateVersionedManifests(joinPath(workspaceRoot, "treatments"), "treatment.yaml", "treatment.schema.json", "Treatment");
 await validateVersionedManifests(joinPath(workspaceRoot, "environments"), "environment.yaml", "environment.schema.json", "Environment");
 
-for (const path of [joinPath(workspaceRoot, "schemas"), suitesPath, joinPath(workspaceRoot, "treatments"), joinPath(workspaceRoot, "environments"), joinPath(workspaceRoot, "src")]) await findNodeModules(path);
+for (const path of [joinPath(workspaceRoot, "schemas"), suitesPath, joinPath(workspaceRoot, "treatments"), joinPath(workspaceRoot, "environments"), experimentsPath, joinPath(workspaceRoot, "src")]) await findNodeModules(path);
 
 if (failures.length > 0) {
   console.error("Workspace validation failed:");

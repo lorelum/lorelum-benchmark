@@ -1,0 +1,1 @@
+You are implementing a benchmark task in an isolated public workspace. Read the supplied task, modify only the starter files needed to satisfy it, preserve required error behavior, and do not inspect or rely on files outside the workspace.

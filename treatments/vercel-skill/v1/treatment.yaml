@@ -1,0 +1,15 @@
+id: vercel-skill
+version: v1
+kind: skill
+tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+source:
+  repository: vercel-labs/agent-skills
+  revision: f8a72b9603728bb92a217a879b7e62e43ad76c81
+  path: skills/react-best-practices
+  skill_md_sha256: 71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355
+injection:
+  mode: pi-skill
+  skill_path: private/SKILL.md
+  skill_hash: 71ed7794962fa6e803ee83030517b5b93a9f70fbfeb431ec4535c5480a8d8355
+  scope: system-prompt
+  secrets: excluded
