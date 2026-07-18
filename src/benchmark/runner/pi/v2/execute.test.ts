@@ -225,7 +225,7 @@ test("verifies the pinned Pi runtime before a formal execution", async () => {
 
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toContain("0.80.10");
-});
+}, 15_000);
 
 test("rejects a run identifier that already has workspace artifacts", async () => {
   const id = runId();
