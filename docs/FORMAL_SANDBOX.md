@@ -10,10 +10,12 @@
 
 ## 镜像与验收
 
-`Publish formal Pi container image` 将 Dockerfile 以仅含 `package.json` 与 `bun.lock` 的 build context 构建，并在 job summary 输出 digest。把该 digest 写入 formal environment 后，在 runner 上执行：
+`Publish formal Pi container image` 将 Dockerfile 以仅含 `package.json` 与 `bun.lock` 的 build context 构建，并在 job summary 输出 digest。把该 digest 写入 formal environment 后，受保护 workflow 会以短期 `GITHUB_TOKEN` 登录 GHCR 并拉取该 exact digest；该 token 不会进入 Pi 容器。优先通过该 workflow 验证。手动验证时必须使用仅具 `packages:read` 权限的短期 token，且不要将它设为 runner 服务环境变量：
 
 ```sh
+printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io --username <github-user> --password-stdin
 docker pull ghcr.io/lorelum/lorelum-benchmark/formal-pi@sha256:<digest>
+docker logout ghcr.io
 export LORELUM_SANDBOX_ENFORCED=1
 bun run test:sandbox
 ```

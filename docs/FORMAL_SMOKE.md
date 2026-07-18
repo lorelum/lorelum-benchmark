@@ -6,7 +6,7 @@
 
 1. 从 DeepSeek 获取不可变模型快照 ID。在没有任何正式 record 前，将该值同时写入 `environments/formal-pi-deepseek-v4-pro/v1/environment.yaml` 与两个 G0/G1 实验计划的 `model.version`；不得使用 `pending-provider-snapshot` 执行真实运行。
 2. 创建启用 versioning 和默认 Object Lock retention 的 S3 bucket/prefix。将固定的 `s3://bucket/prefix` 写入 formal environment 的 `artifact_storage.uri`，并将完全相同的值配置为 GitHub Environment variable `LORELUM_ARTIFACT_STORAGE_URI`。
-3. 合并后由 `Publish formal Pi container image` 发布镜像。将 workflow 输出的 digest 写回 formal environment；不得使用 image tag。注册带 `lorelum-formal-sandbox` 标签的 Linux 自托管 GitHub Actions runner，预拉取该 digest，并由 runner 服务环境设置 `LORELUM_SANDBOX_ENFORCED=1`。
+3. 合并后由 `Publish formal Pi container image` 发布镜像。将 workflow 输出的 digest 写回 formal environment；不得使用 image tag。注册带 `lorelum-formal-sandbox` 标签的 Linux 自托管 GitHub Actions runner，并由 runner 服务环境设置 `LORELUM_SANDBOX_ENFORCED=1`；workflow 使用临时 `GITHUB_TOKEN` 拉取 digest，不将 registry 凭据传给 Pi。
 4. 创建 Docker 内部网络 `lorelum-formal-egress`，并部署只允许 `api.deepseek.com:443` 的 CONNECT proxy；Pi 容器不得拥有 host network、Docker socket 或 checkout 挂载。
 5. 在 GitHub Environment `formal-g0-g1` 配置 `DEEPSEEK_API_KEY` secret、`AWS_ROLE_TO_ASSUME` 与 `AWS_REGION` variables。OIDC 角色只授予该 bucket/prefix 的 `PutObject`、`HeadObject` 和对象版本读取权限。
 
