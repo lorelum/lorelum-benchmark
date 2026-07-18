@@ -1,0 +1,19 @@
+id: local-bun-deepseek-v4-pro
+version: v1
+bun: 1.3.14
+agent_runtime:
+  id: pi
+  version: 0.73.1
+model:
+  id: deepseek/deepseek-v4-pro
+sandbox:
+  policy_hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+execution:
+  seed: 1
+  max_turns: 20
+  max_duration_ms: 600000
+  system_prompt_hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  tool_policy_hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+dependencies:
+  manifest: package.json
+  lockfile: bun.lock
