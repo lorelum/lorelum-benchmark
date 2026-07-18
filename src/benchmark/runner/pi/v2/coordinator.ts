@@ -73,8 +73,13 @@ async function terminateTree(pid: number): Promise<void> {
     await child.exited;
     return;
   }
-  const descendants = Bun.spawn(["pkill", "-TERM", "-P", String(pid)], { stdout: "ignore", stderr: "ignore" });
-  await descendants.exited;
+  const children = Bun.spawn(["pgrep", "-P", String(pid)], { stdout: "pipe", stderr: "ignore" });
+  if ((await children.exited) === 0) {
+    const output = await new Response(children.stdout).text();
+    const direct = output.split(/\s+/).filter(Boolean).map(Number).filter(Number.isInteger);
+    for (const childPid of direct) await terminateTree(childPid);
+  }
+  try { process.kill(pid, "SIGTERM"); } catch { }
 }
 
 async function runProcess(command: string[], cwd: string, env: Record<string, string | undefined>, timeoutMs: number): Promise<ProcessResult> {
@@ -106,6 +111,14 @@ async function artifact(kind: Artifact["kind"], path: string): Promise<Artifact>
 async function preflight(path: string): Promise<void> {
   const result = await runProcess([process.execPath, "run", "src/benchmark/runner/pi/v2/execute.ts", path, "--dry-run"], workspaceRoot, Bun.env, 30_000);
   if (result.exitCode !== 0) fail(`Pi request preflight failed: ${result.stderr.trim() || result.stdout.trim()}`);
+}
+
+function requireProtectedArtifactStorage(environment: Record<string, unknown>): void {
+  const storage = environment.artifact_storage;
+  if (!isRecord(storage) || storage.mode !== "immutable-after-upload" || typeof storage.uri !== "string" || typeof storage.uploader !== "string") fail("Formal environment must define immutable artifact storage");
+  if (storage.uploader === "protected-environment-required" && Bun.env.LORELUM_ARTIFACT_STORAGE_URI !== storage.uri) {
+    fail(`Protected artifact storage is not configured for ${storage.uri}`);
+  }
 }
 
 async function adapterCommit(): Promise<string> {
@@ -168,6 +181,8 @@ try {
 
   const startedAt = new Date().toISOString();
   let currentAdapterCommit = await adapterCommit();
+  const environmentManifest = await readYaml(repositoryPath("environments", request.environment.id, request.environment.version, "environment.yaml"));
+  if (request.environment.id === "formal-pi-deepseek-v4-pro") requireProtectedArtifactStorage(environmentManifest);
   const runner = await runProcess([process.execPath, "run", "src/benchmark/runner/pi/v2/execute.ts", requestPath], workspaceRoot, Bun.env, request.execution.budget.max_duration_ms);
   await writeText(joinPath(artifactPath, "pi.stdout.log"), runner.stdout);
   await writeText(joinPath(artifactPath, "pi.stderr.log"), runner.stderr);
@@ -188,20 +203,28 @@ try {
 
   let evaluator: ProcessResult | undefined;
   let diffPath: string | undefined;
+  let failureReason: string | undefined;
   const workspacePath = repositoryPath(".run-workspaces", request.run_id);
   const candidatePath = resolve(workspacePath, request.candidate_path);
   if (runner.exitCode === 0 && !runner.timedOut) {
-    await candidateIsSafe(candidatePath);
-    const diff = await createDiff(request, candidatePath, artifactPath);
-    diffPath = diff.path;
-    if (!diff.success) fail("Unable to create candidate diff");
-    artifacts.push(await artifact("patch", diff.path));
-    const reference = taskReference(request);
-    evaluator = await runProcess([process.execPath, "run", "src/benchmark/evaluate.ts", request.suite.id, reference.reference], workspaceRoot, { ...Bun.env, CANDIDATE_PATH: candidatePath }, request.execution.budget.max_duration_ms);
-    await writeText(joinPath(artifactPath, "evaluator.stdout.log"), evaluator.stdout);
-    await writeText(joinPath(artifactPath, "evaluator.stderr.log"), evaluator.stderr);
-    artifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stdout.log")));
-    artifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stderr.log")));
+    try {
+      await candidateIsSafe(candidatePath);
+      const diff = await createDiff(request, candidatePath, artifactPath);
+      diffPath = diff.path;
+      if (!diff.success) fail("Unable to create candidate diff");
+      artifacts.push(await artifact("patch", diff.path));
+      const reference = taskReference(request);
+      evaluator = await runProcess([process.execPath, "run", "src/benchmark/evaluate.ts", request.suite.id, reference.reference], workspaceRoot, { ...Bun.env, CANDIDATE_PATH: candidatePath }, request.execution.budget.max_duration_ms);
+      await writeText(joinPath(artifactPath, "evaluator.stdout.log"), evaluator.stdout);
+      await writeText(joinPath(artifactPath, "evaluator.stderr.log"), evaluator.stderr);
+      artifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stdout.log")));
+      artifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stderr.log")));
+      if (evaluator.exitCode !== 0 || evaluator.timedOut) failureReason = evaluator.timedOut ? "Evaluator timed out" : "Evaluator failed";
+    } catch (error) {
+      failureReason = error instanceof Error ? error.message : String(error);
+    }
+  } else {
+    failureReason = runner.timedOut ? "Pi timed out" : `Pi failed with exit code ${runner.exitCode ?? "unknown"}`;
   }
 
   const environmentPath = repositoryPath("environments", request.environment.id, request.environment.version, "environment.yaml");
@@ -242,7 +265,7 @@ try {
     model: { id: request.agent.model, parameters: { provider_version: request.agent.version, seed: request.execution.seed } },
     started_at: startedAt,
     cost: { duration_ms: Date.now() - Date.parse(startedAt) },
-    outcome: { automated_checks_passed: evaluator?.exitCode === 0 && !evaluator.timedOut, blind_review: "pending", ...(diffPath ? { diff_path: repositoryRelative(diffPath) } : {}) }
+    outcome: { automated_checks_passed: evaluator?.exitCode === 0 && !evaluator.timedOut && !failureReason, blind_review: "pending", ...(diffPath ? { diff_path: repositoryRelative(diffPath) } : {}), ...(failureReason ? { failure_reason: failureReason } : {}) }
   };
   await validateSchema("run-record.schema.json", record, "formal run record");
   if (await pathExists(recordPath)) fail(`Run record already exists: ${relativePath(recordPath)}`);

@@ -285,3 +285,24 @@ test("coordinates evaluator output into a formal immutable record", async () => 
   expect((record.outcome as Record<string, unknown>).automated_checks_passed).toBe(true);
   expect(await Bun.file(join(root, output.run_manifest)).exists()).toBe(true);
 });
+
+test("writes a failed record when Pi exits without a candidate", async () => {
+  const id = runId();
+  const environmentId = runId();
+  await writeEnvironment(environmentId);
+  cleanupPaths.add(join(root, "environments", environmentId));
+  cleanupPaths.add(join(root, ".run-workspaces", id));
+  cleanupPaths.add(join(root, "artifacts", "runs", id));
+  cleanupPaths.add(join(root, "results", "records", "react-skill-comparison", "workspace-overview-loader-v1", `${id}.json`));
+  const document = request(id, environmentId);
+  (document.execution as Record<string, unknown>).args = ["-e", 'await (await import("node:fs/promises")).rm(Bun.env.CANDIDATE_PATH!)'];
+
+  const result = await coordinate(document);
+
+  expect(result.exitCode).toBe(1);
+  const output = JSON.parse(result.stdout) as Record<string, string>;
+  const record = await Bun.file(join(root, output.record)).json() as Record<string, unknown>;
+  const outcome = record.outcome as Record<string, unknown>;
+  expect(outcome.automated_checks_passed).toBe(false);
+  expect(outcome.failure_reason).toContain("candidate file");
+});

@@ -109,7 +109,8 @@
       "properties": {
         "automated_checks_passed": { "type": "boolean" },
         "blind_review": { "enum": ["pass", "partial", "fail", "pending"] },
-        "diff_path": { "type": "string" }
+        "diff_path": { "type": "string" },
+        "failure_reason": { "type": "string", "minLength": 1 }
       }
     }
   },

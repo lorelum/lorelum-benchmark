@@ -35,6 +35,10 @@ function fail(message: string): never {
   throw new Error(message);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function asPlan(value: unknown): ExperimentPlan {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("Experiment plan must be a YAML object");
   return value as ExperimentPlan;
@@ -79,7 +83,11 @@ async function requestFor(plan: ExperimentPlan, policy: PiPolicy, systemPrompt: 
   const snapshot = await Bun.file(joinPath(task.path, "private", "snapshot.json")).json() as { snapshot_id?: unknown };
   if (typeof snapshot.snapshot_id !== "string") fail(`Task snapshot is invalid: ${relativePath(task.path)}`);
   const starterFiles = await listFiles(joinPath(task.path, "public", "starter"));
-  if (starterFiles.length !== 1) fail(`Task must have exactly one candidate starter file: ${relativePath(task.path)}`);
+  const taskCard = Bun.YAML.parse(await Bun.file(joinPath(task.path, "public", "task.yaml")).text()) as Record<string, unknown>;
+  const agentInput = taskCard.agent_input;
+  const declaredCandidate = isRecord(agentInput) && typeof agentInput.candidate === "string" ? agentInput.candidate : undefined;
+  const candidateFile = declaredCandidate ?? (starterFiles.length === 1 ? starterFiles[0] : undefined);
+  if (!candidateFile || !starterFiles.includes(candidateFile.replaceAll("\\", "/")) && !starterFiles.includes(candidateFile)) fail(`Task must declare a candidate starter file when it has multiple starter files: ${relativePath(task.path)}`);
   const [treatmentId, treatmentVersion] = condition.treatment.split("/");
   if (!treatmentId || !treatmentVersion) fail(`Invalid treatment reference: ${condition.treatment}`);
   const repeatId = String(repeat).padStart(3, "0");
@@ -88,7 +96,7 @@ async function requestFor(plan: ExperimentPlan, policy: PiPolicy, systemPrompt: 
     schema_version: "pi-run/v2",
     run_id: runId,
     source_commit: plan.source_commit,
-    candidate_path: `starter/${starterFiles[0]!.replaceAll("\\", "/")}`,
+    candidate_path: `starter/${candidateFile.replaceAll("\\", "/")}`,
     suite: plan.suite,
     task: { id: taskId, revision, snapshot_id: snapshot.snapshot_id },
     treatment: { id: treatmentId, version: treatmentVersion },
