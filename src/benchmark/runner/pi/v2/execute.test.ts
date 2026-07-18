@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const emptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-const snapshotId = "5db89923964f543bc3fd52bb5181af60b3aba991a834485f7a45995ea21ca175";
+const snapshotId = "cd9b292fe2777bcb5f94d5eba0b155e606f165ac9e54e93e8d6c091fe2561b82";
 const cleanupPaths = new Set<string>();
 
 afterEach(async () => {
@@ -21,15 +21,15 @@ function request(id: string, environmentId: string): Record<string, unknown> {
   return {
     schema_version: "pi-run/v2",
     run_id: id,
-    suite: { id: "react-skill-comparison", version: "0.1.0" },
-    task: { id: "async-dashboard-v1", revision: "v1", snapshot_id: snapshotId },
+    suite: { id: "react-skill-comparison", version: "0.2.0" },
+    task: { id: "workspace-overview-loader-v1", revision: "v1", snapshot_id: snapshotId },
     treatment: { id: "baseline", version: "v1" },
     environment: { id: environmentId, version: "v1" },
-    scorer: { id: "async-dashboard", version: "v1" },
+    scorer: { id: "workspace-overview-loader", version: "v1" },
     agent: { id: "pi-test", version: "test-v1", model: "test-model", system_prompt_hash: emptyHash },
     execution: {
       command: process.execPath,
-      args: ["-e", 'if (!(await Bun.file("task.md").exists()) || !(await Bun.file("starter/src/dashboard.ts").exists()) || await Bun.file("private/oracle.yaml").exists()) process.exit(1);'],
+      args: ["-e", 'if (!(await Bun.file("task.md").exists()) || !(await Bun.file("starter/src/workspace-overview.ts").exists()) || await Bun.file("private/oracle.yaml").exists()) process.exit(1);'],
       seed: 1,
       budget: { max_turns: 1, max_duration_ms: 1000 },
       tool_policy_hash: emptyHash
@@ -88,13 +88,13 @@ test("creates an isolated public-only workspace and artifact manifest", async ()
 
   expect(result.exitCode).toBe(0);
   expect(await Bun.file(join(workspacePath, "task.md")).exists()).toBe(true);
-  expect(await Bun.file(join(workspacePath, "starter", "src", "dashboard.ts")).exists()).toBe(true);
+  expect(await Bun.file(join(workspacePath, "starter", "src", "workspace-overview.ts")).exists()).toBe(true);
   expect(await Bun.file(join(workspacePath, "task.yaml")).exists()).toBe(false);
   expect(await Bun.file(join(workspacePath, "private", "oracle.yaml")).exists()).toBe(false);
   expect(await Bun.file(join(workspacePath, "private", "evaluator", "dashboard.test.ts")).exists()).toBe(false);
   const artifact = await Bun.file(join(artifactPath, "run-manifest.json")).json() as Record<string, unknown>;
   expect(artifact.status).toBe("completed");
-  expect(Object.keys((artifact.workspace as Record<string, unknown>).starter_files as Record<string, unknown>)).toContain("src/dashboard.ts");
+  expect(Object.keys((artifact.workspace as Record<string, unknown>).starter_files as Record<string, unknown>)).toContain("src/workspace-overview.ts");
 });
 
 test("rejects caller-provided execution directories", async () => {
