@@ -104,6 +104,22 @@ async function execute(requestDocument: Record<string, unknown>, dryRun = false)
   };
 }
 
+async function coordinate(requestDocument: Record<string, unknown>, dryRun = false): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const requestPath = join(tmpdir(), `${requestDocument.run_id}.json`);
+  cleanupPaths.add(requestPath);
+  await Bun.write(requestPath, `${JSON.stringify(requestDocument)}\n`);
+  const child = Bun.spawn([process.execPath, "run", "src/benchmark/runner/pi/v2/coordinator.ts", requestPath, ...(dryRun ? ["--dry-run"] : [])], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe"
+  });
+  return {
+    exitCode: await child.exited,
+    stdout: await new Response(child.stdout).text(),
+    stderr: await new Response(child.stderr).text()
+  };
+}
+
 test("creates an isolated public-only workspace and artifact manifest", async () => {
   const id = runId();
   const environmentId = runId();
@@ -240,4 +256,28 @@ test("rejects a run identifier that already has workspace artifacts", async () =
 
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain("Run id already has a workspace or artifacts");
+});
+
+test("coordinates evaluator output into a formal immutable record", async () => {
+  const id = runId();
+  const environmentId = runId();
+  await writeEnvironment(environmentId);
+  cleanupPaths.add(join(root, "environments", environmentId));
+  cleanupPaths.add(join(root, ".run-workspaces", id));
+  cleanupPaths.add(join(root, "artifacts", "runs", id));
+  cleanupPaths.add(join(root, "results", "records", "react-skill-comparison", "workspace-overview-loader-v1", `${id}.json`));
+  const document = request(id, environmentId);
+  const reference = await Bun.file(join(root, "suites", "react-skill-comparison", "tasks", "workspace-overview-loader", "v1", "private", "reference", "src", "workspace-overview.ts")).text();
+  (document.execution as Record<string, unknown>).args = ["-e", `await Bun.write(Bun.env.CANDIDATE_PATH, ${JSON.stringify(reference)});`];
+
+  const result = await coordinate(document);
+
+  if (result.exitCode !== 0) throw new Error(`${result.stdout}\n${result.stderr}\n${await Bun.file(join(root, "artifacts", "runs", id, "evaluator.stdout.log")).text()}\n${await Bun.file(join(root, "artifacts", "runs", id, "evaluator.stderr.log")).text()}`);
+  expect(result.exitCode).toBe(0);
+  const output = JSON.parse(result.stdout) as Record<string, string>;
+  const record = await Bun.file(join(root, output.record)).json() as Record<string, unknown>;
+  expect(record.adapter).toEqual({ id: "pi", version: "v2" });
+  expect(record.treatment).toEqual({ id: "baseline", version: "v1" });
+  expect((record.outcome as Record<string, unknown>).automated_checks_passed).toBe(true);
+  expect(await Bun.file(join(root, output.run_manifest)).exists()).toBe(true);
 });

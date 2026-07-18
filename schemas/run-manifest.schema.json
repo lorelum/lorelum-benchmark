@@ -2,10 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Lorelum benchmark immutable run manifest",
   "type": "object",
-  "required": ["run_id", "source_commit", "suite", "task", "treatment", "environment", "scorer", "agent", "execution", "inputs", "artifacts"],
+  "required": ["run_id", "source_commit", "adapter_commit", "suite", "task", "treatment", "environment", "scorer", "agent", "execution", "inputs", "artifacts"],
   "properties": {
     "run_id": { "type": "string" },
     "source_commit": { "type": "string", "minLength": 1 },
+    "adapter_commit": { "type": "string", "minLength": 1 },
     "suite": { "type": "object", "required": ["id", "version"] },
     "task": { "type": "object", "required": ["id", "revision", "snapshot_id"] },
     "treatment": { "type": "object", "required": ["id", "version"] },

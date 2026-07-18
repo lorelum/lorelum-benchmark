@@ -7,6 +7,8 @@
     "snapshot": "bun run src/benchmark/snapshot.ts --write",
     "evaluate": "bun run src/benchmark/evaluate.ts",
     "pi": "bun run src/benchmark/runner/pi/v2/execute.ts",
+    "pi:coordinate": "bun run src/benchmark/runner/pi/v2/coordinator.ts",
+    "pi:requests": "bun run src/benchmark/runner/pi/request-generator.ts",
     "pi:v1": "bun run src/benchmark/runner/pi/v1/execute.ts",
     "test:pi:v2": "bun test src/benchmark/runner/pi/v2",
     "test:fixtures": "bun run src/benchmark/fixtures.ts",

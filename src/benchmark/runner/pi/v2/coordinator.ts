@@ -1,0 +1,255 @@
+import Ajv2020 from "ajv/dist/2020";
+import type { ErrorObject, ValidateFunction } from "ajv";
+import { lstat, mkdir } from "node:fs/promises";
+import { isAbsolute, relative, resolve } from "node:path";
+import { joinPath, pathExists, relativePath, sha256File, workspaceRoot } from "../../../fs";
+import { findTask } from "../../../task-discovery";
+import type { PiRunRequestV2 } from "./types";
+
+type Artifact = { kind: "trace" | "patch" | "raw-output" | "evaluator-output" | "environment" | "review"; uri: string; sha256: string };
+
+type ProcessResult = { exitCode: number | null; stdout: string; stderr: string; timedOut: boolean };
+
+const [requestPath, ...options] = Bun.argv.slice(2);
+const dryRun = options.includes("--dry-run");
+const ajv = new Ajv2020({ allErrors: true, validateFormats: false });
+const schemaValidators = new Map<string, ValidateFunction>();
+
+function fail(message: string): never {
+  throw new Error(message);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function readJson(path: string): Promise<unknown> {
+  try {
+    return JSON.parse(await Bun.file(path).text()) as unknown;
+  } catch (error) {
+    fail(`Unable to read JSON ${relativePath(path)}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+async function readYaml(path: string): Promise<Record<string, unknown>> {
+  const document = Bun.YAML.parse(await Bun.file(path).text()) as unknown;
+  if (!isRecord(document)) fail(`YAML document must be an object: ${relativePath(path)}`);
+  return document;
+}
+
+function schemaErrors(errors: ErrorObject[] | null | undefined): string {
+  return (errors ?? []).map((error) => `${error.instancePath || "/"} ${error.message ?? error.keyword}`).join("; ");
+}
+
+async function schemaValidator(name: string): Promise<ValidateFunction> {
+  const cached = schemaValidators.get(name);
+  if (cached) return cached;
+  if (name === "run-manifest.schema.json") ajv.addSchema(await readJson(joinPath(workspaceRoot, "schemas", "artifact.schema.json")), "artifact.schema.json");
+  const validator = ajv.compile(await readJson(joinPath(workspaceRoot, "schemas", name)));
+  schemaValidators.set(name, validator);
+  return validator;
+}
+
+async function validateSchema(name: string, value: unknown, label: string): Promise<void> {
+  const validator = await schemaValidator(name);
+  if (!validator(value)) fail(`Invalid ${label}: ${schemaErrors(validator.errors)}`);
+}
+
+function repositoryPath(...parts: string[]): string {
+  const root = resolve(workspaceRoot);
+  const candidate = resolve(root, ...parts);
+  const fromRoot = relative(root, candidate);
+  if (fromRoot.startsWith("..") || isAbsolute(fromRoot)) fail(`Path escapes workspace root: ${parts.join("/")}`);
+  return candidate;
+}
+
+function repositoryRelative(path: string): string {
+  return relative(resolve(workspaceRoot), resolve(path)).replaceAll("\\", "/");
+}
+
+async function terminateTree(pid: number): Promise<void> {
+  if (process.platform === "win32") {
+    const child = Bun.spawn(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
+    await child.exited;
+    return;
+  }
+  const descendants = Bun.spawn(["pkill", "-TERM", "-P", String(pid)], { stdout: "ignore", stderr: "ignore" });
+  await descendants.exited;
+}
+
+async function runProcess(command: string[], cwd: string, env: Record<string, string | undefined>, timeoutMs: number): Promise<ProcessResult> {
+  const child = Bun.spawn(command, { cwd, env, stdout: "pipe", stderr: "pipe" });
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    void terminateTree(child.pid).finally(() => child.kill());
+  }, timeoutMs);
+  const exitCode = await child.exited;
+  clearTimeout(timer);
+  return {
+    exitCode,
+    stdout: await new Response(child.stdout).text(),
+    stderr: await new Response(child.stderr).text(),
+    timedOut
+  };
+}
+
+async function writeText(path: string, content: string): Promise<void> {
+  await mkdir(resolve(path, ".."), { recursive: true });
+  await Bun.write(path, content);
+}
+
+async function artifact(kind: Artifact["kind"], path: string): Promise<Artifact> {
+  return { kind, uri: repositoryRelative(path), sha256: await sha256File(path) };
+}
+
+async function preflight(path: string): Promise<void> {
+  const result = await runProcess([process.execPath, "run", "src/benchmark/runner/pi/v2/execute.ts", path, "--dry-run"], workspaceRoot, Bun.env, 30_000);
+  if (result.exitCode !== 0) fail(`Pi request preflight failed: ${result.stderr.trim() || result.stdout.trim()}`);
+}
+
+async function adapterCommit(): Promise<string> {
+  const child = Bun.spawn(["git", "rev-parse", "HEAD"], { cwd: workspaceRoot, stdout: "pipe", stderr: "pipe" });
+  if ((await child.exited) !== 0) fail(`Unable to resolve adapter commit: ${(await new Response(child.stderr).text()).trim()}`);
+  return (await new Response(child.stdout).text()).trim();
+}
+
+function taskReference(request: PiRunRequestV2): { slug: string; reference: string } {
+  const suffix = `-${request.task.revision}`;
+  if (!request.task.id.endsWith(suffix)) fail(`Task id must end with ${suffix}`);
+  const slug = request.task.id.slice(0, -suffix.length);
+  return { slug, reference: `${slug}/${request.task.revision}` };
+}
+
+async function candidateIsSafe(path: string): Promise<void> {
+  if (!(await pathExists(path))) fail(`Pi did not produce candidate file: ${relativePath(path)}`);
+  const stats = await lstat(path);
+  if (!stats.isFile() || stats.isSymbolicLink()) fail(`Candidate must be a regular file: ${relativePath(path)}`);
+}
+
+async function createDiff(request: PiRunRequestV2, candidatePath: string, artifactPath: string): Promise<{ path: string; success: boolean }> {
+  const reference = taskReference(request);
+  const task = await findTask(request.suite.id, reference.reference);
+  if (!task) fail(`Task not found while creating diff: ${request.task.id}`);
+  const originalPath = resolve(task.path, "public", request.candidate_path);
+  const originalRelative = relative(resolve(task.path, "public", "starter"), originalPath);
+  if (originalRelative.startsWith("..") || isAbsolute(originalRelative)) fail(`Candidate path must start under starter/: ${request.candidate_path}`);
+  const result = await runProcess(["git", "diff", "--no-index", "--", originalPath, candidatePath], workspaceRoot, Bun.env, 30_000);
+  const path = joinPath(artifactPath, "candidate.diff");
+  await writeText(path, `${result.stdout}${result.stderr}`);
+  return { path, success: result.exitCode === 0 || result.exitCode === 1 };
+}
+
+async function taskMetadata(request: PiRunRequestV2): Promise<{ track: string; evaluatorVersion: number }> {
+  const reference = taskReference(request);
+  const task = await findTask(request.suite.id, reference.reference);
+  if (!task) fail(`Task not found while creating record: ${request.task.id}`);
+  const card = await readYaml(joinPath(task.path, "public", "task.yaml"));
+  if (typeof card.track !== "string" || !Number.isInteger(card.evaluator_version)) fail(`Task card metadata is invalid: ${relativePath(task.path)}`);
+  return { track: card.track, evaluatorVersion: card.evaluator_version as number };
+}
+
+if (!requestPath) {
+  console.error("Usage: bun run pi:coordinate -- <pi-run-request-v2.json> [--dry-run]");
+  process.exit(1);
+}
+
+try {
+  const document = await readJson(requestPath);
+  await validateSchema("pi-run-request-v2.schema.json", document, "Pi run request");
+  const request = document as PiRunRequestV2;
+  await preflight(requestPath);
+  const artifactPath = repositoryPath("artifacts", "runs", request.run_id);
+  const recordPath = repositoryPath("results", "records", request.suite.id, request.task.id, `${request.run_id}.json`);
+  if (dryRun) {
+    console.log(JSON.stringify({ run_id: request.run_id, artifact_directory: repositoryRelative(artifactPath), run_manifest: repositoryRelative(joinPath(artifactPath, "formal-run-manifest.json")), record: repositoryRelative(recordPath) }, null, 2));
+    process.exit(0);
+  }
+
+  const startedAt = new Date().toISOString();
+  let currentAdapterCommit = await adapterCommit();
+  const runner = await runProcess([process.execPath, "run", "src/benchmark/runner/pi/v2/execute.ts", requestPath], workspaceRoot, Bun.env, request.execution.budget.max_duration_ms);
+  await writeText(joinPath(artifactPath, "pi.stdout.log"), runner.stdout);
+  await writeText(joinPath(artifactPath, "pi.stderr.log"), runner.stderr);
+  const artifacts: Artifact[] = [
+    await artifact("raw-output", joinPath(artifactPath, "pi.stdout.log")),
+    await artifact("raw-output", joinPath(artifactPath, "pi.stderr.log"))
+  ];
+  const piManifestPath = joinPath(artifactPath, request.artifacts.manifest_name);
+  let executedExecution: Record<string, unknown> = request.execution;
+  if (await pathExists(piManifestPath)) {
+    artifacts.push(await artifact("trace", piManifestPath));
+    const piManifest = await readJson(piManifestPath);
+    if (isRecord(piManifest)) {
+      if (isRecord(piManifest.execution)) executedExecution = piManifest.execution;
+      if (typeof piManifest.adapter_commit === "string") currentAdapterCommit = piManifest.adapter_commit;
+    }
+  }
+
+  let evaluator: ProcessResult | undefined;
+  let diffPath: string | undefined;
+  const workspacePath = repositoryPath(".run-workspaces", request.run_id);
+  const candidatePath = resolve(workspacePath, request.candidate_path);
+  if (runner.exitCode === 0 && !runner.timedOut) {
+    await candidateIsSafe(candidatePath);
+    const diff = await createDiff(request, candidatePath, artifactPath);
+    diffPath = diff.path;
+    if (!diff.success) fail("Unable to create candidate diff");
+    artifacts.push(await artifact("patch", diff.path));
+    const reference = taskReference(request);
+    evaluator = await runProcess([process.execPath, "run", "src/benchmark/evaluate.ts", request.suite.id, reference.reference], workspaceRoot, { ...Bun.env, CANDIDATE_PATH: candidatePath }, request.execution.budget.max_duration_ms);
+    await writeText(joinPath(artifactPath, "evaluator.stdout.log"), evaluator.stdout);
+    await writeText(joinPath(artifactPath, "evaluator.stderr.log"), evaluator.stderr);
+    artifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stdout.log")));
+    artifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stderr.log")));
+  }
+
+  const environmentPath = repositoryPath("environments", request.environment.id, request.environment.version, "environment.yaml");
+  artifacts.push(await artifact("environment", environmentPath));
+  const runManifest = {
+    run_id: request.run_id,
+    source_commit: request.source_commit,
+    adapter_commit: currentAdapterCommit,
+    suite: request.suite,
+    task: request.task,
+    treatment: request.treatment,
+    environment: request.environment,
+    scorer: request.scorer,
+    agent: request.agent,
+    execution: executedExecution,
+    inputs: request.inputs,
+    artifacts
+  };
+  await validateSchema("run-manifest.schema.json", runManifest, "formal run manifest");
+  const runManifestPath = joinPath(artifactPath, "formal-run-manifest.json");
+  await writeText(runManifestPath, `${JSON.stringify(runManifest, null, 2)}\n`);
+  const metadata = await taskMetadata(request);
+  const record = {
+    run_id: request.run_id,
+    suite_version: request.suite.version,
+    task_id: request.task.id,
+    task_version: Number(request.task.revision.slice(1)),
+    evaluator_version: metadata.evaluatorVersion,
+    source_commit: request.source_commit,
+    adapter_commit: currentAdapterCommit,
+    snapshot_id: request.task.snapshot_id,
+    adapter: { id: "pi", version: "v2" },
+    treatment: request.treatment,
+    environment: request.environment,
+    run_manifest: { uri: repositoryRelative(runManifestPath), sha256: await sha256File(runManifestPath) },
+    track: metadata.track,
+    condition: request.treatment.id,
+    model: { id: request.agent.model, parameters: { provider_version: request.agent.version, seed: request.execution.seed } },
+    started_at: startedAt,
+    cost: { duration_ms: Date.now() - Date.parse(startedAt) },
+    outcome: { automated_checks_passed: evaluator?.exitCode === 0 && !evaluator.timedOut, blind_review: "pending", ...(diffPath ? { diff_path: repositoryRelative(diffPath) } : {}) }
+  };
+  await validateSchema("run-record.schema.json", record, "formal run record");
+  if (await pathExists(recordPath)) fail(`Run record already exists: ${relativePath(recordPath)}`);
+  await writeText(recordPath, `${JSON.stringify(record, null, 2)}\n`);
+  console.log(JSON.stringify({ run_id: request.run_id, status: record.outcome.automated_checks_passed ? "completed" : "failed", run_manifest: repositoryRelative(runManifestPath), record: repositoryRelative(recordPath) }));
+  process.exit(record.outcome.automated_checks_passed ? 0 : 1);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
