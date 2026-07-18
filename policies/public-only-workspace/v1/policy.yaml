@@ -1,0 +1,29 @@
+id: public-only-workspace
+version: v1
+agent_tools:
+  allow:
+    - read
+    - bash
+    - edit
+    - write
+    - grep
+    - find
+    - ls
+pi:
+  required_args:
+    - --print
+    - --no-session
+    - --no-extensions
+    - --no-skills
+    - --no-context-files
+  tools: read,bash,edit,write,grep,find,ls
+  task_prompt: '@task.md'
+  task_instruction: Implement the task. Edit only files under starter/ and leave task.md unchanged.
+filesystem:
+  working_directory: public-workspace
+  private_paths: denied
+  symlinks: denied
+network:
+  mode: api-only
+secrets:
+  mode: protected-environment

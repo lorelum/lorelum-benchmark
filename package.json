@@ -16,6 +16,10 @@
     "ajv": "^8.17.1"
   },
   "engines": {
-    "bun": ">=1.1.0"
+    "bun": ">=1.1.0",
+    "node": ">=22.19.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.80.10"
   }
 }

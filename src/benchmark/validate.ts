@@ -92,7 +92,7 @@ async function validateVersionedManifests(path: string, manifestName: string, sc
 }
 
 const suitesPath = joinPath(workspaceRoot, "suites");
-for (const schema of ["suite.schema.json", "task-card.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json"]) {
+for (const schema of ["suite.schema.json", "task-card.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
   await requirePath(joinPath(workspaceRoot, "schemas", schema));
 }
 
@@ -182,10 +182,16 @@ for (const suite of await listDirectories(suitesPath)) {
   }
 }
 
+const experimentsPath = joinPath(workspaceRoot, "experiments");
+await requirePath(experimentsPath);
+for (const file of await listFiles(experimentsPath)) {
+  if (file.endsWith(".yaml")) await validateYaml(joinPath(experimentsPath, file), "experiment-plan.schema.json");
+}
+
 await validateVersionedManifests(joinPath(workspaceRoot, "treatments"), "treatment.yaml", "treatment.schema.json", "Treatment");
 await validateVersionedManifests(joinPath(workspaceRoot, "environments"), "environment.yaml", "environment.schema.json", "Environment");
 
-for (const path of [joinPath(workspaceRoot, "schemas"), suitesPath, joinPath(workspaceRoot, "treatments"), joinPath(workspaceRoot, "environments"), joinPath(workspaceRoot, "src")]) await findNodeModules(path);
+for (const path of [joinPath(workspaceRoot, "schemas"), suitesPath, joinPath(workspaceRoot, "treatments"), joinPath(workspaceRoot, "environments"), experimentsPath, joinPath(workspaceRoot, "src")]) await findNodeModules(path);
 
 if (failures.length > 0) {
   console.error("Workspace validation failed:");
