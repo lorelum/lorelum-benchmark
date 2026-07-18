@@ -230,8 +230,8 @@ test("injects only the pinned Vercel skill for the G1 treatment", async () => {
 
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toContain("--skill");
-  expect(result.stdout).toContain("treatments");
-  expect(result.stdout).toContain("SKILL.md");
+  expect(result.stdout).toContain("/lorelum/treatment/SKILL.md");
+  expect(result.stdout).not.toContain("treatments/");
 });
 
 test("rejects Pi arguments outside the pinned public-only policy", async () => {

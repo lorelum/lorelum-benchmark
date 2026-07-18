@@ -31,6 +31,8 @@ bun run pi:coordinate -- scratch/requests/<run-id>.json
 
 正式运行要求 `LORELUM_ARTIFACT_STORAGE_URI` 与 environment 中的 S3 URI 完全一致。coordinator 会先将输出、评测日志、diff、环境与 Pi manifest 上传到启用 Object Lock 的版本化 S3 对象，再写入引用带 `versionId` URI 的 run manifest 和 record；任一上传或锁定验证失败都不会创建 record。
 
-`formal-g0-g1` 的真实 smoke job 只能调度到带 `lorelum-formal-sandbox` 标签的自托管 GitHub Actions runner。该 runner 必须在服务环境中设置 `LORELUM_SANDBOX_ENFORCED=1`，并以容器或等价的 OS 隔离只暴露 `.run-workspaces/<run-id>/` 给 Pi；普通 GitHub-hosted runner 只能执行 preflight。
+`formal-g0-g1` 的真实 smoke job 只能调度到带 `lorelum-formal-sandbox` 标签的 Linux 自托管 GitHub Actions runner。Pi 在 digest 固定的 Docker image 中运行：容器只获得 public workspace 的可写挂载；G1 额外获得校验后 Skill 的只读挂载；宿主 checkout、`.git`、private、AWS 凭据与 GitHub token 均不进入容器。容器使用只读根文件系统、无 capabilities、`no-new-privileges`、PID/内存限制。
+
+runner 必须创建内部网络 `lorelum-formal-egress`。Pi 只连接此网络；allowlist proxy 同时连接该内部网络和上游网络，并仅允许 `api.deepseek.com:443` 的 CONNECT 请求。Pi `0.80.10` 读取 `HTTP_PROXY`/`HTTPS_PROXY`，adapter 只向容器传递该 proxy 和 `DEEPSEEK_API_KEY`。`bun run test:sandbox` 会验证 image digest、版本、挂载、凭据不可见、非允许出口不可达及 DeepSeek 端点经 proxy 可达；未通过时 workflow 不会运行 Pi 或写 record。
 
 `pi/v1` 保留为历史兼容入口：`bun run pi:v1 -- <request> [--dry-run]`。新运行不得使用它。

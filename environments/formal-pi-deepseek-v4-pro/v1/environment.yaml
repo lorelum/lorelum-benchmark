@@ -15,6 +15,16 @@ sandbox:
   enforcement: protected-runner-required
   network: api-only
   secrets: protected-environment
+  container:
+    runtime: docker
+    image: ghcr.io/lorelum/lorelum-benchmark/formal-pi@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    network: lorelum-formal-egress
+    proxy_url: http://lorelum-egress-proxy:3128
+    allowed_endpoint: api.deepseek.com:443
+    workspace_path: /workspace
+    skill_path: /lorelum/treatment/SKILL.md
+    pids_limit: 256
+    memory_limit: 2g
 dependencies:
   package: '@earendil-works/pi-coding-agent@0.80.10'
   manifest: package.json
