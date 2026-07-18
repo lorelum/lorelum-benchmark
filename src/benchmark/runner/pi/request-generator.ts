@@ -8,6 +8,7 @@ type PlanCondition = { id: string; treatment: string };
 
 type ExperimentPlan = {
   id: string;
+  run_kind: "smoke" | "official";
   source_commit: string;
   suite: { id: string; version: string };
   conditions: PlanCondition[];
@@ -15,7 +16,7 @@ type ExperimentPlan = {
   full_tasks: string[];
   environment: { id: string; version: string };
   agent: { id: string; version: string; command: string };
-  model: { id: string };
+  model: { id: string; version: string };
   repetitions: number;
   seed: number;
   budget: PiRunRequestV2["execution"]["budget"];
@@ -73,7 +74,7 @@ function parseArguments(): { planPath: string; outputPath?: string; smoke: boole
   return { planPath: resolve(workspaceRoot, planPath), outputPath: outputPath ? resolve(workspaceRoot, outputPath) : undefined, smoke, dryRun };
 }
 
-async function requestFor(plan: ExperimentPlan, policy: PiPolicy, systemPrompt: string, taskId: string, condition: PlanCondition, repeat: number): Promise<PiRunRequestV2> {
+async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPolicy, systemPrompt: string, taskId: string, condition: PlanCondition, repeat: number): Promise<PiRunRequestV2> {
   const revisionMatch = /-v([1-9][0-9]*)$/.exec(taskId);
   if (!revisionMatch) fail(`Task id must end in -v<number>: ${taskId}`);
   const revision = `v${revisionMatch[1]}`;
@@ -91,10 +92,13 @@ async function requestFor(plan: ExperimentPlan, policy: PiPolicy, systemPrompt: 
   const [treatmentId, treatmentVersion] = condition.treatment.split("/");
   if (!treatmentId || !treatmentVersion) fail(`Invalid treatment reference: ${condition.treatment}`);
   const repeatId = String(repeat).padStart(3, "0");
-  const runId = `${plan.suite.id}-${taskId}-${condition.id}-${repeatId}`;
+  const runId = `${plan.id}-${taskId}-${condition.id}-${repeatId}`;
   return {
     schema_version: "pi-run/v2",
     run_id: runId,
+    experiment_id: plan.id,
+    experiment_plan_hash: planHash,
+    run_kind: plan.run_kind,
     source_commit: plan.source_commit,
     candidate_path: `starter/${candidateFile.replaceAll("\\", "/")}`,
     suite: plan.suite,
@@ -102,7 +106,7 @@ async function requestFor(plan: ExperimentPlan, policy: PiPolicy, systemPrompt: 
     treatment: { id: treatmentId, version: treatmentVersion },
     environment: plan.environment,
     scorer: { id: slug, version: revision },
-    agent: { id: plan.agent.id, version: plan.agent.version, model: plan.model.id, system_prompt_hash: plan.system_prompt_hash },
+    agent: { id: plan.agent.id, version: plan.agent.version, model: plan.model.id, model_version: plan.model.version, system_prompt_hash: plan.system_prompt_hash },
     execution: {
       command: plan.agent.command,
       args: ["--model", plan.model.id, "--system-prompt", systemPrompt, ...policy.required_args, "--tools", policy.tools, policy.task_prompt, policy.task_instruction],
@@ -118,6 +122,7 @@ async function requestFor(plan: ExperimentPlan, policy: PiPolicy, systemPrompt: 
 async function main(): Promise<void> {
   const { planPath, outputPath, smoke, dryRun } = parseArguments();
   const plan = asPlan(Bun.YAML.parse(await Bun.file(planPath).text()));
+  const planHash = await sha256File(planPath);
   if (!(await sourceCommitIsAncestor(plan.source_commit))) fail(`Experiment plan source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
   const systemPromptPath = resolve(workspaceRoot, plan.system_prompt_path);
   const systemPrompt = await Bun.file(systemPromptPath).text();
@@ -132,7 +137,7 @@ async function main(): Promise<void> {
   const requests: PiRunRequestV2[] = [];
   for (const taskId of taskIds) {
     for (const condition of plan.conditions) {
-      for (let repeat = 1; repeat <= plan.repetitions; repeat += 1) requests.push(await requestFor(plan, policy, systemPrompt, taskId, condition, repeat));
+      for (let repeat = 1; repeat <= plan.repetitions; repeat += 1) requests.push(await requestFor(plan, planHash, policy, systemPrompt, taskId, condition, repeat));
     }
   }
   if (dryRun) {

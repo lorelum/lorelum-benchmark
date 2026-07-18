@@ -177,6 +177,7 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
     fail(`Requested agent runtime does not match ${relativePath(environmentPath)}`);
   }
   if (model.id !== request.agent.model) fail(`Requested model does not match ${relativePath(environmentPath)}`);
+  if (model.version !== request.agent.model_version) fail(`Requested model version does not match ${relativePath(environmentPath)}`);
   if (sandbox.policy_hash !== request.execution.tool_policy_hash) {
     fail(`Environment sandbox policy does not match request: ${relativePath(environmentPath)}`);
   }
@@ -298,6 +299,10 @@ async function verifyRuntime(environment: Record<string, unknown>, request: PiRu
   if (actualVersion !== agentRuntime.version) fail(`Pi version does not match environment: expected ${agentRuntime.version}, received ${actualVersion}`);
 }
 
+function hasResolvedModelVersion(version: unknown): boolean {
+  return typeof version === "string" && !/^(pending|pinned|operator)-/.test(version);
+}
+
 if (!requestPath) {
   console.error("Usage: bun run pi -- <pi-run-request-v2.json> [--dry-run]");
   process.exit(1);
@@ -329,6 +334,9 @@ try {
     process.exit(0);
   }
 
+  if (request.environment.id === "formal-pi-deepseek-v4-pro" && !hasResolvedModelVersion(request.agent.model_version)) {
+    fail("Formal Pi execution requires an immutable provider model snapshot ID");
+  }
   await verifyRuntime(contracts.environment, request);
   await ensureCleanFormalWorktree(contracts.environment);
   const sandbox = contracts.environment.sandbox;
@@ -339,6 +347,9 @@ try {
   const manifest: PiRunArtifactManifestV2 = {
     schema_version: "pi-run-artifact/v2",
     run_id: request.run_id,
+    experiment_id: request.experiment_id,
+    experiment_plan_hash: request.experiment_plan_hash,
+    run_kind: request.run_kind,
     source_commit: request.source_commit,
     adapter_commit: adapterCommit,
     candidate_path: request.candidate_path,

@@ -1,6 +1,9 @@
 export type PiRunRequestV2 = {
   schema_version: "pi-run/v2";
   run_id: string;
+  experiment_id: string;
+  experiment_plan_hash: string;
+  run_kind: "smoke" | "official";
   source_commit: string;
   candidate_path: string;
   suite: { id: string; version: string };
@@ -8,7 +11,7 @@ export type PiRunRequestV2 = {
   treatment: { id: string; version: string };
   environment: { id: string; version: string };
   scorer: { id: string; version: string };
-  agent: { id: string; version: string; model: string; system_prompt_hash: string };
+  agent: { id: string; version: string; model: string; model_version: string; system_prompt_hash: string };
   execution: {
     command: string;
     args: string[];
@@ -23,6 +26,9 @@ export type PiRunRequestV2 = {
 export type PiRunArtifactManifestV2 = {
   schema_version: "pi-run-artifact/v2";
   run_id: string;
+  experiment_id: string;
+  experiment_plan_hash: string;
+  run_kind: "smoke" | "official";
   source_commit: string;
   adapter_commit: string;
   candidate_path: string;

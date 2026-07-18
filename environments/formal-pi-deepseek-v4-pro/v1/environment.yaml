@@ -8,7 +8,7 @@ agent_runtime:
   command: pi
 model:
   id: deepseek/deepseek-v4-pro
-  version: pinned-by-provider
+  version: pending-provider-snapshot
 sandbox:
   policy_path: policies/public-only-workspace/v1/policy.yaml
   policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
@@ -21,6 +21,6 @@ dependencies:
   lockfile: bun.lock
   lockfile_sha256: 34e58d71f683c849bd04ac4ada22aeb01dd9ceaa5780e0c4b8160a98c65713e8
 artifact_storage:
-  uri: protected://lorelum-benchmark/runs
+  uri: s3://required-bucket/lorelum-benchmark/runs
   mode: immutable-after-upload
-  uploader: protected-environment-required
+  uploader: s3-object-lock
