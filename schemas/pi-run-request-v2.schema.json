@@ -2,10 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Lorelum Pi run request v2",
   "type": "object",
-  "required": ["schema_version", "run_id", "suite", "task", "treatment", "environment", "scorer", "agent", "execution", "inputs", "artifacts"],
+  "required": ["schema_version", "run_id", "source_commit", "candidate_path", "suite", "task", "treatment", "environment", "scorer", "agent", "execution", "inputs", "artifacts"],
   "properties": {
     "schema_version": { "const": "pi-run/v2" },
     "run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "candidate_path": { "type": "string", "minLength": 1 },
     "suite": {
       "type": "object",
       "required": ["id", "version"],

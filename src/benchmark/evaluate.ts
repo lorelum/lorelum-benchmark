@@ -14,7 +14,7 @@ if (!task || !(await pathExists(evaluatorPath))) {
   process.exit(1);
 }
 
-const snapshotCheck = Bun.spawn(["bun", "run", "src/benchmark/snapshot.ts", suite, taskReference], {
+const snapshotCheck = Bun.spawn([process.execPath, "run", "src/benchmark/snapshot.ts", suite, taskReference], {
   cwd: workspaceRoot,
   env: Bun.env,
   stdin: "inherit",
@@ -23,7 +23,7 @@ const snapshotCheck = Bun.spawn(["bun", "run", "src/benchmark/snapshot.ts", suit
 });
 if ((await snapshotCheck.exited) !== 0) process.exit(1);
 
-const evaluator = Bun.spawn(["bun", "test", evaluatorPath], {
+const evaluator = Bun.spawn([process.execPath, "test", evaluatorPath], {
   cwd: workspaceRoot,
   env: Bun.env,
   stdin: "inherit",

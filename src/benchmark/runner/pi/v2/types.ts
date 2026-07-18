@@ -1,6 +1,8 @@
 export type PiRunRequestV2 = {
   schema_version: "pi-run/v2";
   run_id: string;
+  source_commit: string;
+  candidate_path: string;
   suite: { id: string; version: string };
   task: { id: string; revision: string; snapshot_id: string };
   treatment: { id: string; version: string };
@@ -22,6 +24,8 @@ export type PiRunArtifactManifestV2 = {
   schema_version: "pi-run-artifact/v2";
   run_id: string;
   source_commit: string;
+  adapter_commit: string;
+  candidate_path: string;
   suite: PiRunRequestV2["suite"];
   task: PiRunRequestV2["task"];
   treatment: PiRunRequestV2["treatment"] & { manifest_path: string };
