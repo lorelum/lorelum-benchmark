@@ -12,6 +12,7 @@ model:
 sandbox:
   policy_path: policies/public-only-workspace/v1/policy.yaml
   policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+  enforcement: protected-runner-required
   network: api-only
   secrets: protected-environment
 dependencies:

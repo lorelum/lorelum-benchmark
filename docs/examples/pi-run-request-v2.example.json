@@ -1,6 +1,8 @@
 {
   "schema_version": "pi-run/v2",
   "run_id": "local-async-dashboard-v2",
+  "source_commit": "073d466b01c1edf12e8d0330ace6110950c3df9c",
+  "candidate_path": "starter/src/workspace-overview.ts",
   "suite": { "id": "react-skill-comparison", "version": "0.1.0" },
   "task": {
     "id": "async-dashboard-v1",

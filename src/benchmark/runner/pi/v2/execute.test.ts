@@ -7,6 +7,8 @@ const root = process.cwd();
 const emptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 const formalToolPolicyHash = "095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2";
 const snapshotId = "2a8c08b6765ace825185b5b252974427cf38dcade88ccd21a964f02436322c10";
+const sourceCommit = (await new Response(Bun.spawn(["git", "rev-parse", "HEAD"], { cwd: root, stdout: "pipe" }).stdout).text()).trim();
+const formalSystemPrompt = await Bun.file(join(root, "prompts", "formal-pi", "v1", "system.md")).text();
 const cleanupPaths = new Set<string>();
 
 afterEach(async () => {
@@ -22,6 +24,8 @@ function request(id: string, environmentId: string): Record<string, unknown> {
   return {
     schema_version: "pi-run/v2",
     run_id: id,
+    source_commit: sourceCommit,
+    candidate_path: "starter/src/workspace-overview.ts",
     suite: { id: "react-skill-comparison", version: "0.2.0" },
     task: { id: "workspace-overview-loader-v1", revision: "v1", snapshot_id: snapshotId },
     treatment: { id: "baseline", version: "v1" },
@@ -58,6 +62,30 @@ async function writeEnvironment(id: string): Promise<void> {
     `  policy_hash: ${formalToolPolicyHash}`,
     ""
   ].join("\n"));
+}
+
+async function writePinnedPiEnvironment(id: string): Promise<void> {
+  const environmentPath = join(root, "environments", id, "v1");
+  cleanupPaths.add(join(root, "environments", id));
+  await mkdir(environmentPath, { recursive: true });
+  await Bun.write(join(environmentPath, "environment.yaml"), [
+    `id: ${id}`,
+    "version: v1",
+    'bun: ">=1.3.0"',
+    "agent_runtime:",
+    "  id: pi",
+    "  version: 0.80.10",
+    "  command: pi",
+    "model:",
+    "  id: deepseek/deepseek-v4-pro",
+    "sandbox:",
+    `  policy_hash: ${formalToolPolicyHash}`,
+    ""
+  ].join("\n"));
+}
+
+function formalPiArgs(): string[] {
+  return ["--model", "deepseek/deepseek-v4-pro", "--system-prompt", formalSystemPrompt, "--print", "--no-session", "--no-extensions", "--no-skills", "--no-context-files", "--tools", "read,bash,edit,write,grep,find,ls", "@task.md", "Implement the task. Edit only files under starter/ and leave task.md unchanged."];
 }
 
 async function execute(requestDocument: Record<string, unknown>, dryRun = false): Promise<{ exitCode: number; stdout: string; stderr: string }> {
@@ -137,6 +165,67 @@ test("rejects artifact names that escape the adapter-managed directory", async (
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain("must match pattern");
 });
+
+test("injects only the pinned Vercel skill for the G1 treatment", async () => {
+  const document = request(runId(), "formal-pi-deepseek-v4-pro");
+  document.treatment = { id: "vercel-skill", version: "v1" };
+  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", system_prompt_hash: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
+  document.inputs = { task_prompt: "959b878c8f62ef4e0631a35b8871307d6872122647ecf1b9fde55292ecbd9989", system_prompt: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
+  document.execution = {
+    command: "pi",
+    args: formalPiArgs(),
+    seed: 1,
+    budget: { max_turns: 1, max_duration_ms: 1000 },
+    tool_policy_hash: formalToolPolicyHash
+  };
+
+  const result = await execute(document, true);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout).toContain("--skill");
+  expect(result.stdout).toContain("treatments");
+  expect(result.stdout).toContain("SKILL.md");
+});
+
+test("rejects Pi arguments outside the pinned public-only policy", async () => {
+  const document = request(runId(), "formal-pi-deepseek-v4-pro");
+  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", system_prompt_hash: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
+  document.inputs = { task_prompt: "959b878c8f62ef4e0631a35b8871307d6872122647ecf1b9fde55292ecbd9989", system_prompt: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
+  document.execution = {
+    command: "pi",
+    args: [...formalPiArgs(), "--append-system-prompt", "untracked input"],
+    seed: 1,
+    budget: { max_turns: 1, max_duration_ms: 1000 },
+    tool_policy_hash: formalToolPolicyHash
+  };
+
+  const result = await execute(document, true);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("Pi arguments do not match the public-only policy");
+});
+
+test("verifies the pinned Pi runtime before a formal execution", async () => {
+  const id = runId();
+  const environmentId = runId();
+  await writePinnedPiEnvironment(environmentId);
+  cleanupPaths.add(join(root, ".run-workspaces", id));
+  cleanupPaths.add(join(root, "artifacts", "runs", id));
+  const document = request(id, environmentId);
+  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", system_prompt_hash: emptyHash };
+  document.execution = {
+    command: "pi",
+    args: ["--version"],
+    seed: 1,
+    budget: { max_turns: 1, max_duration_ms: 15000 },
+    tool_policy_hash: formalToolPolicyHash
+  };
+
+  const result = await execute(document);
+
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout).toContain("0.80.10");
+}, 15_000);
 
 test("rejects a run identifier that already has workspace artifacts", async () => {
   const id = runId();

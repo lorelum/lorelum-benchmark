@@ -2,7 +2,7 @@ import Ajv2020 from "ajv/dist/2020";
 import type { ErrorObject, ValidateFunction } from "ajv";
 import { lstat, mkdir, readdir } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { joinPath, pathExists, relativePath, sha256File, workspaceRoot } from "../../../fs";
+import { joinPath, pathExists, relativePath, sha256File, sha256Text, workspaceRoot } from "../../../fs";
 import { findTask } from "../../../task-discovery";
 import type { PiRunArtifactManifestV2, PiRunRequestV2, PiRunResultV2 } from "./types";
 
@@ -92,7 +92,23 @@ async function verifySnapshot(suite: string, reference: string, expectedSnapshot
   }
 }
 
-async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: string; treatmentPath: string; environmentPath: string }> {
+async function verifyPiArguments(request: PiRunRequestV2, policy: Record<string, unknown>): Promise<void> {
+  const pi = policy.pi;
+  if (!isRecord(pi) || !Array.isArray(pi.required_args) || !pi.required_args.every((value) => typeof value === "string") || typeof pi.tools !== "string" || typeof pi.task_prompt !== "string" || typeof pi.task_instruction !== "string") {
+    fail("Sandbox policy must define Pi argument constraints");
+  }
+  const args = request.execution.args;
+  const systemPrompt = args[3];
+  if (typeof systemPrompt !== "string" || (await sha256Text(systemPrompt)) !== request.agent.system_prompt_hash || request.inputs.system_prompt !== request.agent.system_prompt_hash) {
+    fail("Pi system prompt does not match the request hash");
+  }
+  const expected = ["--model", request.agent.model, "--system-prompt", systemPrompt, ...pi.required_args, "--tools", pi.tools, pi.task_prompt, pi.task_instruction];
+  if (args.length !== expected.length || args.some((value, index) => value !== expected[index])) {
+    fail("Pi arguments do not match the public-only policy");
+  }
+}
+
+async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: string; treatmentPath: string; treatment: Record<string, unknown>; treatmentSkillPath?: string; environmentPath: string; environment: Record<string, unknown> }> {
   const suitePath = repositoryPath("suites", request.suite.id);
   const suiteManifestPath = joinPath(suitePath, "suite.yaml");
   await requireFile(suiteManifestPath, "suite manifest");
@@ -127,6 +143,24 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
   if (treatment.tool_policy_hash !== request.execution.tool_policy_hash) {
     fail(`Treatment tool_policy_hash does not match request: ${relativePath(treatmentPath)}`);
   }
+  let treatmentSkillPath: string | undefined;
+  if (treatment.kind === "baseline" && treatment.injection !== undefined) fail(`Baseline treatment must not define injection: ${relativePath(treatmentPath)}`);
+  if (treatment.kind === "skill") {
+    if (!isRecord(treatment.injection) || treatment.injection.mode !== "pi-skill" || typeof treatment.injection.skill_path !== "string" || typeof treatment.injection.skill_hash !== "string") {
+      fail(`Skill treatment must define a pinned pi-skill injection: ${relativePath(treatmentPath)}`);
+    }
+    treatmentSkillPath = resolve(dirname(treatmentPath), treatment.injection.skill_path);
+    const skillRelative = relative(dirname(treatmentPath), treatmentSkillPath);
+    if (!skillRelative || skillRelative.startsWith("..") || isAbsolute(skillRelative)) {
+      fail(`Treatment skill_path escapes treatment directory: ${relativePath(treatmentPath)}`);
+    }
+    await requireFile(treatmentSkillPath, "treatment skill");
+    const skillHash = await sha256File(treatmentSkillPath);
+    if (skillHash !== treatment.injection.skill_hash) fail(`Treatment skill_hash does not match skill file: ${relativePath(treatmentSkillPath)}`);
+    if (!isRecord(treatment.source) || treatment.source.skill_md_sha256 !== skillHash) {
+      fail(`Treatment source hash does not match skill file: ${relativePath(treatmentPath)}`);
+    }
+  }
 
   const environmentPath = manifestPath("environments", request.environment.id, request.environment.version, "environment.yaml");
   await requireFile(environmentPath, "environment manifest");
@@ -146,8 +180,20 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
   if (sandbox.policy_hash !== request.execution.tool_policy_hash) {
     fail(`Environment sandbox policy does not match request: ${relativePath(environmentPath)}`);
   }
+  if (typeof sandbox.policy_path === "string") {
+    const policyPath = repositoryPath(sandbox.policy_path);
+    await requireFile(policyPath, "sandbox policy");
+    if ((await sha256File(policyPath)) !== sandbox.policy_hash) fail(`Environment sandbox policy hash does not match ${relativePath(policyPath)}`);
+    if (agentRuntime.id === "pi") await verifyPiArguments(request, await readYaml(policyPath));
+  }
+  const dependencies = environment.dependencies;
+  if (isRecord(dependencies) && typeof dependencies.lockfile === "string" && typeof dependencies.lockfile_sha256 === "string") {
+    const lockfilePath = repositoryPath(dependencies.lockfile);
+    await requireFile(lockfilePath, "environment lockfile");
+    if ((await sha256File(lockfilePath)) !== dependencies.lockfile_sha256) fail(`Environment lockfile hash does not match: ${relativePath(lockfilePath)}`);
+  }
 
-  return { taskPath: task.path, treatmentPath, environmentPath };
+  return { taskPath: task.path, treatmentPath, treatment, treatmentSkillPath, environmentPath, environment };
 }
 
 async function copyFile(source: string, destination: string): Promise<void> {
@@ -206,6 +252,52 @@ async function sourceCommit(): Promise<string> {
   return (await new Response(revision.stdout).text()).trim();
 }
 
+async function sourceCommitIsAncestor(commit: string): Promise<boolean> {
+  const check = Bun.spawn(["git", "merge-base", "--is-ancestor", commit, "HEAD"], { cwd: workspaceRoot, stdout: "ignore", stderr: "ignore" });
+  return (await check.exited) === 0;
+}
+
+async function ensureCleanFormalWorktree(environment: Record<string, unknown>): Promise<void> {
+  const sandbox = environment.sandbox;
+  if (!isRecord(sandbox) || typeof sandbox.policy_path !== "string") return;
+  const status = Bun.spawn(["git", "status", "--porcelain"], { cwd: workspaceRoot, stdout: "pipe", stderr: "pipe" });
+  if ((await status.exited) !== 0) fail(`Unable to inspect Git worktree: ${(await new Response(status.stderr).text()).trim()}`);
+  if ((await new Response(status.stdout).text()).trim()) fail("Formal Pi execution requires a clean Git worktree");
+}
+
+async function descendantPids(pid: number): Promise<number[]> {
+  const children = Bun.spawn(["pgrep", "-P", String(pid)], { stdout: "pipe", stderr: "ignore" });
+  if ((await children.exited) !== 0) return [];
+  const output = await new Response(children.stdout).text();
+  const direct = output.split(/\s+/).filter(Boolean).map(Number).filter(Number.isInteger);
+  const nested = await Promise.all(direct.map((child) => descendantPids(child)));
+  return [...direct, ...nested.flat()];
+}
+
+async function terminateProcessTree(pid: number): Promise<void> {
+  if (process.platform === "win32") {
+    const killer = Bun.spawn(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
+    await killer.exited;
+    return;
+  }
+  for (const childPid of (await descendantPids(pid)).reverse()) {
+    try { process.kill(childPid, "SIGTERM"); } catch { }
+  }
+  try { process.kill(pid, "SIGTERM"); } catch { }
+}
+
+async function verifyRuntime(environment: Record<string, unknown>, request: PiRunRequestV2): Promise<void> {
+  if (typeof environment.bun === "string" && /^\d+\.\d+\.\d+$/.test(environment.bun) && environment.bun !== Bun.version) {
+    fail(`Bun version does not match environment: expected ${environment.bun}, received ${Bun.version}`);
+  }
+  const agentRuntime = environment.agent_runtime;
+  if (!isRecord(agentRuntime) || agentRuntime.id !== "pi" || typeof agentRuntime.version !== "string") return;
+  const versionCheck = Bun.spawn([request.execution.command, "--version"], { cwd: workspaceRoot, env: Bun.env, stdout: "pipe", stderr: "pipe" });
+  if ((await versionCheck.exited) !== 0) fail(`Unable to resolve Pi version: ${(await new Response(versionCheck.stderr).text()).trim()}`);
+  const actualVersion = (await new Response(versionCheck.stdout).text()).trim();
+  if (actualVersion !== agentRuntime.version) fail(`Pi version does not match environment: expected ${agentRuntime.version}, received ${actualVersion}`);
+}
+
 if (!requestPath) {
   console.error("Usage: bun run pi -- <pi-run-request-v2.json> [--dry-run]");
   process.exit(1);
@@ -215,54 +307,80 @@ try {
   const requestDocument = await readJson(requestPath);
   await validateSchema("pi-run-request-v2.schema.json", requestDocument, "Pi run request");
   const request = requestDocument as PiRunRequestV2;
+  const adapterCommit = await sourceCommit();
+  if (!(await sourceCommitIsAncestor(request.source_commit))) fail(`Request source_commit is not an ancestor of HEAD: ${request.source_commit}`);
   const contracts = await verifyContracts(request);
   const workspacePath = repositoryPath(".run-workspaces", request.run_id);
   const artifactPath = repositoryPath("artifacts", "runs", request.run_id);
   const artifactManifestPath = joinPath(artifactPath, request.artifacts.manifest_name);
+  const candidatePath = resolve(workspacePath, request.candidate_path);
+  const candidateRelative = relative(resolve(workspacePath), candidatePath);
+  if (!candidateRelative || candidateRelative.startsWith("..") || isAbsolute(candidateRelative)) fail(`Candidate path must stay inside the workspace: ${request.candidate_path}`);
+  const effectiveExecution = {
+    ...request.execution,
+    args: contracts.treatmentSkillPath ? [...request.execution.args, "--skill", contracts.treatmentSkillPath] : request.execution.args
+  };
   if (await pathExists(workspacePath) || await pathExists(artifactPath)) {
     fail(`Run id already has a workspace or artifacts: ${request.run_id}`);
   }
 
   if (dryRun) {
-    console.log(JSON.stringify({ run_id: request.run_id, command: request.execution.command, args: request.execution.args, cwd: repositoryRelative(workspacePath), artifact_manifest: repositoryRelative(artifactManifestPath) }, null, 2));
+    console.log(JSON.stringify({ run_id: request.run_id, command: effectiveExecution.command, args: effectiveExecution.args, cwd: repositoryRelative(workspacePath), artifact_manifest: repositoryRelative(artifactManifestPath) }, null, 2));
     process.exit(0);
   }
 
+  await verifyRuntime(contracts.environment, request);
+  await ensureCleanFormalWorktree(contracts.environment);
+  const sandbox = contracts.environment.sandbox;
+  if (isRecord(sandbox) && typeof sandbox.policy_path === "string" && (sandbox.enforcement !== "protected-runner-required" || Bun.env.LORELUM_SANDBOX_ENFORCED !== "1")) {
+    fail("Formal Pi execution requires the protected sandbox runner");
+  }
   const workspace = await createWorkspace(request.run_id, contracts.taskPath);
   const manifest: PiRunArtifactManifestV2 = {
     schema_version: "pi-run-artifact/v2",
     run_id: request.run_id,
-    source_commit: await sourceCommit(),
+    source_commit: request.source_commit,
+    adapter_commit: adapterCommit,
+    candidate_path: request.candidate_path,
     suite: request.suite,
     task: request.task,
     treatment: { ...request.treatment, manifest_path: repositoryRelative(contracts.treatmentPath) },
     environment: { ...request.environment, manifest_path: repositoryRelative(contracts.environmentPath) },
     scorer: request.scorer,
     agent: request.agent,
-    execution: { ...request.execution, cwd: "." },
+    execution: { ...effectiveExecution, cwd: "." },
     inputs: request.inputs,
     workspace: { path: repositoryRelative(workspace.path), task_md_sha256: workspace.taskMdSha256, starter_files: workspace.starterFiles },
     status: "prepared",
+    timed_out: false,
     exit_code: null,
     completed_at: null
   };
   await writeArtifactManifest(artifactManifestPath, manifest);
 
   let exitCode: number | null = null;
+  let timedOut = false;
   try {
-    const child = Bun.spawn([request.execution.command, ...request.execution.args], {
+    const executionEnv = { ...Bun.env, CANDIDATE_PATH: candidatePath, LORELUM_RUN_ID: request.run_id };
+    const child = Bun.spawn([effectiveExecution.command, ...effectiveExecution.args], {
       cwd: workspace.path,
-      env: Bun.env,
+      env: executionEnv,
       stdin: "inherit",
       stdout: "inherit",
       stderr: "inherit"
     });
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      void terminateProcessTree(child.pid).finally(() => child.kill());
+    }, request.execution.budget.max_duration_ms);
     exitCode = await child.exited;
+    clearTimeout(timeout);
   } catch (error) {
     console.error(`Pi command failed to start: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  manifest.status = exitCode === 0 ? "completed" : "failed";
+  manifest.status = exitCode === 0 && !timedOut ? "completed" : "failed";
+  manifest.timed_out = timedOut;
   manifest.exit_code = exitCode;
   manifest.completed_at = new Date().toISOString();
   await writeArtifactManifest(artifactManifestPath, manifest);
