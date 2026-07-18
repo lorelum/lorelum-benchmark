@@ -69,4 +69,6 @@ bun run evaluate -- react-skill-comparison issue-workbench-model/v1
 
 Pi 是执行 benchmark 任务的自动化 runner。正式 G0/G1 使用固定的 Pi `0.80.10`、环境、
 system prompt 与 Vercel Skill treatment；`pi:requests` 生成请求，`pi:coordinate` 运行并生成
-可追溯 record。详见 `docs/PI_RUNNER.md`。
+可追溯 record。受保护的 `formal-g0-g1` GitHub Environment 必须提供模型快照、S3 Object Lock 与运行密钥；在此之前只能执行 smoke dry-run。详见 `docs/PI_RUNNER.md`。
+
+正式 smoke 的运行者配置与人工复核步骤见 `docs/FORMAL_SMOKE.md`。

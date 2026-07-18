@@ -1,6 +1,6 @@
-id: react-skill-comparison-g0-g1-v1
+id: react-skill-comparison-g0-g1-smoke-v1
 version: v1
-run_kind: official
+run_kind: smoke
 source_commit: 073d466b01c1edf12e8d0330ace6110950c3df9c
 suite:
   id: react-skill-comparison
@@ -18,8 +18,6 @@ smoke_tasks:
 full_tasks:
   - workspace-overview-loader-v1
   - issue-workbench-model-v1
-  - notification-preference-store-v1
-  - order-route-loader-v1
 environment:
   id: formal-pi-deepseek-v4-pro
   version: v1
@@ -30,7 +28,7 @@ agent:
 model:
   id: deepseek/deepseek-v4-pro
   version: pending-provider-snapshot
-repetitions: 3
+repetitions: 1
 seed: 1
 budget:
   max_turns: 20
@@ -39,8 +37,5 @@ system_prompt_path: prompts/formal-pi/v1/system.md
 system_prompt_hash: a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a
 tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
 analysis:
-  strata:
-    - direct
-    - partial
+  excluded_from_official_conclusion: true
   paired_conditions_only: true
-  blind_review_after_batch: true

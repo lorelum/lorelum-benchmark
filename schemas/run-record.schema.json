@@ -4,6 +4,11 @@
   "type": "object",
   "required": [
     "run_id",
+    "experiment_id",
+    "experiment_plan_hash",
+    "run_kind",
+    "condition_id",
+    "repeat",
     "suite_version",
     "task_id",
     "task_version",
@@ -23,6 +28,11 @@
   ],
   "properties": {
     "run_id": { "type": "string" },
+    "experiment_id": { "type": "string", "minLength": 1 },
+    "experiment_plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "run_kind": { "enum": ["smoke", "official"] },
+    "condition_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "repeat": { "type": "integer", "minimum": 1 },
     "suite_version": { "type": "string" },
     "task_id": { "type": "string" },
     "task_version": { "type": "integer", "minimum": 1 },
@@ -41,9 +51,10 @@
     },
     "model": {
       "type": "object",
-      "required": ["id"],
+      "required": ["id", "version"],
       "properties": {
         "id": { "type": "string" },
+        "version": { "type": "string", "minLength": 1 },
         "parameters": { "type": "object" }
       }
     },

@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { sha256File } from "../../../fs";
 
 const root = process.cwd();
 const emptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -9,6 +10,9 @@ const formalToolPolicyHash = "095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a
 const snapshotId = "2a8c08b6765ace825185b5b252974427cf38dcade88ccd21a964f02436322c10";
 const sourceCommit = (await new Response(Bun.spawn(["git", "rev-parse", "HEAD"], { cwd: root, stdout: "pipe" }).stdout).text()).trim();
 const formalSystemPrompt = await Bun.file(join(root, "prompts", "formal-pi", "v1", "system.md")).text();
+const formalPlanPath = join(root, "experiments", "react-skill-comparison", "g0-g1-smoke-v1.yaml");
+const formalPlanHash = await sha256File(formalPlanPath);
+const formalSourceCommit = "073d466b01c1edf12e8d0330ace6110950c3df9c";
 const cleanupPaths = new Set<string>();
 
 afterEach(async () => {
@@ -24,6 +28,11 @@ function request(id: string, environmentId: string): Record<string, unknown> {
   return {
     schema_version: "pi-run/v2",
     run_id: id,
+    experiment_id: "pi-v2-test",
+    experiment_plan_hash: emptyHash,
+    run_kind: "smoke",
+    condition_id: "baseline",
+    repeat: 1,
     source_commit: sourceCommit,
     candidate_path: "starter/src/workspace-overview.ts",
     suite: { id: "react-skill-comparison", version: "0.2.0" },
@@ -31,7 +40,7 @@ function request(id: string, environmentId: string): Record<string, unknown> {
     treatment: { id: "baseline", version: "v1" },
     environment: { id: environmentId, version: "v1" },
     scorer: { id: "workspace-overview-loader", version: "v1" },
-    agent: { id: "pi-test", version: "test-v1", model: "test-model", system_prompt_hash: emptyHash },
+    agent: { id: "pi-test", version: "test-v1", model: "test-model", model_version: "test-v1", system_prompt_hash: emptyHash },
     execution: {
       command: process.execPath,
       args: ["-e", 'if (!(await Bun.file("task.md").exists()) || !(await Bun.file("starter/src/workspace-overview.ts").exists()) || await Bun.file("private/oracle.yaml").exists()) process.exit(1);'],
@@ -44,11 +53,11 @@ function request(id: string, environmentId: string): Record<string, unknown> {
   };
 }
 
-async function writeEnvironment(id: string): Promise<void> {
+async function writeEnvironment(id: string, withArtifactStorage = false): Promise<void> {
   const environmentPath = join(root, "environments", id, "v1");
   cleanupPaths.add(join(root, "environments", id));
   await mkdir(environmentPath, { recursive: true });
-  await Bun.write(join(environmentPath, "environment.yaml"), [
+  const lines = [
     `id: ${id}`,
     "version: v1",
     'bun: ">=1.3.0"',
@@ -58,10 +67,18 @@ async function writeEnvironment(id: string): Promise<void> {
     `  command: ${JSON.stringify(process.execPath)}`,
     "model:",
     "  id: test-model",
+    "  version: test-v1",
     "sandbox:",
     `  policy_hash: ${formalToolPolicyHash}`,
+    ...(withArtifactStorage ? [
+      "artifact_storage:",
+      "  uri: s3://benchmark-artifacts/runs",
+      "  mode: immutable-after-upload",
+      "  uploader: s3-object-lock"
+    ] : []),
     ""
-  ].join("\n"));
+  ];
+  await Bun.write(join(environmentPath, "environment.yaml"), lines.join("\n"));
 }
 
 async function writePinnedPiEnvironment(id: string): Promise<void> {
@@ -78,6 +95,7 @@ async function writePinnedPiEnvironment(id: string): Promise<void> {
     "  command: pi",
     "model:",
     "  id: deepseek/deepseek-v4-pro",
+    "  version: pending-provider-snapshot",
     "sandbox:",
     `  policy_hash: ${formalToolPolicyHash}`,
     ""
@@ -86,6 +104,28 @@ async function writePinnedPiEnvironment(id: string): Promise<void> {
 
 function formalPiArgs(): string[] {
   return ["--model", "deepseek/deepseek-v4-pro", "--system-prompt", formalSystemPrompt, "--print", "--no-session", "--no-extensions", "--no-skills", "--no-context-files", "--tools", "read,bash,edit,write,grep,find,ls", "@task.md", "Implement the task. Edit only files under starter/ and leave task.md unchanged."];
+}
+
+function formalize(document: Record<string, unknown>, conditionId = "baseline"): void {
+  const treatment = conditionId === "vercel-skill" ? { id: "vercel-skill", version: "v1" } : { id: "baseline", version: "v1" };
+  document.run_id = `react-skill-comparison-g0-g1-smoke-v1-workspace-overview-loader-v1-${conditionId}-001`;
+  document.experiment_id = "react-skill-comparison-g0-g1-smoke-v1";
+  document.experiment_plan_hash = formalPlanHash;
+  document.run_kind = "smoke";
+  document.condition_id = conditionId;
+  document.repeat = 1;
+  document.source_commit = formalSourceCommit;
+  document.treatment = treatment;
+  document.environment = { id: "formal-pi-deepseek-v4-pro", version: "v1" };
+  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", model_version: "pending-provider-snapshot", system_prompt_hash: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
+  document.execution = {
+    command: "pi",
+    args: formalPiArgs(),
+    seed: 1,
+    budget: { max_turns: 20, max_duration_ms: 600000 },
+    tool_policy_hash: formalToolPolicyHash
+  };
+  document.inputs = { task_prompt: "959b878c8f62ef4e0631a35b8871307d6872122647ecf1b9fde55292ecbd9989", system_prompt: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
 }
 
 async function execute(requestDocument: Record<string, unknown>, dryRun = false): Promise<{ exitCode: number; stdout: string; stderr: string }> {
@@ -184,16 +224,7 @@ test("rejects artifact names that escape the adapter-managed directory", async (
 
 test("injects only the pinned Vercel skill for the G1 treatment", async () => {
   const document = request(runId(), "formal-pi-deepseek-v4-pro");
-  document.treatment = { id: "vercel-skill", version: "v1" };
-  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", system_prompt_hash: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
-  document.inputs = { task_prompt: "959b878c8f62ef4e0631a35b8871307d6872122647ecf1b9fde55292ecbd9989", system_prompt: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
-  document.execution = {
-    command: "pi",
-    args: formalPiArgs(),
-    seed: 1,
-    budget: { max_turns: 1, max_duration_ms: 1000 },
-    tool_policy_hash: formalToolPolicyHash
-  };
+  formalize(document, "vercel-skill");
 
   const result = await execute(document, true);
 
@@ -205,13 +236,12 @@ test("injects only the pinned Vercel skill for the G1 treatment", async () => {
 
 test("rejects Pi arguments outside the pinned public-only policy", async () => {
   const document = request(runId(), "formal-pi-deepseek-v4-pro");
-  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", system_prompt_hash: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
-  document.inputs = { task_prompt: "959b878c8f62ef4e0631a35b8871307d6872122647ecf1b9fde55292ecbd9989", system_prompt: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
+  formalize(document);
   document.execution = {
     command: "pi",
     args: [...formalPiArgs(), "--append-system-prompt", "untracked input"],
     seed: 1,
-    budget: { max_turns: 1, max_duration_ms: 1000 },
+    budget: { max_turns: 20, max_duration_ms: 600000 },
     tool_policy_hash: formalToolPolicyHash
   };
 
@@ -228,7 +258,7 @@ test("verifies the pinned Pi runtime before a formal execution", async () => {
   cleanupPaths.add(join(root, ".run-workspaces", id));
   cleanupPaths.add(join(root, "artifacts", "runs", id));
   const document = request(id, environmentId);
-  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", system_prompt_hash: emptyHash };
+  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", model_version: "pending-provider-snapshot", system_prompt_hash: emptyHash };
   document.execution = {
     command: "pi",
     args: ["--version"],
@@ -242,6 +272,61 @@ test("verifies the pinned Pi runtime before a formal execution", async () => {
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toContain("0.80.10");
 }, 15_000);
+
+test("refuses formal coordination until the provider model snapshot is resolved", async () => {
+  const id = runId();
+  cleanupPaths.add(join(root, ".run-workspaces", id));
+  cleanupPaths.add(join(root, "artifacts", "runs", id));
+  cleanupPaths.add(join(root, "results", "records", "react-skill-comparison", "workspace-overview-loader-v1", `${id}.json`));
+  const document = request(id, "formal-pi-deepseek-v4-pro");
+  formalize(document);
+
+  const result = await coordinate(document);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("immutable provider model snapshot ID");
+  expect(await Bun.file(join(root, "results", "records", "react-skill-comparison", "workspace-overview-loader-v1", `${id}.json`)).exists()).toBe(false);
+});
+
+test("rejects forged formal experiment provenance", async () => {
+  const document = request(runId(), "formal-pi-deepseek-v4-pro");
+  formalize(document);
+  document.experiment_plan_hash = emptyHash;
+
+  const result = await execute(document, true);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("Experiment plan hash does not match");
+});
+
+test("rejects a formal request with a forged run kind", async () => {
+  const document = request(runId(), "formal-pi-deepseek-v4-pro");
+  formalize(document);
+  document.run_kind = "official";
+
+  const result = await execute(document, true);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("Experiment provenance does not match");
+});
+
+test("does not write a record when immutable artifact storage is unavailable", async () => {
+  const id = runId();
+  const environmentId = runId();
+  await writeEnvironment(environmentId, true);
+  cleanupPaths.add(join(root, "environments", environmentId));
+  cleanupPaths.add(join(root, ".run-workspaces", id));
+  cleanupPaths.add(join(root, "artifacts", "runs", id));
+  const recordPath = join(root, "results", "records", "react-skill-comparison", "workspace-overview-loader-v1", `${id}.json`);
+  cleanupPaths.add(recordPath);
+  const document = request(id, environmentId);
+
+  const result = await coordinate(document);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("Protected artifact storage is not configured");
+  expect(await Bun.file(recordPath).exists()).toBe(false);
+});
 
 test("rejects a run identifier that already has workspace artifacts", async () => {
   const id = runId();
@@ -282,6 +367,9 @@ test("coordinates evaluator output into a formal immutable record", async () => 
   const record = await Bun.file(join(root, output.record)).json() as Record<string, unknown>;
   expect(record.adapter).toEqual({ id: "pi", version: "v2" });
   expect(record.treatment).toEqual({ id: "baseline", version: "v1" });
+  expect(record.run_kind).toBe("smoke");
+  expect(record.experiment_plan_hash).toBe(emptyHash);
+  expect(record.model).toMatchObject({ id: "test-model", version: "test-v1" });
   expect((record.outcome as Record<string, unknown>).automated_checks_passed).toBe(true);
   expect(await Bun.file(join(root, output.run_manifest)).exists()).toBe(true);
 });

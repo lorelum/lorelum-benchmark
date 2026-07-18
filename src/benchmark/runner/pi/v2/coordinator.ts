@@ -5,6 +5,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { joinPath, pathExists, relativePath, sha256File, workspaceRoot } from "../../../fs";
 import { findTask } from "../../../task-discovery";
 import type { PiRunRequestV2 } from "./types";
+import { parseS3Uri, uploadImmutableS3Artifact } from "./s3";
 
 type Artifact = { kind: "trace" | "patch" | "raw-output" | "evaluator-output" | "environment" | "review"; uri: string; sha256: string };
 
@@ -21,6 +22,10 @@ function fail(message: string): never {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasResolvedModelVersion(version: unknown): boolean {
+  return typeof version === "string" && !/^(pending|pinned|operator)-/.test(version);
 }
 
 async function readJson(path: string): Promise<unknown> {
@@ -113,12 +118,15 @@ async function preflight(path: string): Promise<void> {
   if (result.exitCode !== 0) fail(`Pi request preflight failed: ${result.stderr.trim() || result.stdout.trim()}`);
 }
 
-function requireProtectedArtifactStorage(environment: Record<string, unknown>): void {
+function requireProtectedArtifactStorage(environment: Record<string, unknown>): string {
   const storage = environment.artifact_storage;
   if (!isRecord(storage) || storage.mode !== "immutable-after-upload" || typeof storage.uri !== "string" || typeof storage.uploader !== "string") fail("Formal environment must define immutable artifact storage");
-  if (storage.uploader === "protected-environment-required" && Bun.env.LORELUM_ARTIFACT_STORAGE_URI !== storage.uri) {
+  if (storage.uploader !== "s3-object-lock") fail("Formal environment must use the S3 Object Lock uploader");
+  parseS3Uri(storage.uri);
+  if (Bun.env.LORELUM_ARTIFACT_STORAGE_URI !== storage.uri) {
     fail(`Protected artifact storage is not configured for ${storage.uri}`);
   }
+  return storage.uri;
 }
 
 async function adapterCommit(): Promise<string> {
@@ -182,18 +190,21 @@ try {
   const startedAt = new Date().toISOString();
   let currentAdapterCommit = await adapterCommit();
   const environmentManifest = await readYaml(repositoryPath("environments", request.environment.id, request.environment.version, "environment.yaml"));
-  if (request.environment.id === "formal-pi-deepseek-v4-pro") requireProtectedArtifactStorage(environmentManifest);
+  if (request.environment.id === "formal-pi-deepseek-v4-pro" && !hasResolvedModelVersion(request.agent.model_version)) {
+    fail("Formal Pi coordination requires an immutable provider model snapshot ID");
+  }
+  const storageUri = isRecord(environmentManifest.artifact_storage) ? requireProtectedArtifactStorage(environmentManifest) : undefined;
   const runner = await runProcess([process.execPath, "run", "src/benchmark/runner/pi/v2/execute.ts", requestPath], workspaceRoot, Bun.env, request.execution.budget.max_duration_ms);
   await writeText(joinPath(artifactPath, "pi.stdout.log"), runner.stdout);
   await writeText(joinPath(artifactPath, "pi.stderr.log"), runner.stderr);
-  const artifacts: Artifact[] = [
+  const localArtifacts: Artifact[] = [
     await artifact("raw-output", joinPath(artifactPath, "pi.stdout.log")),
     await artifact("raw-output", joinPath(artifactPath, "pi.stderr.log"))
   ];
   const piManifestPath = joinPath(artifactPath, request.artifacts.manifest_name);
   let executedExecution: Record<string, unknown> = request.execution;
   if (await pathExists(piManifestPath)) {
-    artifacts.push(await artifact("trace", piManifestPath));
+    localArtifacts.push(await artifact("trace", piManifestPath));
     const piManifest = await readJson(piManifestPath);
     if (isRecord(piManifest)) {
       if (isRecord(piManifest.execution)) executedExecution = piManifest.execution;
@@ -212,13 +223,13 @@ try {
       const diff = await createDiff(request, candidatePath, artifactPath);
       diffPath = diff.path;
       if (!diff.success) fail("Unable to create candidate diff");
-      artifacts.push(await artifact("patch", diff.path));
+      localArtifacts.push(await artifact("patch", diff.path));
       const reference = taskReference(request);
       evaluator = await runProcess([process.execPath, "run", "src/benchmark/evaluate.ts", request.suite.id, reference.reference], workspaceRoot, { ...Bun.env, CANDIDATE_PATH: candidatePath }, request.execution.budget.max_duration_ms);
       await writeText(joinPath(artifactPath, "evaluator.stdout.log"), evaluator.stdout);
       await writeText(joinPath(artifactPath, "evaluator.stderr.log"), evaluator.stderr);
-      artifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stdout.log")));
-      artifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stderr.log")));
+      localArtifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stdout.log")));
+      localArtifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stderr.log")));
       if (evaluator.exitCode !== 0 || evaluator.timedOut) failureReason = evaluator.timedOut ? "Evaluator timed out" : "Evaluator failed";
     } catch (error) {
       failureReason = error instanceof Error ? error.message : String(error);
@@ -228,9 +239,17 @@ try {
   }
 
   const environmentPath = repositoryPath("environments", request.environment.id, request.environment.version, "environment.yaml");
-  artifacts.push(await artifact("environment", environmentPath));
+  localArtifacts.push(await artifact("environment", environmentPath));
+  const artifacts = storageUri
+    ? await Promise.all(localArtifacts.map(async (entry) => ({ kind: entry.kind, ...(await uploadImmutableS3Artifact(repositoryPath(entry.uri), storageUri, request.run_id)) })))
+    : localArtifacts;
   const runManifest = {
     run_id: request.run_id,
+    experiment_id: request.experiment_id,
+    experiment_plan_hash: request.experiment_plan_hash,
+    run_kind: request.run_kind,
+    condition_id: request.condition_id,
+    repeat: request.repeat,
     source_commit: request.source_commit,
     adapter_commit: currentAdapterCommit,
     suite: request.suite,
@@ -246,9 +265,17 @@ try {
   await validateSchema("run-manifest.schema.json", runManifest, "formal run manifest");
   const runManifestPath = joinPath(artifactPath, "formal-run-manifest.json");
   await writeText(runManifestPath, `${JSON.stringify(runManifest, null, 2)}\n`);
+  const manifestReference = storageUri
+    ? await uploadImmutableS3Artifact(runManifestPath, storageUri, request.run_id)
+    : { uri: repositoryRelative(runManifestPath), sha256: await sha256File(runManifestPath) };
   const metadata = await taskMetadata(request);
   const record = {
     run_id: request.run_id,
+    experiment_id: request.experiment_id,
+    experiment_plan_hash: request.experiment_plan_hash,
+    run_kind: request.run_kind,
+    condition_id: request.condition_id,
+    repeat: request.repeat,
     suite_version: request.suite.version,
     task_id: request.task.id,
     task_version: Number(request.task.revision.slice(1)),
@@ -259,10 +286,10 @@ try {
     adapter: { id: "pi", version: "v2" },
     treatment: request.treatment,
     environment: request.environment,
-    run_manifest: { uri: repositoryRelative(runManifestPath), sha256: await sha256File(runManifestPath) },
+    run_manifest: manifestReference,
     track: metadata.track,
     condition: request.treatment.id,
-    model: { id: request.agent.model, parameters: { provider_version: request.agent.version, seed: request.execution.seed } },
+    model: { id: request.agent.model, version: request.agent.model_version, parameters: { seed: request.execution.seed } },
     started_at: startedAt,
     cost: { duration_ms: Date.now() - Date.parse(startedAt) },
     outcome: { automated_checks_passed: evaluator?.exitCode === 0 && !evaluator.timedOut && !failureReason, blind_review: "pending", ...(diffPath ? { diff_path: repositoryRelative(diffPath) } : {}), ...(failureReason ? { failure_reason: failureReason } : {}) }

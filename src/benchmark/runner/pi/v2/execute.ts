@@ -2,7 +2,7 @@ import Ajv2020 from "ajv/dist/2020";
 import type { ErrorObject, ValidateFunction } from "ajv";
 import { lstat, mkdir, readdir } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { joinPath, pathExists, relativePath, sha256File, sha256Text, workspaceRoot } from "../../../fs";
+import { joinPath, listFiles, pathExists, relativePath, sha256File, sha256Text, workspaceRoot } from "../../../fs";
 import { findTask } from "../../../task-discovery";
 import type { PiRunArtifactManifestV2, PiRunRequestV2, PiRunResultV2 } from "./types";
 
@@ -108,7 +108,47 @@ async function verifyPiArguments(request: PiRunRequestV2, policy: Record<string,
   }
 }
 
+async function verifyFormalExperiment(request: PiRunRequestV2): Promise<void> {
+  if (request.environment.id !== "formal-pi-deepseek-v4-pro") return;
+  const matches: Array<{ path: string; plan: Record<string, unknown> }> = [];
+  const experimentsPath = repositoryPath("experiments");
+  for (const file of await listFiles(experimentsPath)) {
+    if (!file.endsWith(".yaml")) continue;
+    const path = joinPath(experimentsPath, file);
+    const plan = await readYaml(path);
+    if (plan.id !== request.experiment_id) continue;
+    await validateSchema("experiment-plan.schema.json", plan, `experiment plan ${relativePath(path)}`);
+    matches.push({ path, plan });
+  }
+  if (matches.length !== 1) fail(`Formal request must reference exactly one experiment plan: ${request.experiment_id}`);
+  const { path, plan } = matches[0];
+  if ((await sha256File(path)) !== request.experiment_plan_hash) fail(`Experiment plan hash does not match: ${relativePath(path)}`);
+  if (plan.run_kind !== request.run_kind || plan.source_commit !== request.source_commit) fail(`Experiment provenance does not match: ${relativePath(path)}`);
+  const suite = plan.suite;
+  const environment = plan.environment;
+  const agent = plan.agent;
+  const model = plan.model;
+  if (!isRecord(suite) || suite.id !== request.suite.id || suite.version !== request.suite.version) fail(`Experiment suite does not match request: ${relativePath(path)}`);
+  if (!isRecord(environment) || environment.id !== request.environment.id || environment.version !== request.environment.version) fail(`Experiment environment does not match request: ${relativePath(path)}`);
+  if (!isRecord(agent) || agent.id !== request.agent.id || agent.version !== request.agent.version || agent.command !== request.execution.command) fail(`Experiment agent does not match request: ${relativePath(path)}`);
+  if (!isRecord(model) || model.id !== request.agent.model || model.version !== request.agent.model_version) fail(`Experiment model does not match request: ${relativePath(path)}`);
+  if (plan.seed !== request.execution.seed || plan.system_prompt_hash !== request.agent.system_prompt_hash || plan.system_prompt_hash !== request.inputs.system_prompt || plan.tool_policy_hash !== request.execution.tool_policy_hash) {
+    fail(`Experiment execution policy does not match request: ${relativePath(path)}`);
+  }
+  if (!isRecord(plan.budget) || plan.budget.max_turns !== request.execution.budget.max_turns || plan.budget.max_duration_ms !== request.execution.budget.max_duration_ms) {
+    fail(`Experiment budget does not match request: ${relativePath(path)}`);
+  }
+  const condition = Array.isArray(plan.conditions) ? plan.conditions.find((entry) => isRecord(entry) && entry.id === request.condition_id) : undefined;
+  if (!isRecord(condition) || condition.treatment !== `${request.treatment.id}/${request.treatment.version}`) fail(`Experiment condition does not match request: ${relativePath(path)}`);
+  const taskSet = request.run_kind === "smoke" ? plan.smoke_tasks : plan.full_tasks;
+  if (!Array.isArray(taskSet) || !taskSet.includes(request.task.id)) fail(`Experiment task does not match request: ${relativePath(path)}`);
+  if (!Number.isInteger(plan.repetitions) || request.repeat > plan.repetitions) fail(`Experiment repeat does not match request: ${relativePath(path)}`);
+  const expectedRunId = `${request.experiment_id}-${request.task.id}-${request.condition_id}-${String(request.repeat).padStart(3, "0")}`;
+  if (request.run_id !== expectedRunId) fail(`Experiment run ID does not match request: ${relativePath(path)}`);
+}
+
 async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: string; treatmentPath: string; treatment: Record<string, unknown>; treatmentSkillPath?: string; environmentPath: string; environment: Record<string, unknown> }> {
+  await verifyFormalExperiment(request);
   const suitePath = repositoryPath("suites", request.suite.id);
   const suiteManifestPath = joinPath(suitePath, "suite.yaml");
   await requireFile(suiteManifestPath, "suite manifest");
@@ -177,6 +217,7 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
     fail(`Requested agent runtime does not match ${relativePath(environmentPath)}`);
   }
   if (model.id !== request.agent.model) fail(`Requested model does not match ${relativePath(environmentPath)}`);
+  if (model.version !== request.agent.model_version) fail(`Requested model version does not match ${relativePath(environmentPath)}`);
   if (sandbox.policy_hash !== request.execution.tool_policy_hash) {
     fail(`Environment sandbox policy does not match request: ${relativePath(environmentPath)}`);
   }
@@ -298,6 +339,10 @@ async function verifyRuntime(environment: Record<string, unknown>, request: PiRu
   if (actualVersion !== agentRuntime.version) fail(`Pi version does not match environment: expected ${agentRuntime.version}, received ${actualVersion}`);
 }
 
+function hasResolvedModelVersion(version: unknown): boolean {
+  return typeof version === "string" && !/^(pending|pinned|operator)-/.test(version);
+}
+
 if (!requestPath) {
   console.error("Usage: bun run pi -- <pi-run-request-v2.json> [--dry-run]");
   process.exit(1);
@@ -329,6 +374,9 @@ try {
     process.exit(0);
   }
 
+  if (request.environment.id === "formal-pi-deepseek-v4-pro" && !hasResolvedModelVersion(request.agent.model_version)) {
+    fail("Formal Pi execution requires an immutable provider model snapshot ID");
+  }
   await verifyRuntime(contracts.environment, request);
   await ensureCleanFormalWorktree(contracts.environment);
   const sandbox = contracts.environment.sandbox;
@@ -339,6 +387,11 @@ try {
   const manifest: PiRunArtifactManifestV2 = {
     schema_version: "pi-run-artifact/v2",
     run_id: request.run_id,
+    experiment_id: request.experiment_id,
+    experiment_plan_hash: request.experiment_plan_hash,
+    run_kind: request.run_kind,
+    condition_id: request.condition_id,
+    repeat: request.repeat,
     source_commit: request.source_commit,
     adapter_commit: adapterCommit,
     candidate_path: request.candidate_path,

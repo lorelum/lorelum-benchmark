@@ -1,0 +1,88 @@
+name: Run formal G0/G1 smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run contract-only preflight or the protected Pi smoke
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - smoke
+
+concurrency:
+  group: formal-g0-g1-smoke
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+      - run: bun install --frozen-lockfile
+      - run: bun run validate
+      - run: bun run test:contracts
+      - run: bun run test:fixtures
+      - run: bun run pi:requests -- experiments/react-skill-comparison/g0-g1-smoke-v1.yaml --smoke --output "$RUNNER_TEMP/requests"
+      - run: |
+          for request in "$RUNNER_TEMP"/requests/*.json; do
+            bun run pi:coordinate -- "$request" --dry-run
+          done
+
+  smoke:
+    if: inputs.mode == 'smoke'
+    needs: preflight
+    runs-on: [self-hosted, lorelum-formal-sandbox]
+    environment: formal-g0-g1
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+    env:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      LORELUM_ARTIFACT_STORAGE_URI: ${{ vars.LORELUM_ARTIFACT_STORAGE_URI }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run pi:requests -- experiments/react-skill-comparison/g0-g1-smoke-v1.yaml --smoke --output "$RUNNER_TEMP/requests"
+      - id: coordinate
+        run: |
+          status=0
+          for request in "$RUNNER_TEMP"/requests/*.json; do
+            bun run pi:coordinate -- "$request" || status=1
+          done
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+      - if: always()
+        run: |
+          if git diff --quiet -- results/records; then
+            exit 0
+          fi
+          branch="results/g0-g1-smoke-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add results/records
+          git commit -m "data(benchmark): record G0/G1 smoke ${GITHUB_RUN_ID}"
+          git push --set-upstream origin "$branch"
+          gh pr create --draft --base main --head "$branch" --title "data(benchmark): G0/G1 smoke ${GITHUB_RUN_ID}" --body "由受保护的 formal-g0-g1 workflow 生成。请核验 versioned S3 manifest、Object Lock、hash 与 smoke 标记后再合并。"
+      - if: steps.coordinate.outputs.status != '0'
+        run: exit 1

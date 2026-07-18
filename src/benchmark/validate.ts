@@ -136,6 +136,16 @@ async function validateExperimentPlan(path: string, plan: Record<string, unknown
     await requirePath(environmentPath);
     const environmentDocument = await validateYaml(environmentPath, "environment.schema.json");
     if (environmentDocument && (environmentDocument.id !== environment.id || environmentDocument.version !== environment.version)) failures.push(`Experiment environment does not match path: ${environment.id}/${environment.version}`);
+    const planAgent = plan.agent;
+    const planModel = plan.model;
+    const environmentAgent = environmentDocument?.agent_runtime;
+    const environmentModel = environmentDocument?.model;
+    if (isRecord(planAgent) && isRecord(environmentAgent) && (planAgent.id !== environmentAgent.id || planAgent.version !== environmentAgent.version || planAgent.command !== environmentAgent.command)) {
+      failures.push(`Experiment agent does not match environment: ${relativePath(path)}`);
+    }
+    if (isRecord(planModel) && isRecord(environmentModel) && (planModel.id !== environmentModel.id || planModel.version !== environmentModel.version)) {
+      failures.push(`Experiment model does not match environment: ${relativePath(path)}`);
+    }
     const dependencies = environmentDocument?.dependencies;
     if (isRecord(dependencies) && typeof dependencies.lockfile === "string" && typeof dependencies.lockfile_sha256 === "string") {
       const lockfilePath = joinPath(workspaceRoot, dependencies.lockfile);
@@ -144,12 +154,49 @@ async function validateExperimentPlan(path: string, plan: Record<string, unknown
     }
   }
 
+  if (plan.run_kind === "smoke" && plan.repetitions !== 1) failures.push(`Smoke experiment must use exactly one repetition: ${relativePath(path)}`);
+
   if (typeof plan.source_commit === "string" && !(await commitIsAncestor(plan.source_commit))) failures.push(`Experiment source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
   if (typeof plan.system_prompt_path === "string" && typeof plan.system_prompt_hash === "string") {
     const promptPath = resolve(workspaceRoot, plan.system_prompt_path);
     if (!insideWorkspace(promptPath)) failures.push(`Experiment system prompt escapes workspace: ${plan.system_prompt_path}`);
     else if (!(await pathExists(promptPath))) failures.push(`Experiment system prompt is missing: ${relativePath(promptPath)}`);
     else if ((await sha256File(promptPath)) !== plan.system_prompt_hash) failures.push(`Experiment system prompt hash does not match: ${relativePath(promptPath)}`);
+  }
+}
+
+async function validateRunRecords(): Promise<void> {
+  const recordsPath = joinPath(workspaceRoot, "results", "records");
+  if (!(await directoryExists(recordsPath))) return;
+  const runIds = new Set<string>();
+  for (const file of await listFiles(recordsPath)) {
+    if (!file.endsWith(".json")) continue;
+    const path = joinPath(recordsPath, file);
+    let record: Record<string, unknown> | null = null;
+    try {
+      const parsed = JSON.parse(await Bun.file(path).text()) as unknown;
+      record = isRecord(parsed) ? parsed : null;
+    } catch (error) {
+      failures.push(`Invalid JSON in ${relativePath(path)}: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    if (!record) {
+      failures.push(`Run record must be a JSON object: ${relativePath(path)}`);
+      continue;
+    }
+    const validator = await schemaValidator("run-record.schema.json");
+    if (!validator) continue;
+    if (!validator(record)) {
+      addSchemaFailures(path, validator.errors);
+      continue;
+    }
+    const runId = record.run_id;
+    if (typeof runId === "string" && !runIds.add(runId)) failures.push(`Duplicate run record id: ${runId}`);
+    const environment = record.environment;
+    const runManifest = record.run_manifest;
+    if (isRecord(environment) && environment.id === "formal-pi-deepseek-v4-pro" && (!isRecord(runManifest) || typeof runManifest.uri !== "string" || !/^s3:\/\/[^?]+\?versionId=.+$/.test(runManifest.uri))) {
+      failures.push(`Formal run record must reference a versioned S3 manifest: ${relativePath(path)}`);
+    }
   }
 }
 
@@ -285,6 +332,8 @@ for (const file of await listFiles(experimentsPath)) {
     if (plan) await validateExperimentPlan(planPath, plan);
   }
 }
+
+await validateRunRecords();
 
 await validateVersionedManifests(joinPath(workspaceRoot, "treatments"), "treatment.yaml", "treatment.schema.json", "Treatment");
 await validateVersionedManifests(joinPath(workspaceRoot, "environments"), "environment.yaml", "environment.schema.json", "Environment");
