@@ -21,5 +21,6 @@ dependencies:
   lockfile: bun.lock
   lockfile_sha256: 34e58d71f683c849bd04ac4ada22aeb01dd9ceaa5780e0c4b8160a98c65713e8
 artifact_storage:
-  uri: artifacts/runs
+  uri: protected://lorelum-benchmark/runs
   mode: immutable-after-upload
+  uploader: protected-environment-required

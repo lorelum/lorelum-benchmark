@@ -23,10 +23,9 @@
 控制默认参与的任务集合。候选测试在升级前存放于 `incubator/`；仅可丢弃的
 探针才放入被忽略的 `scratch/`。
 
-首批 smoke 夹具为 `async-dashboard-v1` 和 `bundle-advanced-panel-v1`。
-区分度任务集还覆盖嵌套异步数据加载、延迟命令、稳定列表操作、隐藏对话框渲染、
-客户端监听器清理和单请求服务端去重。评测器与任务素材分离，因此同一任务可在
-每个条件下运行。
+首批 smoke 夹具为 `workspace-overview-loader-v1` 和 `issue-workbench-model-v1`；扩展 smoke
+再覆盖 `notification-preference-store-v1` 与 `order-route-loader-v1`。四个任务分别校验异步
+依赖图、稳定状态列表、持久化同步和授权路由中的动态行为与性能约束。
 
 ## 校验工作区
 
@@ -41,21 +40,21 @@ bun run validate
 starter 预期会在并发断言中失败。请通过统一入口运行：
 
 ```sh
-bun run evaluate -- react-skill-comparison async-dashboard/v1
+bun run evaluate -- react-skill-comparison workspace-overview-loader/v1
 ```
 
 通过 `CANDIDATE_PATH` 提供候选解源码路径后，即可评测候选解：
 
 ```powershell
-$env:CANDIDATE_PATH = 'D:\path\to\candidate\src\dashboard.ts'
-bun run evaluate -- react-skill-comparison async-dashboard/v1
+$env:CANDIDATE_PATH = 'D:\path\to\candidate\src\workspace-overview.ts'
+bun run evaluate -- react-skill-comparison workspace-overview-loader/v1
 ```
 
-对于条件加载的 bundle evaluator，传入候选 `src/settings.ts` 路径：
+对于状态化列表任务，传入候选 `src/issue-workbench.ts` 路径：
 
 ```powershell
-$env:CANDIDATE_PATH = 'D:\path\to\candidate\src\settings.ts'
-bun run evaluate -- react-skill-comparison bundle-advanced-panel/v1
+$env:CANDIDATE_PATH = 'D:\path\to\candidate\src\issue-workbench.ts'
+bun run evaluate -- react-skill-comparison issue-workbench-model/v1
 ```
 
 每次评测都会在执行测试前校验任务已提交的 `private/snapshot.json`。要复现
@@ -68,6 +67,6 @@ bun run evaluate -- react-skill-comparison bundle-advanced-panel/v1
 
 ## Pi 自动化
 
-Pi 是执行 benchmark 任务的自动化 runner。本仓库不假定 Pi 的命令行形态：
-版本化 adapter 接收显式 run request，校验复现所需的固定信息后，执行请求中
-提供的 Pi 命令。详见 `docs/PI_RUNNER.md`。
+Pi 是执行 benchmark 任务的自动化 runner。正式 G0/G1 使用固定的 Pi `0.80.10`、环境、
+system prompt 与 Vercel Skill treatment；`pi:requests` 生成请求，`pi:coordinate` 运行并生成
+可追溯 record。详见 `docs/PI_RUNNER.md`。
