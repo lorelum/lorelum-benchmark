@@ -9,6 +9,7 @@
     "pi": "bun run src/benchmark/runner/pi/v2/execute.ts",
     "pi:v1": "bun run src/benchmark/runner/pi/v1/execute.ts",
     "test:pi:v2": "bun test src/benchmark/runner/pi/v2",
+    "test:fixtures": "bun run src/benchmark/fixtures.ts",
     "test:contracts": "bun test src/benchmark/validate.test.ts src/benchmark/runner/pi/v2"
   },
   "dependencies": {

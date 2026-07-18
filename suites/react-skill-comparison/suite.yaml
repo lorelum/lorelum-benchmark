@@ -1,5 +1,5 @@
 id: react-skill-comparison
-version: 0.1.0
+version: 0.2.0
 track: performance-skill-comparison
 lifecycle_stage: pilot
 protocol: ../../docs/BENCHMARK_PROTOCOL.md
@@ -12,43 +12,23 @@ conditions:
   - vercel-skill
   - lorelum-retrieval
 tasks:
-  - id: async-dashboard-v1
-    path: tasks/async-dashboard/v1
-    profile: spa
-    category: async
-    lifecycle_stage: pilot
-  - id: bundle-advanced-panel-v1
-    path: tasks/bundle-advanced-panel/v1
-    profile: spa
-    category: bundle
-    lifecycle_stage: pilot
-  - id: async-product-route-v1
-    path: tasks/async-product-route/v1
-    profile: spa
-    category: async
-    lifecycle_stage: pilot
-  - id: bundle-command-palette-v1
-    path: tasks/bundle-command-palette/v1
-    profile: spa
-    category: bundle
-    lifecycle_stage: pilot
-  - id: rerender-stable-row-actions-v1
-    path: tasks/rerender-stable-row-actions/v1
-    profile: spa
-    category: rerender
-    lifecycle_stage: pilot
-  - id: rendering-deferred-dialog-v1
-    path: tasks/rendering-deferred-dialog/v1
-    profile: spa
-    category: rendering
-    lifecycle_stage: pilot
-  - id: client-search-shortcut-cleanup-v1
-    path: tasks/client-search-shortcut-cleanup/v1
-    profile: spa
-    category: client
-    lifecycle_stage: pilot
-  - id: server-request-viewer-dedup-v1
-    path: tasks/server-request-viewer-dedup/v1
+  - id: workspace-overview-loader-v1
+    path: tasks/workspace-overview-loader/v1
     profile: rsc
-    category: server
-    lifecycle_stage: pilot
+    category: async-dependency-graph
+    lifecycle_stage: candidate
+  - id: issue-workbench-model-v1
+    path: tasks/issue-workbench-model/v1
+    profile: spa
+    category: rerender-stateful-model
+    lifecycle_stage: candidate
+  - id: notification-preference-store-v1
+    path: tasks/notification-preference-store/v1
+    profile: spa
+    category: client-persistence-sync
+    lifecycle_stage: candidate
+  - id: order-route-loader-v1
+    path: tasks/order-route-loader/v1
+    profile: rsc
+    category: server-authorization-serialization
+    lifecycle_stage: candidate

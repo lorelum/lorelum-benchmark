@@ -1,50 +1,34 @@
-version: 1
+version: 2
 baseline:
   repository: vercel-labs/agent-skills
   revision: f8a72b9603728bb92a217a879b7e62e43ad76c81
   skill: skills/react-best-practices
 coverage_status: partial
 covered_rules:
-  - id: async-parallel
+  - id: async-dependency-graph
     tasks:
-      - async-dashboard-v1
-      - async-product-route-v1
-  - id: async-parallel-nested-fetching
+      - workspace-overview-loader-v1
+  - id: stateful-row-memoization
     tasks:
-      - async-product-route-v1
-  - id: bundle-dynamic-imports
+      - issue-workbench-model-v1
+  - id: defensive-client-persistence
     tasks:
-      - bundle-advanced-panel-v1
-      - bundle-command-palette-v1
-  - id: bundle-conditional
+      - notification-preference-store-v1
+  - id: authorization-before-data-expansion
     tasks:
-      - bundle-advanced-panel-v1
-      - bundle-command-palette-v1
-  - id: rerender-memo
-    tasks:
-      - rerender-stable-row-actions-v1
-  - id: rendering-conditional-render
-    tasks:
-      - rendering-deferred-dialog-v1
-  - id: client-event-listeners
-    tasks:
-      - client-search-shortcut-cleanup-v1
-  - id: server-dedup-props
-    tasks:
-      - server-request-viewer-dedup-v1
-  - id: server-cache-react
-    tasks:
-      - server-request-viewer-dedup-v1
+      - order-route-loader-v1
 coverage_gaps:
   status: intentional
-  reason: This issue establishes discriminative fixtures before attempting complete rule coverage.
+  reason: Tasks are sampled from realistic development failure modes. Skill relevance is an analysis dimension, not a task source or answer key.
   categories:
-    - advanced
-    - js
-    - server-streaming
-    - client-storage
     - rendering-hydration
     - bundle-import-shape
+    - server-streaming
+task_relevance:
+  workspace-overview-loader-v1: direct
+  issue-workbench-model-v1: direct
+  notification-preference-store-v1: partial
+  order-route-loader-v1: partial
 acceptance:
   each_task_must_distinguish_functional_from_compliant: true
   complete_rule_coverage_required_before_claiming_parity: true

@@ -1,0 +1,16 @@
+id: issue-workbench-model-v1
+reference_solution: reference/src/issue-workbench.ts
+engineering_concerns:
+  - semantic row memoization
+  - stable callback identity
+  - filtered-state correctness
+  - localized invalidation
+checks:
+  - id: unchanged-rows-remain-stable
+  - id: filtered-rows-reuse-cached-models
+  - id: changed-row-does-not-invalidate-neighbors
+  - id: selection-and-actions-remain-correct
+scoring:
+  functional: required
+  dynamic_behavior: required
+  shortcut_resistance: required
