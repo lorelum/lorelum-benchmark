@@ -4,6 +4,8 @@ export type PiRunRequestV2 = {
   experiment_id: string;
   experiment_plan_hash: string;
   run_kind: "smoke" | "official";
+  condition_id: string;
+  repeat: number;
   source_commit: string;
   candidate_path: string;
   suite: { id: string; version: string };
@@ -29,6 +31,8 @@ export type PiRunArtifactManifestV2 = {
   experiment_id: string;
   experiment_plan_hash: string;
   run_kind: "smoke" | "official";
+  condition_id: string;
+  repeat: number;
   source_commit: string;
   adapter_commit: string;
   candidate_path: string;

@@ -19,6 +19,8 @@ test("generates stable single-repeat smoke requests with experiment provenance",
   for (const request of requests) {
     expect(request.experiment_id).toBe("react-skill-comparison-g0-g1-smoke-v1");
     expect(request.run_kind).toBe("smoke");
+    expect(request.condition_id).toMatch(/^(baseline|vercel-skill)$/);
+    expect(request.repeat).toBe(1);
     expect(request.experiment_plan_hash).toMatch(/^[a-f0-9]{64}$/);
     expect(String(request.run_id)).toMatch(/^react-skill-comparison-g0-g1-smoke-v1-.+-001$/);
     expect((request.agent as Record<string, unknown>).model_version).toBe("pending-provider-snapshot");

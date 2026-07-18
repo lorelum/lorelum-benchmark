@@ -99,6 +99,8 @@ async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPoli
     experiment_id: plan.id,
     experiment_plan_hash: planHash,
     run_kind: plan.run_kind,
+    condition_id: condition.id,
+    repeat,
     source_commit: plan.source_commit,
     candidate_path: `starter/${candidateFile.replaceAll("\\", "/")}`,
     suite: plan.suite,

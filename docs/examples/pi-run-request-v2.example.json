@@ -4,6 +4,8 @@
   "experiment_id": "react-skill-comparison-g0-g1-smoke-v1",
   "experiment_plan_hash": "e6ab9444657616c4325c88e54cf3bb747efcf5f5b5ed6065c6ca3c0ce82ba9cd",
   "run_kind": "smoke",
+  "condition_id": "baseline",
+  "repeat": 1,
   "source_commit": "073d466b01c1edf12e8d0330ace6110950c3df9c",
   "candidate_path": "starter/src/workspace-overview.ts",
   "suite": { "id": "react-skill-comparison", "version": "0.2.0" },
