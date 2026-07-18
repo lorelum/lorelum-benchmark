@@ -217,7 +217,7 @@ test("verifies the pinned Pi runtime before a formal execution", async () => {
     command: "pi",
     args: ["--version"],
     seed: 1,
-    budget: { max_turns: 1, max_duration_ms: 1000 },
+    budget: { max_turns: 1, max_duration_ms: 15000 },
     tool_policy_hash: formalToolPolicyHash
   };
 

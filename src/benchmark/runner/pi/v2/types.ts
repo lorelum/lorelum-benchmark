@@ -36,6 +36,7 @@ export type PiRunArtifactManifestV2 = {
   inputs: PiRunRequestV2["inputs"];
   workspace: { path: string; task_md_sha256: string; starter_files: Record<string, string> };
   status: "prepared" | "completed" | "failed";
+  timed_out: boolean;
   exit_code: number | null;
   completed_at: string | null;
 };

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Lorelum Pi run artifact manifest v2",
   "type": "object",
-  "required": ["schema_version", "run_id", "source_commit", "adapter_commit", "candidate_path", "suite", "task", "treatment", "environment", "scorer", "agent", "execution", "inputs", "workspace", "status", "completed_at"],
+  "required": ["schema_version", "run_id", "source_commit", "adapter_commit", "candidate_path", "suite", "task", "treatment", "environment", "scorer", "agent", "execution", "inputs", "workspace", "status", "timed_out", "completed_at"],
   "properties": {
     "schema_version": { "const": "pi-run-artifact/v2" },
     "run_id": { "type": "string" },
@@ -28,6 +28,7 @@
       "additionalProperties": false
     },
     "status": { "enum": ["prepared", "completed", "failed"] },
+    "timed_out": { "type": "boolean" },
     "exit_code": { "type": ["integer", "null"] },
     "completed_at": { "type": ["string", "null"] }
   },

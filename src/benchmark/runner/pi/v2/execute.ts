@@ -186,6 +186,12 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
     if ((await sha256File(policyPath)) !== sandbox.policy_hash) fail(`Environment sandbox policy hash does not match ${relativePath(policyPath)}`);
     if (agentRuntime.id === "pi") await verifyPiArguments(request, await readYaml(policyPath));
   }
+  const dependencies = environment.dependencies;
+  if (isRecord(dependencies) && typeof dependencies.lockfile === "string" && typeof dependencies.lockfile_sha256 === "string") {
+    const lockfilePath = repositoryPath(dependencies.lockfile);
+    await requireFile(lockfilePath, "environment lockfile");
+    if ((await sha256File(lockfilePath)) !== dependencies.lockfile_sha256) fail(`Environment lockfile hash does not match: ${relativePath(lockfilePath)}`);
+  }
 
   return { taskPath: task.path, treatmentPath, treatment, treatmentSkillPath, environmentPath, environment };
 }
@@ -259,6 +265,27 @@ async function ensureCleanFormalWorktree(environment: Record<string, unknown>): 
   if ((await new Response(status.stdout).text()).trim()) fail("Formal Pi execution requires a clean Git worktree");
 }
 
+async function descendantPids(pid: number): Promise<number[]> {
+  const children = Bun.spawn(["pgrep", "-P", String(pid)], { stdout: "pipe", stderr: "ignore" });
+  if ((await children.exited) !== 0) return [];
+  const output = await new Response(children.stdout).text();
+  const direct = output.split(/\s+/).filter(Boolean).map(Number).filter(Number.isInteger);
+  const nested = await Promise.all(direct.map((child) => descendantPids(child)));
+  return [...direct, ...nested.flat()];
+}
+
+async function terminateProcessTree(pid: number): Promise<void> {
+  if (process.platform === "win32") {
+    const killer = Bun.spawn(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
+    await killer.exited;
+    return;
+  }
+  for (const childPid of (await descendantPids(pid)).reverse()) {
+    try { process.kill(childPid, "SIGTERM"); } catch { }
+  }
+  try { process.kill(pid, "SIGTERM"); } catch { }
+}
+
 async function verifyRuntime(environment: Record<string, unknown>, request: PiRunRequestV2): Promise<void> {
   if (typeof environment.bun === "string" && /^\d+\.\d+\.\d+$/.test(environment.bun) && environment.bun !== Bun.version) {
     fail(`Bun version does not match environment: expected ${environment.bun}, received ${Bun.version}`);
@@ -304,6 +331,10 @@ try {
 
   await verifyRuntime(contracts.environment, request);
   await ensureCleanFormalWorktree(contracts.environment);
+  const sandbox = contracts.environment.sandbox;
+  if (isRecord(sandbox) && typeof sandbox.policy_path === "string" && (sandbox.enforcement !== "protected-runner-required" || Bun.env.LORELUM_SANDBOX_ENFORCED !== "1")) {
+    fail("Formal Pi execution requires the protected sandbox runner");
+  }
   const workspace = await createWorkspace(request.run_id, contracts.taskPath);
   const manifest: PiRunArtifactManifestV2 = {
     schema_version: "pi-run-artifact/v2",
@@ -321,12 +352,14 @@ try {
     inputs: request.inputs,
     workspace: { path: repositoryRelative(workspace.path), task_md_sha256: workspace.taskMdSha256, starter_files: workspace.starterFiles },
     status: "prepared",
+    timed_out: false,
     exit_code: null,
     completed_at: null
   };
   await writeArtifactManifest(artifactManifestPath, manifest);
 
   let exitCode: number | null = null;
+  let timedOut = false;
   try {
     const executionEnv = { ...Bun.env, CANDIDATE_PATH: candidatePath, LORELUM_RUN_ID: request.run_id };
     const child = Bun.spawn([effectiveExecution.command, ...effectiveExecution.args], {
@@ -336,12 +369,18 @@ try {
       stdout: "inherit",
       stderr: "inherit"
     });
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      void terminateProcessTree(child.pid).finally(() => child.kill());
+    }, request.execution.budget.max_duration_ms);
     exitCode = await child.exited;
+    clearTimeout(timeout);
   } catch (error) {
     console.error(`Pi command failed to start: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  manifest.status = exitCode === 0 ? "completed" : "failed";
+  manifest.status = exitCode === 0 && !timedOut ? "completed" : "failed";
+  manifest.timed_out = timedOut;
   manifest.exit_code = exitCode;
   manifest.completed_at = new Date().toISOString();
   await writeArtifactManifest(artifactManifestPath, manifest);
