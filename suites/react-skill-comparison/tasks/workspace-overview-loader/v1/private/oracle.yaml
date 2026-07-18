@@ -1,0 +1,16 @@
+id: workspace-overview-loader-v1
+engineering_concerns:
+  - dependency-aware async scheduling
+  - cheap invalid-input guard
+  - optional work avoidance
+  - original-error preservation
+checks:
+  - id: empty-input-avoids-io
+  - id: independent-root-requests-start-together
+  - id: dependent-requests-fan-out-after-workspace
+  - id: optional-audit-is-not-requested
+  - id: result-shape-and-errors-are-preserved
+scoring:
+  functional: required
+  dynamic_behavior: required
+  shortcut_resistance: required

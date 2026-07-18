@@ -1,0 +1,16 @@
+id: order-route-loader-v1
+engineering_concerns:
+  - authorization-before-data-expansion
+  - dependency-aware async scheduling
+  - explicit public-data projection
+  - invalid-input avoidance
+checks:
+  - id: empty-id-avoids-io
+  - id: unauthorized-request-is-contained
+  - id: authorized-secondary-requests-start-together
+  - id: response-does-not-leak-internal-fields
+  - id: api-errors-are-not-replaced
+scoring:
+  functional: required
+  dynamic_behavior: required
+  shortcut_resistance: required

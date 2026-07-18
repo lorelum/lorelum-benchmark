@@ -1,0 +1,17 @@
+id: issue-workbench-model-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: candidate
+evaluator_version: 1
+source:
+  kind: synthetic-realistic-workflow
+  scenario: memoized issue rows with filtering and retained selection
+runtime:
+  command: bun run evaluate -- react-skill-comparison issue-workbench-model/v1
+agent_input:
+  prompt: task.md
+  starter: starter
+applicable_conditions:
+  - baseline
+  - vercel-skill
+  - lorelum-retrieval

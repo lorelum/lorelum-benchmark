@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "96cc4ffd244efa1714f319e049ed6a57ca2b47122317fd035c7293773772c5d3",
+  "files": {
+    "private/evaluator/order-route.test.ts": "79f5402a2da930ffdb2ec213756b38677bb0a57aa096350c0934cc8a3dc0815c",
+    "private/oracle.yaml": "14e8290bc56b3eb8a0cf0e4827361f27d9b2d62aaf46503c6fc8662db5973b3c",
+    "public/starter/src/order-route.ts": "93a460d811f84fea218c8cbba5b8d813154a2c218a5121ac91a8b8d4b1b5e738",
+    "public/task.md": "c92e9997c335c589d91f375be535d2265b5849bc5c8b130618848112aa8a3ac0",
+    "public/task.yaml": "85b8941a037a5d0b54ea5b6c929cb17012e001aa05c1c1cc92611ddaec72612d"
+  }
+}

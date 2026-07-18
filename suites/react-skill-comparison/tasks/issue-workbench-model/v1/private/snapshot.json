@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "55fe188755dd89cef2eb89102f47e5a4dca935d7fad93e34d6e83050a29daddc",
+  "files": {
+    "private/evaluator/issue-workbench.test.ts": "5013c5979b0b8a08dccb52cac90c4dd32fc4af4bf35d2c0ceeb0499bc5f726a3",
+    "private/oracle.yaml": "a450c34984d069b1606f42b83a6f2d0220fbe3f5177523b72923b62d3f1e0927",
+    "public/starter/src/issue-workbench.ts": "a3dca402da68795f530abcca2ab1cc2699be67fd09f122c7420165f079bb5914",
+    "public/task.md": "96973376a061173f2d77842776d37d53e6bbf2c218590dfc14f337675c6a3dc4",
+    "public/task.yaml": "88d0510db238c96c294061a6985185a3d3187b344817c6a7229915b0b3c9e294"
+  }
+}

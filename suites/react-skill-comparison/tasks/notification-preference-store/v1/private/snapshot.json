@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "ffe800bce50006456fc5e3c024fe84eea7dabbc6be5ee8473bc416a11d75cac0",
+  "files": {
+    "private/evaluator/notification-preferences.test.ts": "610334220d86106dd77b0bc984736e2b3b9ebdae3663ad159ceab4668bab92ce",
+    "private/oracle.yaml": "5375827e79bfa3f3ca807e4c8e40f36b3673f8fff80aff829e81567bb03d533e",
+    "public/starter/src/notification-preferences.ts": "cf9df7da1076861cebfd56b3f1873fa0997e8147857bc899599030a695b69281",
+    "public/task.md": "54c82b9fd589e2049dd99fc0d8a90fe9512db0d1d6a136f83dfb93362a504d98",
+    "public/task.yaml": "11dac70271a942db14a34d40aef40d9845cca44d396de13e3d448784e63723db"
+  }
+}

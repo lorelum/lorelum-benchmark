@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "cd9b292fe2777bcb5f94d5eba0b155e606f165ac9e54e93e8d6c091fe2561b82",
+  "files": {
+    "private/evaluator/workspace-overview.test.ts": "01eab7d0830e17cda0ef791f122c1faf992971b8200cd24ddd01e10a58beb632",
+    "private/oracle.yaml": "ed2390729b6caa8c6125b203508ccad6503e53dc5176320ce85dad64306e4466",
+    "public/starter/src/workspace-overview.ts": "6b7551881afbcbbc2e4d5075413082e13fcc74d92b8df08272c375d9f09122a5",
+    "public/task.md": "8283d0866a9ac9885fb43d2d0e08e7f5e85d8ad44bd333b7c5b98083bb7b9854",
+    "public/task.yaml": "42b6d940d3b0793e35351baddfb1d76253f038be6dc7b0a3afb3e9e6faa5cd20"
+  }
+}
