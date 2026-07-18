@@ -272,7 +272,11 @@ test("coordinates evaluator output into a formal immutable record", async () => 
 
   const result = await coordinate(document);
 
-  if (result.exitCode !== 0) throw new Error(`${result.stdout}\n${result.stderr}\n${await Bun.file(join(root, "artifacts", "runs", id, "evaluator.stdout.log")).text()}\n${await Bun.file(join(root, "artifacts", "runs", id, "evaluator.stderr.log")).text()}`);
+  if (result.exitCode !== 0) {
+    const artifactRoot = join(root, "artifacts", "runs", id);
+    const readOptional = async (name: string) => (await Bun.file(join(artifactRoot, name)).exists() ? Bun.file(join(artifactRoot, name)).text() : "");
+    throw new Error(`${result.stdout}\n${result.stderr}\n${await readOptional("pi.stdout.log")}\n${await readOptional("pi.stderr.log")}\n${await readOptional("evaluator.stdout.log")}\n${await readOptional("evaluator.stderr.log")}`);
+  }
   expect(result.exitCode).toBe(0);
   const output = JSON.parse(result.stdout) as Record<string, string>;
   const record = await Bun.file(join(root, output.record)).json() as Record<string, unknown>;
