@@ -1,12 +1,13 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "cd9b292fe2777bcb5f94d5eba0b155e606f165ac9e54e93e8d6c091fe2561b82",
+  "snapshot_id": "2a8c08b6765ace825185b5b252974427cf38dcade88ccd21a964f02436322c10",
   "files": {
-    "private/evaluator/workspace-overview.test.ts": "01eab7d0830e17cda0ef791f122c1faf992971b8200cd24ddd01e10a58beb632",
-    "private/oracle.yaml": "ed2390729b6caa8c6125b203508ccad6503e53dc5176320ce85dad64306e4466",
+    "private/evaluator/workspace-overview.test.ts": "39f834a9ae01320fe770e95694d169e45d7e7f5f390dea2c3ca9a2b6a6734a2d",
+    "private/oracle.yaml": "e0ef0f2388dd2c0c97ccde53c9201268e33ae154050ecffdcf7bed5e69ed7033",
+    "private/reference/src/workspace-overview.ts": "98e73c8d66ce991ae6050b1344b4474dcbfc4936aa9e49ca1b42585f398a7524",
     "public/starter/src/workspace-overview.ts": "6b7551881afbcbbc2e4d5075413082e13fcc74d92b8df08272c375d9f09122a5",
     "public/task.md": "8283d0866a9ac9885fb43d2d0e08e7f5e85d8ad44bd333b7c5b98083bb7b9854",
-    "public/task.yaml": "42b6d940d3b0793e35351baddfb1d76253f038be6dc7b0a3afb3e9e6faa5cd20"
+    "public/task.yaml": "5dc7e50adfa9ef18cf98a452b780a77069f1b24f4455a6d16afa10bbd08d4fa0"
   }
 }

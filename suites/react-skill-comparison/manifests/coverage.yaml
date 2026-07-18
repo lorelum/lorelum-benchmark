@@ -24,6 +24,11 @@ coverage_gaps:
     - rendering-hydration
     - bundle-import-shape
     - server-streaming
+task_relevance:
+  workspace-overview-loader-v1: direct
+  issue-workbench-model-v1: direct
+  notification-preference-store-v1: partial
+  order-route-loader-v1: partial
 acceptance:
   each_task_must_distinguish_functional_from_compliant: true
   complete_rule_coverage_required_before_claiming_parity: true

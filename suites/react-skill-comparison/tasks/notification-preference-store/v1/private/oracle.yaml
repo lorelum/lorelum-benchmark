@@ -1,4 +1,5 @@
 id: notification-preference-store-v1
+reference_solution: reference/src/notification-preferences.ts
 engineering_concerns:
   - defensive persisted-data parsing
   - explicit schema migration

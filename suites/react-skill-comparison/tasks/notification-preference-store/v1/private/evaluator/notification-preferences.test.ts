@@ -115,6 +115,9 @@ describe("notification-preference-store-v1", () => {
     expect(events.size).toBe(1);
 
     events.emit({ key: "other-key", newValue: JSON.stringify({ version: 2, theme: "dark", dismissedNoticeIds: [] }) });
+    events.emit({ key: notificationPreferenceStorageKey, newValue: "{" });
+    events.emit({ key: notificationPreferenceStorageKey, newValue: JSON.stringify({ version: 2, theme: "invalid", dismissedNoticeIds: [] }) });
+    expect(updates).toEqual([]);
     events.emit({ key: notificationPreferenceStorageKey, newValue: JSON.stringify({ version: 2, theme: "dark", dismissedNoticeIds: ["release", "release"] }) });
     expect(store.get()).toEqual({ version: 2, theme: "dark", dismissedNoticeIds: ["release"] });
     expect(updates).toEqual([{ version: 2, theme: "dark", dismissedNoticeIds: ["release"] }]);

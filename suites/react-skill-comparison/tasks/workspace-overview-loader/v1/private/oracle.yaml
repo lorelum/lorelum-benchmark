@@ -1,4 +1,5 @@
 id: workspace-overview-loader-v1
+reference_solution: reference/src/workspace-overview.ts
 engineering_concerns:
   - dependency-aware async scheduling
   - cheap invalid-input guard

@@ -1,4 +1,5 @@
 id: order-route-loader-v1
+reference_solution: reference/src/order-route.ts
 engineering_concerns:
   - authorization-before-data-expansion
   - dependency-aware async scheduling

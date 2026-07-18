@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const emptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-const snapshotId = "cd9b292fe2777bcb5f94d5eba0b155e606f165ac9e54e93e8d6c091fe2561b82";
+const snapshotId = "2a8c08b6765ace825185b5b252974427cf38dcade88ccd21a964f02436322c10";
 const cleanupPaths = new Set<string>();
 
 afterEach(async () => {

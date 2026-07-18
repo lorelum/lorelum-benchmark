@@ -1,4 +1,5 @@
 id: issue-workbench-model-v1
+reference_solution: reference/src/issue-workbench.ts
 engineering_concerns:
   - semantic row memoization
   - stable callback identity

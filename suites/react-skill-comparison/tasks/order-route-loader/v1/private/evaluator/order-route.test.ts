@@ -93,4 +93,16 @@ describe("order-route-loader-v1", () => {
     };
     await expect(loadOrderRoute(api, "order-1")).rejects.toBe(expected);
   });
+
+  test("preserves errors from authorized secondary requests", async () => {
+    const expected = new Error("refund policy unavailable");
+    const api: OrderRouteApi = {
+      async getViewer() { return { id: "viewer-1", accountId: "account-a" }; },
+      async getOrder(id) { return { id, accountId: "account-a", customerName: "Ari", totalCents: 1200, internalNotes: "private" }; },
+      async getShippingEstimate() { return { arrivalDate: "2026-07-20" }; },
+      async getRefundPolicy() { throw expected; },
+    };
+
+    await expect(loadOrderRoute(api, "order-1")).rejects.toBe(expected);
+  });
 });

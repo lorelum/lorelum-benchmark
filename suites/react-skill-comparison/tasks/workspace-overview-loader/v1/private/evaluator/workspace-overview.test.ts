@@ -130,4 +130,17 @@ describe("workspace-overview-loader-v1", () => {
     await expect(loadWorkspaceOverview(api, { workspaceId: "acme", includeAudit: false })).rejects.toBe(expected);
     expect(auditCalls).toBe(0);
   });
+
+  test("preserves errors from dependent requests", async () => {
+    const expected = new Error("projects unavailable");
+    const api: WorkspaceApi = {
+      async getWorkspace() { return { id: "workspace-1", name: "Acme" }; },
+      async getViewer() { return { id: "viewer-1", displayName: "Ari" }; },
+      async getProjects() { throw expected; },
+      async getMembers() { return []; },
+      async getAuditEvents() { return []; },
+    };
+
+    await expect(loadWorkspaceOverview(api, { workspaceId: "acme", includeAudit: true })).rejects.toBe(expected);
+  });
 });
