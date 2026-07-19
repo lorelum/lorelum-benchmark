@@ -56,7 +56,10 @@ test("provides a deterministic force-remove command for timeout cleanup", () => 
 });
 
 test("checks the installed Pi package version without requiring TTY output", () => {
-  expect(containerVersionCommand(formalContainerSandbox(environment)).join(" ")).toContain("@earendil-works/pi-coding-agent/package.json");
+  const command = containerVersionCommand(formalContainerSandbox(environment)).join(" ");
+
+  expect(command).toContain("@earendil-works/pi-coding-agent/package.json");
+  expect(command).toContain("grep -q");
 });
 
 test("mounts only the staged G1 skill as read-only", () => {
