@@ -15,4 +15,4 @@ dataset:
 tasks:
   - id: pe-deterministic-query-boundaries-v1
     path: tasks/pe-deterministic-query-boundaries/v1
-    lifecycle_stage: pilot
+    lifecycle_stage: candidate

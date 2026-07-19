@@ -1,6 +1,6 @@
 id: pe-deterministic-query-boundaries-v1
 source: contract-derived-seed
-status: pilot
+status: candidate
 reference_solution: reference/src/query.ts
 practice_mapping:
   oracle_practice: { id: deterministic-local-query-boundaries, version: v1, sha256: 04ca3343e740e237c644990befe01d3241c28752cdccc11d4f405e3f0e4d657d }
