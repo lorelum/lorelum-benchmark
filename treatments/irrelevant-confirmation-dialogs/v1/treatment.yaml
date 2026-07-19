@@ -1,0 +1,7 @@
+id: irrelevant-confirmation-dialogs
+version: v1
+kind: control
+prompt_hash: d4051f9b08fa0c777481eec85d5186e99d5f36f51d1709404736ac192dff419e
+tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+source: { kind: matched-irrelevant-practice, practice_id: accessible-confirmation-dialogs, practice_version: v1, practice_path: practices/accessible-confirmation-dialogs/v1/SKILL.md, content_sha256: d4051f9b08fa0c777481eec85d5186e99d5f36f51d1709404736ac192dff419e }
+injection: { mode: pi-skill, skill_path: private/SKILL.md, skill_hash: d4051f9b08fa0c777481eec85d5186e99d5f36f51d1709404736ac192dff419e, scope: system-prompt, secrets: excluded }
