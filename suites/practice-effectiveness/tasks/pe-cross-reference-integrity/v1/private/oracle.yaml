@@ -1,6 +1,6 @@
 id: pe-cross-reference-integrity-v1
 source: contract-derived-seed
-status: pilot
+status: candidate
 reference_solution: reference/src/registry-check.ts
 practice_mapping:
   oracle_practice: { id: preserve-cross-reference-integrity, version: v1, sha256: 6a577bd1accd3f083d0c468c40042cc9ad87e96ccf5b1a01408871d10aa79762 }
