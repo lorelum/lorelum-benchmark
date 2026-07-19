@@ -1,6 +1,6 @@
 id: pe-structured-validation-errors-v1
 source: contract-derived-seed
-status: pilot
+status: candidate
 reference_solution: reference/src/config.ts
 practice_mapping:
   oracle_practice: { id: complete-structured-validation-results, version: v1, sha256: 463741b92d9e4184645a373c829f87e29869cab9534e5c926654c98addd485af }

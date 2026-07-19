@@ -1,7 +1,7 @@
 id: pe-structured-validation-errors-v1
 version: 1
 track: practice-effectiveness
-lifecycle_stage: pilot
+lifecycle_stage: candidate
 evaluator_version: 1
 skill_relevance: direct
 source:
