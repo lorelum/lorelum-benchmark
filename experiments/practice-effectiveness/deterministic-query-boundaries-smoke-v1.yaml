@@ -1,7 +1,7 @@
 id: practice-effectiveness-deterministic-query-boundaries-smoke-v1
 version: v1
 run_kind: smoke
-source_commit: 523f2606f25ad02c056d6765c561565a39b3d904
+source_commit: 858b4fc0e898198fe4db17774ef7037b20cf035d
 suite: { id: practice-effectiveness, version: 0.1.0 }
 conditions:
   - { id: baseline, label: G0, treatment: baseline/v1 }

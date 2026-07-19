@@ -1,7 +1,0 @@
-id: oracle-cross-reference-integrity
-version: v1
-kind: oracle
-prompt_hash: 6a577bd1accd3f083d0c468c40042cc9ad87e96ccf5b1a01408871d10aa79762
-tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
-source: { kind: lorelum-practice, practice_id: preserve-cross-reference-integrity, practice_version: v1, practice_path: practices/preserve-cross-reference-integrity/v1/SKILL.md, content_sha256: 6a577bd1accd3f083d0c468c40042cc9ad87e96ccf5b1a01408871d10aa79762 }
-injection: { mode: pi-skill, skill_path: private/SKILL.md, skill_hash: 6a577bd1accd3f083d0c468c40042cc9ad87e96ccf5b1a01408871d10aa79762, scope: system-prompt, secrets: excluded }
