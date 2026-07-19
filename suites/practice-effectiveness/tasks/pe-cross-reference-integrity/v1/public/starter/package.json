@@ -1,0 +1,9 @@
+{
+  "name": "pe-cross-reference-integrity-starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "bun run src/cli.ts fixtures/registry.json fixtures/entries",
+    "test": "bun test"
+  }
+}
