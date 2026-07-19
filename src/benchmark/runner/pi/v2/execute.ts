@@ -1,7 +1,7 @@
 import Ajv2020 from "ajv/dist/2020";
 import type { ErrorObject, ValidateFunction } from "ajv";
-import { lstat, mkdir, readdir } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { lstat, mkdir, readdir, realpath } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { joinPath, listFiles, pathExists, relativePath, sha256File, sha256Text, workspaceRoot } from "../../../fs";
 import { findTask } from "../../../task-discovery";
 import { containerCommand, containerEnvironment, containerImageInspectCommand, containerRemoveCommand, containerVersionCommand, formalContainerSandbox, type FormalContainerSandbox } from "./sandbox";
@@ -340,6 +340,33 @@ async function runSandboxCommand(command: string[], env: Record<string, string>,
   return stdout.trim();
 }
 
+async function resolvedPiPackageVersion(command: string): Promise<string> {
+  const commandPath = isAbsolute(command) || command.includes("/") || command.includes("\\")
+    ? resolve(workspaceRoot, command)
+    : Bun.which(command) ?? (command === "pi" ? join(workspaceRoot, "node_modules", ".bin", "pi") : undefined);
+  if (!commandPath) fail(`Unable to resolve Pi executable: ${command}`);
+  let resolvedCommand: string;
+  try {
+    resolvedCommand = await realpath(commandPath);
+  } catch (error) {
+    fail(`Unable to resolve Pi executable: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  let directory = dirname(resolvedCommand);
+  while (true) {
+    const packagePath = join(directory, "package.json");
+    if (await pathExists(packagePath)) {
+      const packageDocument = await readJson(packagePath);
+      if (isRecord(packageDocument) && packageDocument.name === "@earendil-works/pi-coding-agent" && typeof packageDocument.version === "string") {
+        return packageDocument.version;
+      }
+    }
+    const parent = dirname(directory);
+    if (parent === directory) break;
+    directory = parent;
+  }
+  fail(`Unable to resolve @earendil-works/pi-coding-agent package metadata for ${command}`);
+}
+
 async function verifyRuntime(environment: Record<string, unknown>, request: PiRunRequestV2, containerSandbox?: FormalContainerSandbox): Promise<void> {
   if (typeof environment.bun === "string" && /^\d+\.\d+\.\d+$/.test(environment.bun) && environment.bun !== Bun.version) {
     fail(`Bun version does not match environment: expected ${environment.bun}, received ${Bun.version}`);
@@ -355,6 +382,8 @@ async function verifyRuntime(environment: Record<string, unknown>, request: PiRu
   }
   const versionCheck = Bun.spawn([request.execution.command, "--version"], { cwd: workspaceRoot, env: Bun.env, stdout: "pipe", stderr: "pipe" });
   if ((await versionCheck.exited) !== 0) fail(`Unable to resolve Pi version: ${(await new Response(versionCheck.stderr).text()).trim()}`);
+  const packageVersion = await resolvedPiPackageVersion(request.execution.command);
+  if (packageVersion !== agentRuntime.version) fail(`Pi package version does not match environment: expected ${agentRuntime.version}, received ${packageVersion}`);
   const actualVersion = (await new Response(versionCheck.stdout).text()).trim();
   if (actualVersion && actualVersion !== agentRuntime.version) fail(`Pi version does not match environment: expected ${agentRuntime.version}, received ${actualVersion}`);
 }

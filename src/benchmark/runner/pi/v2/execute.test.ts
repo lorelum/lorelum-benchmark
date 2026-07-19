@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, rm } from "node:fs/promises";
+import { chmod, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sha256File } from "../../../fs";
@@ -82,7 +82,7 @@ async function writeEnvironment(id: string, withArtifactStorage = false): Promis
   await Bun.write(join(environmentPath, "environment.yaml"), lines.join("\n"));
 }
 
-async function writePinnedPiEnvironment(id: string): Promise<void> {
+async function writePinnedPiEnvironment(id: string, command = localPiCommand): Promise<void> {
   const environmentPath = join(root, "environments", id, "v1");
   cleanupPaths.add(join(root, "environments", id));
   await mkdir(environmentPath, { recursive: true });
@@ -93,7 +93,7 @@ async function writePinnedPiEnvironment(id: string): Promise<void> {
     "agent_runtime:",
     "  id: pi",
     "  version: 0.80.10",
-    `  command: ${JSON.stringify(localPiCommand)}`,
+    `  command: ${JSON.stringify(command)}`,
     "model:",
     "  id: deepseek/deepseek-v4-pro",
     "  version: pending-provider-snapshot",
@@ -101,6 +101,21 @@ async function writePinnedPiEnvironment(id: string): Promise<void> {
     `  policy_hash: ${formalToolPolicyHash}`,
     ""
   ].join("\n"));
+}
+
+async function writeSilentPi(id: string, packageVersion?: string): Promise<string> {
+  const packagePath = packageVersion ? join(tmpdir(), `pi-package-${id}`, "node_modules", "@earendil-works", "pi-coding-agent") : tmpdir();
+  const command = join(packagePath, process.platform === "win32" ? `silent-pi-${id}.cmd` : `silent-pi-${id}`);
+  cleanupPaths.add(packageVersion ? join(tmpdir(), `pi-package-${id}`) : command);
+  await mkdir(packagePath, { recursive: true });
+  if (packageVersion) await Bun.write(join(packagePath, "package.json"), JSON.stringify({ name: "@earendil-works/pi-coding-agent", version: packageVersion }));
+  if (process.platform === "win32") {
+    await Bun.write(command, "@echo off\r\nexit /b 0\r\n");
+  } else {
+    await Bun.write(command, "#!/bin/sh\nexit 0\n");
+    await chmod(command, 0o755);
+  }
+  return command;
 }
 
 async function writeInjectedTreatment(id: string, kind: "oracle" | "control"): Promise<void> {
@@ -292,16 +307,40 @@ test("rejects Pi arguments outside the pinned public-only policy", async () => {
   expect(result.stderr).toContain("Pi arguments do not match the public-only policy");
 });
 
-test("accepts a pinned Pi runtime when its version flag is silent outside a TTY", async () => {
+test("rejects a Pi executable whose version flag is silent", async () => {
   const id = runId();
   const environmentId = runId();
-  await writePinnedPiEnvironment(environmentId);
+  const silentPi = await writeSilentPi(id);
+  await writePinnedPiEnvironment(environmentId, silentPi);
   cleanupPaths.add(join(root, ".run-workspaces", id));
   cleanupPaths.add(join(root, "artifacts", "runs", id));
   const document = request(id, environmentId);
   document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", model_version: "pending-provider-snapshot", system_prompt_hash: emptyHash };
   document.execution = {
-    command: localPiCommand,
+    command: silentPi,
+    args: ["--version"],
+    seed: 1,
+    budget: { max_turns: 1, max_duration_ms: 15000 },
+    tool_policy_hash: formalToolPolicyHash
+  };
+
+  const result = await execute(document);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("Unable to resolve @earendil-works/pi-coding-agent package metadata");
+}, 15_000);
+
+test("accepts a silent Pi executable backed by pinned package metadata", async () => {
+  const id = runId();
+  const environmentId = runId();
+  const silentPi = await writeSilentPi(id, "0.80.10");
+  await writePinnedPiEnvironment(environmentId, silentPi);
+  cleanupPaths.add(join(root, ".run-workspaces", id));
+  cleanupPaths.add(join(root, "artifacts", "runs", id));
+  const document = request(id, environmentId);
+  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", model_version: "pending-provider-snapshot", system_prompt_hash: emptyHash };
+  document.execution = {
+    command: silentPi,
     args: ["--version"],
     seed: 1,
     budget: { max_turns: 1, max_duration_ms: 15000 },
