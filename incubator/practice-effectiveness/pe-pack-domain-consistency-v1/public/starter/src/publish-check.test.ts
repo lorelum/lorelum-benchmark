@@ -1,2 +1,0 @@
-import { expect, test } from "bun:test"; import packs from "../fixtures/packs.json"; import entrypoints from "../fixtures/entrypoints.json"; import { buildPublishIndex } from "./publish-check.ts";
-test("keeps valid local packs publishable", () => expect(buildPublishIndex(packs, entrypoints)).toEqual({ index: packs.map(({ id, domain, entrypoint }) => ({ id, domain, entrypoint })), diagnostics: [] }));

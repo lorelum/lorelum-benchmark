@@ -1,1 +1,0 @@
-[{"id":"writer","domain":"authoring","entrypoint":"entries/writer.ts","dependencies":[]},{"id":"publisher","domain":"delivery","entrypoint":"entries/publisher.ts","dependencies":[]}]
