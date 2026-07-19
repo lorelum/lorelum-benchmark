@@ -1,0 +1,14 @@
+id: pe-pack-domain-consistency-v1
+source: contract-derived-seed
+status: pilot
+reference_solution: reference/src/publish-check.ts
+practice_mapping:
+  oracle_practice: { id: check-pack-domain-consistency, version: v1, sha256: daba6ff23e2c08e23ae3248db77248e94c530799dfe3cea81a73f0373b8fa190 }
+  irrelevant_control: { id: inclusive-design-critique-preparation, version: v1, sha256: 4975ca79a73b56856249512d48f09c04e1d780c0a19801006a84b5b39a7b48e5 }
+contract:
+  domains: [authoring, delivery]
+  entrypoint_export: main
+  dependency_rule: same-domain-only
+  diagnostics: { ordered_by: pack-path-code, accumulate_independent_violations: true }
+checks: [valid-packs-build-index, duplicate-and-missing-facts-block-publication, domain-and-export-consistency-is-checked, dependency-boundaries-are-deterministic]
+scoring: { functional: required, stable-diagnostics: required, practice-adherence: pending-versioned-practice }
