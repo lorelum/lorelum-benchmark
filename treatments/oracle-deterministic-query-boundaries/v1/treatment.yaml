@@ -1,7 +1,0 @@
-id: oracle-deterministic-query-boundaries
-version: v1
-kind: oracle
-prompt_hash: 04ca3343e740e237c644990befe01d3241c28752cdccc11d4f405e3f0e4d657d
-tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
-source: { kind: lorelum-practice, practice_id: deterministic-local-query-boundaries, practice_version: v1, practice_path: practices/deterministic-local-query-boundaries/v1/SKILL.md, content_sha256: 04ca3343e740e237c644990befe01d3241c28752cdccc11d4f405e3f0e4d657d }
-injection: { mode: pi-skill, skill_path: private/SKILL.md, skill_hash: 04ca3343e740e237c644990befe01d3241c28752cdccc11d4f405e3f0e4d657d, scope: system-prompt, secrets: excluded }
