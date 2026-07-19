@@ -267,10 +267,11 @@ test("injects pinned oracle and control content without adding it to the workspa
     document.treatment = { id: treatmentId, version: "v1" };
 
     const result = await execute(document, true);
+    const dryRun = JSON.parse(result.stdout) as { args: string[] };
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("--skill");
-    expect(result.stdout).toContain(`treatments/${treatmentId}/v1/private/SKILL.md`);
+    expect(dryRun.args).toContain("--skill");
+    expect(dryRun.args).toContain(join(root, "treatments", treatmentId, "v1", "private", "SKILL.md"));
   }
 });
 
