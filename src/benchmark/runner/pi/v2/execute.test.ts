@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, rm } from "node:fs/promises";
+import { chmod, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sha256File } from "../../../fs";
@@ -14,6 +14,7 @@ const formalPlanPath = join(root, "experiments", "react-skill-comparison", "g0-g
 const formalPlanHash = await sha256File(formalPlanPath);
 const formalSourceCommit = "073d466b01c1edf12e8d0330ace6110950c3df9c";
 const cleanupPaths = new Set<string>();
+const localPiCommand = join(root, "node_modules", ".bin", "pi");
 
 afterEach(async () => {
   await Promise.all([...cleanupPaths].map((path) => rm(path, { force: true, recursive: true })));
@@ -81,7 +82,7 @@ async function writeEnvironment(id: string, withArtifactStorage = false): Promis
   await Bun.write(join(environmentPath, "environment.yaml"), lines.join("\n"));
 }
 
-async function writePinnedPiEnvironment(id: string): Promise<void> {
+async function writePinnedPiEnvironment(id: string, command = localPiCommand): Promise<void> {
   const environmentPath = join(root, "environments", id, "v1");
   cleanupPaths.add(join(root, "environments", id));
   await mkdir(environmentPath, { recursive: true });
@@ -92,12 +93,49 @@ async function writePinnedPiEnvironment(id: string): Promise<void> {
     "agent_runtime:",
     "  id: pi",
     "  version: 0.80.10",
-    "  command: pi",
+    `  command: ${JSON.stringify(command)}`,
     "model:",
     "  id: deepseek/deepseek-v4-pro",
     "  version: pending-provider-snapshot",
     "sandbox:",
     `  policy_hash: ${formalToolPolicyHash}`,
+    ""
+  ].join("\n"));
+}
+
+async function writeSilentPi(id: string, packageVersion?: string): Promise<string> {
+  const packagePath = packageVersion ? join(tmpdir(), `pi-package-${id}`, "node_modules", "@earendil-works", "pi-coding-agent") : tmpdir();
+  const command = join(packagePath, process.platform === "win32" ? `silent-pi-${id}.cmd` : `silent-pi-${id}`);
+  cleanupPaths.add(packageVersion ? join(tmpdir(), `pi-package-${id}`) : command);
+  await mkdir(packagePath, { recursive: true });
+  if (packageVersion) await Bun.write(join(packagePath, "package.json"), JSON.stringify({ name: "@earendil-works/pi-coding-agent", version: packageVersion }));
+  if (process.platform === "win32") {
+    await Bun.write(command, "@echo off\r\nexit /b 0\r\n");
+  } else {
+    await Bun.write(command, "#!/bin/sh\nexit 0\n");
+    await chmod(command, 0o755);
+  }
+  return command;
+}
+
+async function writeInjectedTreatment(id: string, kind: "oracle" | "control"): Promise<void> {
+  const treatmentPath = join(root, "treatments", id, "v1");
+  cleanupPaths.add(join(root, "treatments", id));
+  await mkdir(join(treatmentPath, "private"), { recursive: true });
+  const skillPath = join(treatmentPath, "private", "SKILL.md");
+  await Bun.write(skillPath, "# Test treatment\n");
+  const skillHash = await sha256File(skillPath);
+  await Bun.write(join(treatmentPath, "treatment.yaml"), [
+    `id: ${id}`,
+    "version: v1",
+    `kind: ${kind}`,
+    `tool_policy_hash: ${formalToolPolicyHash}`,
+    "source:",
+    `  content_sha256: ${skillHash}`,
+    "injection:",
+    "  mode: pi-skill",
+    "  skill_path: private/SKILL.md",
+    `  skill_hash: ${skillHash}`,
     ""
   ].join("\n"));
 }
@@ -234,6 +272,24 @@ test("injects only the pinned Vercel skill for the G1 treatment", async () => {
   expect(result.stdout).not.toContain("treatments/");
 });
 
+test("injects pinned oracle and control content without adding it to the workspace", async () => {
+  for (const kind of ["oracle", "control"] as const) {
+    const treatmentId = `pi-v2-${kind}-${crypto.randomUUID()}`;
+    const environmentId = runId();
+    await writeInjectedTreatment(treatmentId, kind);
+    await writeEnvironment(environmentId);
+    const document = request(runId(), environmentId);
+    document.treatment = { id: treatmentId, version: "v1" };
+
+    const result = await execute(document, true);
+    const dryRun = JSON.parse(result.stdout) as { args: string[] };
+
+    expect(result.exitCode).toBe(0);
+    expect(dryRun.args).toContain("--skill");
+    expect(dryRun.args).toContain(join(root, "treatments", treatmentId, "v1", "private", "SKILL.md"));
+  }
+});
+
 test("rejects Pi arguments outside the pinned public-only policy", async () => {
   const document = request(runId(), "formal-pi-deepseek-v4-pro");
   formalize(document);
@@ -251,16 +307,40 @@ test("rejects Pi arguments outside the pinned public-only policy", async () => {
   expect(result.stderr).toContain("Pi arguments do not match the public-only policy");
 });
 
-test("verifies the pinned Pi runtime before a formal execution", async () => {
+test("rejects a Pi executable whose version flag is silent", async () => {
   const id = runId();
   const environmentId = runId();
-  await writePinnedPiEnvironment(environmentId);
+  const silentPi = await writeSilentPi(id);
+  await writePinnedPiEnvironment(environmentId, silentPi);
   cleanupPaths.add(join(root, ".run-workspaces", id));
   cleanupPaths.add(join(root, "artifacts", "runs", id));
   const document = request(id, environmentId);
   document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", model_version: "pending-provider-snapshot", system_prompt_hash: emptyHash };
   document.execution = {
-    command: "pi",
+    command: silentPi,
+    args: ["--version"],
+    seed: 1,
+    budget: { max_turns: 1, max_duration_ms: 15000 },
+    tool_policy_hash: formalToolPolicyHash
+  };
+
+  const result = await execute(document);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("Unable to resolve @earendil-works/pi-coding-agent package metadata");
+}, 15_000);
+
+test("accepts a silent Pi executable backed by pinned package metadata", async () => {
+  const id = runId();
+  const environmentId = runId();
+  const silentPi = await writeSilentPi(id, "0.80.10");
+  await writePinnedPiEnvironment(environmentId, silentPi);
+  cleanupPaths.add(join(root, ".run-workspaces", id));
+  cleanupPaths.add(join(root, "artifacts", "runs", id));
+  const document = request(id, environmentId);
+  document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", model_version: "pending-provider-snapshot", system_prompt_hash: emptyHash };
+  document.execution = {
+    command: silentPi,
     args: ["--version"],
     seed: 1,
     budget: { max_turns: 1, max_duration_ms: 15000 },
@@ -270,7 +350,7 @@ test("verifies the pinned Pi runtime before a formal execution", async () => {
   const result = await execute(document);
 
   expect(result.exitCode).toBe(0);
-  expect(result.stdout).toContain("0.80.10");
+  expect(result.stdout).toContain('"status":"completed"');
 }, 15_000);
 
 test("refuses formal coordination until the provider model snapshot is resolved", async () => {

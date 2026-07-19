@@ -7,8 +7,8 @@ treatment manifest 和 environment manifest，随后在 `.run-workspaces/<run-id
 
 工作区只包含 `public/task.md` 和 `public/starter/`；`private/`、evaluator、oracle 与
 snapshot 永远不会复制给 Pi。请求中的 Pi 命令和参数仍保持显式，但命令必须与 environment
-manifest 中固定的 agent runtime command 一致。`skill` treatment 的固定 `SKILL.md` 会在
-hash 校验后作为 Pi `--skill` 参数注入；baseline 不注入任何 Skill。adapter 约束命令的工作目录；正式环境还
+manifest 中固定的 agent runtime command 一致。`skill`、`oracle` 和 `control` treatment 的固定 `SKILL.md` 会在
+hash 校验后作为 Pi `--skill` 参数注入；baseline 不注入任何内容。adapter 约束命令的工作目录；正式环境还
 必须由 environment manifest 指定的 sandbox 阻止 Pi 逃逸到宿主文件系统。
 
 ```sh

@@ -1,7 +1,7 @@
 import Ajv2020 from "ajv/dist/2020";
 import type { ErrorObject, ValidateFunction } from "ajv";
-import { lstat, mkdir, readdir } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { lstat, mkdir, readdir, realpath } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { joinPath, listFiles, pathExists, relativePath, sha256File, sha256Text, workspaceRoot } from "../../../fs";
 import { findTask } from "../../../task-discovery";
 import { containerCommand, containerEnvironment, containerImageInspectCommand, containerRemoveCommand, containerVersionCommand, formalContainerSandbox, type FormalContainerSandbox } from "./sandbox";
@@ -186,9 +186,9 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
   }
   let treatmentSkillPath: string | undefined;
   if (treatment.kind === "baseline" && treatment.injection !== undefined) fail(`Baseline treatment must not define injection: ${relativePath(treatmentPath)}`);
-  if (treatment.kind === "skill") {
+  if (treatment.kind === "skill" || treatment.kind === "oracle" || treatment.kind === "control") {
     if (!isRecord(treatment.injection) || treatment.injection.mode !== "pi-skill" || typeof treatment.injection.skill_path !== "string" || typeof treatment.injection.skill_hash !== "string") {
-      fail(`Skill treatment must define a pinned pi-skill injection: ${relativePath(treatmentPath)}`);
+      fail(`Injectable treatment must define a pinned pi-skill injection: ${relativePath(treatmentPath)}`);
     }
     treatmentSkillPath = resolve(dirname(treatmentPath), treatment.injection.skill_path);
     const skillRelative = relative(dirname(treatmentPath), treatmentSkillPath);
@@ -198,9 +198,11 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
     await requireFile(treatmentSkillPath, "treatment skill");
     const skillHash = await sha256File(treatmentSkillPath);
     if (skillHash !== treatment.injection.skill_hash) fail(`Treatment skill_hash does not match skill file: ${relativePath(treatmentSkillPath)}`);
-    if (!isRecord(treatment.source) || treatment.source.skill_md_sha256 !== skillHash) {
+    if (!isRecord(treatment.source) || (treatment.source.skill_md_sha256 !== skillHash && treatment.source.content_sha256 !== skillHash)) {
       fail(`Treatment source hash does not match skill file: ${relativePath(treatmentPath)}`);
     }
+  } else if (treatment.injection !== undefined) {
+    fail(`Treatment kind must not define injection: ${relativePath(treatmentPath)}`);
   }
 
   const environmentPath = manifestPath("environments", request.environment.id, request.environment.version, "environment.yaml");
@@ -338,6 +340,33 @@ async function runSandboxCommand(command: string[], env: Record<string, string>,
   return stdout.trim();
 }
 
+async function resolvedPiPackageVersion(command: string): Promise<string> {
+  const commandPath = isAbsolute(command) || command.includes("/") || command.includes("\\")
+    ? resolve(workspaceRoot, command)
+    : Bun.which(command) ?? (command === "pi" ? join(workspaceRoot, "node_modules", ".bin", "pi") : undefined);
+  if (!commandPath) fail(`Unable to resolve Pi executable: ${command}`);
+  let resolvedCommand: string;
+  try {
+    resolvedCommand = await realpath(commandPath);
+  } catch (error) {
+    fail(`Unable to resolve Pi executable: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  let directory = dirname(resolvedCommand);
+  while (true) {
+    const packagePath = join(directory, "package.json");
+    if (await pathExists(packagePath)) {
+      const packageDocument = await readJson(packagePath);
+      if (isRecord(packageDocument) && packageDocument.name === "@earendil-works/pi-coding-agent" && typeof packageDocument.version === "string") {
+        return packageDocument.version;
+      }
+    }
+    const parent = dirname(directory);
+    if (parent === directory) break;
+    directory = parent;
+  }
+  fail(`Unable to resolve @earendil-works/pi-coding-agent package metadata for ${command}`);
+}
+
 async function verifyRuntime(environment: Record<string, unknown>, request: PiRunRequestV2, containerSandbox?: FormalContainerSandbox): Promise<void> {
   if (typeof environment.bun === "string" && /^\d+\.\d+\.\d+$/.test(environment.bun) && environment.bun !== Bun.version) {
     fail(`Bun version does not match environment: expected ${environment.bun}, received ${Bun.version}`);
@@ -353,8 +382,10 @@ async function verifyRuntime(environment: Record<string, unknown>, request: PiRu
   }
   const versionCheck = Bun.spawn([request.execution.command, "--version"], { cwd: workspaceRoot, env: Bun.env, stdout: "pipe", stderr: "pipe" });
   if ((await versionCheck.exited) !== 0) fail(`Unable to resolve Pi version: ${(await new Response(versionCheck.stderr).text()).trim()}`);
+  const packageVersion = await resolvedPiPackageVersion(request.execution.command);
+  if (packageVersion !== agentRuntime.version) fail(`Pi package version does not match environment: expected ${agentRuntime.version}, received ${packageVersion}`);
   const actualVersion = (await new Response(versionCheck.stdout).text()).trim();
-  if (actualVersion !== agentRuntime.version) fail(`Pi version does not match environment: expected ${agentRuntime.version}, received ${actualVersion}`);
+  if (actualVersion && actualVersion !== agentRuntime.version) fail(`Pi version does not match environment: expected ${agentRuntime.version}, received ${actualVersion}`);
 }
 
 function hasResolvedModelVersion(version: unknown): boolean {
