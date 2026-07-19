@@ -1,0 +1,1 @@
+[{"file":"entries/writer.ts","domain":"authoring","exports":["main"]},{"file":"entries/publisher.ts","domain":"delivery","exports":["main"]}]
