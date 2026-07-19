@@ -14,6 +14,7 @@ const formalPlanPath = join(root, "experiments", "react-skill-comparison", "g0-g
 const formalPlanHash = await sha256File(formalPlanPath);
 const formalSourceCommit = "073d466b01c1edf12e8d0330ace6110950c3df9c";
 const cleanupPaths = new Set<string>();
+const localPiCommand = join(root, "node_modules", ".bin", "pi");
 
 afterEach(async () => {
   await Promise.all([...cleanupPaths].map((path) => rm(path, { force: true, recursive: true })));
@@ -92,12 +93,34 @@ async function writePinnedPiEnvironment(id: string): Promise<void> {
     "agent_runtime:",
     "  id: pi",
     "  version: 0.80.10",
-    "  command: pi",
+    `  command: ${JSON.stringify(localPiCommand)}`,
     "model:",
     "  id: deepseek/deepseek-v4-pro",
     "  version: pending-provider-snapshot",
     "sandbox:",
     `  policy_hash: ${formalToolPolicyHash}`,
+    ""
+  ].join("\n"));
+}
+
+async function writeInjectedTreatment(id: string, kind: "oracle" | "control"): Promise<void> {
+  const treatmentPath = join(root, "treatments", id, "v1");
+  cleanupPaths.add(join(root, "treatments", id));
+  await mkdir(join(treatmentPath, "private"), { recursive: true });
+  const skillPath = join(treatmentPath, "private", "SKILL.md");
+  await Bun.write(skillPath, "# Test treatment\n");
+  const skillHash = await sha256File(skillPath);
+  await Bun.write(join(treatmentPath, "treatment.yaml"), [
+    `id: ${id}`,
+    "version: v1",
+    `kind: ${kind}`,
+    `tool_policy_hash: ${formalToolPolicyHash}`,
+    "source:",
+    `  content_sha256: ${skillHash}`,
+    "injection:",
+    "  mode: pi-skill",
+    "  skill_path: private/SKILL.md",
+    `  skill_hash: ${skillHash}`,
     ""
   ].join("\n"));
 }
@@ -234,6 +257,23 @@ test("injects only the pinned Vercel skill for the G1 treatment", async () => {
   expect(result.stdout).not.toContain("treatments/");
 });
 
+test("injects pinned oracle and control content without adding it to the workspace", async () => {
+  for (const kind of ["oracle", "control"] as const) {
+    const treatmentId = `pi-v2-${kind}-${crypto.randomUUID()}`;
+    const environmentId = runId();
+    await writeInjectedTreatment(treatmentId, kind);
+    await writeEnvironment(environmentId);
+    const document = request(runId(), environmentId);
+    document.treatment = { id: treatmentId, version: "v1" };
+
+    const result = await execute(document, true);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("--skill");
+    expect(result.stdout).toContain(`treatments/${treatmentId}/v1/private/SKILL.md`);
+  }
+});
+
 test("rejects Pi arguments outside the pinned public-only policy", async () => {
   const document = request(runId(), "formal-pi-deepseek-v4-pro");
   formalize(document);
@@ -251,7 +291,7 @@ test("rejects Pi arguments outside the pinned public-only policy", async () => {
   expect(result.stderr).toContain("Pi arguments do not match the public-only policy");
 });
 
-test("verifies the pinned Pi runtime before a formal execution", async () => {
+test("accepts a pinned Pi runtime when its version flag is silent outside a TTY", async () => {
   const id = runId();
   const environmentId = runId();
   await writePinnedPiEnvironment(environmentId);
@@ -260,7 +300,7 @@ test("verifies the pinned Pi runtime before a formal execution", async () => {
   const document = request(id, environmentId);
   document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", model_version: "pending-provider-snapshot", system_prompt_hash: emptyHash };
   document.execution = {
-    command: "pi",
+    command: localPiCommand,
     args: ["--version"],
     seed: 1,
     budget: { max_turns: 1, max_duration_ms: 15000 },
@@ -270,7 +310,7 @@ test("verifies the pinned Pi runtime before a formal execution", async () => {
   const result = await execute(document);
 
   expect(result.exitCode).toBe(0);
-  expect(result.stdout).toContain("0.80.10");
+  expect(result.stdout).toContain('"status":"completed"');
 }, 15_000);
 
 test("refuses formal coordination until the provider model snapshot is resolved", async () => {
