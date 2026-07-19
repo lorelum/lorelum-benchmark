@@ -1,9 +1,0 @@
-{
-  "name": "pe-deterministic-query-boundaries-starter",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "check": "bun run src/cli.ts fixtures/items.json '{\"page\":1}'",
-    "test": "bun test"
-  }
-}
