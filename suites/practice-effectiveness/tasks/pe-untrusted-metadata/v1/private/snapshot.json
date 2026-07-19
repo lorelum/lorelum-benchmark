@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "170949f15d60c496b159d74a3b284312529fc12450c0776b4a34d79053369a8c",
+  "files": {
+    "private/evaluator/plugin-manifest.test.ts": "3a6104649715b92163ca18db2f855b9bd93c045934e812354fa979430f789af0",
+    "private/oracle.yaml": "e6f4276432c5c17143e252cda65ed89d9e87f85e7d10a894723f2ce8387c6d36",
+    "private/reference/src/plugin-manifest.ts": "c08888448f482112eaced0cfdbf1d4a683dc0b99e7ef5b5a80efe9af7daf4396",
+    "public/starter/bun.lock": "63596027003871d9b06a56fe33c7b5f7c97cf77b21386803a230c640a031b74b",
+    "public/starter/fixtures/plugins/valid-plugin.json": "382b95a9954488a462f6fab894269ebce4a1a377cd7be3b3357dd2e2a0e7cd8c",
+    "public/starter/package.json": "81878a3ed0bfb2b53316cec51c311e93a3c15dfbfa4e8e26da1e3b628301e130",
+    "public/starter/src/cli.ts": "55fe666c5d556ab9c67ec7199851c8aa63113026861548abef4b9fa6702390dc",
+    "public/starter/src/plugin-manifest.test.ts": "a0bafa8826235a1d02b69c5eecd6bd718c5339d626e40b83012b6ebec5c6e95d",
+    "public/starter/src/plugin-manifest.ts": "d140e8f5ab662dde5bd04d5a713083e907b767fa0f3126ce96f209d9b3d585cf",
+    "public/task.md": "f61a8c56e8e8f81d2f672a8e75662008473477fa9ea18e21c11d31d1b54b5b99",
+    "public/task.yaml": "981d67aef7fe17675566cd9d34fbfb4ef0e15ac65ffa120b91ce22f0fa299556"
+  }
+}

@@ -1,0 +1,35 @@
+id: pe-untrusted-metadata-v1
+source: contract-derived-seed
+status: candidate-only
+reference_solution: reference/src/plugin-manifest.ts
+contract:
+  accepted_fields:
+    - id
+    - displayName
+    - apiVersion
+    - entrypoint
+    - capabilities
+  api_version: v1
+  max_display_name_length: 64
+  entrypoint: must-start-with-dot-slash-and-contain-no-parent-segment
+  capabilities:
+    - read
+    - transform
+    - write
+  diagnostics:
+    required_fields:
+      - file
+      - path
+      - code
+    ordered_by: path-then-code
+    accumulate_independent_violations: true
+checks:
+  - valid-manifest-is-preserved
+  - malformed-fields-are-rejected-with-stable-diagnostics
+  - missing-fields-are-accumulated
+  - property-order-does-not-change-diagnostics
+  - validation-does-not-mutate-input
+scoring:
+  functional: required
+  stable-diagnostics: required
+  practice-adherence: pending-versioned-practice
