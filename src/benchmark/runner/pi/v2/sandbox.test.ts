@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { containerCommand, containerEnvironment, containerName, containerRemoveCommand, formalContainerSandbox } from "./sandbox";
+import { containerCommand, containerEnvironment, containerName, containerRemoveCommand, containerVersionCommand, formalContainerSandbox } from "./sandbox";
 
 const image = "ghcr.io/lorelum/lorelum-benchmark/formal-pi@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const environment = {
@@ -53,6 +53,10 @@ test("builds a minimal baseline container command", () => {
 
 test("provides a deterministic force-remove command for timeout cleanup", () => {
   expect(containerRemoveCommand("test-run")).toEqual(["docker", "rm", "--force", "lorelum-pi-test-run"]);
+});
+
+test("checks the installed Pi package version without requiring TTY output", () => {
+  expect(containerVersionCommand(formalContainerSandbox(environment)).join(" ")).toContain("@earendil-works/pi-coding-agent/package.json");
 });
 
 test("mounts only the staged G1 skill as read-only", () => {

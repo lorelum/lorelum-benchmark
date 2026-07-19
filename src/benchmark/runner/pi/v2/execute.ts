@@ -186,9 +186,9 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
   }
   let treatmentSkillPath: string | undefined;
   if (treatment.kind === "baseline" && treatment.injection !== undefined) fail(`Baseline treatment must not define injection: ${relativePath(treatmentPath)}`);
-  if (treatment.kind === "skill") {
+  if (treatment.kind === "skill" || treatment.kind === "oracle" || treatment.kind === "control") {
     if (!isRecord(treatment.injection) || treatment.injection.mode !== "pi-skill" || typeof treatment.injection.skill_path !== "string" || typeof treatment.injection.skill_hash !== "string") {
-      fail(`Skill treatment must define a pinned pi-skill injection: ${relativePath(treatmentPath)}`);
+      fail(`Injectable treatment must define a pinned pi-skill injection: ${relativePath(treatmentPath)}`);
     }
     treatmentSkillPath = resolve(dirname(treatmentPath), treatment.injection.skill_path);
     const skillRelative = relative(dirname(treatmentPath), treatmentSkillPath);
@@ -198,9 +198,11 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
     await requireFile(treatmentSkillPath, "treatment skill");
     const skillHash = await sha256File(treatmentSkillPath);
     if (skillHash !== treatment.injection.skill_hash) fail(`Treatment skill_hash does not match skill file: ${relativePath(treatmentSkillPath)}`);
-    if (!isRecord(treatment.source) || treatment.source.skill_md_sha256 !== skillHash) {
+    if (!isRecord(treatment.source) || (treatment.source.skill_md_sha256 !== skillHash && treatment.source.content_sha256 !== skillHash)) {
       fail(`Treatment source hash does not match skill file: ${relativePath(treatmentPath)}`);
     }
+  } else if (treatment.injection !== undefined) {
+    fail(`Treatment kind must not define injection: ${relativePath(treatmentPath)}`);
   }
 
   const environmentPath = manifestPath("environments", request.environment.id, request.environment.version, "environment.yaml");
@@ -354,7 +356,7 @@ async function verifyRuntime(environment: Record<string, unknown>, request: PiRu
   const versionCheck = Bun.spawn([request.execution.command, "--version"], { cwd: workspaceRoot, env: Bun.env, stdout: "pipe", stderr: "pipe" });
   if ((await versionCheck.exited) !== 0) fail(`Unable to resolve Pi version: ${(await new Response(versionCheck.stderr).text()).trim()}`);
   const actualVersion = (await new Response(versionCheck.stdout).text()).trim();
-  if (actualVersion !== agentRuntime.version) fail(`Pi version does not match environment: expected ${agentRuntime.version}, received ${actualVersion}`);
+  if (actualVersion && actualVersion !== agentRuntime.version) fail(`Pi version does not match environment: expected ${agentRuntime.version}, received ${actualVersion}`);
 }
 
 function hasResolvedModelVersion(version: unknown): boolean {
