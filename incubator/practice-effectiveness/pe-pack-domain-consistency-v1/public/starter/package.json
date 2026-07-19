@@ -1,0 +1,1 @@
+{"name":"pe-pack-domain-consistency-starter","private":true,"type":"module","scripts":{"check":"bun run src/cli.ts fixtures/packs.json fixtures/entrypoints.json","test":"bun test"}}

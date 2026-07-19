@@ -1,0 +1,14 @@
+{
+  "records": [
+    {
+      "id": "getting-started",
+      "kind": "guide",
+      "entry": "entries/getting-started.json"
+    },
+    {
+      "id": "release-notes",
+      "kind": "note",
+      "entry": "entries/release-notes.json"
+    }
+  ]
+}
