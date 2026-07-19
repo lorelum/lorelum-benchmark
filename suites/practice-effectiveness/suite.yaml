@@ -16,3 +16,15 @@ tasks:
   - id: pe-untrusted-metadata-v1
     path: tasks/pe-untrusted-metadata/v1
     lifecycle_stage: pilot
+  - id: pe-cross-reference-integrity-v1
+    path: tasks/pe-cross-reference-integrity/v1
+    lifecycle_stage: pilot
+  - id: pe-deterministic-query-boundaries-v1
+    path: tasks/pe-deterministic-query-boundaries/v1
+    lifecycle_stage: pilot
+  - id: pe-structured-validation-errors-v1
+    path: tasks/pe-structured-validation-errors/v1
+    lifecycle_stage: pilot
+  - id: pe-pack-domain-consistency-v1
+    path: tasks/pe-pack-domain-consistency/v1
+    lifecycle_stage: pilot

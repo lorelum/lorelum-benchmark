@@ -1,0 +1,1 @@
+{"name":"pe-structured-validation-errors-starter","private":true,"type":"module","scripts":{"check":"bun run src/cli.ts fixtures/valid.json","test":"bun test"}}
