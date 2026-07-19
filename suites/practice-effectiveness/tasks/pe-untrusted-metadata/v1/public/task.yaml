@@ -1,0 +1,21 @@
+id: pe-untrusted-metadata-v1
+version: 1
+track: practice-effectiveness
+lifecycle_stage: pilot
+evaluator_version: 1
+skill_relevance: direct
+source:
+  kind: contract-derived-seed
+  scenario: local plugin metadata loader with malformed-input compatibility contract
+  production_evidence: unavailable
+runtime:
+  command: bun test private/evaluator
+agent_input:
+  prompt: task.md
+  starter: starter
+  candidate: src/plugin-manifest.ts
+applicable_conditions:
+  - baseline
+  - oracle-practice
+  - irrelevant-practice
+  - lorelum-retrieval

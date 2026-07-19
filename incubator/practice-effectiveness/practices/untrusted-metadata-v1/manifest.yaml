@@ -1,0 +1,14 @@
+id: untrusted-metadata-v1
+status: approved-and-frozen-as-formal-practice
+source: contract-derived-seed
+candidate_task: pe-untrusted-metadata-v1
+related_practice: validate-untrusted-metadata-boundaries-draft-v1
+irrelevant_control: accessible-empty-state-copy-draft-v1
+approval_required:
+  - provider-model-snapshot
+  - protected-artifact-storage
+  - formal-run-authorization
+notes:
+  - This group is synthetic and does not represent a production incident.
+  - Formal sources are practices/validate-untrusted-metadata-boundaries/v1/SKILL.md and practices/accessible-empty-state-copy/v1/SKILL.md.
+  - Frozen treatment content is oracle-untrusted-metadata/v1 and irrelevant-empty-state/v1.

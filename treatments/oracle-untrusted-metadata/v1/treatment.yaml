@@ -1,0 +1,17 @@
+id: oracle-untrusted-metadata
+version: v1
+kind: oracle
+prompt_hash: 9c4d7e71a6a61cd80f678377f593166685ab674301e6625c00ffbf681535a255
+tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+source:
+  kind: lorelum-practice
+  practice_id: validate-untrusted-metadata-boundaries
+  practice_version: v1
+  practice_path: practices/validate-untrusted-metadata-boundaries/v1/SKILL.md
+  content_sha256: 9c4d7e71a6a61cd80f678377f593166685ab674301e6625c00ffbf681535a255
+injection:
+  mode: pi-skill
+  skill_path: private/SKILL.md
+  skill_hash: 9c4d7e71a6a61cd80f678377f593166685ab674301e6625c00ffbf681535a255
+  scope: system-prompt
+  secrets: excluded
