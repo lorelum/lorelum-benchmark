@@ -83,7 +83,7 @@ export function containerVersionCommand(sandbox: FormalContainerSandbox): string
   return [
     "docker", "run", "--rm", "--network", "none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
     "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--entrypoint", "/bin/sh", sandbox.image,
-    "-ec", "test \"$(bun --version)\" = \"1.3.11\"; test \"$(node --version)\" = \"v22.19.0\"; command -v pi >/dev/null; test \"$(node -p \\\"require('@earendil-works/pi-coding-agent/package.json').version\\\")\" = \"0.80.10\""
+    "-ec", "test \"$(bun --version)\" = \"1.3.11\"; test \"$(node --version)\" = \"v22.19.0\"; command -v pi >/dev/null; grep -q '\"version\": \"0.80.10\"' node_modules/@earendil-works/pi-coding-agent/package.json"
   ];
 }
 
