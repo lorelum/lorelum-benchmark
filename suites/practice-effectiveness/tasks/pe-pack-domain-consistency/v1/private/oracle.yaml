@@ -1,6 +1,6 @@
 id: pe-pack-domain-consistency-v1
 source: contract-derived-seed
-status: pilot
+status: candidate
 reference_solution: reference/src/publish-check.ts
 practice_mapping:
   oracle_practice: { id: check-pack-domain-consistency, version: v1, sha256: daba6ff23e2c08e23ae3248db77248e94c530799dfe3cea81a73f0373b8fa190 }
