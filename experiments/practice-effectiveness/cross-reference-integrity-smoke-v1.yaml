@@ -1,0 +1,21 @@
+id: practice-effectiveness-cross-reference-integrity-smoke-v1
+version: v1
+run_kind: smoke
+source_commit: 523f2606f25ad02c056d6765c561565a39b3d904
+suite: { id: practice-effectiveness, version: 0.1.0 }
+conditions:
+  - { id: baseline, label: G0, treatment: baseline/v1 }
+  - { id: oracle-practice, label: G1-oracle, treatment: oracle-cross-reference-integrity/v1 }
+  - { id: irrelevant-practice, label: G-control, treatment: irrelevant-local-setup-guide/v1 }
+smoke_tasks: [pe-cross-reference-integrity-v1]
+full_tasks: [pe-cross-reference-integrity-v1]
+environment: { id: formal-pi-deepseek-v4-pro, version: v1 }
+agent: { id: pi, version: 0.80.10, command: pi }
+model: { id: deepseek/deepseek-v4-pro, version: pending-provider-snapshot }
+repetitions: 1
+seed: 1
+budget: { max_turns: 20, max_duration_ms: 600000 }
+system_prompt_path: prompts/formal-pi/v1/system.md
+system_prompt_hash: a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a
+tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+analysis: { claim: Dry-run contract validation only; no effectiveness conclusion., success_rule: All requests pass --dry-run., retrieval_status: deferred-until-versioned-lorelum-retrieval-is-available }
