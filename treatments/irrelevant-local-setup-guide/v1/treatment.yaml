@@ -1,0 +1,7 @@
+id: irrelevant-local-setup-guide
+version: v1
+kind: control
+prompt_hash: 839e6ba78b8d22e19c6be39cf21ce28133aadd0dbbe96b185c981f0ae49b91fc
+tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+source: { kind: matched-irrelevant-practice, practice_id: concise-local-setup-guide, practice_version: v1, practice_path: practices/concise-local-setup-guide/v1/SKILL.md, content_sha256: 839e6ba78b8d22e19c6be39cf21ce28133aadd0dbbe96b185c981f0ae49b91fc }
+injection: { mode: pi-skill, skill_path: private/SKILL.md, skill_hash: 839e6ba78b8d22e19c6be39cf21ce28133aadd0dbbe96b185c981f0ae49b91fc, scope: system-prompt, secrets: excluded }
