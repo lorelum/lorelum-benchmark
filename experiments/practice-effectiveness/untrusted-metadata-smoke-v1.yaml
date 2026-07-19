@@ -1,7 +1,7 @@
 id: practice-effectiveness-untrusted-metadata-smoke-v1
 version: v1
 run_kind: smoke
-source_commit: 85b47b7ddb5db54dae6108a6805e5b7717be699b
+source_commit: 858b4fc0e898198fe4db17774ef7037b20cf035d
 suite:
   id: practice-effectiveness
   version: 0.1.0
