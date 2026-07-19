@@ -12,4 +12,7 @@ dataset:
   candidate_pool_target: 20
   pilot_task_target: 6
   formal_task_target: 8-12
-tasks: []
+tasks:
+  - id: pe-pack-domain-consistency-v1
+    path: tasks/pe-pack-domain-consistency/v1
+    lifecycle_stage: pilot

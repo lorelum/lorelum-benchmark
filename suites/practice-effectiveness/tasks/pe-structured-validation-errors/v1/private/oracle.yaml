@@ -1,0 +1,25 @@
+id: pe-structured-validation-errors-v1
+source: contract-derived-seed
+status: pilot
+reference_solution: reference/src/config.ts
+practice_mapping:
+  oracle_practice: { id: complete-structured-validation-results, version: v1, sha256: 463741b92d9e4184645a373c829f87e29869cab9534e5c926654c98addd485af }
+  irrelevant_control: { id: focused-product-interview-planning, version: v1, sha256: 094ef0bc65ba617d24f9b092a62730995a7bd97d1d046d055414ed3962239590 }
+contract:
+  fields: [name, revision, output, modes]
+  revision: v1
+  outputs: [summary, full]
+  modes: [safe, fast]
+  diagnostics:
+    required_fields: [path, code]
+    ordered_by: path-then-code
+    accumulate_independent_violations: true
+checks:
+  - valid-config-is-preserved
+  - independent-errors-are-accumulated
+  - missing-fields-are-accumulated
+  - ordering-and-input-immutability-are-stable
+scoring:
+  functional: required
+  structured-diagnostics: required
+  practice-adherence: pending-versioned-practice
