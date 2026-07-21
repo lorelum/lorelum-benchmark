@@ -2,12 +2,20 @@ import { basename } from "node:path";
 import { findTask, type TaskLocation } from "./task-discovery";
 import { joinPath, workspaceRoot } from "./fs";
 
-const fixtureReferences: Array<{ suite: string; reference: string }> = [
-  { suite: "react-skill-comparison", reference: "workspace-overview-loader/v1" },
-  { suite: "react-skill-comparison", reference: "issue-workbench-model/v1" },
-  { suite: "react-skill-comparison", reference: "notification-preference-store/v1" },
-  { suite: "react-skill-comparison", reference: "order-route-loader/v1" },
-];
+const suite = "react-skill-comparison";
+const suiteManifest = Bun.YAML.parse(await Bun.file(joinPath(workspaceRoot, "suites", suite, "suite.yaml")).text()) as { tasks?: Array<{ id?: string; path?: string; lifecycle_stage?: string }> };
+const fixtureReferences = (suiteManifest.tasks ?? [])
+  .filter((task) => (task.lifecycle_stage === "pilot" || task.lifecycle_stage === "retired") && typeof task.id === "string" && typeof task.path === "string")
+  .map((task) => {
+    const match = /^tasks\/([a-z0-9-]+)\/(v[1-9][0-9]*)$/.exec(task.path!);
+    if (!match) throw new Error(`Invalid pilot task path: ${task.path}`);
+    return { suite, reference: `${match[1]}/${match[2]}` };
+  });
+
+if (fixtureReferences.length === 0) {
+  console.error("Fixture calibration requires at least one pilot or retired task.");
+  process.exit(1);
+}
 
 async function runEvaluator(task: TaskLocation, candidatePath: string): Promise<{ exitCode: number; output: string }> {
   const evaluatorPath = joinPath(task.path, "private", "evaluator");
@@ -55,7 +63,21 @@ for (const fixture of fixtureReferences) {
     continue;
   }
 
-  console.log(`Fixture calibrated: ${fixture.reference} (reference pass, starter negative)`);
+  const mutationCandidates = oracle.mutation_candidates;
+  if (mutationCandidates !== undefined && (!Array.isArray(mutationCandidates) || mutationCandidates.some((candidate) => typeof candidate !== "string" || candidate.length === 0))) {
+    failures.push(`Invalid mutation_candidates in ${oraclePath}`);
+    continue;
+  }
+
+  for (const mutationCandidate of mutationCandidates ?? []) {
+    const mutationPath = joinPath(task.path, "private", mutationCandidate as string);
+    const mutationResult = await runEvaluator(task, mutationPath);
+    if (mutationResult.exitCode === 0 || !mutationResult.output.includes("(fail)")) {
+      failures.push(`Mutation did not demonstrate a rejected check for ${fixture.reference}/${mutationCandidate}:\n${mutationResult.output}`);
+    }
+  }
+
+  console.log(`Fixture calibrated: ${fixture.reference} (reference pass, starter negative, ${mutationCandidates?.length ?? 0} mutations rejected)`);
 }
 
 if (failures.length > 0) {

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "a09441f9828be59429f1c5018af2227892cb0ce7cd31f633841e3af88e547de6",
+  "files": {
+    "private/evaluator/evaluate.ts": "5bcd2a0edc52bb4ceb50078ae8799610728dc11c97235c0a1a47dbe56b976e9a",
+    "private/mutations/anonymous-member-projection.ts": "6dc339a7804704ab97f09b9891f0f9710a7188fc0badb29c6198d0759e97b5c0",
+    "private/mutations/distinguishable-forbidden.ts": "d7f0c52e3a61d5cb8ddd7b237f0d7b29fe41e7ef17dfbf967ce19edf4a91b29e",
+    "private/mutations/eager-public-read-for-member.ts": "7b63d70e917cb13293cbfb4dcdaf56bb8ebc307b7b3b5a58c315f0faaa457289",
+    "private/mutations/malformed-viewer-expansion.ts": "6495509da8289e9e597c87403c3c5a82f9eb02dee72eae1fbc9ed990752ae8b3",
+    "private/oracle.yaml": "758a6c17fa26d65fad2541bdec22eccd5eeac1b363966bb49aea2d61f8c83c1e",
+    "private/reference/src/project-summary.ts": "5c095f6926d3ac713837f4fcb5cd3369ca99f14d0ee4e98d60b86c2e3fa632d8",
+    "public/starter/src/project-summary.ts": "6bd168d9e05c10cc39a7efea15beee9a67665deb7c399f85761b5e92ff7991d6",
+    "public/task.md": "81119deed58b0165c87519cd48516d2900842d049117af068e39d23b31f3cfef",
+    "public/task.yaml": "a358abb0393e24c7a3f377ba4ac8ce5757495c28dfc386d13f7aa5c3552d7698"
+  }
+}

@@ -23,8 +23,8 @@
 控制默认参与的任务集合。候选测试在升级前存放于 `incubator/`；仅可丢弃的
 探针才放入被忽略的 `scratch/`。
 
-首批 smoke 夹具为 `workspace-overview-loader-v1` 和 `issue-workbench-model-v1`；扩展 smoke
-再覆盖 `notification-preference-store-v1` 与 `order-route-loader-v1`。四个任务分别校验异步
+当前 smoke 包含 `workspace-overview-loader-v1`、`issue-workbench-model-v2`、
+`notification-preference-store-v1` 与 `order-route-loader-v1`。四个任务分别校验异步
 依赖图、稳定状态列表、持久化同步和授权路由中的动态行为与性能约束。
 
 ## 校验工作区
@@ -54,7 +54,7 @@ bun run evaluate -- react-skill-comparison workspace-overview-loader/v1
 
 ```powershell
 $env:CANDIDATE_PATH = 'D:\path\to\candidate\src\issue-workbench.ts'
-bun run evaluate -- react-skill-comparison issue-workbench-model/v1
+bun run evaluate -- react-skill-comparison issue-workbench-model/v2
 ```
 
 每次评测都会在执行测试前校验任务已提交的 `private/snapshot.json`。要复现

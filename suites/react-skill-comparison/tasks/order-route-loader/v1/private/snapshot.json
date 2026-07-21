@@ -1,13 +1,13 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "db60c21f0aca05248c26959e51f0f13236b51b03a0fc4693a01a9c89ef242915",
+  "snapshot_id": "5dcabd8c019369fe9c66d7a3c66f9ebde217f89275540edf0813ac39135ae5f3",
   "files": {
     "private/evaluator/order-route.test.ts": "8cade58357542657ff0bbc09aed05b4700b9b3b12f8f2d016173aa9d0e3b1f26",
     "private/oracle.yaml": "89794957b2712140aebc762ef54fbc4e2214c506273fe31b32acdbd61513707b",
     "private/reference/src/order-route.ts": "5994415747baad6e7be101aa35af25708effc816ee25fb74b550f244de6cbb1e",
     "public/starter/src/order-route.ts": "93a460d811f84fea218c8cbba5b8d813154a2c218a5121ac91a8b8d4b1b5e738",
     "public/task.md": "c92e9997c335c589d91f375be535d2265b5849bc5c8b130618848112aa8a3ac0",
-    "public/task.yaml": "11008136893a8d2907002b9ff5158231b6b6e5ea7a3e4277494ae041d49f6e2a"
+    "public/task.yaml": "1ad6ccd3f8c4188f304a63a776e9feaa60f4e3367dcbd23a6f3bc266c72accc4"
   }
 }

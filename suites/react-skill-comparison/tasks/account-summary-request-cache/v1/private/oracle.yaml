@@ -1,0 +1,27 @@
+id: account-summary-request-cache-v1
+reference_solution: reference/src/account-summary.ts
+engineering_concerns:
+  - request-scoped-deduplication
+  - normalised-input-keying
+  - failure-eviction
+  - original-error-preservation
+checks:
+  - id: blank-input-avoids-io
+  - id: same-context-concurrent-reads-share-one-repository-trace
+  - id: same-context-success-reuses-summary-identity
+  - id: different-contexts-do-not-share-reads
+  - id: missing-account-skips-permissions
+  - id: rejected-read-is-retryable-with-original-error
+scoring:
+  semantic: required
+  deterministic_dynamic_quality: required
+  wall_clock_thresholds: prohibited
+  semantic_failure_score: 0
+required_mutations:
+  - no-request-context-sharing
+  - module-global-sharing
+  - rejected-entry-retained
+mutation_candidates:
+  - mutations/no-request-context-sharing.ts
+  - mutations/module-global-sharing.ts
+  - mutations/rejected-entry-retained.ts

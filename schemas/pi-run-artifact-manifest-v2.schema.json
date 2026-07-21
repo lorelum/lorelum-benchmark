@@ -8,7 +8,7 @@
     "run_id": { "type": "string" },
     "experiment_id": { "type": "string", "minLength": 1 },
     "experiment_plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "run_kind": { "enum": ["smoke", "official"] },
+    "run_kind": { "enum": ["smoke", "pilot", "official"] },
     "condition_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
     "repeat": { "type": "integer", "minimum": 1 },
     "source_commit": { "type": "string", "minLength": 1 },
@@ -22,6 +22,25 @@
     "agent": { "type": "object" },
     "execution": { "type": "object" },
     "inputs": { "type": "object" },
+    "rule_audit": {
+      "type": "object",
+      "required": ["manifest_path", "sha256", "treatment", "required_rules"],
+      "properties": {
+        "manifest_path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "treatment": {
+          "type": "object",
+          "required": ["id", "version"],
+          "properties": {
+            "id": { "type": "string" },
+            "version": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "required_rules": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
     "workspace": {
       "type": "object",
       "required": ["path", "task_md_sha256", "starter_files"],

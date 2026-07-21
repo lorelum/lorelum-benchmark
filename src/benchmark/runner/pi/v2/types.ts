@@ -3,7 +3,7 @@ export type PiRunRequestV2 = {
   run_id: string;
   experiment_id: string;
   experiment_plan_hash: string;
-  run_kind: "smoke" | "official";
+  run_kind: "smoke" | "pilot" | "official";
   condition_id: string;
   repeat: number;
   source_commit: string;
@@ -30,7 +30,7 @@ export type PiRunArtifactManifestV2 = {
   run_id: string;
   experiment_id: string;
   experiment_plan_hash: string;
-  run_kind: "smoke" | "official";
+  run_kind: "smoke" | "pilot" | "official";
   condition_id: string;
   repeat: number;
   source_commit: string;
@@ -38,12 +38,21 @@ export type PiRunArtifactManifestV2 = {
   candidate_path: string;
   suite: PiRunRequestV2["suite"];
   task: PiRunRequestV2["task"];
-  treatment: PiRunRequestV2["treatment"] & { manifest_path: string };
+  treatment: PiRunRequestV2["treatment"] & {
+    manifest_path: string;
+    source?: { repository: string; revision: string; path: string; bundle_sha256: string };
+  };
   environment: PiRunRequestV2["environment"] & { manifest_path: string };
   scorer: PiRunRequestV2["scorer"];
   agent: PiRunRequestV2["agent"];
   execution: PiRunRequestV2["execution"] & { cwd: string };
   inputs: PiRunRequestV2["inputs"];
+  rule_audit?: {
+    manifest_path: string;
+    sha256: string;
+    treatment: { id: string; version: string };
+    required_rules: string[];
+  };
   workspace: { path: string; task_md_sha256: string; starter_files: Record<string, string> };
   status: "prepared" | "completed" | "failed";
   timed_out: boolean;

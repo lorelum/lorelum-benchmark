@@ -8,7 +8,8 @@ type PlanCondition = { id: string; treatment: string };
 
 type ExperimentPlan = {
   id: string;
-  run_kind: "smoke" | "official";
+  lifecycle_stage?: "active" | "retired";
+  run_kind: "smoke" | "pilot" | "official";
   source_commit: string;
   suite: { id: string; version: string };
   conditions: PlanCondition[];
@@ -124,6 +125,7 @@ async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPoli
 async function main(): Promise<void> {
   const { planPath, outputPath, smoke, dryRun } = parseArguments();
   const plan = asPlan(Bun.YAML.parse(await Bun.file(planPath).text()));
+  if (plan.lifecycle_stage === "retired") fail(`Experiment plan is retired: ${plan.id}`);
   const planHash = await sha256File(planPath);
   if (!(await sourceCommitIsAncestor(plan.source_commit))) fail(`Experiment plan source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
   const systemPromptPath = resolve(workspaceRoot, plan.system_prompt_path);

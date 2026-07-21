@@ -1,3 +1,5 @@
+import { lstat } from "node:fs/promises";
+
 export const workspaceRoot = Bun.cwd;
 
 export function joinPath(...parts: string[]): string {
@@ -43,6 +45,16 @@ export async function listFiles(path: string): Promise<string[]> {
 export async function sha256File(path: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", await Bun.file(path).arrayBuffer());
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export async function sha256Directory(path: string): Promise<string> {
+  const files = await listFiles(path);
+  const entries = await Promise.all(files.map(async (file) => {
+    const filePath = joinPath(path, file);
+    if ((await lstat(filePath)).isSymbolicLink()) throw new Error(`Directory hash cannot include symbolic link: ${filePath}`);
+    return `${file.replaceAll("\\", "/")}\0${await sha256File(filePath)}`;
+  }));
+  return sha256Text(entries.join("\n"));
 }
 
 export async function sha256Text(value: string): Promise<string> {

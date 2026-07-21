@@ -1,0 +1,15 @@
+id: account-summary-react-cache-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 2
+evaluator_contract: structured/v2
+skill_relevance: direct
+source:
+  kind: public-case-abstraction
+  reviewed_cases: [https://github.com/vercel/swr/issues/3013, https://github.com/vercel/swr/pull/4282]
+  scenario: server-rendered account panels share request-local reads
+  non_derivative_statement: Original account domain; no source API or patch is copied.
+runtime: { command: bun run evaluate -- react-skill-comparison account-summary-react-cache/v1 }
+agent_input: { prompt: task.md, starter: starter }
+applicable_conditions: [baseline, vercel-skill, lorelum-retrieval]

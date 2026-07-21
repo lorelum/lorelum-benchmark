@@ -6,7 +6,8 @@
   "properties": {
     "id": { "type": "string", "minLength": 1 },
     "version": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
-    "run_kind": { "enum": ["smoke", "official"] },
+    "lifecycle_stage": { "enum": ["active", "retired"] },
+    "run_kind": { "enum": ["smoke", "pilot", "official"] },
     "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
     "suite": { "type": "object", "required": ["id", "version"] },
     "conditions": {

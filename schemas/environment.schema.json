@@ -15,20 +15,38 @@
       "properties": {
         "policy_hash": { "type": "string" },
         "container": {
-          "type": "object",
-          "required": ["runtime", "image", "network", "proxy_url", "allowed_endpoint", "workspace_path", "skill_path", "pids_limit", "memory_limit"],
-          "properties": {
-            "runtime": { "const": "docker" },
-            "image": { "type": "string", "pattern": "^ghcr\\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$" },
-            "network": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$" },
-            "proxy_url": { "type": "string", "pattern": "^http://[A-Za-z0-9][A-Za-z0-9.-]*:[1-9][0-9]{0,4}$" },
-            "allowed_endpoint": { "const": "api.deepseek.com:443" },
-            "workspace_path": { "const": "/workspace" },
-            "skill_path": { "const": "/lorelum/treatment/SKILL.md" },
-            "pids_limit": { "type": "integer", "minimum": 1 },
-            "memory_limit": { "type": "string", "pattern": "^[1-9][0-9]*[kKmMgG]$" }
-          },
-          "additionalProperties": false
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["runtime", "image", "network", "proxy_url", "allowed_endpoint", "workspace_path", "skill_path", "pids_limit", "memory_limit"],
+              "properties": {
+                "runtime": { "const": "docker" },
+                "image": { "type": "string", "pattern": "^ghcr\\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$" },
+                "network": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$" },
+                "proxy_url": { "type": "string", "pattern": "^http://[A-Za-z0-9][A-Za-z0-9.-]*:[1-9][0-9]{0,4}$" },
+                "allowed_endpoint": { "const": "api.deepseek.com:443" },
+                "workspace_path": { "const": "/workspace" },
+                "skill_path": { "const": "/lorelum/treatment/SKILL.md" },
+                "pids_limit": { "type": "integer", "minimum": 1 },
+                "memory_limit": { "type": "string", "pattern": "^[1-9][0-9]*[kKmMgG]$" }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": ["runtime", "image", "network", "workspace_path", "skill_path", "pids_limit", "memory_limit"],
+              "properties": {
+                "runtime": { "const": "docker" },
+                "image": { "type": "string", "pattern": "^lorelum-formal-pi:[a-z0-9][a-z0-9._-]*$" },
+                "network": { "const": "bridge" },
+                "workspace_path": { "const": "/workspace" },
+                "skill_path": { "const": "/lorelum/treatment/SKILL.md" },
+                "pids_limit": { "type": "integer", "minimum": 1 },
+                "memory_limit": { "type": "string", "pattern": "^[1-9][0-9]*[kKmMgG]$" }
+              },
+              "additionalProperties": false
+            }
+          ]
         }
       },
       "additionalProperties": true

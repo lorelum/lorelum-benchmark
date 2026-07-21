@@ -1,0 +1,7 @@
+id: incident-board-view-model-v1
+reference_solution: reference/src/incident-board.ts
+engineering_concerns: [derived-state, stable-row-identity, stable-callback-identity]
+checks: [{ id: filtered-shape }, { id: selection-transitions }, { id: input-immutability }, { id: stable-unaffected-rows }, { id: stable-callbacks }, { id: bounded-derivation }]
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+required_mutations: [always-rebuild, stale-callback, in-place-row-mutation]
+mutation_candidates: [mutations/always-rebuild.ts, mutations/stale-callback.ts, mutations/in-place-row-mutation.ts]

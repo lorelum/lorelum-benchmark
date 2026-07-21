@@ -1,0 +1,15 @@
+id: fulfilment-transition-service-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 2
+evaluator_contract: structured/v2
+skill_relevance: out-of-domain
+source:
+  kind: public-case-abstraction
+  reviewed_cases: [https://github.com/statelyai/xstate/pull/5463, https://github.com/statelyai/xstate/issues/3279]
+  scenario: order reservation and carrier-backed fulfilment transitions
+  non_derivative_statement: Original order graph, carrier contract, and evaluator; no source state-machine API, callback contract, or fix is copied.
+runtime: { command: bun run evaluate -- react-skill-comparison fulfilment-transition-service/v1 }
+agent_input: { prompt: task.md, starter: starter }
+applicable_conditions: [baseline, vercel-skill, lorelum-retrieval]

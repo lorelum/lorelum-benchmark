@@ -1,0 +1,1 @@
+export function createReportController(viewer: any, report: any, loadRenderer: any) { const pending = loadRenderer(); return { summary: () => ({ id: report.id, title: report.title, canOpenExport: Boolean(viewer.id && viewer.canExport && report.exportsEnabled) }), async openExport() { return (await pending).render(report); } }; }

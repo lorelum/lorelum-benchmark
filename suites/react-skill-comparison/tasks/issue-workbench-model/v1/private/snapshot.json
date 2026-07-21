@@ -1,13 +1,13 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "26591303a4cdc6714b792efe715c2d567d3262661f9fd0ff63fbbfcc84623175",
+  "snapshot_id": "885c8e79864d2e1bd2b59559bf681a0bf2e2a8e56996ba1274e6e89b2537c4ce",
   "files": {
     "private/evaluator/issue-workbench.test.ts": "5013c5979b0b8a08dccb52cac90c4dd32fc4af4bf35d2c0ceeb0499bc5f726a3",
     "private/oracle.yaml": "68fef2aa48d684171056ebd926e13529ee232de8aea277c4cb5c5f2fa94b1cb9",
     "private/reference/src/issue-workbench.ts": "bd22c3d2f3cc76dbeda10be85ed446bc173452581a8f54ef74fee4384aa35b63",
     "public/starter/src/issue-workbench.ts": "a3dca402da68795f530abcca2ab1cc2699be67fd09f122c7420165f079bb5914",
     "public/task.md": "96973376a061173f2d77842776d37d53e6bbf2c218590dfc14f337675c6a3dc4",
-    "public/task.yaml": "81fe9704aa6d43b0dd7abe5fbf74ac39c8a74590a1d7c39ce18e407ad1617cb6"
+    "public/task.yaml": "4f741f2a5b2c0ddca47d41d31fe98747b1267a98081a4c74f78dbc3d31a1a031"
   }
 }

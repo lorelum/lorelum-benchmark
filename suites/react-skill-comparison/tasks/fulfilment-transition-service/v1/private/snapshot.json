@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "a3b028fc66ea1139f63da23c4ac99c47deb8a7c959f1760d229d218778ac9079",
+  "files": {
+    "private/evaluator/evaluate.ts": "aaad722b8dbf66306d2081827a5677a9a5cc1c252d1967bb587c73b370355518",
+    "private/mutations/duplicate-pending-dispatch.ts": "44cf8cebe23cd5d2ef79998325109750a0858bb9c61f09f3c848ce39ee2a0c51",
+    "private/mutations/premature-dispatched-state.ts": "141867ca3dd93754b86caead01e9bde8866b786bfdd28a1d4f1d8ed0dcb25919",
+    "private/mutations/swallowed-carrier-error.ts": "dcd13fd0cdbc597271e587c07f2af4eaa0f3a3bedb26d286338de61009b6d748",
+    "private/mutations/terminal-transition.ts": "fa3b5e623eecbd15fce77f97bddc055696c836b99f8d65cacc0bffe7a93352cb",
+    "private/oracle.yaml": "ba18fe3c65f5bc876a17a739480f8ce781e4c2dbd576b0da44b2883c11debb57",
+    "private/reference/src/fulfilment-service.ts": "06965a4126570de405d0c10cf5c026d221f22ecdca047d16e81752408ce1ff61",
+    "public/starter/src/fulfilment-service.ts": "f9ebfa2a8c650603d43a9f184092764214bc37ec676cf65035feb6c4e5cd9578",
+    "public/task.md": "df85a880ddef58ac751e87ac18a44ebdf6ce95a58ca1433352e8fd8c17599156",
+    "public/task.yaml": "7e3779f945ef796042300dd94e7134890d3dfff508dd1b6288ad247a53566fe0"
+  }
+}

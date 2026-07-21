@@ -7,7 +7,7 @@
     "run_id": { "type": "string" },
     "experiment_id": { "type": "string", "minLength": 1 },
     "experiment_plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "run_kind": { "enum": ["smoke", "official"] },
+    "run_kind": { "enum": ["smoke", "pilot", "official"] },
     "condition_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
     "repeat": { "type": "integer", "minimum": 1 },
     "source_commit": { "type": "string", "minLength": 1 },
@@ -20,6 +20,40 @@
     "agent": { "type": "object", "required": ["id", "version", "model", "model_version", "system_prompt_hash"] },
     "execution": { "type": "object", "required": ["seed", "budget", "tool_policy_hash"] },
     "inputs": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" } },
+    "rule_audit": {
+      "type": "object",
+      "required": ["manifest_path", "sha256", "treatment", "required_rules"],
+      "properties": {
+        "manifest_path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "treatment": {
+          "type": "object",
+          "required": ["id", "version"],
+          "properties": {
+            "id": { "type": "string" },
+            "version": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "required_rules": { "type": "array", "items": { "type": "string" } },
+        "trace_audit": {
+          "type": "object",
+          "required": ["schema_version", "treatment_id", "skill_activated", "rule_reads", "required_rules", "first_edit_event", "rule_read_events", "valid"],
+          "properties": {
+            "schema_version": { "const": "pi-trace-audit/v1" },
+            "treatment_id": { "type": "string" },
+            "skill_activated": { "type": "boolean" },
+            "rule_reads": { "type": "array", "items": { "type": "string" } },
+            "required_rules": { "type": "array", "items": { "type": "string" } },
+            "first_edit_event": { "type": ["integer", "null"] },
+            "rule_read_events": { "type": "array", "items": { "type": "object" } },
+            "valid": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
     "artifacts": { "type": "array", "items": { "$ref": "artifact.schema.json" } }
   },
   "additionalProperties": false

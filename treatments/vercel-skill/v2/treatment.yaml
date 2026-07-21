@@ -1,0 +1,17 @@
+id: vercel-skill
+version: v2
+kind: skill
+tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+source:
+  repository: https://github.com/vercel-labs/agent-skills.git
+  revision: f8a72b9603728bb92a217a879b7e62e43ad76c81
+  path: skills/react-best-practices
+  license: MIT
+  bundle_sha256: 3e9da5010a3a9195d0dc4568e99056c52dfe7339d19214a682ba16f1a1a1d407
+injection:
+  mode: pi-skill
+  skill_name: vercel-react-best-practices
+  skill_path: SKILL.md
+  activation_instruction: Before editing, read and apply the individual rule files relevant to this task.
+  scope: native-resource
+  secrets: excluded

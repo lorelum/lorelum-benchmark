@@ -8,8 +8,7 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile && ln -s /opt/formal-pi/node_modules/.bin/pi /usr/local/bin/pi && \
     test "$(bun --version)" = "1.3.11" && \
     test "$(node --version)" = "v22.19.0" && \
-    command -v pi >/dev/null && \
-    grep -q '"version": "0.80.10"' node_modules/@earendil-works/pi-coding-agent/package.json
+    test "$(pi --version)" = "0.80.10"
 
 USER 65532:65532
 ENTRYPOINT ["pi"]

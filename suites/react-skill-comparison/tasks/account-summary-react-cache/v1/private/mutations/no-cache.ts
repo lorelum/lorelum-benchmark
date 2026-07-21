@@ -1,0 +1,1 @@
+export async function loadAccountSummary(api: any, input: { accountId: string }) { const id = input.accountId.trim(); if (!id) return null; const account = await api.getAccount(id); return account ? { account, permissions: await api.getPermissions(id) } : null; }

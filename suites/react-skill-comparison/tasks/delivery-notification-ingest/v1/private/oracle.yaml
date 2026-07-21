@@ -1,0 +1,26 @@
+id: delivery-notification-ingest-v1
+reference_solution: reference/src/delivery-notifications.ts
+engineering_concerns:
+  - runtime-event-validation
+  - duplicate-event-idempotency
+  - chronological-state-progression
+  - immutable-notification-snapshots
+checks:
+  - id: invalid-events-do-not-mutate-or-notify
+  - id: valid-events-preserve-delivery-order
+  - id: duplicate-and-stale-events-are-ignored
+  - id: timestamps-compare-by-instant-not-string-order
+  - id: snapshots-and-release-are-safe
+scoring:
+  semantic: required
+  deterministic_dynamic_quality: required
+  wall_clock_thresholds: prohibited
+  semantic_failure_score: 0
+required_mutations:
+  - static-type-assertion
+  - duplicate-event-overwrite
+  - lexical-timestamp-comparison
+mutation_candidates:
+  - mutations/static-type-assertion.ts
+  - mutations/duplicate-event-overwrite.ts
+  - mutations/lexical-timestamp-comparison.ts

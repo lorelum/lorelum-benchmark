@@ -29,6 +29,7 @@ async function fixture(track: "practice-effectiveness" | "performance-skill-comp
     "runtime:",
     "  command: bun",
     "evaluator_version: 1",
+    "skill_relevance: direct",
     "agent_input:",
     "  prompt: task.md",
     "  starter: starter",
@@ -37,6 +38,16 @@ async function fixture(track: "practice-effectiveness" | "performance-skill-comp
     ""
   ].join("\n"));
   await write(join(taskPath, "private", "oracle.yaml"), "id: example-v1\n");
+  await write(join(taskPath, "private", "rule-audit.yaml"), [
+    "schema_version: task-rule-audit/v1",
+    "task_id: example-v1",
+    "treatment:",
+    "  id: vercel-skill",
+    "  version: v2",
+    "required_rules:",
+    "  - async-parallel.md",
+    ""
+  ].join("\n"));
   await write(join(taskPath, "private", "snapshot.json"), "{}\n");
   await write(join(suitePath, "suite.yaml"), [
     "id: fixture",
@@ -89,12 +100,84 @@ test("rejects suite documents that violate their JSON Schema", async () => {
   }
 });
 
+test("requires a frozen private rule audit for active direct tasks", async () => {
+  const workspace = await fixture("practice-effectiveness");
+  try {
+    await rm(join(workspace, "suites", "fixture", "tasks", "example", "v1", "private", "rule-audit.yaml"));
+    const result = await validate(workspace);
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("Missing required path: suites/fixture/tasks/example/v1/private/rule-audit.yaml");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
 test("rejects coverage manifests that reference undeclared tasks", async () => {
   const workspace = await fixture("performance-skill-comparison");
   try {
     const result = await validate(workspace);
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("Coverage manifest references missing task: fixture/missing-v1");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("rejects active experiments that reference retired tasks", async () => {
+  const workspace = await fixture("practice-effectiveness");
+  try {
+    const taskCard = join(workspace, "suites", "fixture", "tasks", "example", "v1", "public", "task.yaml");
+    await write(taskCard, (await Bun.file(taskCard).text()).replace("lifecycle_stage: pilot", "lifecycle_stage: retired"));
+    const suitePath = join(workspace, "suites", "fixture", "suite.yaml");
+    await write(suitePath, (await Bun.file(suitePath).text()).replace("    lifecycle_stage: pilot", "    lifecycle_stage: retired"));
+    const experimentPath = join(workspace, "experiments");
+    await mkdir(experimentPath, { recursive: true });
+    await write(join(experimentPath, "active.yaml"), [
+      "id: fixture-active",
+      "version: v1",
+      "lifecycle_stage: active",
+      "run_kind: official",
+      `source_commit: '${"0".repeat(40)}'`,
+      "suite:", "  id: fixture", "  version: 0.1.0",
+      "conditions:", "  - id: baseline", "    label: G0", "    treatment: baseline/v1", "  - id: control", "    label: C", "    treatment: baseline/v1",
+      "smoke_tasks:", "  - example-v1", "full_tasks:", "  - example-v1",
+      "environment:", "  id: local", "  version: v1",
+      "agent:", "  id: test", "  version: v1", "  command: bun",
+      "model:", "  id: test", "  version: v1",
+      "repetitions: 3", "seed: 0", "budget:", "  max_turns: 1", "  max_duration_ms: 1", "system_prompt_path: prompt.md", `system_prompt_hash: '${"0".repeat(64)}'`, `tool_policy_hash: '${"0".repeat(64)}'`, ""
+    ].join("\n"));
+    const result = await validate(workspace);
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("Active experiment full_tasks references retired task: fixture/example-v1");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("rejects pilot experiments with fewer than two repetitions", async () => {
+  const workspace = await fixture("practice-effectiveness");
+  try {
+    const experimentPath = join(workspace, "experiments");
+    await mkdir(experimentPath, { recursive: true });
+    await write(join(experimentPath, "pilot.yaml"), [
+      "id: fixture-pilot",
+      "version: v1",
+      "lifecycle_stage: active",
+      "run_kind: pilot",
+      `source_commit: '${"0".repeat(40)}'`,
+      "suite:", "  id: fixture", "  version: 0.1.0",
+      "conditions:", "  - id: baseline", "    label: G0", "    treatment: baseline/v1", "  - id: control", "    label: C", "    treatment: baseline/v1",
+      "smoke_tasks:", "  - example-v1", "full_tasks:", "  - example-v1",
+      "environment:", "  id: local", "  version: v1",
+      "agent:", "  id: test", "  version: v1", "  command: bun",
+      "model:", "  id: test", "  version: v1",
+      "repetitions: 1", "seed: 0", "budget:", "  max_turns: 1", "  max_duration_ms: 1", "system_prompt_path: prompt.md", `system_prompt_hash: '${"0".repeat(64)}'`, `tool_policy_hash: '${"0".repeat(64)}'`, ""
+    ].join("\n"));
+
+    const result = await validate(workspace);
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("Pilot experiment must use at least two repetitions");
+    expect(result.output).not.toContain("Schema violation in experiments/pilot.yaml");
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }

@@ -65,8 +65,12 @@ Practice 有效性任务。性能轨道从 8 个类别 smoke 任务开始，只�
 每个 JSON 对象代表一次任务执行。正式运行还必须有受
 `schemas/run-manifest.schema.json` 约束的不可变 manifest。运行记录和 manifest 共同
 固定 suite/case 版本、treatment、scorer、Agent、模型、系统 prompt、工具权限、环境、
-源码 commit、随机种子、预算、输入 hash、snapshot id、成本/延迟、代码 diff 位置、自动
+源码 commit、实验配对 seed、预算、输入 hash、snapshot id、成本/延迟、代码 diff 位置、自动
 检查和盲审结果。
+
+实验配对 seed 用于稳定请求和配对设计，不得自动记为模型采样参数。只有 provider 明确
+支持且 adapter 确实传递该参数时，run record 才能在 `model.parameters` 中声明模型 seed。
+不支持 seed 的模型必须依靠固定采样参数和多次重复估计结果分布。
 
 这样两条轨道可使用同一数据集而不会覆盖彼此证据。每份不可变记录存放于
 `results/records/<suite>/<task>/<run_id>.json`；大日志和 diff 作为 artifact，以校验和或

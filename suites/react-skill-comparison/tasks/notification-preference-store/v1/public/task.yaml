@@ -1,7 +1,7 @@
 id: notification-preference-store-v1
 version: 1
 track: performance-skill-comparison
-lifecycle_stage: candidate
+lifecycle_stage: retired
 evaluator_version: 1
 skill_relevance: partial
 source:

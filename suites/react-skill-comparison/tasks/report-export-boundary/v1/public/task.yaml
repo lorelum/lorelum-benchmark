@@ -1,0 +1,15 @@
+id: report-export-boundary-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 2
+evaluator_contract: structured/v2
+skill_relevance: direct
+source:
+  kind: public-case-abstraction
+  reviewed_cases: [https://github.com/vercel/next.js/issues/18819, https://github.com/vercel/next.js/issues/89252]
+  scenario: authorised report export opened on demand
+  non_derivative_statement: Original report and loader interfaces; no source route, import syntax, or configuration is copied.
+runtime: { command: bun run evaluate -- react-skill-comparison report-export-boundary/v1 }
+agent_input: { prompt: task.md, starter: starter }
+applicable_conditions: [baseline, vercel-skill, lorelum-retrieval]

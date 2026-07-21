@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "aebaea5846241396ccaff81791815d0a921d903c48ed776012376a6fa44d2a44",
+  "files": {
+    "private/evaluator/README.md": "821bd385388915c1127b27cbdbdacc0288f72625aee46be2948bb1b66163ce78",
+    "private/evaluator/evaluate.ts": "ff14e4c8fa75738affdd7bdf0d3b6e49b954d770e2a741debea5e4b0cc4f77d6",
+    "private/mutations/always-rebuild.ts": "0e94f622a819b4b746f6055d1a17053aa7b1840bcc3c5f3097b3f16e536c5575",
+    "private/mutations/in-place-row-mutation.ts": "0e94f622a819b4b746f6055d1a17053aa7b1840bcc3c5f3097b3f16e536c5575",
+    "private/mutations/stale-callback.ts": "73b363c5bb7778be6894ec98ef7e2ef205316240121e66e4cd8194dff1cb7fec",
+    "private/oracle.yaml": "01d9799bc717258569504f75ec762e764663909694cd2aaf7de629eadc2d1910",
+    "private/reference/src/incident-board.ts": "e7ab5703c913784c15294df80635578476da4ab7e81765ffb4f6c6fb5d3cce85",
+    "private/rule-audit.yaml": "853b5de142d204f34a63ae3e16e03bafafa3421b18545831d3dd60eaf10fe7ee",
+    "public/starter/src/incident-board.ts": "a1e1aa5f3a7cba82715999313aa592d21514bb8f6d130a801dad84feea753b76",
+    "public/task.md": "179074595ccd9acb7cd168dd8c66f7e328b4b9fba52762f26cdda1184915f4a1",
+    "public/task.yaml": "4b3e83e7f536943241201db59cde0cc7aa64110f79585f17b889e63d80ba9f5b"
+  }
+}

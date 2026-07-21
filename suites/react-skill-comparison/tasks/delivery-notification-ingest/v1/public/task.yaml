@@ -1,0 +1,22 @@
+id: delivery-notification-ingest-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 1
+skill_relevance: out-of-domain
+source:
+  kind: public-case-abstraction
+  reviewed_cases:
+    - https://github.com/MergeFi/backend/issues/28
+    - https://github.com/Fairmint/ocp-canton-sdk/pull/438
+  scenario: externally delivered notifications with ordered delivery state updates
+  non_derivative_statement: The task uses an original event contract and does not copy source schemas or validation implementations.
+runtime:
+  command: bun run evaluate -- react-skill-comparison delivery-notification-ingest/v1
+agent_input:
+  prompt: task.md
+  starter: starter
+applicable_conditions:
+  - baseline
+  - vercel-skill
+  - lorelum-retrieval

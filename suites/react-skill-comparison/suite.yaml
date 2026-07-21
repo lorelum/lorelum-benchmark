@@ -1,5 +1,5 @@
 id: react-skill-comparison
-version: 0.2.0
+version: 0.4.0
 track: performance-skill-comparison
 lifecycle_stage: pilot
 protocol: ../../docs/BENCHMARK_PROTOCOL.md
@@ -16,19 +16,39 @@ tasks:
     path: tasks/workspace-overview-loader/v1
     profile: rsc
     category: async-dependency-graph
-    lifecycle_stage: candidate
+    lifecycle_stage: retired
+  - id: issue-workbench-model-v2
+    path: tasks/issue-workbench-model/v2
+    profile: spa
+    category: rerender-stateful-model
+    lifecycle_stage: retired
   - id: issue-workbench-model-v1
     path: tasks/issue-workbench-model/v1
     profile: spa
     category: rerender-stateful-model
-    lifecycle_stage: candidate
+    lifecycle_stage: retired
   - id: notification-preference-store-v1
     path: tasks/notification-preference-store/v1
     profile: spa
     category: client-persistence-sync
-    lifecycle_stage: candidate
+    lifecycle_stage: retired
   - id: order-route-loader-v1
     path: tasks/order-route-loader/v1
     profile: rsc
     category: server-authorization-serialization
-    lifecycle_stage: candidate
+    lifecycle_stage: retired
+  - id: member-hub-loader-v1
+    path: tasks/member-hub-loader/v1
+    profile: rsc
+    category: asynchronous-dependency-orchestration
+    lifecycle_stage: pilot
+  - id: account-summary-request-cache-v1
+    path: tasks/account-summary-request-cache/v1
+    profile: rsc
+    category: request-scope-deduplication
+    lifecycle_stage: pilot
+  - id: delivery-notification-ingest-v1
+    path: tasks/delivery-notification-ingest/v1
+    profile: spa
+    category: external-event-data-validity
+    lifecycle_stage: pilot

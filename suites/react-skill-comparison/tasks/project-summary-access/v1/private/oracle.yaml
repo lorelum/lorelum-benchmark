@@ -1,0 +1,7 @@
+id: project-summary-access-v1
+reference_solution: reference/src/project-summary.ts
+engineering_concerns: [runtime-viewer-validation, least-privileged-data-projection, cross-organisation-indistinguishability, aggregate-visibility-boundary]
+checks: [{ id: malformed-viewer-is-denied-before-project-read }, { id: missing-and-cross-organisation-are-indistinguishable }, { id: anonymous-view-is-approved-and-public-only }, { id: member-view-is-organisation-scoped-and-complete }]
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+required_mutations: [malformed-viewer-expansion, anonymous-member-projection, distinguishable-forbidden, eager-public-read-for-member]
+mutation_candidates: [mutations/malformed-viewer-expansion.ts, mutations/anonymous-member-projection.ts, mutations/distinguishable-forbidden.ts, mutations/eager-public-read-for-member.ts]

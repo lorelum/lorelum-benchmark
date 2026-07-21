@@ -1,5 +1,6 @@
 id: react-skill-comparison-g0-g1-v1
 version: v1
+lifecycle_stage: retired
 run_kind: official
 source_commit: 073d466b01c1edf12e8d0330ace6110950c3df9c
 suite:

@@ -1,0 +1,26 @@
+id: member-hub-loader-v2
+reference_solution: reference/src/member-hub.ts
+engineering_concerns:
+  - blank-input-guard
+  - asynchronous-dependency-orchestration
+  - original-error-preservation
+checks:
+  - id: blank-input-avoids-io
+  - id: aggregate-shape
+  - id: original-errors-are-preserved
+  - id: dependent-reads-require-organisation
+  - id: independent-root-reads-start-together
+  - id: organisation-dependent-reads-fan-out
+scoring:
+  semantic: required
+  deterministic_dynamic_quality: required
+  wall_clock_thresholds: prohibited
+  semantic_failure_score: 0
+required_mutations:
+  - serial-root-reads
+  - serial-dependent-reads
+  - wrapped-repository-error
+mutation_candidates:
+  - mutations/serial-root-reads.ts
+  - mutations/serial-dependent-reads.ts
+  - mutations/wrapped-repository-error.ts

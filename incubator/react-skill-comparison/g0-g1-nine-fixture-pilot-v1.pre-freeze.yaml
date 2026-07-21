@@ -1,0 +1,39 @@
+status: pending-frozen-source-commit
+plan_id: react-skill-comparison-g0-g1-nine-fixture-pilot-v1
+run_kind: pilot
+purpose: validate-fixture-discrimination-injection-and-evaluator-variance
+
+source_freeze:
+  required: true
+  source_commit: must-be-the-new-commit-containing-this-nine-task-set
+  rationale: A plan cannot claim a source commit that predates its task cards, snapshots, private evaluators, or coverage manifest.
+
+conditions:
+  - { id: baseline, label: G0, treatment: baseline/v1 }
+  - { id: vercel-skill, label: G1, treatment: vercel-skill/v2 }
+
+direct_tasks:
+  - member-hub-loader-v2
+  - account-summary-react-cache-v1
+  - incident-board-view-model-v1
+  - connection-indicator-subscriptions-v1
+  - preference-hydration-store-v1
+  - report-export-boundary-v1
+
+control_tasks:
+  - delivery-notification-ingest-v2
+  - project-summary-access-v1
+  - fulfilment-transition-service-v1
+
+pilot_design:
+  smoke_tasks: [member-hub-loader-v2, account-summary-react-cache-v1, delivery-notification-ingest-v2]
+  full_tasks: [member-hub-loader-v2, account-summary-react-cache-v1, incident-board-view-model-v1, connection-indicator-subscriptions-v1, preference-hydration-store-v1, report-export-boundary-v1, delivery-notification-ingest-v2, project-summary-access-v1, fulfilment-transition-service-v1]
+  repetitions: 2
+  paired_conditions_only: true
+  excluded_from_official_conclusion: true
+
+activation_requirements:
+  - Commit and validate the exact source tree, then use that commit as source_commit.
+  - Obtain the immutable provider model snapshot and replace pending-provider-snapshot in the pinned environment.
+  - Keep the existing container isolation, immutable artifact storage, and protected-runner gates satisfied.
+  - Materialise this document as schemas/experiment-plan.schema.json-compliant YAML under experiments/react-skill-comparison/ only after the preceding requirements hold.

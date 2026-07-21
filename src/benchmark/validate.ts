@@ -77,6 +77,7 @@ async function commitIsAncestor(commit: string): Promise<boolean> {
 }
 
 async function validateExperimentPlan(path: string, plan: Record<string, unknown>): Promise<void> {
+  const retiredPlan = plan.lifecycle_stage === "retired";
   const suite = plan.suite;
   if (!isRecord(suite) || typeof suite.id !== "string" || typeof suite.version !== "string") return;
   const suitePath = joinPath(workspaceRoot, "suites", suite.id);
@@ -84,7 +85,7 @@ async function validateExperimentPlan(path: string, plan: Record<string, unknown
   await requirePath(suiteManifestPath);
   const suiteDocument = await validateYaml(suiteManifestPath, "suite.schema.json");
   if (!suiteDocument) return;
-  if (suiteDocument.id !== suite.id || suiteDocument.version !== suite.version) failures.push(`Experiment suite does not match suite manifest: ${relativePath(path)}`);
+  if (!retiredPlan && (suiteDocument.id !== suite.id || suiteDocument.version !== suite.version)) failures.push(`Experiment suite does not match suite manifest: ${relativePath(path)}`);
 
   const declaredTasks = new Map<string, Record<string, unknown>>();
   if (Array.isArray(suiteDocument.tasks)) {
@@ -106,6 +107,10 @@ async function validateExperimentPlan(path: string, plan: Record<string, unknown
         continue;
       }
       if (typeof declared.path !== "string") continue;
+      if (!retiredPlan && declared.lifecycle_stage === "retired") {
+        failures.push(`Active experiment ${setName} references retired task: ${suite.id}/${taskId}`);
+        continue;
+      }
       const taskCardPath = joinPath(suitePath, declared.path, "public", "task.yaml");
       const taskCard = await validateYaml(taskCardPath, "task-card.schema.json");
       if (!taskCard || taskCard.id !== taskId) failures.push(`Experiment task does not match task card: ${suite.id}/${taskId}`);
@@ -155,6 +160,7 @@ async function validateExperimentPlan(path: string, plan: Record<string, unknown
   }
 
   if (plan.run_kind === "smoke" && plan.repetitions !== 1) failures.push(`Smoke experiment must use exactly one repetition: ${relativePath(path)}`);
+  if (plan.run_kind === "pilot" && plan.repetitions < 2) failures.push(`Pilot experiment must use at least two repetitions: ${relativePath(path)}`);
 
   if (typeof plan.source_commit === "string" && !(await commitIsAncestor(plan.source_commit))) failures.push(`Experiment source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
   if (typeof plan.system_prompt_path === "string" && typeof plan.system_prompt_hash === "string") {
@@ -233,7 +239,7 @@ async function validateVersionedManifests(path: string, manifestName: string, sc
 }
 
 const suitesPath = joinPath(workspaceRoot, "suites");
-for (const schema of ["suite.schema.json", "task-card.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
+for (const schema of ["suite.schema.json", "task-card.schema.json", "task-rule-audit.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
   await requirePath(joinPath(workspaceRoot, "schemas", schema));
 }
 
@@ -271,6 +277,12 @@ for (const suite of await listDirectories(suitesPath)) {
         if (taskDocument.version !== Number(revision.slice(1))) failures.push(`Task version must match ${revision} in ${relativePath(taskCard)}`);
         if (!Number.isInteger(taskDocument.evaluator_version) || Number(taskDocument.evaluator_version) < 1) failures.push(`evaluator_version must be a positive integer in ${relativePath(taskCard)}`);
         if (!lifecycleStages.has(String(taskDocument.lifecycle_stage))) failures.push(`Invalid lifecycle_stage in ${relativePath(taskCard)}`);
+        if (taskDocument.skill_relevance === "direct" && taskDocument.lifecycle_stage !== "retired") {
+          const ruleAuditPath = joinPath(privatePath, "rule-audit.yaml");
+          await requirePath(ruleAuditPath);
+          const ruleAudit = await validateYaml(ruleAuditPath, "task-rule-audit.schema.json");
+          if (ruleAudit?.task_id !== expectedId) failures.push(`Task rule audit does not match task: ${relativePath(ruleAuditPath)}`);
+        }
         discovered.set(expectedId, { document: taskDocument, manifestPath: `tasks/${taskSlug}/${revision}` });
       }
       await findForbiddenPublicFiles(publicPath);

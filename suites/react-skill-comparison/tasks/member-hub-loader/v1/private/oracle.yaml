@@ -1,0 +1,27 @@
+id: member-hub-loader-v1
+reference_solution: reference/src/member-hub.ts
+engineering_concerns:
+  - blank-input-guard
+  - asynchronous-dependency-orchestration
+  - optional-work-avoidance
+  - original-error-preservation
+checks:
+  - id: blank-input-avoids-io
+  - id: independent-root-reads-start-together
+  - id: organisation-dependent-reads-fan-out
+  - id: activity-starts-after-projects-only
+  - id: optional-activity-is-not-requested
+  - id: original-errors-are-preserved
+scoring:
+  semantic: required
+  deterministic_dynamic_quality: required
+  wall_clock_thresholds: prohibited
+  semantic_failure_score: 0
+required_mutations:
+  - serial-root-reads
+  - unconditional-activity-read
+  - wrapped-repository-error
+mutation_candidates:
+  - mutations/serial-root-reads.ts
+  - mutations/unconditional-activity-read.ts
+  - mutations/wrapped-repository-error.ts

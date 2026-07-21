@@ -29,7 +29,7 @@ dependencies:
   package: '@earendil-works/pi-coding-agent@0.80.10'
   manifest: package.json
   lockfile: bun.lock
-  lockfile_sha256: 31af8c0e3665fafbe5311589620978f5e130284cebe835fceb4bb7e3d4ff559b
+  lockfile_sha256: 34e58d71f683c849bd04ac4ada22aeb01dd9ceaa5780e0c4b8160a98c65713e8
 artifact_storage:
   uri: s3://required-bucket/lorelum-benchmark/runs
   mode: immutable-after-upload

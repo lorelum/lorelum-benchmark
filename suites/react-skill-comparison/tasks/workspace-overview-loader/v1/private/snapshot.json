@@ -1,13 +1,13 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "2a8c08b6765ace825185b5b252974427cf38dcade88ccd21a964f02436322c10",
+  "snapshot_id": "82108ee0af9cac61a4af890285f846aa35002b8851076f45e895325e363fcd4d",
   "files": {
     "private/evaluator/workspace-overview.test.ts": "39f834a9ae01320fe770e95694d169e45d7e7f5f390dea2c3ca9a2b6a6734a2d",
     "private/oracle.yaml": "e0ef0f2388dd2c0c97ccde53c9201268e33ae154050ecffdcf7bed5e69ed7033",
     "private/reference/src/workspace-overview.ts": "98e73c8d66ce991ae6050b1344b4474dcbfc4936aa9e49ca1b42585f398a7524",
     "public/starter/src/workspace-overview.ts": "6b7551881afbcbbc2e4d5075413082e13fcc74d92b8df08272c375d9f09122a5",
     "public/task.md": "8283d0866a9ac9885fb43d2d0e08e7f5e85d8ad44bd333b7c5b98083bb7b9854",
-    "public/task.yaml": "5dc7e50adfa9ef18cf98a452b780a77069f1b24f4455a6d16afa10bbd08d4fa0"
+    "public/task.yaml": "cad9d882d0be21f6379eb88e50c2caba2af668c8698e5ea119da1c1780170196"
   }
 }

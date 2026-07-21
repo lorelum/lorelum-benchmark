@@ -1,0 +1,13 @@
+{
+  "name": "@lorelum/react-server-runtime-probe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun --conditions=react-server test react-cache-runtime.test.ts"
+  },
+  "devDependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-server-dom-webpack": "19.2.3"
+  }
+}

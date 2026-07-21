@@ -1,0 +1,7 @@
+id: account-summary-react-cache-v1
+reference_solution: reference/src/account-summary.ts
+engineering_concerns: [request-scope-react-cache, primitive-cache-arguments, error-preservation]
+checks: [{ id: blank-input-avoids-io }, { id: missing-account-skips-permissions }, { id: original-errors-are-preserved }, { id: same-render-deduplicates }, { id: later-render-is-fresh }]
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+required_mutations: [no-cache, global-cache, wrapped-error]
+mutation_candidates: [mutations/no-cache.ts, mutations/global-cache.ts, mutations/wrapped-error.ts]

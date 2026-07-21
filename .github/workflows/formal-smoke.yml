@@ -32,7 +32,7 @@ jobs:
       - run: bun run validate
       - run: bun run test:contracts
       - run: bun run test:fixtures
-      - run: bun run pi:requests -- experiments/react-skill-comparison/g0-g1-smoke-v1.yaml --smoke --output "$RUNNER_TEMP/requests"
+      - run: bun run pi:requests -- experiments/react-skill-comparison/g0-g1-smoke-v2.yaml --smoke --output "$RUNNER_TEMP/requests"
       - run: |
           for request in "$RUNNER_TEMP"/requests/*.json; do
             bun run pi:coordinate -- "$request" --dry-run
@@ -72,7 +72,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}
       - run: bun install --frozen-lockfile
-      - run: bun run pi:requests -- experiments/react-skill-comparison/g0-g1-smoke-v1.yaml --smoke --output "$RUNNER_TEMP/requests"
+      - run: bun run pi:requests -- experiments/react-skill-comparison/g0-g1-smoke-v2.yaml --smoke --output "$RUNNER_TEMP/requests"
       - id: coordinate
         run: |
           status=0
