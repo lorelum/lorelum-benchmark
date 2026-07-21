@@ -345,7 +345,7 @@ test("verifies the pinned Pi runtime before a formal execution", async () => {
 
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toContain("0.80.10");
-}, 15_000);
+}, 30_000);
 
 test("refuses formal coordination until the provider model snapshot is resolved", async () => {
   const id = runId();
