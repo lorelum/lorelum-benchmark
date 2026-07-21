@@ -45,6 +45,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 async function verifyPublicRuleCoverage(taskPath: string, taskCard: Record<string, unknown>, treatmentId: string, treatmentVersion: string): Promise<void> {
   if (treatmentId !== "vercel-skill" || treatmentVersion !== "v2") return;
+  if (taskCard.skill_relevance !== "direct" || taskCard.lifecycle_stage === "retired") return;
   const treatmentPath = joinPath(workspaceRoot, "treatments", treatmentId, treatmentVersion, "treatment.yaml");
   const treatment = Bun.YAML.parse(await Bun.file(treatmentPath).text()) as unknown;
   if (!isRecord(treatment)) fail(`Skill treatment is invalid: ${relativePath(treatmentPath)}`);
@@ -52,7 +53,6 @@ async function verifyPublicRuleCoverage(taskPath: string, taskCard: Record<strin
   const declaration = taskCard.skill_context;
   const declaredRules = isRecord(declaration) && Array.isArray(declaration.rules) && declaration.rules.every((rule) => typeof rule === "string") ? declaration.rules as string[] : [];
   const context = await declaredRuleContext(taskPath, bundle, declaredRules);
-  if (taskCard.skill_relevance !== "direct" || taskCard.lifecycle_stage === "retired") return;
   const auditPath = joinPath(taskPath, "private", "rule-audit.yaml");
   const audit = Bun.YAML.parse(await Bun.file(auditPath).text()) as Record<string, unknown>;
   const required = Array.isArray(audit.required_rules) && audit.required_rules.every((rule) => typeof rule === "string") ? audit.required_rules : undefined;
@@ -109,7 +109,9 @@ async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPoli
   const agentInput = taskCard.agent_input;
   const declaredCandidate = isRecord(agentInput) && typeof agentInput.candidate === "string" ? agentInput.candidate : undefined;
   const candidateFile = declaredCandidate ?? (starterFiles.length === 1 ? starterFiles[0] : undefined);
-  if (!candidateFile || !starterFiles.includes(candidateFile.replaceAll("\\", "/")) && !starterFiles.includes(candidateFile)) fail(`Task must declare a candidate starter file when it has multiple starter files: ${relativePath(task.path)}`);
+  const normalizedStarterFiles = starterFiles.map((file) => file.replaceAll("\\", "/"));
+  const normalizedCandidateFile = candidateFile?.replaceAll("\\", "/");
+  if (!normalizedCandidateFile || !normalizedStarterFiles.includes(normalizedCandidateFile)) fail(`Task must declare a candidate starter file when it has multiple starter files: ${relativePath(task.path)}`);
   const [treatmentId, treatmentVersion] = condition.treatment.split("/");
   if (!treatmentId || !treatmentVersion) fail(`Invalid treatment reference: ${condition.treatment}`);
   await verifyPublicRuleCoverage(task.path, taskCard, treatmentId, treatmentVersion);
@@ -124,7 +126,7 @@ async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPoli
     condition_id: condition.id,
     repeat,
     source_commit: plan.source_commit,
-    candidate_path: `starter/${candidateFile.replaceAll("\\", "/")}`,
+    candidate_path: `starter/${normalizedCandidateFile}`,
     suite: plan.suite,
     task: { id: taskId, revision, snapshot_id: snapshot.snapshot_id },
     treatment: { id: treatmentId, version: treatmentVersion },

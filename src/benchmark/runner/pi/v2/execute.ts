@@ -219,7 +219,7 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
       const declared = declaredSkillBundle(treatment);
       treatmentBundle = await resolveSkillBundle(treatment);
       if (treatmentBundle.path) {
-        ruleContext = await declaredRuleContext(task.path, treatmentBundle, publicRuleNames(taskCard));
+        if (taskCard.skill_relevance === "direct") ruleContext = await declaredRuleContext(task.path, treatmentBundle, publicRuleNames(taskCard));
         if (taskCard.lifecycle_stage !== "retired" && ruleAudit && request.treatment.id === ruleAudit.treatment.id && request.treatment.version === ruleAudit.treatment.version) {
           const selected = routedRuleNames(ruleContext);
           if (selected.length !== ruleAudit.requiredRules.length || selected.some((rule) => !ruleAudit.requiredRules.includes(rule))) fail(`Public rule context does not exactly match ${request.task.id}`);
