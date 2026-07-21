@@ -1,8 +1,8 @@
 # PE Cross-Reference Integrity v1 原型
 
-这是 `../pe-cross-reference-integrity-v1.md` 的可执行 incubator 原型，生命周期仍为
-`candidate`。它不是正式 suite task：没有 snapshot、run record 或可用于 benchmark
-结论的 Practice treatment。
+这是可执行、来源受限的 `TK-registry-publication` 草案。它尚未拥有可审计的真实来源，
+因而不是 suite task、不可生成 benchmark 结论，也不可 materialize 为 intervention。
+准入条件见 `source-audit.md` 与 `reuse-card.md`。
 
 Agent 只应获得 `public/task.md` 和 `public/starter/`。`private/` 中的 evaluator、
 oracle 和 reference 只能由评审者在本地使用，不能复制进 Agent workspace。
