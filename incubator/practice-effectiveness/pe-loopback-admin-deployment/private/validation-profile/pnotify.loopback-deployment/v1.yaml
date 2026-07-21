@@ -1,0 +1,51 @@
+id: pnotify.loopback-deployment
+version: 1
+kind: source-derived-test-practice
+lifecycle_stage: candidate
+source_snapshot:
+  repository: lorelum/notify-bus
+  pull_request: 5
+  commit: d2a5a07bbe5e2b3cde3b9a3bd2db3a256d695123
+  files:
+    - docker-compose.yml
+    - .env.example
+relevance:
+  applicable_scenario: A local Compose deployment publishes an unauthenticated administrative API from the host.
+  rationale: The source changes the default host exposure boundary for that API and documents proxy-mediated external access.
+  unsupported_semantics:
+    - Live reverse-proxy, firewall, TLS, Docker daemon, or deployed-host validation.
+    - A requirement to randomize ports or to use a specific proxy product.
+    - Dynamic retrieval or injection timing.
+static_prompt_interventions:
+  oracle_practice:
+    id: pnotify.loopback-deployment-oracle-v1
+    content: >-
+      For an unauthenticated administration surface in a local Compose deployment,
+      make the host exposure boundary explicit and keep external access behind a
+      separately managed TLS reverse proxy. Preserve the service's internal port
+      and the deployment's configurable host port.
+  irrelevant_control:
+    id: pnotify.loopback-deployment-irrelevant-v1
+    content: >-
+      For a local Compose deployment that writes application logs, make log file
+      retention explicit and keep external log collection behind a separately
+      managed TLS reverse proxy. Preserve the service's internal path and the
+      deployment's configurable log directory.
+condition_readiness:
+  baseline: no injected profile content
+  oracle-practice: static system-prompt content is pinned above
+  lorelum-retrieval: static pinned retrieval output may use the same profile content; no retrieval adapter or timing claim is validated here
+  irrelevant-practice: static system-prompt control content is pinned above
+functional_acceptance:
+  - Compose remains parseable and retains the configured host-port to internal-port mapping.
+profile_adherence_probes:
+  - The administrative port has an explicit loopback host binding rather than an implicit or all-interface binding.
+  - The example configuration describes proxy-mediated TLS access for external traffic.
+non_applicable_conditions:
+  - A deployment with an authenticated management surface.
+  - Claims about a running container, proxy, host firewall, or public-network reachability.
+conclusion_boundary: >-
+  This profile can test the relevance of static system-prompt content for this
+  frozen candidate kernel only. It is not evidence of an existing team Practice,
+  product-wide Lorelum effectiveness, production deployment safety, or dynamic
+  injection behavior.
