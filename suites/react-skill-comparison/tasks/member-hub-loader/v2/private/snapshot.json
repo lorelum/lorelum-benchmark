@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "11347f7c1f7c360228571f255c9717e23800c83b969ac0d02e7649c6656225a5",
+  "snapshot_id": "e4da24be370d78e6f236c588d934dbfd116c8e239954505086deb0497823ed81",
   "files": {
     "private/evaluator/evaluate.ts": "1fabe9cb3d989b79b5826aed48d96ea7f9a4f64642704b6aa7537e42e0bc5ed6",
     "private/mutations/serial-dependent-reads.ts": "60a41d366481cc156336caa71ad8f4b2e11b33c2a915b2e03b3324abebfcb24c",
@@ -12,6 +12,6 @@
     "private/rule-audit.yaml": "9848f77ad37b1c224f98e88a041558ec04c04603927b40f985ccc9d6af7cb95c",
     "public/starter/src/member-hub.ts": "f3f85266a17ecef6922fb555be45b96a963eaae334b233cce90fb07fc9b8e323",
     "public/task.md": "17d52b246e38811dd72954d8320ced9dd9d6e56a1f49352b86b58371451d23e9",
-    "public/task.yaml": "723fe95dc613e73d1d3e807a96a1a455afc94b179e9224406a106ef9ac8f91ff"
+    "public/task.yaml": "22c450601a4f3cfa934f14483b689a754f918d4d019fc476d5c330beb124cdc7"
   }
 }

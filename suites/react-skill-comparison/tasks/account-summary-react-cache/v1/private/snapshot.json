@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "dd8283c464ede033e945fca56774cdab2971330a4bc1a30365777448997cac62",
+  "snapshot_id": "8810ac7d7f0c4d69b12c900a4063bae8442625e762e3bbe1a0fd7635f0980ffe",
   "files": {
     "private/evaluator/README.md": "4d4e1b1b5b851d260b1d2d2ce6738cc0ec7ba85f178d696c3c8dce26e96e814e",
     "private/evaluator/evaluate.ts": "f836323447ef9ad0f77e272531ba7a094b38d450b8f04faa536b51950f1a907d",
@@ -13,6 +13,6 @@
     "private/rule-audit.yaml": "7384f3e951b4b473db9249ef32e79dbd42dfbd8fd46c618c0f88b6143005cc67",
     "public/starter/src/account-summary.ts": "436b2a65d0b064a15a78164c2f81889fe0b53bc8f94da0a3fde021d09aadc65b",
     "public/task.md": "2c8139132ea73e6f644a11d5bf5ea7479759cdf4f59f656765c003d20f576b30",
-    "public/task.yaml": "620bb93845bc7a8c2b9088b721e4e8e87d3baedfb804da2abe9f3bf559cf39c4"
+    "public/task.yaml": "07a0a88ae6eaeec45329135d485c96e7928b76777300c3956a9846e11479d761"
   }
 }

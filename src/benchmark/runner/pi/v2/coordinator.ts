@@ -6,7 +6,7 @@ import { joinPath, pathExists, relativePath, sha256File, workspaceRoot } from ".
 import { findTask } from "../../../task-discovery";
 import type { PiRunRequestV2 } from "./types";
 import { parseS3Uri, uploadImmutableS3Artifact } from "./s3";
-import { auditPiJsonTrace } from "./trace";
+import { auditPiJsonTrace, type PiTraceAudit } from "./trace";
 import { taskRuleAuditFromArtifact, type TaskRuleAudit } from "./task-rule-audit";
 import { evaluatorResultFromOutput, type EvaluatorResultV2 } from "../../../evaluator/v2/result";
 
@@ -204,15 +204,20 @@ try {
   const piManifestPath = joinPath(artifactPath, request.artifacts.manifest_name);
   let executedExecution: Record<string, unknown> = request.execution;
   let ruleAudit: TaskRuleAudit | undefined;
+  let traceAudit: PiTraceAudit | undefined;
   if (await pathExists(piManifestPath)) {
     const piManifest = await readJson(piManifestPath);
     if (isRecord(piManifest)) {
       if (isRecord(piManifest.execution)) executedExecution = piManifest.execution;
       if (typeof piManifest.adapter_commit === "string") currentAdapterCommit = piManifest.adapter_commit;
       ruleAudit = taskRuleAuditFromArtifact(piManifest.rule_audit);
+      if (isRecord(piManifest.trace) && typeof piManifest.trace.audit_path === "string") {
+        const auditPath = repositoryPath(piManifest.trace.audit_path);
+        if (await pathExists(auditPath)) traceAudit = await readJson(auditPath) as PiTraceAudit;
+      }
     }
   }
-  const traceAudit = request.agent.id === "pi" ? auditPiJsonTrace(runner.stdout, request, ruleAudit) : undefined;
+  traceAudit ??= request.agent.id === "pi" ? auditPiJsonTrace(runner.stdout, request, ruleAudit) : undefined;
   if (traceAudit) await writeText(joinPath(artifactPath, "pi-trace-audit.json"), `${JSON.stringify(traceAudit, null, 2)}\n`);
   const localArtifacts: Artifact[] = [
     await artifact("raw-output", joinPath(artifactPath, "pi.stdout.log")),

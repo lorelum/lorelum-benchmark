@@ -53,6 +53,15 @@ export type PiRunArtifactManifestV2 = {
     treatment: { id: string; version: string };
     required_rules: string[];
   };
+  rule_context?: {
+    schema_version: "pi-rule-context/v1";
+    router: { id: "public-bm25"; version: "v1"; maxRules: 3 };
+    public_input_sha256: string;
+    bundle_sha256: string;
+    rules: Array<{ path: string; sha256: string; score: number }>;
+    sha256: string;
+  };
+  trace?: { stdout_path: string; stderr_path: string; audit_path?: string };
   workspace: { path: string; task_md_sha256: string; starter_files: Record<string, string> };
   status: "prepared" | "completed" | "failed";
   timed_out: boolean;

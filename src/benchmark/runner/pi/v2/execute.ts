@@ -5,7 +5,8 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { joinPath, listFiles, pathExists, relativePath, sha256File, sha256Text, workspaceRoot } from "../../../fs";
 import { findTask } from "../../../task-discovery";
 import { containerCommand, containerEnvironment, containerImageInspectCommand, containerRemoveCommand, containerVersionCommand, formalContainerSandbox, localContainerImageInspectCommand, localContainerSandbox, type ContainerSandbox } from "./sandbox";
-import { piJsonTraceArgs } from "./trace";
+import { auditPiJsonTrace, piJsonTraceArgs } from "./trace";
+import { routePublicRules, routedRuleNames, type RuleContext } from "./rule-router";
 import { declaredSkillBundle, resolveSkillBundle, stageSkillBundle, type SkillBundle } from "./treatment-resolver";
 import { taskRuleAuditFromDocument, type TaskRuleAudit } from "./task-rule-audit";
 import type { PiRunArtifactManifestV2, PiRunRequestV2, PiRunResultV2 } from "./types";
@@ -152,7 +153,7 @@ async function verifyFormalExperiment(request: PiRunRequestV2): Promise<void> {
   if (request.run_id !== expectedRunId) fail(`Experiment run ID does not match request: ${relativePath(path)}`);
 }
 
-async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: string; treatmentPath: string; treatment: Record<string, unknown>; treatmentBundle?: SkillBundle; ruleAudit?: TaskRuleAudit; environmentPath: string; environment: Record<string, unknown>; containerSandbox?: ContainerSandbox }> {
+async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: string; treatmentPath: string; treatment: Record<string, unknown>; treatmentBundle?: SkillBundle; ruleAudit?: TaskRuleAudit; ruleContext?: RuleContext; environmentPath: string; environment: Record<string, unknown>; containerSandbox?: ContainerSandbox }> {
   await verifyFormalExperiment(request);
   const suitePath = repositoryPath("suites", request.suite.id);
   const suiteManifestPath = joinPath(suitePath, "suite.yaml");
@@ -178,7 +179,7 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
   if (taskCard.track !== suiteManifest.track) fail(`Task track does not match suite track: ${request.task.id}`);
   await verifySnapshot(request.suite.id, reference, request.task.snapshot_id);
   let ruleAudit: TaskRuleAudit | undefined;
-  if (taskCard.skill_relevance === "direct" && taskCard.lifecycle_stage !== "retired") {
+  if (taskCard.skill_relevance === "direct") {
     const ruleAuditPath = joinPath(task.path, "private", "rule-audit.yaml");
     await requireFile(ruleAuditPath, "task rule audit");
     const ruleAuditDocument = await readYaml(ruleAuditPath);
@@ -201,13 +202,24 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
     fail(`Treatment tool_policy_hash does not match request: ${relativePath(treatmentPath)}`);
   }
   let treatmentBundle: SkillBundle | undefined;
+  let ruleContext: RuleContext | undefined;
   if (treatment.kind === "baseline" && treatment.injection !== undefined) fail(`Baseline treatment must not define injection: ${relativePath(treatmentPath)}`);
   if (treatment.kind === "skill") {
+    const routing = treatment.routing;
+    if (!isRecord(routing) || routing.id !== "public-bm25" || routing.version !== "v1" || routing.max_rules !== 3 || routing.delivery !== "inline-rule-context") {
+      fail(`Skill treatment must pin public-bm25/v1 inline rule routing: ${relativePath(treatmentPath)}`);
+    }
     try {
       const declared = declaredSkillBundle(treatment);
-      treatmentBundle = dryRun
-        ? { ...declared, path: "", skillPath: "" }
-        : await resolveSkillBundle(treatment);
+      treatmentBundle = await resolveSkillBundle(treatment);
+      if (treatmentBundle.path) {
+        ruleContext = await routePublicRules(task.path, treatmentBundle);
+        if (taskCard.lifecycle_stage !== "retired" && ruleAudit && request.treatment.id === ruleAudit.treatment.id && request.treatment.version === ruleAudit.treatment.version) {
+          const selected = routedRuleNames(ruleContext);
+          const missing = ruleAudit.requiredRules.filter((rule) => !selected.includes(rule));
+          if (missing.length > 0) fail(`Public rule routing does not cover ${request.task.id}: ${missing.join(", ")}`);
+        }
+      }
     } catch (error) {
       fail(`${error instanceof Error ? error.message : String(error)}: ${relativePath(treatmentPath)}`);
     }
@@ -250,7 +262,7 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
     : sandbox.enforcement === "local-container-experiment"
       ? localContainerSandbox(environment)
       : undefined;
-  return { taskPath: task.path, treatmentPath, treatment, treatmentBundle, ruleAudit, environmentPath, environment, containerSandbox };
+  return { taskPath: task.path, treatmentPath, treatment, treatmentBundle, ruleAudit, ruleContext, environmentPath, environment, containerSandbox };
 }
 
 async function copyFile(source: string, destination: string): Promise<void> {
@@ -261,13 +273,13 @@ async function copyFile(source: string, destination: string): Promise<void> {
   await Bun.write(destination, await Bun.file(source).arrayBuffer());
 }
 
-async function skillExecutionArgs(executionArgs: string[], taskPath: string, taskFilePath: string, skillName: string, skillPath: string, activationInstruction: string): Promise<string[]> {
+async function skillExecutionArgs(executionArgs: string[], taskPath: string, taskFilePath: string, skillName: string, skillPath: string, activationInstruction: string, ruleContext?: RuleContext): Promise<string[]> {
   const taskArgumentIndex = executionArgs.indexOf("@task.md");
   const taskInstruction = executionArgs[taskArgumentIndex + 1];
   if (taskArgumentIndex === -1 || typeof taskInstruction !== "string") fail("Pi skill injection requires the pinned task prompt arguments");
   const taskMarkdown = await Bun.file(joinPath(taskPath, "public", "task.md")).text();
   const fileText = `<file name="${taskFilePath}">\n${taskMarkdown}\n</file>\n`;
-  const prompt = `/skill:${skillName} ${activationInstruction}\n\n${fileText}${taskInstruction}`;
+  const prompt = `/skill:${skillName} ${activationInstruction}\n\n${ruleContext?.text ? `${ruleContext.text}\n\n` : ""}${fileText}${taskInstruction}`;
   return [...executionArgs.slice(0, taskArgumentIndex), prompt, "--skill", skillPath];
 }
 
@@ -424,7 +436,8 @@ try {
           contracts.containerSandbox ? `${contracts.containerSandbox.workspace_path}/task.md` : joinPath(workspacePath, "task.md"),
           contracts.treatmentBundle.name,
           contracts.containerSandbox?.skill_path ?? stagedSkillPath!,
-          activationInstruction
+          activationInstruction,
+          contracts.ruleContext
         )
         : [...tracedExecutionArgs, "--skill", contracts.containerSandbox?.skill_path ?? stagedSkillPath!]
       : tracedExecutionArgs
@@ -490,6 +503,16 @@ try {
         required_rules: contracts.ruleAudit.requiredRules
       }
     } : {}),
+    ...(contracts.ruleContext ? {
+      rule_context: {
+        schema_version: contracts.ruleContext.schema_version,
+        router: contracts.ruleContext.router,
+        public_input_sha256: contracts.ruleContext.public_input_sha256,
+        bundle_sha256: contracts.ruleContext.bundle_sha256,
+        rules: contracts.ruleContext.rules,
+        sha256: contracts.ruleContext.sha256
+      }
+    } : {}),
     workspace: { path: repositoryRelative(workspace.path), task_md_sha256: workspace.taskMdSha256, starter_files: workspace.starterFiles },
     status: "prepared",
     timed_out: false,
@@ -500,6 +523,8 @@ try {
 
   let exitCode: number | null = null;
   let timedOut = false;
+  let stdout = "";
+  let stderr = "";
   try {
     const executionEnv = contracts.containerSandbox
       ? { PATH: Bun.env.PATH ?? "", ...containerEnvironment(Bun.env.DEEPSEEK_API_KEY, contracts.containerSandbox) }
@@ -511,8 +536,8 @@ try {
       cwd: contracts.containerSandbox ? workspaceRoot : workspace.path,
       env: executionEnv,
       stdin: "inherit",
-      stdout: "inherit",
-      stderr: "inherit"
+      stdout: "pipe",
+      stderr: "pipe"
     });
     const timeout = setTimeout(() => {
       timedOut = true;
@@ -525,6 +550,7 @@ try {
       });
     }, request.execution.budget.max_duration_ms);
     exitCode = await child.exited;
+    [stdout, stderr] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text()]);
     clearTimeout(timeout);
   } catch (error) {
     console.error(`Pi command failed to start: ${error instanceof Error ? error.message : String(error)}`);
@@ -534,6 +560,18 @@ try {
   manifest.timed_out = timedOut;
   manifest.exit_code = exitCode;
   manifest.completed_at = new Date().toISOString();
+  const stdoutPath = joinPath(artifactPath, "pi.stdout.jsonl");
+  const stderrPath = joinPath(artifactPath, "pi.stderr.log");
+  await Bun.write(stdoutPath, stdout);
+  await Bun.write(stderrPath, stderr);
+  manifest.trace = { stdout_path: repositoryRelative(stdoutPath), stderr_path: repositoryRelative(stderrPath) };
+  if (request.agent.id === "pi" && effectiveExecution.args.includes("--mode")) {
+    const traceAudit = auditPiJsonTrace(stdout, request, contracts.ruleAudit, contracts.ruleContext);
+    const tracePath = joinPath(artifactPath, "pi-trace-audit.json");
+    await Bun.write(tracePath, `${JSON.stringify(traceAudit, null, 2)}\n`);
+    manifest.trace.audit_path = repositoryRelative(tracePath);
+    if (!traceAudit.valid) manifest.status = "failed";
+  }
   await writeArtifactManifest(artifactManifestPath, manifest);
   const result: PiRunResultV2 = {
     schema_version: "pi-run-result/v2",
@@ -544,8 +582,10 @@ try {
     artifact_manifest: repositoryRelative(artifactManifestPath),
     completed_at: manifest.completed_at
   };
+  if (stdout) process.stdout.write(stdout);
+  if (stderr) process.stderr.write(stderr);
   console.log(JSON.stringify(result));
-  process.exit(exitCode === 0 ? 0 : 1);
+  process.exit(manifest.status === "completed" ? 0 : 1);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

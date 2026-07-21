@@ -1,0 +1,7 @@
+id: report-export-boundary-v2
+reference_solution: reference/src/report-export.ts
+engineering_concerns: [conditional-module-loading, cached-inflight-loader, retry-after-loader-error]
+checks: [{ id: ineligible-never-loads }, { id: eligible-open-renders }, { id: error-is-preserved-and-retryable }]
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+required_mutations: [eager-load, no-inflight-sharing, sticky-loader-error]
+mutation_candidates: [mutations/eager-load.ts, mutations/no-inflight-sharing.ts, mutations/sticky-loader-error.ts]

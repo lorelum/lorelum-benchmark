@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "aebaea5846241396ccaff81791815d0a921d903c48ed776012376a6fa44d2a44",
+  "snapshot_id": "6775e101e357bf9040941d9556d35d313bfe8463b1f67cc640502135253b268d",
   "files": {
     "private/evaluator/README.md": "821bd385388915c1127b27cbdbdacc0288f72625aee46be2948bb1b66163ce78",
     "private/evaluator/evaluate.ts": "ff14e4c8fa75738affdd7bdf0d3b6e49b954d770e2a741debea5e4b0cc4f77d6",
@@ -13,6 +13,6 @@
     "private/rule-audit.yaml": "853b5de142d204f34a63ae3e16e03bafafa3421b18545831d3dd60eaf10fe7ee",
     "public/starter/src/incident-board.ts": "a1e1aa5f3a7cba82715999313aa592d21514bb8f6d130a801dad84feea753b76",
     "public/task.md": "179074595ccd9acb7cd168dd8c66f7e328b4b9fba52762f26cdda1184915f4a1",
-    "public/task.yaml": "4b3e83e7f536943241201db59cde0cc7aa64110f79585f17b889e63d80ba9f5b"
+    "public/task.yaml": "7af88a505067b47c4ead2c275486dd50d983da6464e2abad0762357f8a129531"
   }
 }

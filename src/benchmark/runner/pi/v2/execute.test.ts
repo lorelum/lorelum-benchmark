@@ -270,13 +270,14 @@ test("injects only the pinned Vercel skill for the G1 treatment", async () => {
   expect(output.args).not.toContain("--print");
   expect(output.args.slice(output.args.indexOf("--mode"), output.args.indexOf("--mode") + 2)).toEqual(["--mode", "json"]);
   const prompt = output.args.find((value) => value.startsWith("/skill:"));
-  expect(prompt).toStartWith("/skill:vercel-react-best-practices Before editing, read and apply the individual rule files relevant to this task.");
+  expect(prompt).toStartWith("/skill:vercel-react-best-practices Use the supplied verified rule context together with this Skill before editing.");
+  expect(prompt).toContain("<lorelum-rule-context");
   expect(prompt).toContain('<file name="/workspace/task.md">');
   expect(prompt).not.toStartWith("/skill:vercel-react-best-practices\n");
   expect(result.stdout).not.toContain("treatments/");
 });
 
-test("declares the native Vercel skill staging path without fetching in dry-run", async () => {
+test("declares the native Vercel skill staging path in dry-run", async () => {
   const environmentId = runId();
   const id = runId();
   await writeEnvironment(environmentId);

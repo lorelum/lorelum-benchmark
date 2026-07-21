@@ -1,4 +1,5 @@
 import type { TaskRuleAudit } from "./task-rule-audit";
+import type { RuleContext } from "./rule-router";
 import type { PiRunRequestV2 } from "./types";
 
 type JsonRecord = Record<string, unknown>;
@@ -13,6 +14,8 @@ export type PiTraceAudit = {
   required_rules: string[];
   first_edit_event: number | null;
   rule_read_events: Array<{ rule: string; event_index: number }>;
+  rule_context_sha256?: string;
+  rule_context_verified?: boolean;
   valid: boolean;
   failure_reason?: string;
 };
@@ -52,7 +55,7 @@ export function piJsonTraceArgs(args: string[]): string[] {
   return [...args.slice(0, printIndex), "--mode", "json", ...args.slice(printIndex + 1)];
 }
 
-export function auditPiJsonTrace(stdout: string, request: Pick<PiRunRequestV2, "treatment">, ruleAudit?: TaskRuleAudit): PiTraceAudit {
+export function auditPiJsonTrace(stdout: string, request: Pick<PiRunRequestV2, "treatment">, ruleAudit?: TaskRuleAudit, ruleContext?: RuleContext): PiTraceAudit {
   const events: JsonRecord[] = [];
   for (const line of stdout.split(/\r?\n/).filter(Boolean)) {
     try {
@@ -78,6 +81,9 @@ export function auditPiJsonTrace(stdout: string, request: Pick<PiRunRequestV2, "
   const eventTypes = [...new Set(events.map((event) => String(event.type ?? "unknown")))];
   const userText = events.flatMap(eventMessages).map(messageText).join("\n");
   const skillActivated = userText.includes('<skill name="vercel-react-best-practices" location="');
+  const ruleContextPresent = userText.includes("<lorelum-rule-context");
+  const contextHash = ruleContext ? new Bun.CryptoHasher("sha256").update(ruleContext.text).digest("hex") : undefined;
+  const contextVerified = ruleContext ? contextHash === ruleContext.sha256 && userText.includes(ruleContext.text) : undefined;
   const requiredRules = ruleAudit && request.treatment.id === ruleAudit.treatment.id && request.treatment.version === ruleAudit.treatment.version
     ? ruleAudit.requiredRules
     : [];
@@ -111,8 +117,9 @@ export function auditPiJsonTrace(stdout: string, request: Pick<PiRunRequestV2, "
   let failureReason: string | undefined;
   if (!complete) failureReason = "Pi JSON event stream is incomplete";
   else if (request.treatment.id === "vercel-skill" && !skillActivated) failureReason = "Vercel Skill was not expanded into the G1 user message";
-  else if (request.treatment.id === "vercel-skill" && requiredRules.some((rule) => !ruleReads.includes(rule))) failureReason = "G1 did not successfully read every required task rule before the first edit";
-  else if (request.treatment.id === "baseline" && (skillActivated || attemptedReads.size > 0)) failureReason = "Baseline unexpectedly accessed the Vercel Skill";
+  else if (request.treatment.id === "vercel-skill" && ruleContext && !contextVerified) failureReason = "G1 rule context is missing or hash-mismatched in the expanded user message";
+  else if (request.treatment.id === "vercel-skill" && !ruleContext && requiredRules.some((rule) => !ruleReads.includes(rule))) failureReason = "G1 did not successfully read every required task rule before the first edit";
+  else if (request.treatment.id === "baseline" && (skillActivated || ruleContextPresent || attemptedReads.size > 0)) failureReason = "Baseline unexpectedly accessed the Vercel Skill";
 
   return {
     schema_version: "pi-trace-audit/v1",
@@ -124,6 +131,7 @@ export function auditPiJsonTrace(stdout: string, request: Pick<PiRunRequestV2, "
     required_rules: requiredRules,
     first_edit_event: firstEditEvent,
     rule_read_events: ruleReadEvents,
+    ...(ruleContext ? { rule_context_sha256: ruleContext.sha256, rule_context_verified: contextVerified } : {}),
     valid: failureReason === undefined,
     ...(failureReason ? { failure_reason: failureReason } : {})
   };

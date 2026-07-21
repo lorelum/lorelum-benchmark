@@ -41,6 +41,51 @@
       },
       "additionalProperties": false
     },
+    "rule_context": {
+      "type": "object",
+      "required": ["schema_version", "router", "public_input_sha256", "bundle_sha256", "rules", "sha256"],
+      "properties": {
+        "schema_version": { "const": "pi-rule-context/v1" },
+        "router": {
+          "type": "object",
+          "required": ["id", "version", "maxRules"],
+          "properties": {
+            "id": { "const": "public-bm25" },
+            "version": { "const": "v1" },
+            "maxRules": { "const": 3 }
+          },
+          "additionalProperties": false
+        },
+        "public_input_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bundle_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "rules": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["path", "sha256", "score"],
+            "properties": {
+              "path": { "type": "string", "pattern": "^rules/[a-z0-9-]+\\.md$" },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "score": { "type": "number", "exclusiveMinimum": 0 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "trace": {
+      "type": "object",
+      "required": ["stdout_path", "stderr_path"],
+      "properties": {
+        "stdout_path": { "type": "string", "minLength": 1 },
+        "stderr_path": { "type": "string", "minLength": 1 },
+        "audit_path": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "workspace": {
       "type": "object",
       "required": ["path", "task_md_sha256", "starter_files"],

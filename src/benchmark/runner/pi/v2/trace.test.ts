@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { auditPiJsonTrace, piJsonTraceArgs } from "./trace";
+import type { RuleContext } from "./rule-router";
 import type { TaskRuleAudit } from "./task-rule-audit";
 
 const skill = '<skill name="vercel-react-best-practices" location="/lorelum/treatment/SKILL.md">instructions</skill>';
@@ -27,6 +28,11 @@ function successfulRead(id: string, path: string): Record<string, unknown>[] {
     { type: "tool_execution_start", toolCallId: id, toolName: "read", args: { path } },
     { type: "tool_execution_end", toolCallId: id, toolName: "read", result: {}, isError: false }
   ];
+}
+
+function context(): RuleContext {
+  const text = '<lorelum-rule-context schema="pi-rule-context/v1">\n<lorelum-rule path="rules/async-parallel.md" sha256="a">rule body</lorelum-rule>\n</lorelum-rule-context>';
+  return { schema_version: "pi-rule-context/v1", router: { id: "public-bm25", version: "v1", maxRules: 3 }, public_input_sha256: "a".repeat(64), bundle_sha256: "b".repeat(64), rules: [{ path: "rules/async-parallel.md", sha256: "a".repeat(64), score: 1 }], sha256: new Bun.CryptoHasher("sha256").update(text).digest("hex"), text };
 }
 
 test("converts pinned Pi print mode into a JSON event stream", () => {
@@ -104,4 +110,20 @@ test("rejects the old unexpanded newline-form Skill command", () => {
   const audit = auditPiJsonTrace(eventStream("/skill:vercel-react-best-practices\n\nImplement the task"), { treatment: { id: "vercel-skill", version: "v2" } }, memberHubRuleAudit);
   expect(audit.valid).toBe(false);
   expect(audit.failure_reason).toContain("not expanded");
+});
+
+test("accepts complete inline rule context and rejects a changed context", () => {
+  const ruleContext = context();
+  const valid = auditPiJsonTrace(eventStream(`${skill}\n${ruleContext.text}`), { treatment: { id: "vercel-skill", version: "v2" } }, memberHubRuleAudit, ruleContext);
+  expect(valid.valid).toBe(true);
+  expect(valid.rule_context_verified).toBe(true);
+  const invalid = auditPiJsonTrace(eventStream(`${skill}\n${ruleContext.text.replace("rule body", "changed")}`), { treatment: { id: "vercel-skill", version: "v2" } }, memberHubRuleAudit, ruleContext);
+  expect(invalid.valid).toBe(false);
+  expect(invalid.failure_reason).toContain("rule context");
+});
+
+test("rejects an inline rule context in the baseline trace", () => {
+  const audit = auditPiJsonTrace(eventStream(context().text), { treatment: { id: "baseline", version: "v1" } });
+  expect(audit.valid).toBe(false);
+  expect(audit.failure_reason).toContain("Baseline unexpectedly");
 });

@@ -12,6 +12,11 @@ injection:
   mode: pi-skill
   skill_name: vercel-react-best-practices
   skill_path: SKILL.md
-  activation_instruction: Before editing, read and apply the individual rule files relevant to this task.
+  activation_instruction: Use the supplied verified rule context together with this Skill before editing.
   scope: native-resource
   secrets: excluded
+routing:
+  id: public-bm25
+  version: v1
+  max_rules: 3
+  delivery: inline-rule-context

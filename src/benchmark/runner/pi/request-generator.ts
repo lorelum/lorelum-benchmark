@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { joinPath, listFiles, relativePath, sha256File, sha256Text, workspaceRoot } from "../../fs";
 import { findTask } from "../../task-discovery";
 import type { PiRunRequestV2 } from "./v2/types";
+import { routePublicRules, routedRuleNames } from "./v2/rule-router";
+import { resolveSkillBundle } from "./v2/treatment-resolver";
 
 type PlanCondition = { id: string; treatment: string };
 
@@ -39,6 +41,22 @@ function fail(message: string): never {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function verifyPublicRuleCoverage(taskPath: string, taskCard: Record<string, unknown>, treatmentId: string, treatmentVersion: string): Promise<void> {
+  if (treatmentId !== "vercel-skill" || treatmentVersion !== "v2") return;
+  const treatmentPath = joinPath(workspaceRoot, "treatments", treatmentId, treatmentVersion, "treatment.yaml");
+  const treatment = Bun.YAML.parse(await Bun.file(treatmentPath).text()) as unknown;
+  if (!isRecord(treatment)) fail(`Skill treatment is invalid: ${relativePath(treatmentPath)}`);
+  const bundle = await resolveSkillBundle(treatment);
+  const context = await routePublicRules(taskPath, bundle);
+  if (taskCard.skill_relevance !== "direct" || taskCard.lifecycle_stage === "retired") return;
+  const auditPath = joinPath(taskPath, "private", "rule-audit.yaml");
+  const audit = Bun.YAML.parse(await Bun.file(auditPath).text()) as Record<string, unknown>;
+  const required = Array.isArray(audit.required_rules) && audit.required_rules.every((rule) => typeof rule === "string") ? audit.required_rules : undefined;
+  if (!required) fail(`Task rule audit is invalid: ${relativePath(auditPath)}`);
+  const missing = required.filter((rule) => !routedRuleNames(context).includes(rule));
+  if (missing.length > 0) fail(`Public rule routing does not cover ${taskCard.id}: ${missing.join(", ")}`);
 }
 
 function asPlan(value: unknown): ExperimentPlan {
@@ -92,6 +110,7 @@ async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPoli
   if (!candidateFile || !starterFiles.includes(candidateFile.replaceAll("\\", "/")) && !starterFiles.includes(candidateFile)) fail(`Task must declare a candidate starter file when it has multiple starter files: ${relativePath(task.path)}`);
   const [treatmentId, treatmentVersion] = condition.treatment.split("/");
   if (!treatmentId || !treatmentVersion) fail(`Invalid treatment reference: ${condition.treatment}`);
+  await verifyPublicRuleCoverage(task.path, taskCard, treatmentId, treatmentVersion);
   const repeatId = String(repeat).padStart(3, "0");
   const runId = `${plan.id}-${taskId}-${condition.id}-${repeatId}`;
   return {
