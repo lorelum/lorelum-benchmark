@@ -1,5 +1,8 @@
 # React Skill Comparison 实验计划
 
-- 当前 smoke 计划：`g0-g1-smoke-v2.yaml`，G1 使用完整的 `vercel-skill/v2` bundle。
-- 当前正式计划：`g0-g1-v2.yaml`，仅在 v2 smoke 完成并复核后使用。
-- `g0-g1-smoke-v1.yaml` 与 `g0-g1-v1.yaml` 使用不完整的 `vercel-skill/v1`，已退役；request generator 和 Pi adapter 均会拒绝它们。
+当前没有可运行的 active 计划。此目录的历史 smoke、pilot 和正式计划均已
+retired，request generator 与 Pi adapter 会拒绝它们。
+
+下一份计划必须基于九题集合的新 Git commit、不可变模型快照和已满足的隔离与
+artifact 前提生成。任务集合和激活标准见
+`incubator/react-skill-comparison/g0-g1-nine-fixture-pilot-v1.pre-freeze.yaml`。

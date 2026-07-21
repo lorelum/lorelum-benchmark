@@ -1,7 +1,7 @@
 # C2 — project summary access
 
-**Status:** design only
-**Proposed task:** `project-summary-access/v1`
+**Status:** admitted to offline-calibrated pilot
+**Task:** `project-summary-access/v1`
 **Skill relevance:** control
 
 ## Product framing
@@ -26,17 +26,26 @@ same visibility boundary as item fields.
 
 ## Deterministic quality probe
 
-The evaluator uses a repository double that separately records public summary,
-internal-detail, and aggregate reads. It scores only after semantic success:
-unauthorised paths must make no internal-detail read, while authorised member
-paths make exactly the reads necessary for their declared response. The probe
-protects the access boundary; it does not reward framework optimisation.
+The evaluator uses a repository double that separately records public and
+member-projection reads. It scores only after semantic success: anonymous
+paths make one public read and no member read, while an authorised member path
+makes one scoped member read and no public read. The probe protects the access
+boundary; it does not reward framework optimisation.
 
 ## Required mutation resistance
 
-Reject filtering private fields after returning all rows, a total count over
-all organisation items, a distinguishable forbidden response, and a reader
-that loads internal details before validating the viewer.
+Reject malformed viewer expansion, an anonymous member projection, a
+distinguishable forbidden response, and an unnecessary public read before a
+member projection.
+
+## Offline calibration
+
+On 2026-07-21, the private reference passed every semantic gate and received a
+`100` quality score. The public starter failed, and four plausible mutations
+were each rejected: malformed viewer expansion, anonymous member projection,
+distinguishable forbidden response, and eager public read for a member. The
+revision snapshot was then written. This task is a control: it is reported
+separately and cannot be used in the direct-task effect estimate.
 
 ## Source abstraction
 

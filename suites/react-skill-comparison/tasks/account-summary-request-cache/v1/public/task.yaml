@@ -1,7 +1,7 @@
 id: account-summary-request-cache-v1
 version: 1
 track: performance-skill-comparison
-lifecycle_stage: pilot
+lifecycle_stage: retired
 evaluator_version: 1
 skill_relevance: direct
 source:

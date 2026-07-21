@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, expect, test } from "bun:test";
 import { mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,15 +7,42 @@ import { sha256File } from "../../../fs";
 const root = process.cwd();
 const emptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 const formalToolPolicyHash = "095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2";
-const snapshotId = (await Bun.file(join(root, "suites", "react-skill-comparison", "tasks", "member-hub-loader", "v1", "private", "snapshot.json")).json() as { snapshot_id: string }).snapshot_id;
+const snapshotId = (await Bun.file(join(root, "suites", "react-skill-comparison", "tasks", "member-hub-loader", "v2", "private", "snapshot.json")).json() as { snapshot_id: string }).snapshot_id;
 const sourceCommit = (await new Response(Bun.spawn(["git", "rev-parse", "HEAD"], { cwd: root, stdout: "pipe" }).stdout).text()).trim();
 const formalSystemPrompt = await Bun.file(join(root, "prompts", "formal-pi", "v1", "system.md")).text();
-const formalPlanPath = join(root, "experiments", "react-skill-comparison", "g0-g1-fixture-pilot-v1.yaml");
+const formalPlanId = `pi-v2-contract-test-${crypto.randomUUID()}`;
+const formalPlanPath = join(root, "experiments", "react-skill-comparison", `${formalPlanId}.yaml`);
+await Bun.write(formalPlanPath, [
+  `id: ${formalPlanId}`,
+  "version: v1",
+  "lifecycle_stage: active",
+  "run_kind: pilot",
+  `source_commit: ${sourceCommit}`,
+  "suite: { id: react-skill-comparison, version: 0.4.0 }",
+  "conditions:",
+  "  - { id: baseline, label: G0, treatment: baseline/v1 }",
+  "  - { id: vercel-skill, label: G1, treatment: vercel-skill/v2 }",
+  "smoke_tasks: [member-hub-loader-v2]",
+  "full_tasks: [member-hub-loader-v2]",
+  "environment: { id: formal-pi-deepseek-v4-pro, version: v1 }",
+  "agent: { id: pi, version: 0.80.10, command: pi }",
+  "model: { id: deepseek/deepseek-v4-pro, version: pending-provider-snapshot }",
+  "repetitions: 2",
+  "seed: 1",
+  "budget: { max_turns: 20, max_duration_ms: 600000 }",
+  "system_prompt_path: prompts/formal-pi/v1/system.md",
+  "system_prompt_hash: a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a",
+  "tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2",
+  ""
+].join("\n"));
 const formalPlanHash = await sha256File(formalPlanPath);
 const retiredFormalPlanPath = join(root, "experiments", "react-skill-comparison", "g0-g1-smoke-v1.yaml");
 const retiredFormalPlanHash = await sha256File(retiredFormalPlanPath);
-const formalSourceCommit = "09b753fa266519245f9be85f3097767e350eee13";
 const cleanupPaths = new Set<string>();
+
+afterAll(async () => {
+  await rm(formalPlanPath, { force: true });
+});
 
 afterEach(async () => {
   await Promise.all([...cleanupPaths].map((path) => rm(path, { force: true, recursive: true })));
@@ -38,7 +65,7 @@ function request(id: string, environmentId: string): Record<string, unknown> {
     source_commit: sourceCommit,
     candidate_path: "starter/src/member-hub.ts",
     suite: { id: "react-skill-comparison", version: "0.4.0" },
-    task: { id: "member-hub-loader-v1", revision: "v1", snapshot_id: snapshotId },
+    task: { id: "member-hub-loader-v2", revision: "v2", snapshot_id: snapshotId },
     treatment: { id: "baseline", version: "v1" },
     environment: { id: environmentId, version: "v1" },
     scorer: { id: "member-hub-loader", version: "v1" },
@@ -110,13 +137,13 @@ function formalPiArgs(): string[] {
 
 function formalize(document: Record<string, unknown>, conditionId = "baseline"): void {
   const treatment = conditionId === "vercel-skill" ? { id: "vercel-skill", version: "v2" } : { id: "baseline", version: "v1" };
-  document.run_id = `react-skill-comparison-g0-g1-fixture-pilot-v1-member-hub-loader-v1-${conditionId}-001`;
-  document.experiment_id = "react-skill-comparison-g0-g1-fixture-pilot-v1";
+  document.run_id = `${formalPlanId}-member-hub-loader-v2-${conditionId}-001`;
+  document.experiment_id = formalPlanId;
   document.experiment_plan_hash = formalPlanHash;
   document.run_kind = "pilot";
   document.condition_id = conditionId;
   document.repeat = 1;
-  document.source_commit = formalSourceCommit;
+  document.source_commit = sourceCommit;
   document.treatment = treatment;
   document.environment = { id: "formal-pi-deepseek-v4-pro", version: "v1" };
   document.agent = { id: "pi", version: "0.80.10", model: "deepseek/deepseek-v4-pro", model_version: "pending-provider-snapshot", system_prompt_hash: "a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a" };
@@ -183,7 +210,7 @@ test("creates an isolated public-only workspace and artifact manifest", async ()
   expect(artifact.status).toBe("completed");
   expect(Object.keys((artifact.workspace as Record<string, unknown>).starter_files as Record<string, unknown>)).toContain("src/member-hub.ts");
   expect(artifact.rule_audit).toMatchObject({
-    manifest_path: "suites/react-skill-comparison/tasks/member-hub-loader/v1/private/rule-audit.yaml",
+    manifest_path: "suites/react-skill-comparison/tasks/member-hub-loader/v2/private/rule-audit.yaml",
     treatment: { id: "vercel-skill", version: "v2" },
     required_rules: ["async-dependencies.md", "async-parallel.md"]
   });
@@ -324,7 +351,7 @@ test("refuses formal coordination until the provider model snapshot is resolved"
   const id = runId();
   cleanupPaths.add(join(root, ".run-workspaces", id));
   cleanupPaths.add(join(root, "artifacts", "runs", id));
-  cleanupPaths.add(join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v1", `${id}.json`));
+  cleanupPaths.add(join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v2", `${id}.json`));
   const document = request(id, "formal-pi-deepseek-v4-pro");
   formalize(document);
 
@@ -332,7 +359,7 @@ test("refuses formal coordination until the provider model snapshot is resolved"
 
   expect(result.exitCode).toBe(1);
   expect(result.stderr).toContain("immutable provider model snapshot ID");
-  expect(await Bun.file(join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v1", `${id}.json`)).exists()).toBe(false);
+  expect(await Bun.file(join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v2", `${id}.json`)).exists()).toBe(false);
 });
 
 test("rejects forged formal experiment provenance", async () => {
@@ -364,7 +391,7 @@ test("does not write a record when immutable artifact storage is unavailable", a
   cleanupPaths.add(join(root, "environments", environmentId));
   cleanupPaths.add(join(root, ".run-workspaces", id));
   cleanupPaths.add(join(root, "artifacts", "runs", id));
-  const recordPath = join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v1", `${id}.json`);
+  const recordPath = join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v2", `${id}.json`);
   cleanupPaths.add(recordPath);
   const document = request(id, environmentId);
 
@@ -397,9 +424,9 @@ test("coordinates evaluator output into a formal immutable record", async () => 
   cleanupPaths.add(join(root, "environments", environmentId));
   cleanupPaths.add(join(root, ".run-workspaces", id));
   cleanupPaths.add(join(root, "artifacts", "runs", id));
-  cleanupPaths.add(join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v1", `${id}.json`));
+  cleanupPaths.add(join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v2", `${id}.json`));
   const document = request(id, environmentId);
-  const reference = await Bun.file(join(root, "suites", "react-skill-comparison", "tasks", "member-hub-loader", "v1", "private", "reference", "src", "member-hub.ts")).text();
+  const reference = await Bun.file(join(root, "suites", "react-skill-comparison", "tasks", "member-hub-loader", "v2", "private", "reference", "src", "member-hub.ts")).text();
   (document.execution as Record<string, unknown>).args = ["-e", `await Bun.write(Bun.env.CANDIDATE_PATH, ${JSON.stringify(reference)});`];
 
   const result = await coordinate(document);
@@ -422,7 +449,7 @@ test("coordinates evaluator output into a formal immutable record", async () => 
   expect(await Bun.file(join(root, output.run_manifest)).exists()).toBe(true);
   const runManifest = await Bun.file(join(root, output.run_manifest)).json() as Record<string, unknown>;
   expect(runManifest.rule_audit).toMatchObject({
-    manifest_path: "suites/react-skill-comparison/tasks/member-hub-loader/v1/private/rule-audit.yaml",
+    manifest_path: "suites/react-skill-comparison/tasks/member-hub-loader/v2/private/rule-audit.yaml",
     required_rules: ["async-dependencies.md", "async-parallel.md"]
   });
 });
@@ -434,7 +461,7 @@ test("writes a failed record when Pi exits without a candidate", async () => {
   cleanupPaths.add(join(root, "environments", environmentId));
   cleanupPaths.add(join(root, ".run-workspaces", id));
   cleanupPaths.add(join(root, "artifacts", "runs", id));
-  cleanupPaths.add(join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v1", `${id}.json`));
+  cleanupPaths.add(join(root, "results", "records", "react-skill-comparison", "member-hub-loader-v2", `${id}.json`));
   const document = request(id, environmentId);
   (document.execution as Record<string, unknown>).args = ["-e", 'await (await import("node:fs/promises")).rm(Bun.env.CANDIDATE_PATH!)'];
 

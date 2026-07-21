@@ -8,6 +8,7 @@ import type { PiRunRequestV2 } from "./types";
 import { parseS3Uri, uploadImmutableS3Artifact } from "./s3";
 import { auditPiJsonTrace } from "./trace";
 import { taskRuleAuditFromArtifact, type TaskRuleAudit } from "./task-rule-audit";
+import { evaluatorResultFromOutput, type EvaluatorResultV2 } from "../../../evaluator/v2/result";
 
 type Artifact = { kind: "trace" | "patch" | "raw-output" | "evaluator-output" | "environment" | "review"; uri: string; sha256: string };
 
@@ -163,13 +164,13 @@ async function createDiff(request: PiRunRequestV2, candidatePath: string, artifa
   return { path, success: result.exitCode === 0 || result.exitCode === 1 };
 }
 
-async function taskMetadata(request: PiRunRequestV2): Promise<{ track: string; evaluatorVersion: number; skillRelevance: string }> {
+async function taskMetadata(request: PiRunRequestV2): Promise<{ track: string; evaluatorVersion: number; evaluatorContract?: string; skillRelevance: string }> {
   const reference = taskReference(request);
   const task = await findTask(request.suite.id, reference.reference);
   if (!task) fail(`Task not found while creating record: ${request.task.id}`);
   const card = await readYaml(joinPath(task.path, "public", "task.yaml"));
   if (typeof card.track !== "string" || !Number.isInteger(card.evaluator_version) || typeof card.skill_relevance !== "string") fail(`Task card metadata is invalid: ${relativePath(task.path)}`);
-  return { track: card.track, evaluatorVersion: card.evaluator_version as number, skillRelevance: card.skill_relevance };
+  return { track: card.track, evaluatorVersion: card.evaluator_version as number, ...(typeof card.evaluator_contract === "string" ? { evaluatorContract: card.evaluator_contract } : {}), skillRelevance: card.skill_relevance };
 }
 
 if (!requestPath) {
@@ -221,6 +222,7 @@ try {
   ];
 
   let evaluator: ProcessResult | undefined;
+  let evaluatorResult: EvaluatorResultV2 | undefined;
   let diffPath: string | undefined;
   let failureReason: string | undefined = metadata.skillRelevance === "direct" && !ruleAudit ? "Direct task is missing its frozen rule audit" : undefined;
   const workspacePath = repositoryPath(".run-workspaces", request.run_id);
@@ -239,6 +241,15 @@ try {
       await writeText(joinPath(artifactPath, "evaluator.stderr.log"), evaluator.stderr);
       localArtifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stdout.log")));
       localArtifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stderr.log")));
+      if (metadata.evaluatorContract === "structured/v2") {
+        try {
+          evaluatorResult = evaluatorResultFromOutput(`${evaluator.stdout}\n${evaluator.stderr}`);
+          if (!evaluatorResult) throw new Error("Structured evaluator did not emit a result");
+          if (!evaluatorResult.semantic.passed) failureReason ??= "Evaluator semantic gate failed";
+        } catch (error) {
+          failureReason ??= error instanceof Error ? error.message : String(error);
+        }
+      }
       if (evaluator.exitCode !== 0 || evaluator.timedOut) failureReason ??= evaluator.timedOut ? "Evaluator timed out" : "Evaluator failed";
     } catch (error) {
       failureReason ??= error instanceof Error ? error.message : String(error);
@@ -309,7 +320,13 @@ try {
     model: { id: request.agent.model, version: request.agent.model_version },
     started_at: startedAt,
     cost: { duration_ms: Date.now() - Date.parse(startedAt) },
-    outcome: { automated_checks_passed: evaluator?.exitCode === 0 && !evaluator.timedOut && !failureReason, blind_review: "pending", ...(diffPath ? { diff_path: repositoryRelative(diffPath) } : {}), ...(failureReason ? { failure_reason: failureReason } : {}) }
+    outcome: {
+      automated_checks_passed: evaluator?.exitCode === 0 && !evaluator.timedOut && !failureReason,
+      blind_review: "pending",
+      ...(evaluatorResult ? { evaluator: evaluatorResult, quality_score: evaluatorResult.quality.score } : {}),
+      ...(diffPath ? { diff_path: repositoryRelative(diffPath) } : {}),
+      ...(failureReason ? { failure_reason: failureReason } : {})
+    }
   };
   await validateSchema("run-record.schema.json", record, "formal run record");
   if (await pathExists(recordPath)) fail(`Run record already exists: ${relativePath(recordPath)}`);

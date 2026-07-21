@@ -8,7 +8,8 @@ was read on 2026-07-20 for its reported mechanism, not for a solution.
 
 Before a row moves into a task dossier, its two sources must be rechecked at
 their permalinks and the task design must pass the offline admission checklist
-in [fixture-selection.md](fixture-selection.md).
+in [fixture-selection.md](fixture-selection.md). D1 and D2 were rechecked on
+2026-07-21 when their replacement dossiers were drafted.
 
 | Slot | Public cases reviewed | Abstracted product scenario | Source boundary |
 | --- | --- | --- | --- |
@@ -25,8 +26,10 @@ in [fixture-selection.md](fixture-selection.md).
 ## Screening result
 
 All nine rows have two readable, public GitHub permalinks and a mechanism that
-can be recreated in Bun/TypeScript without an external service. None has yet
-been admitted as a fixture: the next required artefact is a per-slot design
-dossier that states two business invariants, an error path, and a deterministic
-dynamic probe. A row is rejected if that dossier would reveal a source patch or
-skill-rule terminology in its public task.
+can be recreated in Bun/TypeScript without an external service. C1–C3 were
+admitted as `delivery-notification-ingest/v2`, `project-summary-access/v1`, and
+`fulfilment-transition-service/v1` on 2026-07-21 after private offline
+calibration; their dossiers record the results. The remaining rows require a
+per-slot design dossier with two business invariants, an error path, and a
+deterministic dynamic probe. A row is rejected if that dossier would reveal a
+source patch or skill-rule terminology in its public task.

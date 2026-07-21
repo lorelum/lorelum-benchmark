@@ -112,6 +112,19 @@ test("requires a frozen private rule audit for active direct tasks", async () =>
   }
 });
 
+test("requires a structured evaluator entry when a task opts into the v2 contract", async () => {
+  const workspace = await fixture("practice-effectiveness");
+  try {
+    const taskCard = join(workspace, "suites", "fixture", "tasks", "example", "v1", "public", "task.yaml");
+    await write(taskCard, `${await Bun.file(taskCard).text()}evaluator_contract: structured/v2\n`);
+    const result = await validate(workspace);
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("Missing required path: suites/fixture/tasks/example/v1/private/evaluator/evaluate.ts");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
 test("rejects coverage manifests that reference undeclared tasks", async () => {
   const workspace = await fixture("performance-skill-comparison");
   try {
@@ -149,6 +162,32 @@ test("rejects active experiments that reference retired tasks", async () => {
     const result = await validate(workspace);
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("Active experiment full_tasks references retired task: fixture/example-v1");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("allows retired experiments to retain a historical source commit", async () => {
+  const workspace = await fixture("practice-effectiveness");
+  try {
+    const experimentPath = join(workspace, "experiments");
+    await mkdir(experimentPath, { recursive: true });
+    await write(join(experimentPath, "retired.yaml"), [
+      "id: fixture-retired",
+      "version: v1",
+      "lifecycle_stage: retired",
+      "run_kind: pilot",
+      `source_commit: '${"0".repeat(40)}'`,
+      "suite:", "  id: fixture", "  version: 0.1.0",
+      "conditions:", "  - id: baseline", "    label: G0", "    treatment: baseline/v1", "  - id: control", "    label: C", "    treatment: baseline/v1",
+      "smoke_tasks:", "  - example-v1", "full_tasks:", "  - example-v1",
+      "environment:", "  id: local", "  version: v1",
+      "agent:", "  id: test", "  version: v1", "  command: bun",
+      "model:", "  id: test", "  version: v1",
+      "repetitions: 2", "seed: 0", "budget:", "  max_turns: 1", "  max_duration_ms: 1", "system_prompt_path: prompt.md", `system_prompt_hash: '${"0".repeat(64)}'`, `tool_policy_hash: '${"0".repeat(64)}'`, ""
+    ].join("\n"));
+    const result = await validate(workspace);
+    expect(result.output).not.toContain("Experiment source_commit is not an ancestor of HEAD");
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }

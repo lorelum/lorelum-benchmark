@@ -12,15 +12,27 @@ hash 校验后作为 Pi `--skill` 参数注入；baseline 不注入任何 Skill�
 必须由 environment manifest 指定的 sandbox 阻止 Pi 逃逸到宿主文件系统。
 
 ```sh
-bun run pi:requests -- experiments/react-skill-comparison/g0-g1-smoke-v2.yaml --smoke --output scratch/requests
+# 在九题预冻结清单转为正式计划后，替换为该计划的路径。
+bun run pi:requests -- experiments/react-skill-comparison/<frozen-plan>.yaml --smoke --output scratch/requests
 bun run pi:coordinate -- scratch/requests/<run-id>.json --dry-run
 bun run pi:coordinate -- scratch/requests/<run-id>.json
 ```
+
+当前不存在可运行的 active G0/G1 计划。历史 smoke、pilot 与正式计划均已
+retired；九题候选集及其激活前提记录在
+`incubator/react-skill-comparison/g0-g1-nine-fixture-pilot-v1.pre-freeze.yaml`。
 
 `--dry-run` 会验证全部契约并输出将要使用的隔离工作区，不创建目录也不执行 Pi。正式运行
 会在 `artifacts/runs/<run-id>/<manifest_name>` 写入 `pi-run-artifact/v2` manifest，记录经过
 核验的输入、实际工作区、公开文件 hash、命令、状态和退出码。大体积 trace、输出与 diff
 应从该目录上传到 artifact storage；仓库只提交其索引和校验和。
+
+新任务可在 task card 声明 `evaluator_contract: structured/v2`。其私有
+`evaluator/evaluate.ts` 必须导出 `evaluateCandidate({ candidatePath })`，并返回
+`evaluator-result/v2`：语义检查全部通过后才运行命名质量探针；探针最大分总计 `100`，语义
+失败时强制返回空 probe 和 `0` 分。`bun run evaluate` 在语义通过时退出 `0`，即使质量分未满；
+Pi record 会保存完整 evaluator result 与 `quality_score`，供后续质量调整分析。未声明该字段的
+历史任务继续使用 Bun test evaluator。
 
 `pi:requests` 会将 experiment ID、计划 hash 和 `smoke`/`pilot`/`official` run kind 写入请求，并按实验计划中的 task、condition 与重复次数生成稳定 run ID。`pilot` 记录只用于验证注入、方差和 evaluator 链路，永不进入正式比较或发布结论；`pi:coordinate`
 先执行 adapter preflight，再运行 Pi、以 `CANDIDATE_PATH` 桥接私有 evaluator，并捕获 Pi

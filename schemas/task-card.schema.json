@@ -11,6 +11,7 @@
     "source": { "type": "object" },
     "runtime": { "type": "object", "required": ["command"] },
     "evaluator_version": { "type": "integer", "minimum": 1 },
+    "evaluator_contract": { "enum": ["bun-test/v1", "structured/v2"] },
     "agent_input": { "type": "object", "required": ["prompt", "starter"] },
     "applicable_conditions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
     "skill_relevance": { "enum": ["direct", "partial", "out-of-domain"] }

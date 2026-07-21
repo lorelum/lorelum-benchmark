@@ -204,8 +204,10 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
   if (treatment.kind === "baseline" && treatment.injection !== undefined) fail(`Baseline treatment must not define injection: ${relativePath(treatmentPath)}`);
   if (treatment.kind === "skill") {
     try {
-      declaredSkillBundle(treatment);
-      treatmentBundle = await resolveSkillBundle(treatment);
+      const declared = declaredSkillBundle(treatment);
+      treatmentBundle = dryRun
+        ? { ...declared, path: "", skillPath: "" }
+        : await resolveSkillBundle(treatment);
     } catch (error) {
       fail(`${error instanceof Error ? error.message : String(error)}: ${relativePath(treatmentPath)}`);
     }

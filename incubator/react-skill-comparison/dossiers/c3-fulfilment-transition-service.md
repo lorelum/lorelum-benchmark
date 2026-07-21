@@ -1,7 +1,7 @@
 # C3 — fulfilment transition service
 
-**Status:** design only
-**Proposed task:** `fulfilment-transition-service/v1`
+**Status:** admitted to offline-calibrated pilot
+**Task:** `fulfilment-transition-service/v1`
 **Skill relevance:** control
 
 ## Product framing
@@ -42,3 +42,12 @@ successful before the carrier resolves.
 The source cases motivate terminal-state and asynchronous error behavior. This
 task uses an original order graph, command names, and error contract rather
 than state-machine APIs or the source fixes.
+
+## Offline calibration
+
+On 2026-07-21, the private reference passed every semantic gate and received a
+`100` quality score. The public starter failed, and four plausible mutations
+were each rejected: a transition from a terminal state, swallowed carrier
+error, duplicate pending dispatch, and premature dispatched state. The revision
+snapshot was then written. This task is a control: it is reported separately
+and cannot be used in the direct-task effect estimate.

@@ -15,8 +15,9 @@
     "test:sandbox": "bun run src/benchmark/runner/pi/v2/sandbox-preflight.ts",
     "test:local-sandbox": "bun run src/benchmark/runner/pi/v2/local-sandbox-preflight.ts",
     "test:fixtures": "bun run src/benchmark/fixtures.ts",
+    "test:react-runtime": "bun --conditions=react-server test incubator/react-skill-comparison/react-server-runtime/react-cache-runtime.test.ts",
     "test:exploratory:practice": "bun test src/benchmark/exploratory-practice-effectiveness.test.ts",
-    "test:contracts": "bun test src/benchmark/validate.test.ts src/benchmark/runner/pi/v2 src/benchmark/runner/pi/request-generator.test.ts"
+    "test:contracts": "bun test src/benchmark/validate.test.ts src/benchmark/evaluator/v2/harness.test.ts src/benchmark/runner/pi/v2 src/benchmark/runner/pi/request-generator.test.ts && bun run test:react-runtime"
   },
   "dependencies": {
     "ajv": "^8.17.1"

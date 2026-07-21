@@ -5,30 +5,55 @@ baseline:
   skill: skills/react-best-practices
 coverage_status: partial
 active_task_set:
+  - member-hub-loader-v2
+  - account-summary-react-cache-v1
+  - incident-board-view-model-v1
+  - connection-indicator-subscriptions-v1
+  - preference-hydration-store-v1
+  - report-export-boundary-v1
+  - delivery-notification-ingest-v2
+  - project-summary-access-v1
+  - fulfilment-transition-service-v1
+historical_task_set:
   - member-hub-loader-v1
   - account-summary-request-cache-v1
-  - delivery-notification-ingest-v1
-historical_task_set:
   - workspace-overview-loader-v1
   - issue-workbench-model-v2
   - notification-preference-store-v1
   - order-route-loader-v1
+  - delivery-notification-ingest-v1
 covered_rules:
   - id: external-event-data-validity
     tasks:
-      - delivery-notification-ingest-v1
+      - delivery-notification-ingest-v2
+  - id: authorization-public-data-boundary
+    tasks:
+      - project-summary-access-v1
+  - id: domain-transition-error-propagation
+    tasks:
+      - fulfilment-transition-service-v1
   - id: request-scope-deduplication
     tasks:
-      - account-summary-request-cache-v1
+      - account-summary-react-cache-v1
   - id: asynchronous-dependency-orchestration
     tasks:
-      - member-hub-loader-v1
+      - member-hub-loader-v2
   - id: async-dependency-graph
     tasks:
       - workspace-overview-loader-v1
   - id: stateful-row-memoization
     tasks:
       - issue-workbench-model-v2
+      - incident-board-view-model-v1
+  - id: global-listener-ownership
+    tasks:
+      - connection-indicator-subscriptions-v1
+  - id: storage-read-through-caching
+    tasks:
+      - preference-hydration-store-v1
+  - id: conditional-loading-boundary
+    tasks:
+      - report-export-boundary-v1
   - id: defensive-client-persistence
     tasks:
       - notification-preference-store-v1
@@ -44,8 +69,17 @@ coverage_gaps:
     - server-streaming
 task_relevance:
   delivery-notification-ingest-v1: out-of-domain
+  delivery-notification-ingest-v2: out-of-domain
+  project-summary-access-v1: out-of-domain
+  fulfilment-transition-service-v1: out-of-domain
   account-summary-request-cache-v1: direct
+  account-summary-react-cache-v1: direct
+  incident-board-view-model-v1: direct
+  connection-indicator-subscriptions-v1: direct
+  preference-hydration-store-v1: direct
+  report-export-boundary-v1: direct
   member-hub-loader-v1: direct
+  member-hub-loader-v2: direct
   workspace-overview-loader-v1: direct
   issue-workbench-model-v2: direct
   notification-preference-store-v1: partial

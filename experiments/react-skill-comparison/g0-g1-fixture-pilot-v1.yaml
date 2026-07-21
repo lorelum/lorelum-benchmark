@@ -1,6 +1,6 @@
 id: react-skill-comparison-g0-g1-fixture-pilot-v1
 version: v1
-lifecycle_stage: active
+lifecycle_stage: retired
 run_kind: pilot
 source_commit: 09b753fa266519245f9be85f3097767e350eee13
 suite:

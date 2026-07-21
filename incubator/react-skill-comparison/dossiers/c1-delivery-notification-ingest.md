@@ -1,7 +1,7 @@
 # C1 — delivery notification ingest
 
-**Status:** design only
-**Proposed task:** `delivery-notification-ingest/v1`
+**Status:** admitted to offline-calibrated pilot
+**Task:** `delivery-notification-ingest/v2`
 **Skill relevance:** control
 
 ## Product framing
@@ -23,17 +23,26 @@ accepted update for the same delivery do not move the delivery backwards.
 
 ## Deterministic quality probe
 
-The evaluator supplies a scripted event stream with malformed envelopes,
-duplicates, out-of-order timestamps, and valid interleavings. Its logical trace
-checks the accepted IDs, state revisions, and notification count. Quality is
-the percentage of correctly handled trace transitions after every semantic
-assertion passes; it is not a throughput measurement.
+The structured evaluator first applies all semantic gates. Only after those
+pass, it scores two deterministic dynamic probes: an unknown status must be
+rejected before its `details` getter is read, and a subscriber registered while
+an accepted update is being delivered must observe only the next update. These
+are access and delivery traces, not throughput measurements or wall-clock
+thresholds.
 
 ## Required mutation resistance
 
 Reject a TypeScript-only type assertion, duplicate overwrite behavior, lexical
-timestamp comparison, and an implementation that notifies after a rejected
-event.
+timestamp comparison, and live subscriber-set iteration.
+
+## Offline calibration
+
+On 2026-07-21, the private reference passed every semantic gate and received a
+`100` quality score. The public starter failed, and four plausible mutations
+were each rejected: static type assertion, duplicate overwrite, lexical
+timestamp comparison, and live subscriber iteration. The revision snapshot was
+then written. This task is a control: it is reported separately and cannot be
+used in the direct-task effect estimate.
 
 ## Source abstraction
 

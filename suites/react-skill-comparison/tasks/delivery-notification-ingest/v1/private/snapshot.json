@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "2fd57a379806d1fa61cb7b812a3e79fb72fe41e6dfd979a068a744b2c9ec9435",
+  "snapshot_id": "6e64091e48310df7c640beaa59413d466184e4c9a0c0c78015078aed24a1443a",
   "files": {
     "private/evaluator/delivery-notifications.test.ts": "d6a1545a84e996036f1c4ac4d092928656a2a9bbe243a09469d930205de3a8af",
     "private/mutations/duplicate-event-overwrite.ts": "fc482a38982a8d33d3477d31912ebfabb646f4f2afc310580730432d0637d0fd",
@@ -11,6 +11,6 @@
     "private/reference/src/delivery-notifications.ts": "1cd269d34b77323ad39ea62162fdeaed8ecfcff371e6f59146a9c3b78eaeb3e1",
     "public/starter/src/delivery-notifications.ts": "79161ac5fb27e2f60fbdc74aee6a867522153c13675e6612a75a09eba1ab7113",
     "public/task.md": "2abbbd882a225ef1735fcb5dbd6aa17781553187e1e728cac266a112be19701c",
-    "public/task.yaml": "34c97a272593ff0c99c3df10f21c48d43cbefa5dd8af199a2a10c7950411bb54"
+    "public/task.yaml": "a73a69e22d9eb3e40ae0323398dc4fc41fa7a1be041b5a24df1eb4a497ed764f"
   }
 }

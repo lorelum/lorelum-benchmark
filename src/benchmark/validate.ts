@@ -6,6 +6,12 @@ import { directoryExists, joinPath, listDirectories, listFiles, pathExists, rela
 const failures: string[] = [];
 const lifecycleStages = new Set(["candidate", "pilot", "frozen", "official", "published", "retired"]);
 const ajv = new Ajv2020({ allErrors: true });
+ajv.addFormat("date-time", {
+  type: "string",
+  validate(value: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(Date.parse(value));
+  }
+});
 const schemaValidators = new Map<string, ValidateFunction>();
 
 type DiscoveredTask = {
@@ -162,7 +168,7 @@ async function validateExperimentPlan(path: string, plan: Record<string, unknown
   if (plan.run_kind === "smoke" && plan.repetitions !== 1) failures.push(`Smoke experiment must use exactly one repetition: ${relativePath(path)}`);
   if (plan.run_kind === "pilot" && plan.repetitions < 2) failures.push(`Pilot experiment must use at least two repetitions: ${relativePath(path)}`);
 
-  if (typeof plan.source_commit === "string" && !(await commitIsAncestor(plan.source_commit))) failures.push(`Experiment source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
+  if (!retiredPlan && typeof plan.source_commit === "string" && !(await commitIsAncestor(plan.source_commit))) failures.push(`Experiment source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
   if (typeof plan.system_prompt_path === "string" && typeof plan.system_prompt_hash === "string") {
     const promptPath = resolve(workspaceRoot, plan.system_prompt_path);
     if (!insideWorkspace(promptPath)) failures.push(`Experiment system prompt escapes workspace: ${plan.system_prompt_path}`);
@@ -239,7 +245,7 @@ async function validateVersionedManifests(path: string, manifestName: string, sc
 }
 
 const suitesPath = joinPath(workspaceRoot, "suites");
-for (const schema of ["suite.schema.json", "task-card.schema.json", "task-rule-audit.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
+for (const schema of ["suite.schema.json", "task-card.schema.json", "task-rule-audit.schema.json", "evaluator-result-v2.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
   await requirePath(joinPath(workspaceRoot, "schemas", schema));
 }
 
@@ -276,6 +282,7 @@ for (const suite of await listDirectories(suitesPath)) {
         if (taskDocument.id !== expectedId) failures.push(`Task id '${taskDocument.id}' must match ${expectedId} in ${relativePath(taskCard)}`);
         if (taskDocument.version !== Number(revision.slice(1))) failures.push(`Task version must match ${revision} in ${relativePath(taskCard)}`);
         if (!Number.isInteger(taskDocument.evaluator_version) || Number(taskDocument.evaluator_version) < 1) failures.push(`evaluator_version must be a positive integer in ${relativePath(taskCard)}`);
+        if (taskDocument.evaluator_contract === "structured/v2") await requirePath(joinPath(privatePath, "evaluator", "evaluate.ts"));
         if (!lifecycleStages.has(String(taskDocument.lifecycle_stage))) failures.push(`Invalid lifecycle_stage in ${relativePath(taskCard)}`);
         if (taskDocument.skill_relevance === "direct" && taskDocument.lifecycle_stage !== "retired") {
           const ruleAuditPath = joinPath(privatePath, "rule-audit.yaml");

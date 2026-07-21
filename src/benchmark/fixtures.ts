@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { findTask, type TaskLocation } from "./task-discovery";
 import { joinPath, workspaceRoot } from "./fs";
+import { evaluatorResultFromOutput } from "./evaluator/v2/result";
 
 const suite = "react-skill-comparison";
 const suiteManifest = Bun.YAML.parse(await Bun.file(joinPath(workspaceRoot, "suites", suite, "suite.yaml")).text()) as { tasks?: Array<{ id?: string; path?: string; lifecycle_stage?: string }> };
@@ -17,9 +18,8 @@ if (fixtureReferences.length === 0) {
   process.exit(1);
 }
 
-async function runEvaluator(task: TaskLocation, candidatePath: string): Promise<{ exitCode: number; output: string }> {
-  const evaluatorPath = joinPath(task.path, "private", "evaluator");
-  const child = Bun.spawn([process.execPath, "test", evaluatorPath], {
+async function runEvaluator(task: TaskLocation, suite: string, reference: string, candidatePath: string): Promise<{ exitCode: number; output: string }> {
+  const child = Bun.spawn([process.execPath, "run", "src/benchmark/evaluate.ts", suite, reference], {
     cwd: workspaceRoot,
     env: { ...Bun.env, CANDIDATE_PATH: candidatePath },
     stdout: "pipe",
@@ -51,14 +51,29 @@ for (const fixture of fixtureReferences) {
 
   const referencePath = joinPath(task.path, "private", referenceSolution);
   const starterPath = joinPath(task.path, "public", "starter", "src", basename(referencePath));
-  const referenceResult = await runEvaluator(task, referencePath);
+  const taskCard = Bun.YAML.parse(await Bun.file(joinPath(task.path, "public", "task.yaml")).text()) as { evaluator_contract?: unknown };
+  const structuredEvaluator = taskCard.evaluator_contract === "structured/v2";
+  const referenceResult = await runEvaluator(task, fixture.suite, fixture.reference, referencePath);
   if (referenceResult.exitCode !== 0) {
     failures.push(`Reference solution failed for ${fixture.reference}:\n${referenceResult.output}`);
     continue;
   }
 
-  const starterResult = await runEvaluator(task, starterPath);
-  if (starterResult.exitCode === 0 || !starterResult.output.includes("(fail)")) {
+  const dynamicFailure = (result: { exitCode: number; output: string }): boolean => {
+    if (!structuredEvaluator) return result.exitCode !== 0 && result.output.includes("(fail)");
+    const evaluation = evaluatorResultFromOutput(result.output);
+    return Boolean(evaluation && (!evaluation.semantic.passed || evaluation.quality.score < 100));
+  };
+  if (structuredEvaluator) {
+    const referenceEvaluation = evaluatorResultFromOutput(referenceResult.output);
+    if (!referenceEvaluation || !referenceEvaluation.semantic.passed || referenceEvaluation.quality.score !== 100) {
+      failures.push(`Reference solution did not receive a full evaluator v2 score for ${fixture.reference}:\n${referenceResult.output}`);
+      continue;
+    }
+  }
+
+  const starterResult = await runEvaluator(task, fixture.suite, fixture.reference, starterPath);
+  if (!dynamicFailure(starterResult)) {
     failures.push(`Starter did not demonstrate a failing dynamic check for ${fixture.reference}:\n${starterResult.output}`);
     continue;
   }
@@ -71,8 +86,8 @@ for (const fixture of fixtureReferences) {
 
   for (const mutationCandidate of mutationCandidates ?? []) {
     const mutationPath = joinPath(task.path, "private", mutationCandidate as string);
-    const mutationResult = await runEvaluator(task, mutationPath);
-    if (mutationResult.exitCode === 0 || !mutationResult.output.includes("(fail)")) {
+    const mutationResult = await runEvaluator(task, fixture.suite, fixture.reference, mutationPath);
+    if (!dynamicFailure(mutationResult)) {
       failures.push(`Mutation did not demonstrate a rejected check for ${fixture.reference}/${mutationCandidate}:\n${mutationResult.output}`);
     }
   }
