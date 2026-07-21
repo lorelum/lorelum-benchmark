@@ -1,7 +1,7 @@
 # D3 — incident board view model v2
 
-**Status:** retired after public routing failure  
-**Proposed task:** `incident-board-view-model/v2`  
+**Status:** retired after public routing failure
+**Proposed task:** `incident-board-view-model/v2`
 **Relevance target:** direct
 
 ## Public product contract

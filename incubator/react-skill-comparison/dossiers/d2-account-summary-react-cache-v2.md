@@ -1,7 +1,7 @@
 # D2 — account summary React cache v2
 
-**Status:** public routing coverage passed  
-**Proposed task:** `account-summary-react-cache/v2`  
+**Status:** public routing coverage passed
+**Proposed task:** `account-summary-react-cache/v2`
 **Relevance target:** direct
 
 ## Public product contract

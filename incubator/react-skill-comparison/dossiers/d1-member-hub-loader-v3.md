@@ -1,7 +1,7 @@
 # D1 — member hub loader v3
 
-**Status:** retired after formal public routing failure  
-**Proposed task:** `member-hub-loader/v3`  
+**Status:** retired after formal public routing failure
+**Proposed task:** `member-hub-loader/v3`
 **Relevance target:** direct
 
 ## Public product contract
