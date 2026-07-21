@@ -16,7 +16,7 @@ injection:
   scope: native-resource
   secrets: excluded
 routing:
-  id: public-bm25
+  id: public-task-context
   version: v1
   max_rules: 3
   delivery: inline-rule-context

@@ -1,0 +1,7 @@
+export interface MemberProfile { id: string; displayName: string; }
+export interface Organisation { id: string; name: string; }
+export interface Project { id: string; name: string; }
+export interface PendingReview { id: string; projectId: string; }
+export interface MemberHubApi { getMemberProfile(memberId: string): Promise<MemberProfile>; getOrganisationForMember(memberId: string): Promise<Organisation>; getProjects(organisationId: string): Promise<Project[]>; getPendingReviews(organisationId: string): Promise<PendingReview[]>; }
+export interface MemberHub { profile: MemberProfile; organisation: Organisation; projects: Project[]; pendingReviews: PendingReview[]; }
+export async function loadMemberHub(api: MemberHubApi, input: { memberId: string }): Promise<MemberHub | null> { const memberId = input.memberId.trim(); if (!memberId) return null; const profile = api.getMemberProfile(memberId); const organisation = api.getOrganisationForMember(memberId); const projects = organisation.then((value) => api.getProjects(value.id)); const pendingReviews = organisation.then((value) => api.getPendingReviews(value.id)); const [profileValue, organisationValue, projectsValue, pendingReviewsValue] = await Promise.all([profile, organisation, projects, pendingReviews]); return { profile: profileValue, organisation: organisationValue, projects: projectsValue, pendingReviews: pendingReviewsValue }; }

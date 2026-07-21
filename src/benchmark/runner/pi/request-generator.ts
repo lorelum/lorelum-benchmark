@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { joinPath, listFiles, relativePath, sha256File, sha256Text, workspaceRoot } from "../../fs";
 import { findTask } from "../../task-discovery";
 import type { PiRunRequestV2 } from "./v2/types";
-import { routePublicRules, routedRuleNames } from "./v2/rule-router";
+import { declaredRuleContext, routedRuleNames } from "./v2/rule-router";
 import { resolveSkillBundle } from "./v2/treatment-resolver";
 
 type PlanCondition = { id: string; treatment: string };
@@ -49,14 +49,16 @@ async function verifyPublicRuleCoverage(taskPath: string, taskCard: Record<strin
   const treatment = Bun.YAML.parse(await Bun.file(treatmentPath).text()) as unknown;
   if (!isRecord(treatment)) fail(`Skill treatment is invalid: ${relativePath(treatmentPath)}`);
   const bundle = await resolveSkillBundle(treatment);
-  const context = await routePublicRules(taskPath, bundle);
+  const declaration = taskCard.skill_context;
+  const declaredRules = isRecord(declaration) && Array.isArray(declaration.rules) && declaration.rules.every((rule) => typeof rule === "string") ? declaration.rules as string[] : [];
+  const context = await declaredRuleContext(taskPath, bundle, declaredRules);
   if (taskCard.skill_relevance !== "direct" || taskCard.lifecycle_stage === "retired") return;
   const auditPath = joinPath(taskPath, "private", "rule-audit.yaml");
   const audit = Bun.YAML.parse(await Bun.file(auditPath).text()) as Record<string, unknown>;
   const required = Array.isArray(audit.required_rules) && audit.required_rules.every((rule) => typeof rule === "string") ? audit.required_rules : undefined;
   if (!required) fail(`Task rule audit is invalid: ${relativePath(auditPath)}`);
-  const missing = required.filter((rule) => !routedRuleNames(context).includes(rule));
-  if (missing.length > 0) fail(`Public rule routing does not cover ${taskCard.id}: ${missing.join(", ")}`);
+  const selected = routedRuleNames(context);
+  if (selected.length !== required.length || selected.some((rule) => !required.includes(rule))) fail(`Public rule context does not exactly match ${taskCard.id}`);
 }
 
 function asPlan(value: unknown): ExperimentPlan {

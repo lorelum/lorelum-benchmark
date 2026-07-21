@@ -6,7 +6,7 @@ import { joinPath, listFiles, pathExists, relativePath, sha256File, sha256Text, 
 import { findTask } from "../../../task-discovery";
 import { containerCommand, containerEnvironment, containerImageInspectCommand, containerRemoveCommand, containerVersionCommand, formalContainerSandbox, localContainerImageInspectCommand, localContainerSandbox, type ContainerSandbox } from "./sandbox";
 import { auditPiJsonTrace, piJsonTraceArgs } from "./trace";
-import { routePublicRules, routedRuleNames, type RuleContext } from "./rule-router";
+import { declaredRuleContext, routedRuleNames, type RuleContext } from "./rule-router";
 import { declaredSkillBundle, resolveSkillBundle, stageSkillBundle, type SkillBundle } from "./treatment-resolver";
 import { taskRuleAuditFromDocument, type TaskRuleAudit } from "./task-rule-audit";
 import type { PiRunArtifactManifestV2, PiRunRequestV2, PiRunResultV2 } from "./types";
@@ -22,6 +22,12 @@ function fail(message: string): never {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function publicRuleNames(taskCard: Record<string, unknown>): string[] {
+  const context = taskCard.skill_context;
+  if (!isRecord(context) || !Array.isArray(context.rules) || context.rules.length === 0 || !context.rules.every((rule) => typeof rule === "string")) fail("Direct task must declare public skill_context.rules");
+  return [...context.rules] as string[];
 }
 
 async function readJson(path: string): Promise<unknown> {
@@ -206,18 +212,17 @@ async function verifyContracts(request: PiRunRequestV2): Promise<{ taskPath: str
   if (treatment.kind === "baseline" && treatment.injection !== undefined) fail(`Baseline treatment must not define injection: ${relativePath(treatmentPath)}`);
   if (treatment.kind === "skill") {
     const routing = treatment.routing;
-    if (!isRecord(routing) || routing.id !== "public-bm25" || routing.version !== "v1" || routing.max_rules !== 3 || routing.delivery !== "inline-rule-context") {
-      fail(`Skill treatment must pin public-bm25/v1 inline rule routing: ${relativePath(treatmentPath)}`);
+    if (!isRecord(routing) || routing.id !== "public-task-context" || routing.version !== "v1" || routing.max_rules !== 3 || routing.delivery !== "inline-rule-context") {
+      fail(`Skill treatment must pin public-task-context/v1 inline rule routing: ${relativePath(treatmentPath)}`);
     }
     try {
       const declared = declaredSkillBundle(treatment);
       treatmentBundle = await resolveSkillBundle(treatment);
       if (treatmentBundle.path) {
-        ruleContext = await routePublicRules(task.path, treatmentBundle);
+        ruleContext = await declaredRuleContext(task.path, treatmentBundle, publicRuleNames(taskCard));
         if (taskCard.lifecycle_stage !== "retired" && ruleAudit && request.treatment.id === ruleAudit.treatment.id && request.treatment.version === ruleAudit.treatment.version) {
           const selected = routedRuleNames(ruleContext);
-          const missing = ruleAudit.requiredRules.filter((rule) => !selected.includes(rule));
-          if (missing.length > 0) fail(`Public rule routing does not cover ${request.task.id}: ${missing.join(", ")}`);
+          if (selected.length !== ruleAudit.requiredRules.length || selected.some((rule) => !ruleAudit.requiredRules.includes(rule))) fail(`Public rule context does not exactly match ${request.task.id}`);
         }
       }
     } catch (error) {

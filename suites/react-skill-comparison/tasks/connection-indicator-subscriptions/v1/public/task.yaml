@@ -5,6 +5,7 @@ lifecycle_stage: pilot
 evaluator_version: 2
 evaluator_contract: structured/v2
 skill_relevance: direct
+skill_context: { rules: [client-event-listeners.md] }
 source:
   kind: public-case-abstraction
   reviewed_cases: [https://github.com/Vonage/vonage-video-react-app/issues/586, https://github.com/anomalyco/opencode/issues/34617]

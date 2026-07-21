@@ -1,6 +1,6 @@
 import { joinPath, relativePath, workspaceRoot } from "../../../fs";
 import { discoverTasks } from "../../../task-discovery";
-import { routePublicRules, routedRuleNames } from "./rule-router";
+import { declaredRuleContext, routedRuleNames } from "./rule-router";
 import { resolveSkillBundle } from "./treatment-resolver";
 
 type RecordValue = Record<string, unknown>;
@@ -19,10 +19,12 @@ for (const task of await discoverTasks()) {
   if (card.lifecycle_stage !== "pilot" || card.skill_relevance !== "direct") continue;
   const audit = Bun.YAML.parse(await Bun.file(joinPath(task.path, "private", "rule-audit.yaml")).text()) as RecordValue;
   const required = Array.isArray(audit.required_rules) && audit.required_rules.every((rule) => typeof rule === "string") ? audit.required_rules : [];
-  const context = await routePublicRules(task.path, bundle);
+  const declaration = card.skill_context;
+  const rules = isRecord(declaration) && Array.isArray(declaration.rules) && declaration.rules.every((rule) => typeof rule === "string") ? declaration.rules as string[] : [];
+  const context = await declaredRuleContext(task.path, bundle, rules);
   const selected = routedRuleNames(context);
   const missing = required.filter((rule) => !selected.includes(rule));
-  if (missing.length > 0) failures.push(`${relativePath(task.path)} misses ${missing.join(", ")} (selected: ${selected.join(", ") || "none"})`);
+  if (missing.length > 0 || selected.length !== required.length) failures.push(`${relativePath(task.path)} does not exactly match its public rule context (selected: ${selected.join(", ") || "none"})`);
   else console.log(`Rule calibration passed: ${task.reference} (${selected.join(", ")})`);
 }
 
