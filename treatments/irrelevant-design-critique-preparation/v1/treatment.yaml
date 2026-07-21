@@ -1,7 +1,0 @@
-id: irrelevant-design-critique-preparation
-version: v1
-kind: control
-prompt_hash: 4975ca79a73b56856249512d48f09c04e1d780c0a19801006a84b5b39a7b48e5
-tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
-source: { kind: matched-irrelevant-practice, practice_id: inclusive-design-critique-preparation, practice_version: v1, practice_path: practices/inclusive-design-critique-preparation/v1/SKILL.md, content_sha256: 4975ca79a73b56856249512d48f09c04e1d780c0a19801006a84b5b39a7b48e5 }
-injection: { mode: pi-skill, skill_path: private/SKILL.md, skill_hash: 4975ca79a73b56856249512d48f09c04e1d780c0a19801006a84b5b39a7b48e5, scope: system-prompt, secrets: excluded }

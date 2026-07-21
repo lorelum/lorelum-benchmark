@@ -1,7 +1,0 @@
-id: oracle-pack-domain-consistency
-version: v1
-kind: oracle
-prompt_hash: daba6ff23e2c08e23ae3248db77248e94c530799dfe3cea81a73f0373b8fa190
-tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
-source: { kind: lorelum-practice, practice_id: check-pack-domain-consistency, practice_version: v1, practice_path: practices/check-pack-domain-consistency/v1/SKILL.md, content_sha256: daba6ff23e2c08e23ae3248db77248e94c530799dfe3cea81a73f0373b8fa190 }
-injection: { mode: pi-skill, skill_path: private/SKILL.md, skill_hash: daba6ff23e2c08e23ae3248db77248e94c530799dfe3cea81a73f0373b8fa190, scope: system-prompt, secrets: excluded }
