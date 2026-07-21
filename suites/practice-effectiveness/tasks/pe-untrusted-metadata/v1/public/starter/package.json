@@ -1,9 +1,0 @@
-{
-  "name": "pe-untrusted-metadata-starter",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "check": "bun run src/cli.ts fixtures/plugins/valid-plugin.json",
-    "test": "bun test"
-  }
-}

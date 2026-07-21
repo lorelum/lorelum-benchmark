@@ -2,7 +2,7 @@
 
 - **ID**: `pe-untrusted-metadata-v1`
 - **标题**: 不可信插件元数据的兼容校验
-- **来源**: `contract-derived seed`（依据本地 contract 合成；不是生产 issue）
+- **来源状态**: `source-gated draft`（现有 fixture 是 contract-derived seed；不是生产 issue）
 - **实验主张**: 在相同的元数据 contract 下，提供目标 Practice 的 agent 比 baseline 更常拒绝不可信输入、保留有效输入并给出稳定的结构化诊断。
 
 ## 用户可见任务提示
@@ -11,11 +11,10 @@
 
 提示不点名 Practice、anti-pattern、规则 ID、API 或具体算法；实现者需要从输入边界和兼容性要求推导方案。
 
-## Practice 对照
+## 暂定 Profile 方向
 
-- **相关 Lorelum Practice**: `practices/validate-untrusted-metadata-boundaries/v1/SKILL.md`，ID `validate-untrusted-metadata-boundaries`，SHA-256 `9c4d7e71a6a61cd80f678377f593166685ab674301e6625c00ffbf681535a255`。覆盖不可信输入的边界校验、未知字段策略和诊断稳定性。
-- **无关负对照 Practice**: `practices/accessible-empty-state-copy/v1/SKILL.md`，ID `accessible-empty-state-copy`，SHA-256 `f96e10031f42a50aa1b2962fbf2c257da80e2053a9252223b1613dac1dcda240`。其长度、层级、示例和工具权限与相关 Practice 可比，但主题为可访问 empty state，语义无关。
-- `treatments/vercel-skill/v1` 如参与，仅标记为外部/类比条件，不计入相关 Practice 证据。
+- 当前不声明 Oracle Practice、无关 control 或任何内容 hash。真实来源审核通过后，才可为每个独立 profile 冻结相关 Practice、长度/形式可比的无关 control 和 adherence probes。
+- 历史 `validate-untrusted-metadata-boundaries` 草案仅可作为问题空间参考，不能作为此 kernel 的来源或 intervention。
 
 ## 预期 baseline 失败模式
 
@@ -44,11 +43,11 @@
 
 ## 适用条件
 
-`baseline`、`oracle-practice`、`irrelevant-practice`、`lorelum-retrieval`（后三者依赖尚未创建的版本化 treatment/trace）。
+未获得 profile 准入；不得创建或运行 intervention 条件。
 
 ## 冻结前 checklist
 
-- [ ] 补齐并审核相关/无关 Practice ID、版本和内容 hash。
+- [ ] 在 `source-audit.md` 登记并独立审核真实变更、稳定 Practice 和适用边界。
 - [x] 已本地确认 starter 在隐藏恶意 fixtures 失败、reference 通过全部 evaluator 检查；未产生或提交运行产物。
 - [ ] 确认 prompt 不含 Practice/算法/API 解法词，且 control 等长无关。
 - [ ] 固定 runtime、evaluator/oracle 版本和本地 fixtures hash。

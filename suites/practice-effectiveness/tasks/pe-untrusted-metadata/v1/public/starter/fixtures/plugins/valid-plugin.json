@@ -1,7 +1,0 @@
-{
-  "id": "markdown-tools",
-  "displayName": "Markdown tools",
-  "apiVersion": "v1",
-  "entrypoint": "./dist/index.js",
-  "capabilities": ["read", "transform"]
-}
