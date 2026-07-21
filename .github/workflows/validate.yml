@@ -18,6 +18,8 @@ jobs:
         with:
           bun-version: "1.3.11"
       - run: bun install --frozen-lockfile
+      - run: bun install --frozen-lockfile
+        working-directory: incubator/react-skill-comparison/react-server-runtime
       - run: bun run validate
       - run: bun run test:contracts
       - run: bun run test:fixtures
