@@ -1,0 +1,16 @@
+id: dispatch-eligibility-index-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 2
+evaluator_contract: structured/v2
+skill_relevance: direct
+skill_context: { rules: [js-set-map-lookups.md] }
+source:
+  kind: public-case-abstraction
+  reviewed_cases: [https://github.com/Liiift-Studio/Mac-OS-9-React/issues/52, https://github.com/durdana3105/peer-learning/issues/766]
+  scenario: dispatch planning filters an ordered work queue against an operator roster
+  non_derivative_statement: Original work-item domain, interfaces, evaluator, and data; no source code or patch is copied.
+runtime: { command: bun run evaluate -- react-skill-comparison dispatch-eligibility-index/v1 }
+agent_input: { prompt: task.md, starter: starter, candidate: src/dispatch-plan.ts }
+applicable_conditions: [baseline, vercel-skill, lorelum-retrieval]

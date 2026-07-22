@@ -6,6 +6,7 @@ baseline:
 coverage_status: partial
 active_task_set:
   - workspace-brief-react-cache-v1
+  - dispatch-eligibility-index-v1
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
@@ -44,6 +45,9 @@ covered_rules:
   - id: request-scope-deduplication
     tasks:
       - workspace-brief-react-cache-v1
+  - id: repeated-membership-lookup
+    tasks:
+      - dispatch-eligibility-index-v1
   - id: asynchronous-dependency-orchestration
     tasks:
       - member-hub-loader-v4
@@ -85,6 +89,7 @@ task_relevance:
   account-summary-request-cache-v1: direct
   account-summary-react-cache-v1: direct
   workspace-brief-react-cache-v1: direct
+  dispatch-eligibility-index-v1: direct
   incident-board-view-model-v1: direct
   connection-indicator-subscriptions-v1: direct
   connection-indicator-subscriptions-v2: direct

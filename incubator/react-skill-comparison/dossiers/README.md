@@ -12,6 +12,7 @@ mutations, and snapshot satisfy the offline calibration checklist.
 | D4 | `connection-indicator-subscriptions` | direct | global listener and release counters |
 | D5 | `preference-hydration-store/v2` | direct | storage cache, invalidation, and notification counters |
 | D6 | `report-export-boundary/v3` | direct | conditional loader, in-flight sharing, and controller-isolation counters |
+| D7 | `dispatch-eligibility-index/v1` | direct | calibrated membership-scan and roster-iteration counters |
 | C1 | `delivery-notification-ingest` | control | invalid-event mutation and order trace |
 | C2 | `project-summary-access` | control | returned-field and aggregate leakage checks |
 | C3 | `fulfilment-transition-service` | control | transition and causal-error trace |

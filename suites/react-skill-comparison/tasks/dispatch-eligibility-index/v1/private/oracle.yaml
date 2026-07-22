@@ -1,0 +1,7 @@
+id: dispatch-eligibility-index-v1
+reference_solution: reference/src/dispatch-plan.ts
+engineering_concerns: [normalized-membership-index, input-immutability, invocation-scope-ownership, invalid-input-rejection]
+checks: [{ id: ordered-classification }, { id: normalized-roster }, { id: input-immutability }, { id: invalid-id-rejection }]
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+required_mutations: [naive-membership-scan, rebuild-index-per-item, global-roster-leak, unnormalized-roster, ignored-invalid-id]
+mutation_candidates: [mutations/naive-membership-scan.ts, mutations/rebuild-index-per-item.ts, mutations/global-roster-leak.ts, mutations/unnormalized-roster.ts, mutations/ignored-invalid-id.ts]
