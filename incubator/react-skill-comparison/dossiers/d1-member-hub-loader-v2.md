@@ -1,7 +1,7 @@
 # D1 — member hub loader v2
 
-**Status:** successor candidate, rule-behavior design approved  
-**Proposed task:** `member-hub-loader/v5`  
+**Status:** successor candidate, rule-behavior design approved
+**Proposed task:** `member-hub-loader/v5`
 **Skill relevance:** direct  
 **Pre-registered rules:** `async-dependencies.md`, `async-parallel.md`
 
