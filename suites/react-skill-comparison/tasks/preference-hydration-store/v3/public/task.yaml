@@ -1,7 +1,7 @@
-id: preference-hydration-store-v2
-version: 2
+id: preference-hydration-store-v3
+version: 3
 track: performance-skill-comparison
-lifecycle_stage: retired
+lifecycle_stage: pilot
 evaluator_version: 2
 evaluator_contract: structured/v2
 skill_relevance: direct
@@ -11,6 +11,6 @@ source:
   scenario: persisted colour and layout preferences with cross-tab updates
   non_derivative_statement: Original record and fake storage contract; no source middleware or repair is copied.
 skill_context: { rules: [js-cache-storage.md] }
-runtime: { command: bun run evaluate -- react-skill-comparison preference-hydration-store/v2 }
+runtime: { command: bun run evaluate -- react-skill-comparison preference-hydration-store/v3 }
 agent_input: { prompt: task.md, starter: starter }
 applicable_conditions: [baseline, vercel-skill, lorelum-retrieval]
