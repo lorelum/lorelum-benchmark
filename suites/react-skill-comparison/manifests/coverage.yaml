@@ -5,10 +5,10 @@ baseline:
   skill: skills/react-best-practices
 coverage_status: partial
 active_task_set:
-  - member-hub-loader-v5
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
+  - member-hub-loader-v5
   - workspace-brief-react-cache-v1
   - member-hub-loader-v1
   - member-hub-loader-v2

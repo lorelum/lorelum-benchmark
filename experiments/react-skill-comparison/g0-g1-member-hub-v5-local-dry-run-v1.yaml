@@ -1,6 +1,6 @@
 id: react-skill-comparison-g0-g1-member-hub-v5-local-dry-run-v1
 version: v1
-lifecycle_stage: active
+lifecycle_stage: retired
 run_kind: smoke
 source_commit: bce0f46a75f4aece47bd4f923da846881e923e94
 suite:
@@ -41,3 +41,4 @@ analysis:
   excluded_from_official_conclusion: true
   excluded_from_formal_records: true
   purpose: verify-member-hub-v5-G0-G1-rule-delivery-without-model-invocation
+  retirement_reason: valid-baseline-ceiling-in-local-diagnostic

@@ -1,6 +1,6 @@
 # D1 — member hub loader v2
 
-**Status:** v5 pilot, offline calibrated twice
+**Status:** v5 retired after local baseline ceiling
 **Proposed task:** `member-hub-loader/v5`
 **Skill relevance:** direct  
 **Pre-registered rules:** `async-dependencies.md`, `async-parallel.md`
@@ -101,3 +101,10 @@ failure and original-error requirements. They must not be represented as
 quality probes or mutation mappings. This gives the candidate a complete
 causal path from G1 delivery to every scored behavior without falsely claiming
 that the Skill teaches repository error identity.
+
+## Retirement Decision
+
+The local no-Skill G0 diagnostic passed all semantic checks and both quality
+probes for `100/100`. G1 was intentionally not run because a valid baseline
+ceiling cannot demonstrate a treatment advantage. Local requests, workspace
+and artifacts were removed; no record or comparison conclusion exists.

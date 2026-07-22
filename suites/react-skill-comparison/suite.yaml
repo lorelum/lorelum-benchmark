@@ -61,7 +61,7 @@ tasks:
     path: tasks/member-hub-loader/v5
     profile: rsc
     category: asynchronous-dependency-orchestration
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: account-summary-request-cache-v1
     path: tasks/account-summary-request-cache/v1
     profile: rsc
