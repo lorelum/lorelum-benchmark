@@ -76,7 +76,7 @@ tasks:
     path: tasks/dispatch-eligibility-index/v1
     profile: spa
     category: repeated-membership-lookup
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: incident-board-view-model-v1
     path: tasks/incident-board-view-model/v1
     profile: spa

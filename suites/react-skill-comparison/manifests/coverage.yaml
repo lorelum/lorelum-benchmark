@@ -6,7 +6,6 @@ baseline:
 coverage_status: partial
 active_task_set:
   - workspace-brief-react-cache-v1
-  - dispatch-eligibility-index-v1
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
@@ -32,6 +31,7 @@ historical_task_set:
   - delivery-notification-ingest-v3
   - connection-indicator-subscriptions-v1
   - connection-indicator-subscriptions-v2
+  - dispatch-eligibility-index-v1
 covered_rules:
   - id: external-event-data-validity
     tasks:

@@ -1,6 +1,6 @@
 # D7 - dispatch eligibility index
 
-**Status:** admitted to offline-calibrated pilot  
+**Status:** retired after local diagnostic ceiling
 **Task:** `dispatch-eligibility-index/v1`  
 **Skill relevance:** direct
 
@@ -112,6 +112,18 @@ mutations were rejected: repeated array scanning (`30` quality), per-item index
 construction (`70` quality), cross-call roster leakage, missing normalization,
 and ignored invalid IDs. The public declaration was then calibrated against
 the pinned v2 bundle, selecting the complete `js-set-map-lookups.md` context.
-The revision snapshot was written after calibration. No model request, run
-workspace, artifact, experiment plan, result record, or conclusion was
-created.
+The revision snapshot was written after calibration. At this admission point,
+no model request, run workspace, artifact, experiment plan, result record, or
+conclusion had been created.
+
+## Retirement
+
+On 2026-07-22, an ignored local diagnostic ran the baseline once in the pinned
+local container after a passing public-only dry-run. The baseline trace was
+valid, had no Skill or rule access, and the private evaluator gave a semantic
+pass with a `100` quality score. This is a baseline ceiling, so the paired G1
+run was intentionally not started. The local workspace, artifacts, temporary
+plan, and request files are removed; no `results/records` entry, formal
+manifest, or comparison conclusion exists. The task is retired from the active
+set while its source, snapshot, reference, evaluator, and calibration evidence
+remain available for explicit replay.

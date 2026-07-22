@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "bc3a0531280983a306dce99893aec48fe9c3c6a7b9203284ee04769adf26a4fd",
+  "snapshot_id": "2ffb5f33399d523f9e9b5486b7cf5e3292b9bf01eef28eca59124402d989a29c",
   "files": {
     "private/evaluator/evaluate.ts": "329e778a9e47e34f03881c01082b9bda9ddeb0d426189afa866f26fd3b9a662d",
     "private/mutations/global-roster-leak.ts": "6fdfec885ff46affde2452d36f6fd2a2991195ffe3694bf1316a41d9b0a4aa8d",
@@ -14,6 +14,6 @@
     "private/rule-audit.yaml": "9b8d43acd8da155c8283c1b972db6238cbe9fffd215984bc155697c37462d04f",
     "public/starter/src/dispatch-plan.ts": "991665aa38e3e4d559254afd051da39bb61746c2ebbfb3f9f66e30e83b69f48d",
     "public/task.md": "bbd8912e0a531c08f720ebc3e710ebc324323bb6668aca6f983b1153bba64e92",
-    "public/task.yaml": "4d2dfc83ee416486c9484f0cb4675d5adc46e7efb2cbf017132e59e8015cb75d"
+    "public/task.yaml": "75d675efe9474735e30fbe16b074e5a8d76b3083367292cb6630cb9642ba5631"
   }
 }
