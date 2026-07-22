@@ -6,7 +6,6 @@ baseline:
 coverage_status: partial
 active_task_set:
   - workspace-brief-react-cache-v1
-  - trace-navigator-v2
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
@@ -34,6 +33,7 @@ historical_task_set:
   - connection-indicator-subscriptions-v2
   - dispatch-eligibility-index-v1
   - trace-navigator-v1
+  - trace-navigator-v2
 covered_rules:
   - id: external-event-data-validity
     tasks:

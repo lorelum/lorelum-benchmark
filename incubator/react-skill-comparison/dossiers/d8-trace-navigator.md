@@ -1,6 +1,6 @@
 # D8 - trace navigator
 
-**Status:** v1 retired; v2 admitted to offline-calibrated pilot
+**Status:** v1 and v2 retired after local baseline diagnostics
 **Task:** `trace-navigator/v2`
 **Skill relevance:** direct
 
@@ -126,8 +126,21 @@ and must repeat all offline calibration before any later diagnostic.
 ## V2 offline calibration
 
 On 2026-07-22, v2 repeated the full offline gate: the reference scored `100`,
-the starter failed dynamically, and all six mutations were rejected. The active
-public declaration again selects the complete `js-index-maps.md` context from
-the fixed v2 bundle. V2 has no model request, workspace, artifact, experiment
-plan, result record, or conclusion; any future diagnostic must use v2 rather
-than the retired v1 revision.
+the starter failed dynamically, and all six mutations were rejected. The public
+declaration again selects the complete `js-index-maps.md` context from the
+fixed v2 bundle.
+
+## V2 retirement
+
+One ignored local G0 diagnostic completed with a valid no-Skill trace. The
+candidate satisfied every public semantic requirement, including independent
+row-object snapshot isolation, atomic replacement, and direct ID resolution.
+It received `70` because the evaluator's replacement-work counter allowed one
+source-sized indexed pass but the public validation contract naturally requires
+two bounded validation passes before cloning. This is an evaluator accounting
+defect, not a candidate deficiency; the observed implementation otherwise has
+the intended bounded behavior. Correcting only that counter would require a
+new v3 yet would still reveal a baseline ceiling, so v2 is retired rather than
+spending a G1 request or more repeats. The local workspace, artifacts, and
+temporary plan are removed. No result record, formal manifest, comparison, or
+published conclusion exists for either D8 revision.

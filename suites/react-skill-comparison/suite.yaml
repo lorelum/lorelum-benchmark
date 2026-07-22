@@ -81,7 +81,7 @@ tasks:
     path: tasks/trace-navigator/v2
     profile: spa
     category: mutable-trace-navigation
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: dispatch-eligibility-index-v1
     path: tasks/dispatch-eligibility-index/v1
     profile: spa
