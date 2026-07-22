@@ -1,7 +1,7 @@
 # D1 — member hub loader v2
 
-**Status:** design only  
-**Proposed task:** `member-hub-loader/v2`  
+**Status:** successor candidate, rule-behavior design approved  
+**Proposed task:** `member-hub-loader/v5`  
 **Skill relevance:** direct  
 **Pre-registered rules:** `async-dependencies.md`, `async-parallel.md`
 
@@ -69,7 +69,10 @@ Offline calibration must reject all of the following plausible candidates:
 - serial profile/organisation roots;
 - serial project/review fan-out after organisation resolution;
 - eager project or review reads before organisation resolution; and
-- wrapping a repository rejection in a new error object.
+
+The original-error semantic gate deliberately has no mutation. Error identity
+is a product-correctness requirement, not behavior taught by either delivered
+performance rule.
 
 It must additionally demonstrate that a project rejection does not become an
 unhandled rejection merely because reviews were correctly started in parallel.
@@ -83,3 +86,18 @@ unhandled rejection merely because reviews were correctly started in parallel.
 - Before admission, create reference, starter, three mutation candidates, and
   a regenerated snapshot; run the full offline admission checklist twice for
   deterministic repeatability.
+
+## Rule-Behavior Mapping
+
+`rule-audit.yaml` for v5 must declare only these delivered-rule behaviors:
+
+| Behavior | Delivered rule | Quality probe / mutation |
+| --- | --- | --- |
+| independent-root-start | `async-parallel.md` | `independent-roots`, `serial-root-reads` |
+| dependent-fanout-start | `async-dependencies.md` | `partial-dependency-fanout`, `root-wide-barrier`, `serial-dependent-reads` |
+
+The public semantic checks may retain blank-input, aggregate-shape, dependent
+failure and original-error requirements. They must not be represented as
+quality probes or mutation mappings. This gives the candidate a complete
+causal path from G1 delivery to every scored behavior without falsely claiming
+that the Skill teaches repository error identity.
