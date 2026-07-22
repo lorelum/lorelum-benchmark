@@ -1,6 +1,6 @@
 # D3 — incident board React rows
 
-**Status:** candidate, client-runtime design only
+**Status:** pilot, offline calibrated in the pinned client runtime
 **Proposed task:** `incident-board-view-model/v2`
 **Skill relevance:** direct
 **Pre-registered rule:** `rerender-memo.md`
@@ -76,7 +76,7 @@ incident. Offline calibration must use at least five independent mutations.
 - Use `evaluator_contract: structured/v2` and report the three named probes.
 - Evaluate only through the pinned real DOM client runtime; no mock renderer,
   query library, or network dependency is permitted.
-- Reference must pass twice; starter and all three mutations must receive a
+- Reference must pass twice; starter and all five mutations must receive a
   semantic failure or score below `100` before this dossier becomes `pilot`.
 
 ## Offline admission gate

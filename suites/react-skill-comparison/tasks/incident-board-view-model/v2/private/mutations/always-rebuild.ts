@@ -1,0 +1,3 @@
+import type { Dispatch, SetStateAction } from "react";
+export type IncidentStatus = "open" | "resolved"; export interface Incident { id: string; title: string; status: IncidentStatus; } export interface IncidentRow { incident: Incident; isSelected: boolean; select(): void; }
+export function useIncidentBoardRows(incidents: readonly Incident[], filter: IncidentStatus | "all", selected: string | null, onSelect: Dispatch<SetStateAction<string | null>>): IncidentRow[] { return incidents.filter((i) => filter === "all" || i.status === filter).map((incident) => ({ incident, isSelected: incident.id === selected, select: () => onSelect(incident.id) })); }

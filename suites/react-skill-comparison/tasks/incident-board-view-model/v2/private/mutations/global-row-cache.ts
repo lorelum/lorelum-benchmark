@@ -1,0 +1,4 @@
+import { useMemo } from "react"; import type { Dispatch, SetStateAction } from "react";
+export type IncidentStatus = "open" | "resolved"; export interface Incident { id: string; title: string; status: IncidentStatus; } export interface IncidentRow { incident: Incident; isSelected: boolean; select(): void; }
+const cache = new Map<string, IncidentRow>();
+export function useIncidentBoardRows(incidents: readonly Incident[], filter: IncidentStatus | "all", selected: string | null, onSelect: Dispatch<SetStateAction<string | null>>): IncidentRow[] { return useMemo(() => incidents.filter((i) => filter === "all" || i.status === filter).map((incident) => { const cached = cache.get(incident.id); if (cached) return cached; const row = { incident, isSelected: incident.id === selected, select: () => onSelect(incident.id) }; cache.set(incident.id, row); return row; }), [incidents, filter, selected, onSelect]); }

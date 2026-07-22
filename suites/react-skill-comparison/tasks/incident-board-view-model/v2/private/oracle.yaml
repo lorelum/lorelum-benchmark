@@ -1,0 +1,6 @@
+id: incident-board-view-model-v2
+reference_solution: reference/src/incident-board.ts
+checks: [{ id: filter-and-selection-shape }, { id: select-uses-latest-callback }, { id: inputs-remain-unchanged }]
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+required_mutations: [always-rebuild, stale-callback, stale-selection, global-row-cache, mutate-input]
+mutation_candidates: [mutations/always-rebuild.ts, mutations/stale-callback.ts, mutations/stale-selection.ts, mutations/global-row-cache.ts, mutations/mutate-input.ts]

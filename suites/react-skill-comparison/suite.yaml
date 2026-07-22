@@ -72,6 +72,11 @@ tasks:
     profile: rsc
     category: request-scope-deduplication
     lifecycle_stage: pilot
+  - id: incident-board-view-model-v2
+    path: tasks/incident-board-view-model/v2
+    profile: spa
+    category: client-row-render-identity
+    lifecycle_stage: pilot
   - id: trace-navigator-v1
     path: tasks/trace-navigator/v1
     profile: spa
