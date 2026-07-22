@@ -1,0 +1,49 @@
+id: pformat.v1-compat-boundary
+version: 1
+kind: source-derived-test-practice
+lifecycle_stage: candidate
+source_snapshot:
+  repository: lorelum/lorelum
+  adr: docs/adr/0003-practice-pack-format.md
+  pull_request: 10
+  commit: bd0479b8bc02f5a1d1aa445cfa377875c4fe8bb4
+  files:
+    - docs/adr/0003-practice-pack-format.md
+    - packages/format/src/validate/validate.ts
+relevance:
+  applicable_scenario: A local release descriptor declares a v1 field whose implementation is intentionally deferred.
+  rationale: The source retains depends_on but ignores it in v1, producing a warning rather than a validation error or a dependency-resolution attempt.
+  unsupported_semantics:
+    - Pack-to-pack dependency resolution, version ranges, id conflicts, ownership, or dependency graph cycles.
+    - Dynamic retrieval or injection timing.
+pinned_treatment_content:
+  oracle_practice:
+    id: pformat-v1-compat-boundary-oracle-v1
+    content: >-
+      For a local format field that is declared but intentionally unsupported in
+      the current version, preserve the declaration and return explicit
+      non-blocking compatibility feedback. Do not silently implement or discard it.
+  irrelevant_control:
+    id: pformat-v1-compat-boundary-irrelevant-v1
+    content: >-
+      For a local release note, keep the title concise, name the intended
+      audience, and include a rollback contact. Do not change validation
+      behavior, service configuration, or deployment commands.
+condition_readiness:
+  baseline: no injected profile content
+  oracle-practice: content is pinned above; runnable only through a versioned Oracle Pi-skill treatment manifest
+  lorelum-retrieval: deferred until a versioned retrieval adapter can select and inject pinned output
+  irrelevant-practice: control content is pinned above; runnable only through a versioned control Pi-skill treatment manifest
+functional_acceptance:
+  - Required metadata remains blocking and validation returns structured errors and warnings.
+profile_adherence_probes:
+  - A non-empty declared dependency remains non-blocking and produces feedback.
+  - Unknown names and invalid-looking ranges do not activate a resolver.
+non_applicable_conditions:
+  - A workflow that needs resolved dependencies, version compatibility, ownership, or cross-pack graph checks.
+  - Any filesystem, network, model, or dynamic-injection behavior.
+conclusion_boundary: >-
+  This profile can test the relevance of pinned treatment content for this
+  snapshotted candidate kernel only. It is not evidence of an existing team Practice,
+  product-wide Lorelum effectiveness, production release safety, or dynamic
+  injection behavior.
