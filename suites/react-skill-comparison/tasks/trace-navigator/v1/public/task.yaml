@@ -1,0 +1,16 @@
+id: trace-navigator-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 2
+evaluator_contract: structured/v2
+skill_relevance: direct
+skill_context: { rules: [js-index-maps.md] }
+source:
+  kind: public-case-abstraction
+  reviewed_cases: [https://github.com/jaegertracing/jaeger-ui/issues/4193, https://github.com/getcaja/caja/issues/52]
+  scenario: operational trace navigation across an ordered, replaceable row snapshot
+  non_derivative_statement: Original row model, navigation contract, evaluator, and data; no source code or patch is copied.
+runtime: { command: bun run evaluate -- react-skill-comparison trace-navigator/v1 }
+agent_input: { prompt: task.md, starter: starter, candidate: src/trace-navigator.ts }
+applicable_conditions: [baseline, vercel-skill, lorelum-retrieval]

@@ -72,6 +72,11 @@ tasks:
     profile: rsc
     category: request-scope-deduplication
     lifecycle_stage: pilot
+  - id: trace-navigator-v1
+    path: tasks/trace-navigator/v1
+    profile: spa
+    category: mutable-trace-navigation
+    lifecycle_stage: pilot
   - id: dispatch-eligibility-index-v1
     path: tasks/dispatch-eligibility-index/v1
     profile: spa
