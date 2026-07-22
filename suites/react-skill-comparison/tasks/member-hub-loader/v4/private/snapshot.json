@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "83a669f12f0d550a9190a9361d2a75f5a70fc9cd94db8d70b1aeefd3cde1b5d1",
+  "snapshot_id": "6aa5346e3b025bf8519926c0fea5a86c3a43379bd637164f46f32605c8dc745b",
   "files": {
     "private/evaluator/evaluate.ts": "2659220c2acde5c1ab56303b79f9f794cecc16820f15fac099adabd807c10efc",
     "private/mutations/root-wide-barrier.ts": "51be71a590522ceeb9a2ae71b43299149402e672cdb68259eb751a9ed883c773",
@@ -13,6 +13,6 @@
     "private/rule-audit.yaml": "e41ecd8c6660cdb2570ace7e964a02ed557262828a769c0e62ab7b368202160e",
     "public/starter/src/member-hub.ts": "587218ea5cf036e686583b48beeb469ae7978e07ef7a23ab1bcd286c9a077d3b",
     "public/task.md": "33d5cb1381a999abbab0594f5feb35c32746f2e5d7aaeece62b05922f35fbb88",
-    "public/task.yaml": "1d625b81ff58f100ca0afae1b3ed57d4785f63b35240402ee4a38482ba871a70"
+    "public/task.yaml": "8f8b8de44db6d671e9b0073978fcc09c5985aa3f8675bfd6208fb72074ae2bea"
   }
 }

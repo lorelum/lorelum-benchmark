@@ -56,7 +56,7 @@ tasks:
     path: tasks/member-hub-loader/v4
     profile: rsc
     category: asynchronous-dependency-orchestration
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: account-summary-request-cache-v1
     path: tasks/account-summary-request-cache/v1
     profile: rsc
@@ -86,7 +86,7 @@ tasks:
     path: tasks/connection-indicator-subscriptions/v2
     profile: spa
     category: global-listener-ownership
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: preference-hydration-store-v1
     path: tasks/preference-hydration-store/v1
     profile: spa
@@ -106,7 +106,7 @@ tasks:
     path: tasks/report-export-boundary/v3
     profile: rsc
     category: conditional-loading-boundary
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: delivery-notification-ingest-v1
     path: tasks/delivery-notification-ingest/v1
     profile: spa
@@ -121,7 +121,7 @@ tasks:
     path: tasks/delivery-notification-ingest/v3
     profile: spa
     category: external-event-data-validity
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: project-summary-access-v1
     path: tasks/project-summary-access/v1
     profile: rsc

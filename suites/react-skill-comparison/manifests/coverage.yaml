@@ -5,17 +5,14 @@ baseline:
   skill: skills/react-best-practices
 coverage_status: partial
 active_task_set:
-  - member-hub-loader-v4
   - workspace-brief-react-cache-v1
-  - connection-indicator-subscriptions-v2
-  - report-export-boundary-v3
-  - delivery-notification-ingest-v3
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
   - member-hub-loader-v1
   - member-hub-loader-v2
   - member-hub-loader-v3
+  - member-hub-loader-v4
   - account-summary-request-cache-v1
   - account-summary-react-cache-v1
   - workspace-overview-loader-v1
@@ -26,9 +23,12 @@ historical_task_set:
   - order-route-loader-v1
   - report-export-boundary-v1
   - report-export-boundary-v2
+  - report-export-boundary-v3
   - delivery-notification-ingest-v1
   - delivery-notification-ingest-v2
+  - delivery-notification-ingest-v3
   - connection-indicator-subscriptions-v1
+  - connection-indicator-subscriptions-v2
 covered_rules:
   - id: external-event-data-validity
     tasks:

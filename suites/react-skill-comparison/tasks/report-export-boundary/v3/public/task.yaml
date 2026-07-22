@@ -1,7 +1,7 @@
 id: report-export-boundary-v3
 version: 3
 track: performance-skill-comparison
-lifecycle_stage: pilot
+lifecycle_stage: retired
 evaluator_version: 2
 evaluator_contract: structured/v2
 skill_relevance: direct
