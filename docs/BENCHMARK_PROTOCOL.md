@@ -5,7 +5,7 @@
 | 轨道 | 问题 | 必需条件 |
 | --- | --- | --- |
 | `practice-effectiveness` | 相关的团队 Practice 是否能改善编码结果？ | 基线、Oracle Practice、Lorelum 检索、无关 Practice |
-| `performance-skill-comparison` | 在可比覆盖度下，Lorelum 检索能否达到或优于 Vercel React Skill？ | 基线、Vercel Skill、Lorelum 检索 |
+| `performance-skill-comparison` | 固定 Vercel React Skill 能否改善真实 Next 仓库问题的解决质量？ | 基线、Vercel Skill |
 
 两条轨道共用任务卡、评测器、运行记录和评审流程，但不共享结论：外部性能 Skill
 不能证明团队特定的 Practice 检索有效，Oracle Practice 实验也不能证明与 Vercel
@@ -52,13 +52,15 @@ runner 只能将 `public/task.md` 和 `public/starter/` 复制到编码 Agent �
 ## 数据集扩展
 
 维护真实 Lorelum 任务的候选池，先冻结 6 张 pilot 任务卡，再扩展到 8–12 个正式的
-Practice 有效性任务。性能轨道从 8 个类别 smoke 任务开始，只有在
-`manifests/coverage.yaml` 将每条外部基线规则映射到至少一个任务后才可扩展。
+Practice 有效性任务。性能轨道先在真实 Next App Router 候选仓库中预注册多个端到端
+问题；每题必须具备公开 issue、私有 reference/naive/mutation 校准、稳定浏览器评估和
+rule-behavior 映射后，才能冻结为正式 revision。
 
 修改 prompt、starter 代码、evaluator、Oracle 映射、treatment 或模型设置时，应视情况
 创建新的任务、treatment、环境、scorer 或 suite 版本。既有运行记录不可修改。每个任务
 还固定 `evaluator_version`；共享 evaluator helper 的行为变化必须创建新的版本目录。
-退休版本保留在原 suite 路径，只从默认活动集合中移除，仍可被显式运行。
+产生正式结果的版本必须保留在原 suite 路径，只从默认活动集合中移除，仍可被显式运行；
+未产生正式结果且被明确废弃的候选机制可以从仓库删除。
 
 ## 运行记录
 

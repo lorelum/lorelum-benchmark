@@ -1,7 +1,0 @@
-id: report-export-boundary-v3
-reference_solution: reference/src/report-export.ts
-engineering_concerns: [conditional-module-loading, controller-scoped-inflight-loading, format-isolation, retry-after-error]
-checks: [{ id: ineligible-never-loads }, { id: eligible-renders }, { id: error-retries }, { id: controller-isolation }]
-scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
-required_mutations: [eager-load, global-cache, merged-format-cache, sticky-error]
-mutation_candidates: [mutations/eager-load.ts, mutations/global-cache.ts, mutations/merged-format-cache.ts, mutations/sticky-error.ts]

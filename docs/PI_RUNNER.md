@@ -12,16 +12,15 @@ hash 校验后作为 Pi `--skill` 参数注入；baseline 不注入任何 Skill�
 必须由 environment manifest 指定的 sandbox 阻止 Pi 逃逸到宿主文件系统。
 
 ```sh
-# 在九题预冻结清单转为正式计划后，替换为该计划的路径。
-bun run pi:requests -- experiments/react-skill-comparison/<frozen-plan>.yaml --smoke --output scratch/requests
+# 仅在真实仓库任务被冻结为正式 revision 后使用已提交的实验计划。
+bun run pi:requests -- experiments/<suite>/<frozen-plan>.yaml --smoke --output scratch/requests
 bun run pi:coordinate -- scratch/requests/<run-id>.json --dry-run
 bun run pi:coordinate -- scratch/requests/<run-id>.json
 ```
 
-当前不存在 active G0/G1 计划。`g0-g1-d3-local-dry-run-v1` 已在验证规则
-交付后退役，明确排除正式 record 与结论。历史 smoke、pilot 与正式计划均已
-retired；九题候选集及其激活前提记录在
-`incubator/react-skill-comparison/g0-g1-nine-fixture-pilot-v1.pre-freeze.yaml`。
+当前不存在 active G0/G1 计划或正式 record。React Skill 对比处于
+`incubator/realistic-react-repo/v1` 的离线校准阶段；三份问题预注册完成前，
+不得生成 Pi 请求或调用模型 API。
 
 `--dry-run` 会验证全部契约并输出将要使用的隔离工作区，不创建目录也不执行 Pi。正式运行
 会在 `artifacts/runs/<run-id>/<manifest_name>` 写入 `pi-run-artifact/v2` manifest，记录经过

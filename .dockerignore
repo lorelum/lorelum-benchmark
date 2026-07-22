@@ -1,3 +1,16 @@
 **
 !package.json
 !bun.lock
+!incubator/
+!incubator/realistic-react-repo/
+!incubator/realistic-react-repo/v1/
+!incubator/realistic-react-repo/v1/public/
+!incubator/realistic-react-repo/v1/public/starter/
+!incubator/realistic-react-repo/v1/public/starter/app/
+!incubator/realistic-react-repo/v1/public/starter/app/**
+incubator/realistic-react-repo/v1/public/starter/app/node_modules/
+incubator/realistic-react-repo/v1/public/starter/app/.next/
+incubator/realistic-react-repo/v1/public/starter/app/test-results/
+incubator/realistic-react-repo/v1/public/starter/app/playwright-report/
+incubator/realistic-react-repo/v1/public/starter/app/blob-report/
+incubator/realistic-react-repo/v1/public/starter/app/tsconfig.tsbuildinfo

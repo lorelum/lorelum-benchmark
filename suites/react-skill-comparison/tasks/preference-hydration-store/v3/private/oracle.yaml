@@ -1,7 +1,0 @@
-id: preference-hydration-store-v3
-reference_solution: reference/src/preference-store.ts
-engineering_concerns: [lazy-storage-read, external-cache-invalidation, store-instance-isolation, canonical-persistence]
-checks: [{ id: unavailable-storage-defaults }, { id: invalid-records-ignored }, { id: release-stops-notification }, { id: valid-local-update }]
-scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
-required_mutations: [read-on-every-get, invalid-event-notification, noncanonical-write, cache-without-invalidation]
-mutation_candidates: [mutations/read-on-every-get.ts, mutations/invalid-event-notification.ts, mutations/noncanonical-write.ts, mutations/cache-without-invalidation.ts]

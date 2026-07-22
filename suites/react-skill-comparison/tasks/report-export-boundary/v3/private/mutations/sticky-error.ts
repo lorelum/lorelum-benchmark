@@ -1,1 +1,0 @@
-export function createReportController(v:any,r:any,p:any,load:any){const pending=new Map<any,Promise<any>>();return{summary:()=>({id:r.id,title:r.title,canOpenExport:true}),async openExport(f:any){if(!v.id||!v.canExport||!r.exportsEnabled||(f==="csv"?!p.csvEnabled:!p.pdfEnabled))return null;let x=pending.get(f);if(!x){x=load(f);pending.set(f,x)}return (await x).render(r,f)}}}

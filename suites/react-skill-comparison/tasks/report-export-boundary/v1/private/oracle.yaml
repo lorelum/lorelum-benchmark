@@ -1,7 +1,0 @@
-id: report-export-boundary-v1
-reference_solution: reference/src/report-export.ts
-engineering_concerns: [conditional-module-loading, authorization-before-load, instance-scoped-pending-load]
-checks: [{ id: denied-summary-is-safe }, { id: disabled-report-never-loads }, { id: loader-error-preserved }, { id: authorised-open-renders }]
-scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
-required_mutations: [eager-load, permission-after-load, global-renderer-cache]
-mutation_candidates: [mutations/eager-load.ts, mutations/permission-after-load.ts, mutations/global-renderer-cache.ts]

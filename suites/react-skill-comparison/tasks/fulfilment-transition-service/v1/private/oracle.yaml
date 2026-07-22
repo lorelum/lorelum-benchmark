@@ -1,7 +1,0 @@
-id: fulfilment-transition-service-v1
-reference_solution: reference/src/fulfilment-service.ts
-engineering_concerns: [declared-state-transitions, terminal-side-effect-prevention, causal-carrier-error-propagation, pending-command-coalescing]
-checks: [{ id: invalid-and-terminal-commands-are-no-ops }, { id: successful-lifecycle-and-snapshot-safety }]
-scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
-required_mutations: [terminal-transition, swallowed-carrier-error, duplicate-pending-dispatch, premature-dispatched-state]
-mutation_candidates: [mutations/terminal-transition.ts, mutations/swallowed-carrier-error.ts, mutations/duplicate-pending-dispatch.ts, mutations/premature-dispatched-state.ts]

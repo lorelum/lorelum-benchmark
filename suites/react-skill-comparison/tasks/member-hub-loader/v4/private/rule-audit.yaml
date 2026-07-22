@@ -1,4 +1,0 @@
-schema_version: task-rule-audit/v1
-task_id: member-hub-loader-v4
-treatment: { id: vercel-skill, version: v2 }
-required_rules: [async-dependencies.md, async-parallel.md]

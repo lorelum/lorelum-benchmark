@@ -1,4 +1,0 @@
-schema_version: task-rule-audit/v1
-task_id: connection-indicator-subscriptions-v1
-treatment: { id: vercel-skill, version: v2 }
-required_rules: [client-event-listeners.md]

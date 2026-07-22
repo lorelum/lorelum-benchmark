@@ -1,4 +1,0 @@
-export function createFulfilmentService(orderId: string, carrier: any) {
-  let order: any = { id: orderId, status: "draft" }, pending: Promise<string> | undefined;
-  return { reserve() { if (order.status !== "draft") return false; order = { id: order.id, status: "reserved" }; return true; }, dispatch() { if (order.status === "dispatching" && pending) return pending; if (order.status !== "reserved") return Promise.resolve(null); order = { id: order.id, status: "dispatching" }; pending = carrier.dispatch(order.id).then((trackingCode: string) => { order = { id: order.id, status: "dispatched", trackingCode }; return trackingCode; }, () => { order = { id: order.id, status: "failed" }; return null; }); return pending; }, fulfil() { if (order.status !== "dispatched") return false; order = { id: order.id, status: "fulfilled", trackingCode: order.trackingCode }; return true; }, getOrder() { return { ...order }; } };
-}

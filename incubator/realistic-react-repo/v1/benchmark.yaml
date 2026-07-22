@@ -1,0 +1,48 @@
+schema_version: realistic-repository-incubator/v1
+status: incubator
+candidate_convention:
+  anchor_path: public/starter/app/package.json
+  anchor_kind: regular-file
+  app_root: dirname(anchor_path)
+  allowed_source_paths:
+    - lib/dashboard-runtime.ts
+    - components/dashboard/
+  protected_paths:
+    - package.json
+    - bun.lock
+    - next.config.ts
+    - tsconfig.json
+    - lib/repository.ts
+  evaluator_contract: private/dashboard-rsc/evaluator/evaluate.ts
+evaluator_image:
+  lock: evaluator-image/image.lock.yaml
+  status: pending-publication
+issues:
+  - id: workspace-dashboard-rsc-v1
+    lifecycle: candidate
+    relevance: direct
+    dossier: dossiers/workspace-dashboard-rsc-v1.md
+    public_issue: public/issues/workspace-dashboard-rsc.md
+    rules:
+      - server-cache-react.md
+      - async-parallel.md
+      - async-dependencies.md
+  - id: report-insights-conditional-loading-v1
+    lifecycle: preregistered
+    relevance: direct
+    dossier: dossiers/report-insights-conditional-loading-v1.md
+    public_issue: public/issues/report-insights-conditional-loading.md
+    rules:
+      - bundle-conditional.md
+  - id: team-directory-rsc-payload-v1
+    lifecycle: preregistered
+    relevance: direct
+    dossier: dossiers/team-directory-rsc-payload-v1.md
+    public_issue: public/issues/team-directory-rsc-payload.md
+    rules:
+      - server-dedup-props.md
+      - server-serialization.md
+admission:
+  no_api_calls: true
+  requires_all_three_preregistered_before_g1: true
+  formal_task_revision_requires_registry_image_digest: true

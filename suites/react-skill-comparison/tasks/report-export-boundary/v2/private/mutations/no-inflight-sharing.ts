@@ -1,1 +1,0 @@
-export function createReportController(viewer: any, report: any, loadRenderer: any) { const allowed = Boolean(viewer.id && viewer.canExport && report.exportsEnabled); return { summary: () => ({ id: report.id, title: report.title, canOpenExport: allowed }), async openExport() { if (!allowed) return null; return (await loadRenderer()).render(report); } }; }

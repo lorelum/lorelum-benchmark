@@ -5,7 +5,7 @@ import type { TaskRuleAudit } from "./task-rule-audit";
 
 const skill = '<skill name="vercel-react-best-practices" location="/lorelum/treatment/SKILL.md">instructions</skill>';
 const memberHubRuleAudit: TaskRuleAudit = {
-  manifestPath: "suites/react-skill-comparison/tasks/member-hub-loader/v1/private/rule-audit.yaml",
+  manifestPath: "suites/contract-app/tasks/dashboard/v1/private/rule-audit.yaml",
   sha256: "0".repeat(64),
   treatment: { id: "vercel-skill", version: "v2" },
   requiredRules: ["async-dependencies.md", "async-parallel.md"]
@@ -52,7 +52,7 @@ test("accepts G1 only after every required task rule is successfully read before
   const events = [
     ...successfulRead("read-dependencies", "/lorelum/treatment/rules/async-dependencies.md"),
     ...successfulRead("read-parallel", "/lorelum/treatment/rules/async-parallel.md"),
-    { type: "tool_execution_start", toolCallId: "edit-candidate", toolName: "edit", args: { path: "/workspace/starter/src/member-hub.ts" } }
+    { type: "tool_execution_start", toolCallId: "edit-candidate", toolName: "edit", args: { path: "/workspace/starter/app/dashboard.ts" } }
   ];
   const audit = auditPiJsonTrace(eventStream(skill, events), { treatment: { id: "vercel-skill", version: "v2" } }, memberHubRuleAudit);
   expect(audit.valid).toBe(true);
@@ -71,7 +71,7 @@ test("rejects G1 when a required rule is missing or read after editing", () => {
   expect(missing.failure_reason).toContain("every required task rule");
 
   const afterEdit = auditPiJsonTrace(eventStream(skill, [
-    { type: "tool_execution_start", toolCallId: "edit-candidate", toolName: "edit", args: { path: "/workspace/starter/src/member-hub.ts" } },
+    { type: "tool_execution_start", toolCallId: "edit-candidate", toolName: "edit", args: { path: "/workspace/starter/app/dashboard.ts" } },
     ...successfulRead("read-dependencies", "/lorelum/treatment/rules/async-dependencies.md"),
     ...successfulRead("read-parallel", "/lorelum/treatment/rules/async-parallel.md")
   ]), { treatment: { id: "vercel-skill", version: "v2" } }, memberHubRuleAudit);

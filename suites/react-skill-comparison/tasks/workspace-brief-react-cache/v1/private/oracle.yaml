@@ -1,7 +1,0 @@
-id: workspace-brief-react-cache-v1
-reference_solution: reference/src/workspace-brief.ts
-engineering_concerns: [react-request-cache-scope, primitive-cache-arguments, asynchronous-dependency-orchestration, original-error-preservation]
-checks: [{ id: blank-input-avoids-io }, { id: aggregate-shape }, { id: missing-workspace-skips-projects }, { id: original-errors-are-preserved }]
-scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
-required_mutations: [no-request-sharing, object-cache-key, serial-root-reads, root-wide-barrier, wrapped-repository-error]
-mutation_candidates: [mutations/no-request-sharing.ts, mutations/object-cache-key.ts, mutations/serial-root-reads.ts, mutations/root-wide-barrier.ts, mutations/wrapped-repository-error.ts]
