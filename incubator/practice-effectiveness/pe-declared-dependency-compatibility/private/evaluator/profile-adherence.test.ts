@@ -9,12 +9,17 @@ const candidatePath = Bun.env.CANDIDATE_PATH
 const candidateUrl = `${Bun.pathToFileURL(candidatePath).href}?run=${Date.now()}`;
 const { checkReleaseDescriptor } = (await import(candidateUrl)) as ReleaseCheckModule;
 
+function expectCompatibilityWarning(report: ReleaseCheck): void {
+  expect(report.valid).toBe(true);
+  expect(report.errors).toEqual([]);
+  expect(report.warnings).toHaveLength(1);
+  expect(report.warnings[0]).toMatch(/ignor|unsupported|not implemented|not resolved/i);
+}
+
 test("profile adherence: declared v1 dependencies produce non-blocking feedback", () => {
   const report = checkReleaseDescriptor({ name: "local-pack", version: "1.0.0", dependsOn: ["another-pack"] });
 
-  expect(report.valid).toBe(true);
-  expect(report.errors).toEqual([]);
-  expect(report.warnings.length).toBeGreaterThan(0);
+  expectCompatibilityWarning(report);
 });
 
 test("profile adherence: declared v1 dependencies are not resolved", () => {
@@ -24,7 +29,5 @@ test("profile adherence: declared v1 dependencies are not resolved", () => {
     dependsOn: ["unknown-pack@99.0.0", "other-pack@invalid-range"],
   });
 
-  expect(report.valid).toBe(true);
-  expect(report.errors).toEqual([]);
-  expect(report.warnings.length).toBeGreaterThan(0);
+  expectCompatibilityWarning(report);
 });
