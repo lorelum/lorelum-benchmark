@@ -1,0 +1,15 @@
+id: pe-declared-dependency-compatibility-v1
+source_snapshot:
+  repository: lorelum/lorelum
+  adr: docs/adr/0003-practice-pack-format.md
+  pull_request: 10
+  commit: bd0479b8bc02f5a1d1aa445cfa377875c4fe8bb4
+functional_checks:
+  - id: required-release-metadata-remains-blocking
+  - id: validation-result-retains-errors-and-warnings
+profile_adherence_checks:
+  - id: declared-v1-dependencies-produce-non-blocking-feedback
+  - id: declared-v1-dependencies-are-not-resolved
+boundaries:
+  - No dependency resolution, version-range, id-conflict, ownership, or graph behavior.
+  - No network, filesystem, model, or dynamic-injection behavior.
