@@ -101,7 +101,7 @@ tasks:
     path: tasks/preference-hydration-store/v3
     profile: spa
     category: storage-read-through-caching
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: report-export-boundary-v1
     path: tasks/report-export-boundary/v1
     profile: rsc

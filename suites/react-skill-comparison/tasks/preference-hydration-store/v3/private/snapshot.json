@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "97adc67439cbc31158a957b7ed7a0f9b48a96c92394be54940b328552edc4c01",
+  "snapshot_id": "c5c47707f0345b46d99151cef39a30ca6aad18f6ce8ccdcd052d49f86c7db4a2",
   "files": {
     "private/evaluator/evaluate.ts": "f50c18a8ee559be8e7471f211af3cb3116cfb76a1cf1440873266bb659dd20d4",
     "private/mutations/cache-without-invalidation.ts": "64486b10027d93fae8bd87470dd632404704e4cc9b6ce9653945c067e06545d0",
@@ -13,6 +13,6 @@
     "private/rule-audit.yaml": "46251e5e810d597233d59bb8a5a3b51810d4dc3e0fc6ab6589cf094cc30e570e",
     "public/starter/src/preference-store.ts": "3606c1d32dcb30967c05e2b6d60d2dcf252158aa1bd33ca106f8cd3edce427f3",
     "public/task.md": "1d2ac137939b256831c854c0e4b6431364247d4fcdb147997347804fb30d590e",
-    "public/task.yaml": "ed1efac5c03c878c705ab8c47b126baec4eada546d40666fa70319631eaf41da"
+    "public/task.yaml": "70736cb96720afb9f73011c626f22f26c4b77883280edcaa842ee4dd2ec4bb07"
   }
 }
