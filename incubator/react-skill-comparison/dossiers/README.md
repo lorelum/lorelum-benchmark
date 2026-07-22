@@ -8,9 +8,9 @@ mutations, and snapshot satisfy the offline calibration checklist.
 | --- | --- | --- | --- |
 | D1 | `member-hub-loader/v2` | direct | controlled dependency-graph start trace |
 | D2 | `workspace-brief-react-cache/v1` | direct | real React cache scope plus deferred dependency-graph and repository-count probes |
-| D3 | `incident-board-view-model` | direct | object/callback identity and recomputation counters |
+| D3 | deferred | direct | requires a pinned client React renderer before implementation |
 | D4 | `connection-indicator-subscriptions` | direct | global listener and release counters |
-| D5 | `preference-hydration-store` | direct | storage read and notification counters |
+| D5 | `preference-hydration-store/v2` | direct | storage cache, invalidation, and notification counters |
 | D6 | `report-export-boundary/v3` | direct | conditional loader, in-flight sharing, and controller-isolation counters |
 | C1 | `delivery-notification-ingest` | control | invalid-event mutation and order trace |
 | C2 | `project-summary-access` | control | returned-field and aggregate leakage checks |

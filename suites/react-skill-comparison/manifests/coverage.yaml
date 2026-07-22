@@ -6,6 +6,7 @@ baseline:
 coverage_status: partial
 active_task_set:
   - workspace-brief-react-cache-v1
+  - preference-hydration-store-v2
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
@@ -57,7 +58,7 @@ covered_rules:
       - connection-indicator-subscriptions-v2
   - id: storage-read-through-caching
     tasks:
-      - preference-hydration-store-v1
+      - preference-hydration-store-v2
   - id: conditional-loading-boundary
     tasks:
       - report-export-boundary-v3
@@ -87,6 +88,7 @@ task_relevance:
   connection-indicator-subscriptions-v1: direct
   connection-indicator-subscriptions-v2: direct
   preference-hydration-store-v1: direct
+  preference-hydration-store-v2: direct
   report-export-boundary-v1: direct
   report-export-boundary-v3: direct
   member-hub-loader-v1: direct

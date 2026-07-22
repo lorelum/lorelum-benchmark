@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "36a6e7bb12a58eba7ca3036077bf8ee3780bcc57ea95b9a35a70a4d0e761fc3f",
+  "files": {
+    "private/evaluator/evaluate.ts": "1606bd09c37fed5cf899027390e439f04286866930a0a79cf4e8350c049f2920",
+    "private/mutations/cache-without-invalidation.ts": "64486b10027d93fae8bd87470dd632404704e4cc9b6ce9653945c067e06545d0",
+    "private/mutations/invalid-event-notification.ts": "4137d3f1b5602b74fd91bef6fa98a39a6e801e034d7268aab979ee661dceceef",
+    "private/mutations/noncanonical-write.ts": "4137d3f1b5602b74fd91bef6fa98a39a6e801e034d7268aab979ee661dceceef",
+    "private/mutations/read-on-every-get.ts": "4137d3f1b5602b74fd91bef6fa98a39a6e801e034d7268aab979ee661dceceef",
+    "private/oracle.yaml": "00c48651f6ceb08126f365211c7c881280f3b19fbf1654400988052dbaae1530",
+    "private/reference/src/preference-store.ts": "a2dc3cbf651f4ef78e72f5316610a02adaf85e667b6f2be02ac6f8754b0860aa",
+    "private/rule-audit.yaml": "e0bf720ef9684af9a1b0d905edcaa9db9280775f4071ca26bc7223ef15767250",
+    "public/starter/src/preference-store.ts": "3606c1d32dcb30967c05e2b6d60d2dcf252158aa1bd33ca106f8cd3edce427f3",
+    "public/task.md": "1d2ac137939b256831c854c0e4b6431364247d4fcdb147997347804fb30d590e",
+    "public/task.yaml": "0f5a05da9ba18300aca34647df80b9e2ad3083522e806f09209c471fdd1e7222"
+  }
+}
