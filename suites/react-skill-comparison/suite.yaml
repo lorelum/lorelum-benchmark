@@ -71,7 +71,7 @@ tasks:
     path: tasks/workspace-brief-react-cache/v1
     profile: rsc
     category: request-scope-deduplication
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: incident-board-view-model-v2
     path: tasks/incident-board-view-model/v2
     profile: spa

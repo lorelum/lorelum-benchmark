@@ -70,6 +70,42 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+async function validateRuleBehaviorMapping(privatePath: string, audit: Record<string, unknown>): Promise<void> {
+  const auditPath = joinPath(privatePath, "rule-audit.yaml");
+  const requiredRules = Array.isArray(audit.required_rules) && audit.required_rules.every((rule) => typeof rule === "string") ? new Set(audit.required_rules) : new Set<string>();
+  const behaviors = Array.isArray(audit.behaviors) ? audit.behaviors : [];
+  const behaviorIds = new Set<string>();
+  if (behaviors.length === 0) failures.push(`Active direct task rule audit must declare behaviors: ${relativePath(auditPath)}`);
+  for (const behavior of behaviors) {
+    if (!isRecord(behavior) || typeof behavior.id !== "string" || typeof behavior.rule !== "string") {
+      failures.push(`Rule behavior is invalid: ${relativePath(auditPath)}`);
+      continue;
+    }
+    if (!behaviorIds.add(behavior.id)) failures.push(`Duplicate rule behavior id: ${relativePath(auditPath)}/${behavior.id}`);
+    if (!requiredRules.has(behavior.rule)) failures.push(`Rule behavior references an undelivered rule: ${relativePath(auditPath)}/${behavior.id}`);
+  }
+
+  const oraclePath = joinPath(privatePath, "oracle.yaml");
+  const oracle = await readYaml(oraclePath);
+  if (!oracle) return;
+  for (const section of ["quality_probes", "mutations"]) {
+    const mappings = oracle[section];
+    if (!Array.isArray(mappings) || mappings.length === 0) {
+      failures.push(`Active direct task oracle must declare ${section}: ${relativePath(oraclePath)}`);
+      continue;
+    }
+    const ids = new Set<string>();
+    for (const mapping of mappings) {
+      if (!isRecord(mapping) || typeof mapping.id !== "string" || typeof mapping.rule_behavior_id !== "string") {
+        failures.push(`Rule behavior mapping is invalid: ${relativePath(oraclePath)}/${section}`);
+        continue;
+      }
+      if (!ids.add(mapping.id)) failures.push(`Duplicate ${section} mapping id: ${relativePath(oraclePath)}/${mapping.id}`);
+      if (!behaviorIds.has(mapping.rule_behavior_id)) failures.push(`Rule behavior mapping references an undeclared behavior: ${relativePath(oraclePath)}/${mapping.id}`);
+    }
+  }
+}
+
 function insideWorkspace(path: string): boolean {
   const root = resolve(workspaceRoot);
   const candidate = resolve(path);
@@ -288,7 +324,10 @@ for (const suite of await listDirectories(suitesPath)) {
           const ruleAuditPath = joinPath(privatePath, "rule-audit.yaml");
           await requirePath(ruleAuditPath);
           const ruleAudit = await validateYaml(ruleAuditPath, "task-rule-audit.schema.json");
-          if (ruleAudit?.task_id !== expectedId) failures.push(`Task rule audit does not match task: ${relativePath(ruleAuditPath)}`);
+          if (ruleAudit) {
+            if (ruleAudit.task_id !== expectedId) failures.push(`Task rule audit does not match task: ${relativePath(ruleAuditPath)}`);
+            await validateRuleBehaviorMapping(privatePath, ruleAudit);
+          }
         }
         discovered.set(expectedId, { document: taskDocument, manifestPath: `tasks/${taskSlug}/${revision}` });
       }

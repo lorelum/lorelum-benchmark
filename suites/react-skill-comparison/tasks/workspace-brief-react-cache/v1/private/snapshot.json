@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "eb9fd9422765851db23a615c1933c94b0de26ef76d0d16b603d2773c5de25278",
+  "snapshot_id": "536d2feabfe2139952a0625fe08c13bb6daefaa4f713c4ec9cfc8587e8b728c5",
   "files": {
     "private/evaluator/evaluate.ts": "821764dc5ac28d9276a126f265806cc1019676410bb2a0aaa77c2abd3238abfe",
     "private/evaluator/react-server-evaluate.ts": "63119230343f7d343a67b5df90623e091ecefe398e6ecda202a63234a464fb8e",
@@ -15,6 +15,6 @@
     "private/rule-audit.yaml": "d63999adf50339de2faa955636c3119a5f729489d18b7cee9052517b997e0be2",
     "public/starter/src/workspace-brief.ts": "47492d8cc8f7872ebe7e185d5988ce0d053532250d3ad741f5de317541cf957a",
     "public/task.md": "f90e2b2cea81e10ad636332593a8d043ed31bd518f357cb60fb35d7d638ec2d8",
-    "public/task.yaml": "e8fc82c0009bbaae5ea3505d5e733def33de4e84e8618e8e1205a5a11f620602"
+    "public/task.yaml": "44892d450dc0a75ff1ee06fadcf7e54f2ee1247ce86b068f16bf957e8b5b9dfa"
   }
 }

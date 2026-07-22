@@ -1,6 +1,6 @@
 # D2 — workspace brief React cache
 
-**Status:** candidate, offline design only
+**Status:** retired after rule-behavior audit
 **Proposed task:** `workspace-brief-react-cache/v1`
 **Relevance target:** direct
 
@@ -85,3 +85,13 @@ interfaces.
 5. Run at most the pre-registered pilot after the task revision is frozen. If
    both conditions score 100 in the first paired pilot, retire it as a ceiling
    fixture rather than spending repeat budget.
+
+## Retirement Decision
+
+The direct-task rule-behavior gate requires every quality probe and mutation to
+map to a concrete behavior in an actually delivered rule. D2 can map its
+request sharing and dependency-start probes, but its required
+`wrapped-repository-error` mutation concerns error identity, which neither
+`server-cache-react.md` nor `async-dependencies.md` specifies. Assigning it a
+rule would be a false causal claim. The revision is therefore retained for
+history but retired from the active direct set before any G0/G1 API pilot.

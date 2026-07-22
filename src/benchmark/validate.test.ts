@@ -37,7 +37,16 @@ async function fixture(track: "practice-effectiveness" | "performance-skill-comp
     "  - baseline",
     ""
   ].join("\n"));
-  await write(join(taskPath, "private", "oracle.yaml"), "id: example-v1\n");
+  await write(join(taskPath, "private", "oracle.yaml"), [
+    "id: example-v1",
+    "quality_probes:",
+    "  - id: shared-work",
+    "    rule_behavior_id: share-work",
+    "mutations:",
+    "  - id: no-sharing",
+    "    rule_behavior_id: share-work",
+    ""
+  ].join("\n"));
   await write(join(taskPath, "private", "rule-audit.yaml"), [
     "schema_version: task-rule-audit/v1",
     "task_id: example-v1",
@@ -46,6 +55,9 @@ async function fixture(track: "practice-effectiveness" | "performance-skill-comp
     "  version: v2",
     "required_rules:",
     "  - async-parallel.md",
+    "behaviors:",
+    "  - id: share-work",
+    "    rule: async-parallel.md",
     ""
   ].join("\n"));
   await write(join(taskPath, "private", "snapshot.json"), "{}\n");
@@ -107,6 +119,19 @@ test("requires a frozen private rule audit for active direct tasks", async () =>
     const result = await validate(workspace);
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("Missing required path: suites/fixture/tasks/example/v1/private/rule-audit.yaml");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("requires active direct oracle mappings to reference delivered rule behaviors", async () => {
+  const workspace = await fixture("practice-effectiveness");
+  try {
+    const oracle = join(workspace, "suites", "fixture", "tasks", "example", "v1", "private", "oracle.yaml");
+    await write(oracle, (await Bun.file(oracle).text()).replace("rule_behavior_id: share-work", "rule_behavior_id: missing-behavior"));
+    const result = await validate(workspace);
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("Rule behavior mapping references an undeclared behavior");
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
