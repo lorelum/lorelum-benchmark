@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "f29cadcb1182f1d013065849d3d05b6969e16eb2247e0d87342fe72e60a4c2b0",
+  "snapshot_id": "55905790d4c0d507c10b38e4e32f8ba764e15039a555de07590f56b630afa673",
   "files": {
     "private/evaluator/evaluate.ts": "6bed15321a1adc0aa4b28803d8335c11dccb5849776a1bccea85697df715e8f6",
     "private/mutations/dangling-parent.ts": "ed7865b1eaf0de02d4fbc4ccab61586f6ff46866307c7721a4c6d2493e24d1c1",
@@ -10,11 +10,11 @@
     "private/mutations/query-row-scan.ts": "fcd564a65df6f34512efee3da03f1e37bb0ea19f7c7db4f65e3014b47db58b0b",
     "private/mutations/rebuild-positions-per-query.ts": "45cc13bb50af8321d32c47ae4d7ca3f8847d704b1133117e0cf4300ce4d3d8dc",
     "private/mutations/stale-replacement.ts": "45bdd469beba7181f75d888e0daa7c16f8128a3ab8630396240aeecd0842c229",
-    "private/oracle.yaml": "f3b5a8a93e3eae7a1245cf756249980b2c19eb995bcb8be4745809e2d961db66",
+    "private/oracle.yaml": "084529517ec30ecb8a28639ea829c96078e39ec247c13b1b7f30c0f87cc680d1",
     "private/reference/src/trace-navigator.ts": "e90b48ec72a5ba18a525a0d7e3c85ebec15d4a9721745236c0a008d598a0e4c6",
-    "private/rule-audit.yaml": "c5ed59586127d813028fc09d04e9b3ad0a0931d50065a9e840f5b419aa32936c",
+    "private/rule-audit.yaml": "a9091cc3e4ec758ad2829aef6379b400962cd3cc0624cea988ccc11d0c2cfb6f",
     "public/starter/src/trace-navigator.ts": "b6bc85fc37b4f4958a50720eb9ceb4ce6b23f7635cee6bde961a442655eae23b",
-    "public/task.md": "88a44e04ef41237b954d104cf24aea23ddb232f61f569e9f30643bca6daf1afe",
-    "public/task.yaml": "09a88a92a9824b0caf8e5c8f876ccb61921b88610ef02046625ef2dcfa9400a7"
+    "public/task.md": "0c538df99ba837b437e492fb90768a680cdfc191c34c3f3395facdcb24722756",
+    "public/task.yaml": "29a5948e80694a96cdcd02e984c6839c631f74a81b4f834e03ee34f4ea25dee8"
   }
 }

@@ -1,0 +1,7 @@
+id: trace-navigator-v2
+reference_solution: reference/src/trace-navigator.ts
+engineering_concerns: [repeated-id-resolution, parent-position-resolution, atomic-snapshot-replacement, instance-state-ownership]
+checks: [{ id: positions-and-visible-steps }, { id: parent-resolution }, { id: atomic-replacement }, { id: input-and-instance-isolation }]
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+required_mutations: [query-row-scan, rebuild-positions-per-query, stale-replacement, non-atomic-replacement, global-navigator-state, dangling-parent]
+mutation_candidates: [mutations/query-row-scan.ts, mutations/rebuild-positions-per-query.ts, mutations/stale-replacement.ts, mutations/non-atomic-replacement.ts, mutations/global-navigator-state.ts, mutations/dangling-parent.ts]

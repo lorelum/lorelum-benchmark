@@ -1,7 +1,7 @@
 # D8 - trace navigator
 
-**Status:** admitted to offline-calibrated pilot
-**Task:** `trace-navigator/v1`
+**Status:** v1 retired; v2 admitted to offline-calibrated pilot
+**Task:** `trace-navigator/v2`
 **Skill relevance:** direct
 
 ## Admission evidence and independence
@@ -102,12 +102,32 @@ compile but fail at least one dynamic semantic or quality assertion.
 
 ## Offline calibration
 
-On 2026-07-22, the private reference passed every semantic check and received
+On 2026-07-22, the v1 private reference passed every semantic check and received
 a `100` quality score. The public starter failed dynamically. Six independent
 mutations were rejected: repeated row scanning and per-query position rebuilds
 each preserved semantic behavior but scored `55`; stale replacement,
 non-atomic replacement, module-global state, and dangling parents failed
 semantic gates. The public declaration was calibrated against the pinned v2
 bundle and selects the complete `js-index-maps.md` context. The revision
-snapshot was written after calibration. No model request, workspace, artifact,
-experiment plan, result record, or conclusion has been created for D8.
+snapshot was written after calibration.
+
+## V1 retirement and V2 clarification
+
+One ignored local G0 diagnostic then exposed a public-contract gap: the v1
+evaluator required later caller mutations of row objects to leave the installed
+snapshot unchanged, while the v1 public task only prohibited the navigator from
+mutating inputs. The valid G0 trace had no Skill access, but its candidate made
+only an array copy and therefore failed this unstated assertion. It is not an
+interpretable model result, so G1 was not run and no record or conclusion was
+created. V1 is retained and retired. V2 makes independent row-object snapshot
+isolation an explicit public requirement, retains the same private evaluator,
+and must repeat all offline calibration before any later diagnostic.
+
+## V2 offline calibration
+
+On 2026-07-22, v2 repeated the full offline gate: the reference scored `100`,
+the starter failed dynamically, and all six mutations were rejected. The active
+public declaration again selects the complete `js-index-maps.md` context from
+the fixed v2 bundle. V2 has no model request, workspace, artifact, experiment
+plan, result record, or conclusion; any future diagnostic must use v2 rather
+than the retired v1 revision.

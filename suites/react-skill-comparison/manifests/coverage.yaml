@@ -6,7 +6,7 @@ baseline:
 coverage_status: partial
 active_task_set:
   - workspace-brief-react-cache-v1
-  - trace-navigator-v1
+  - trace-navigator-v2
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
@@ -33,6 +33,7 @@ historical_task_set:
   - connection-indicator-subscriptions-v1
   - connection-indicator-subscriptions-v2
   - dispatch-eligibility-index-v1
+  - trace-navigator-v1
 covered_rules:
   - id: external-event-data-validity
     tasks:
@@ -48,7 +49,7 @@ covered_rules:
       - workspace-brief-react-cache-v1
   - id: mutable-trace-navigation
     tasks:
-      - trace-navigator-v1
+      - trace-navigator-v2
   - id: repeated-membership-lookup
     tasks:
       - dispatch-eligibility-index-v1
@@ -94,6 +95,7 @@ task_relevance:
   account-summary-react-cache-v1: direct
   workspace-brief-react-cache-v1: direct
   trace-navigator-v1: direct
+  trace-navigator-v2: direct
   dispatch-eligibility-index-v1: direct
   incident-board-view-model-v1: direct
   connection-indicator-subscriptions-v1: direct
