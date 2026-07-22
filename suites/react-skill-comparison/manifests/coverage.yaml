@@ -5,6 +5,7 @@ baseline:
   skill: skills/react-best-practices
 coverage_status: partial
 active_task_set:
+  - member-hub-loader-v5
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
@@ -57,6 +58,7 @@ covered_rules:
   - id: asynchronous-dependency-orchestration
     tasks:
       - member-hub-loader-v4
+      - member-hub-loader-v5
   - id: async-dependency-graph
     tasks:
       - workspace-overview-loader-v1
@@ -112,6 +114,7 @@ task_relevance:
   member-hub-loader-v2: direct
   member-hub-loader-v3: direct
   member-hub-loader-v4: direct
+  member-hub-loader-v5: direct
   workspace-overview-loader-v1: direct
   issue-workbench-model-v2: direct
   notification-preference-store-v1: partial

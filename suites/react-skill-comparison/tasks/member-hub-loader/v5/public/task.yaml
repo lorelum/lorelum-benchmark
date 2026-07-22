@@ -1,7 +1,7 @@
 id: member-hub-loader-v5
 version: 5
 track: performance-skill-comparison
-lifecycle_stage: candidate
+lifecycle_stage: pilot
 evaluator_version: 2
 evaluator_contract: structured/v2
 skill_relevance: direct
