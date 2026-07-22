@@ -1,6 +1,6 @@
 # D5 — preference hydration store v2
 
-**Status:** candidate, offline design only
+**Status:** rejected after rule-behavior audit
 **Proposed task:** `preference-hydration-store/v2`
 **Relevance target:** direct
 
@@ -38,3 +38,14 @@ noncanonical local writes. Reference passes twice; starter and five mutations
 fail twice; public rule calibration, snapshot, fixtures, contracts, and
 validation must pass before pilot. A first 100/100 pair retires the revision
 for ceiling effect.
+
+## Rejection Decision
+
+The direct-task rule-behavior gate rejects this candidate before implementation.
+`js-cache-storage.md` directly supports cached reads and invalidation after an
+external storage change. It does not support the evaluator's canonical-write
+or notification-delivery behavior. Those are valid product requirements, but
+they cannot be attributed to the delivered G1 rule. Reclassifying only part of
+the evaluator would make the reported score ambiguous, while mapping every
+mutation would be a false causal claim. Preserve the v3 historical revision
+and do not create a new direct revision from this dossier.
