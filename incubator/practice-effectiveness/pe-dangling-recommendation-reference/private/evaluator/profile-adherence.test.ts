@@ -30,11 +30,10 @@ test("profile adherence: an unresolved decision target blocks publication", () =
   const report = checkPublication(
     [{ id: "entry-a" }],
     [
-      { id: "first", branches: [{ label: "First", targets: ["entry-a"] }] },
-      { id: "second", branches: [{ label: "Second", targets: ["missing-entry"] }] },
+      { id: "first", branches: [{ label: "First", targets: ["entry-a", "missing-entry"] }] },
     ],
   );
 
   expect(report.valid).toBe(false);
-  expect(report.errors.length).toBeGreaterThan(0);
+  expect(report.errors).toContain("unavailable entry: missing-entry");
 });
