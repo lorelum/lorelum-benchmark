@@ -1,0 +1,1 @@
+export function createReportController(v:any,r:any,p:any,load:any){const pending=load("csv");return{summary:()=>({id:r.id,title:r.title,canOpenExport:true}),async openExport(f:any){return (await pending).render(r,f)}}}

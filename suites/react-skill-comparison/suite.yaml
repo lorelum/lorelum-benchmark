@@ -102,6 +102,11 @@ tasks:
     profile: rsc
     category: conditional-loading-boundary
     lifecycle_stage: retired
+  - id: report-export-boundary-v3
+    path: tasks/report-export-boundary/v3
+    profile: rsc
+    category: conditional-loading-boundary
+    lifecycle_stage: pilot
   - id: delivery-notification-ingest-v1
     path: tasks/delivery-notification-ingest/v1
     profile: spa

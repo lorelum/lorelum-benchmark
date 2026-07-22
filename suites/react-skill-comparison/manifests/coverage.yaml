@@ -8,6 +8,7 @@ active_task_set:
   - member-hub-loader-v4
   - workspace-brief-react-cache-v1
   - connection-indicator-subscriptions-v2
+  - report-export-boundary-v3
   - delivery-notification-ingest-v3
   - project-summary-access-v1
   - fulfilment-transition-service-v1
@@ -59,7 +60,7 @@ covered_rules:
       - preference-hydration-store-v1
   - id: conditional-loading-boundary
     tasks:
-      - report-export-boundary-v1
+      - report-export-boundary-v3
   - id: defensive-client-persistence
     tasks:
       - notification-preference-store-v1
@@ -87,6 +88,7 @@ task_relevance:
   connection-indicator-subscriptions-v2: direct
   preference-hydration-store-v1: direct
   report-export-boundary-v1: direct
+  report-export-boundary-v3: direct
   member-hub-loader-v1: direct
   member-hub-loader-v2: direct
   member-hub-loader-v3: direct

@@ -1,0 +1,1 @@
+export function createReportController(v:any,r:any,p:any,load:any){let pending:any;return{summary:()=>({id:r.id,title:r.title,canOpenExport:true}),async openExport(f:any){if(!v.id||!v.canExport||!r.exportsEnabled)return null;pending??=load(f);try{return await (await pending).render(r,f)}finally{pending=undefined}}}}
