@@ -1,18 +1,18 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "8565eb408cb670da73a6d7936c94a0cf3967bec82554999e612b2eed2bef73bc",
+  "snapshot_id": "83a669f12f0d550a9190a9361d2a75f5a70fc9cd94db8d70b1aeefd3cde1b5d1",
   "files": {
     "private/evaluator/evaluate.ts": "2659220c2acde5c1ab56303b79f9f794cecc16820f15fac099adabd807c10efc",
     "private/mutations/root-wide-barrier.ts": "51be71a590522ceeb9a2ae71b43299149402e672cdb68259eb751a9ed883c773",
     "private/mutations/serial-dependent-reads.ts": "6f7c7b8b5609f3cb2808b9fa0e965b66e3038450eda68fbb4722c9c3d286413d",
     "private/mutations/serial-root-reads.ts": "568dd0f5524db961e6ba3298cb1619901c70bc6e4484f595838cc384e3842553",
     "private/mutations/wrapped-repository-error.ts": "6156a4928b939adcc6aa40cf590ae0cf889c4e8e8dbf0eac9cf1567dd80ee749",
-    "private/oracle.yaml": "5975a114ae07aef96b789d960768b17e5373868bbaffc4587bd6b0054ef6b687",
+    "private/oracle.yaml": "2966ce17559fd41507f0e34133a66d9cbffa31c0f64d18a3fd074395a3d6264a",
     "private/reference/src/member-hub.ts": "6f0c04b2f62caf4ea500e5d717abfe4dc8751fe7a494277bd655df3cde182f51",
-    "private/rule-audit.yaml": "489048711c3edd79b2c2b293bdf4d741ef0b06dfedcfff460b38eabe5de8e247",
+    "private/rule-audit.yaml": "e41ecd8c6660cdb2570ace7e964a02ed557262828a769c0e62ab7b368202160e",
     "public/starter/src/member-hub.ts": "587218ea5cf036e686583b48beeb469ae7978e07ef7a23ab1bcd286c9a077d3b",
-    "public/task.md": "37e2e013788deaedf2369fe94594954c2f3a9094fb4a1c2ed8219140c97e04ab",
-    "public/task.yaml": "c84a334144d6cfe26b3e9bcc7bae2d80e8fd2843fe9fbb6be1c06686cba8250e"
+    "public/task.md": "33d5cb1381a999abbab0594f5feb35c32746f2e5d7aaeece62b05922f35fbb88",
+    "public/task.yaml": "1d625b81ff58f100ca0afae1b3ed57d4785f63b35240402ee4a38482ba871a70"
   }
 }

@@ -51,6 +51,11 @@ tasks:
     path: tasks/member-hub-loader/v3
     profile: rsc
     category: asynchronous-dependency-orchestration
+    lifecycle_stage: retired
+  - id: member-hub-loader-v4
+    path: tasks/member-hub-loader/v4
+    profile: rsc
+    category: asynchronous-dependency-orchestration
     lifecycle_stage: pilot
   - id: account-summary-request-cache-v1
     path: tasks/account-summary-request-cache/v1
@@ -69,6 +74,11 @@ tasks:
     lifecycle_stage: retired
   - id: connection-indicator-subscriptions-v1
     path: tasks/connection-indicator-subscriptions/v1
+    profile: spa
+    category: global-listener-ownership
+    lifecycle_stage: retired
+  - id: connection-indicator-subscriptions-v2
+    path: tasks/connection-indicator-subscriptions/v2
     profile: spa
     category: global-listener-ownership
     lifecycle_stage: pilot
@@ -94,6 +104,11 @@ tasks:
     lifecycle_stage: retired
   - id: delivery-notification-ingest-v2
     path: tasks/delivery-notification-ingest/v2
+    profile: spa
+    category: external-event-data-validity
+    lifecycle_stage: retired
+  - id: delivery-notification-ingest-v3
+    path: tasks/delivery-notification-ingest/v3
     profile: spa
     category: external-event-data-validity
     lifecycle_stage: pilot

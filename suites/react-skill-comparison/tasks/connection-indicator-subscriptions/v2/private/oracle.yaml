@@ -1,0 +1,7 @@
+id: connection-indicator-subscriptions-v2
+reference_solution: reference/src/connection-indicator.ts
+engineering_concerns: [shared-listener-ownership, idempotent-release, dispatch-snapshot]
+checks: [{ id: immediate-valid-state }, { id: invalid-events-ignored }, { id: release-is-idempotent }, { id: delivery-snapshot }]
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+required_mutations: [one-listener-per-consumer, missing-final-cleanup, live-iteration]
+mutation_candidates: [mutations/one-listener-per-consumer.ts, mutations/missing-final-cleanup.ts, mutations/live-iteration.ts]

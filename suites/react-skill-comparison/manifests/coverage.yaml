@@ -1,31 +1,36 @@
-version: 4
+version: 5
 baseline:
   repository: vercel-labs/agent-skills
   revision: f8a72b9603728bb92a217a879b7e62e43ad76c81
   skill: skills/react-best-practices
 coverage_status: partial
 active_task_set:
-  - member-hub-loader-v2
-  - account-summary-react-cache-v1
-  - incident-board-view-model-v1
-  - connection-indicator-subscriptions-v1
-  - preference-hydration-store-v1
-  - report-export-boundary-v1
-  - delivery-notification-ingest-v2
+  - member-hub-loader-v4
+  - connection-indicator-subscriptions-v2
+  - delivery-notification-ingest-v3
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
   - member-hub-loader-v1
+  - member-hub-loader-v2
+  - member-hub-loader-v3
   - account-summary-request-cache-v1
+  - account-summary-react-cache-v1
   - workspace-overview-loader-v1
   - issue-workbench-model-v2
+  - incident-board-view-model-v1
   - notification-preference-store-v1
+  - preference-hydration-store-v1
   - order-route-loader-v1
+  - report-export-boundary-v1
+  - report-export-boundary-v2
   - delivery-notification-ingest-v1
+  - delivery-notification-ingest-v2
+  - connection-indicator-subscriptions-v1
 covered_rules:
   - id: external-event-data-validity
     tasks:
-      - delivery-notification-ingest-v2
+      - delivery-notification-ingest-v3
   - id: authorization-public-data-boundary
     tasks:
       - project-summary-access-v1
@@ -37,7 +42,7 @@ covered_rules:
       - account-summary-react-cache-v1
   - id: asynchronous-dependency-orchestration
     tasks:
-      - member-hub-loader-v2
+      - member-hub-loader-v4
   - id: async-dependency-graph
     tasks:
       - workspace-overview-loader-v1
@@ -47,7 +52,7 @@ covered_rules:
       - incident-board-view-model-v1
   - id: global-listener-ownership
     tasks:
-      - connection-indicator-subscriptions-v1
+      - connection-indicator-subscriptions-v2
   - id: storage-read-through-caching
     tasks:
       - preference-hydration-store-v1
@@ -70,16 +75,20 @@ coverage_gaps:
 task_relevance:
   delivery-notification-ingest-v1: out-of-domain
   delivery-notification-ingest-v2: out-of-domain
+  delivery-notification-ingest-v3: out-of-domain
   project-summary-access-v1: out-of-domain
   fulfilment-transition-service-v1: out-of-domain
   account-summary-request-cache-v1: direct
   account-summary-react-cache-v1: direct
   incident-board-view-model-v1: direct
   connection-indicator-subscriptions-v1: direct
+  connection-indicator-subscriptions-v2: direct
   preference-hydration-store-v1: direct
   report-export-boundary-v1: direct
   member-hub-loader-v1: direct
   member-hub-loader-v2: direct
+  member-hub-loader-v3: direct
+  member-hub-loader-v4: direct
   workspace-overview-loader-v1: direct
   issue-workbench-model-v2: direct
   notification-preference-store-v1: partial
