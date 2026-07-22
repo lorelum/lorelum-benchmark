@@ -74,7 +74,7 @@ function request(id: string, environmentId: string): Record<string, unknown> {
       command: process.execPath,
       args: ["-e", 'if (!(await Bun.file("task.md").exists()) || !(await Bun.file("starter/src/member-hub.ts").exists()) || await Bun.file("private/oracle.yaml").exists()) process.exit(1);'],
       seed: 1,
-      budget: { max_turns: 1, max_duration_ms: 1000 },
+      budget: { max_turns: 1, max_duration_ms: 5000 },
       tool_policy_hash: formalToolPolicyHash
     },
     inputs: { task_prompt: "1fa9255c4f1b1f4640cddf65d43b52539fb160c3bfa3861016b2b5c675ea66f2" },
