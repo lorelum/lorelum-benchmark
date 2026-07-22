@@ -1,0 +1,14 @@
+id: pe-validation-report-grading-v1
+source_snapshot:
+  repository: lorelum/lorelum
+  pull_request: 10
+  commit: bd0479b8bc02f5a1d1aa445cfa377875c4fe8bb4
+functional_checks:
+  - id: findings-are-returned-in-structured-level-buckets
+  - id: empty-input-produces-an-empty-structured-result
+profile_adherence_checks:
+  - id: non-blocking-feedback-does-not-invalidate-the-report
+  - id: blocking-feedback-invalidates-the-report
+boundaries:
+  - No stable diagnostic ordering or complete-accumulation assertion.
+  - No format-stage, reference-graph, body-reference, filesystem, network, or dynamic-injection behavior.
