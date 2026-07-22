@@ -10,7 +10,8 @@
     "build": "NEXT_TELEMETRY_DISABLED=1 next build",
     "start": "NEXT_TELEMETRY_DISABLED=1 next start -p 3100",
     "test:functional": "bun test tests/dashboard.functional.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "bun run build && bun run tests/run-e2e.ts",
+    "test:e2e:built": "bun run tests/run-e2e.ts"
   },
   "dependencies": {
     "next": "16.2.11",

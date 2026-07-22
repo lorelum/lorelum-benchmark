@@ -28,7 +28,7 @@ issues:
       - async-parallel.md
       - async-dependencies.md
   - id: report-insights-conditional-loading-v1
-    lifecycle: preregistered
+    lifecycle: candidate
     relevance: direct
     dossier: dossiers/report-insights-conditional-loading-v1.md
     public_issue: public/issues/report-insights-conditional-loading.md

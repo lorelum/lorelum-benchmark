@@ -1,6 +1,6 @@
 # Report insights conditional client module loading
 
-**Status:** pre-registered; implementation intentionally deferred
+**Status:** candidate; offline-calibrated before any model invocation
 
 ## Public sources
 
@@ -24,3 +24,12 @@ controller only: no cross-controller cache is part of this task.
 
 The public issue will state those observable product requirements without
 describing dynamic import or any bundling solution.
+
+## Offline calibration
+
+The reference receives `100/100` only when the production build emits the
+visualization chunk, the Chromium route tests preserve authorized click and
+guest behavior, and the panel defers the import until an explicit open. The
+semantically valid naive implementation and the eager-load mutation both score
+`0/100`; each result was reproduced twice before this dossier became a
+candidate.
