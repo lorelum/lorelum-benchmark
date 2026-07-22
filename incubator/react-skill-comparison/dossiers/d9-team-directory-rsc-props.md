@@ -1,6 +1,6 @@
 # D9 - team directory RSC props
 
-**Status:** candidate design only
+**Status:** rejected at API-feasibility review
 **Proposed task:** `team-directory-rsc-props/v1`
 **Relevance target:** direct
 **Candidate rule:** `server-dedup-props.md`
@@ -94,3 +94,20 @@ where applicable. The starter must fail at least one semantic or quality probe.
 4. Verify full G1 rule context by hash in a no-API dry-run. A first paired
    diagnostic may run only after the preceding gates pass; it cannot produce a
    formal record or conclusion.
+
+## API-Feasibility Rejection
+
+This candidate must not become a task revision. A truthful public client-prop
+API exposes one canonical member sequence plus small view state. Under that
+API, every conforming implementation already has the efficient shape, so the
+quality probes have no rule-dependent decision to distinguish. Conversely,
+allowing public `activeMembers` or `alphabeticalMembers` props solely so that
+mutations can send copied arrays would manufacture an error path that the
+product contract does not need.
+
+The runtime probe remains useful infrastructure, but this proposed task would
+either be a baseline ceiling or score candidates for violating an artificial
+API. Preserve the design record and do not create `team-directory-rsc-props/v1`
+or spend an API pilot on it. A successor needs a real public client-boundary
+decision with two valid product-level representations, not an evaluator-only
+payload preference.
