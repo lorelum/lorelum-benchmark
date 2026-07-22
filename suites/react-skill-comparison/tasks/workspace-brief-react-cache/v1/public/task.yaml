@@ -1,0 +1,16 @@
+id: workspace-brief-react-cache-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 2
+evaluator_contract: structured/v2
+skill_relevance: direct
+skill_context: { rules: [server-cache-react.md, async-dependencies.md] }
+source:
+  kind: public-case-abstraction
+  reviewed_cases: [https://github.com/vercel/swr/issues/3013, https://github.com/vercel/swr/pull/4282]
+  scenario: server panels share a workspace brief with dependent project summaries
+  non_derivative_statement: Original workspace domain, interfaces, and evaluator; no source API or patch is copied.
+runtime: { command: bun run evaluate -- react-skill-comparison workspace-brief-react-cache/v1 }
+agent_input: { prompt: task.md, starter: starter, candidate: src/workspace-brief.ts }
+applicable_conditions: [baseline, vercel-skill, lorelum-retrieval]

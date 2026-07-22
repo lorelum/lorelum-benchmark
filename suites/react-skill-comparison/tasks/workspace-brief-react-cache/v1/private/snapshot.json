@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "eb9fd9422765851db23a615c1933c94b0de26ef76d0d16b603d2773c5de25278",
+  "files": {
+    "private/evaluator/evaluate.ts": "821764dc5ac28d9276a126f265806cc1019676410bb2a0aaa77c2abd3238abfe",
+    "private/evaluator/react-server-evaluate.ts": "63119230343f7d343a67b5df90623e091ecefe398e6ecda202a63234a464fb8e",
+    "private/mutations/no-request-sharing.ts": "77190605cd5f11278bbfe4a232dc4849a420659ba6f368e4adb47bf79f579b64",
+    "private/mutations/object-cache-key.ts": "d7a81f9ae817b71c5d03f8f38377af0b03349961eb748ea437d9d902083c4bfd",
+    "private/mutations/root-wide-barrier.ts": "6f36cdc3065655517abcb2a0dd4ebf86cfb4169bef324980a6099a0e578cf8b0",
+    "private/mutations/serial-root-reads.ts": "ac822d746ac3e09a3d4d4d18d7d516225629b4c1e2a26a659955055b36f9fe41",
+    "private/mutations/wrapped-repository-error.ts": "6d0ad3e431b800f4e92525f0ed7eaa188168258697481d39127abfd71a5fb437",
+    "private/oracle.yaml": "32c08ae0af6d52efef97d1a3d6f4654599a97d75e199cf5bff3714daa485fa1d",
+    "private/reference/src/workspace-brief.ts": "ae0a8c2e18640b1aba80cff7ea187c427aec57b918a2426aa58bf7f49046050b",
+    "private/rule-audit.yaml": "d63999adf50339de2faa955636c3119a5f729489d18b7cee9052517b997e0be2",
+    "public/starter/src/workspace-brief.ts": "47492d8cc8f7872ebe7e185d5988ce0d053532250d3ad741f5de317541cf957a",
+    "public/task.md": "f90e2b2cea81e10ad636332593a8d043ed31bd518f357cb60fb35d7d638ec2d8",
+    "public/task.yaml": "e8fc82c0009bbaae5ea3505d5e733def33de4e84e8618e8e1205a5a11f620602"
+  }
+}

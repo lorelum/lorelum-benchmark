@@ -17,7 +17,7 @@ reference, starter, mutations, and snapshot complete offline calibration.
 | Slot | Relevance | Mechanism | Public-case admission evidence |
 | --- | --- | --- | --- |
 | D1 | direct | asynchronous dependency orchestration | two public reports of dependent dashboard or route work starting serially |
-| D2 | direct | request-scope deduplication | two public reports of duplicate same-request reads or cache-scope bugs |
+| D2 | direct | request-scope deduplication plus partial dependency orchestration | two public reports of duplicate same-request reads or cache-scope bugs |
 | D3 | direct | derived state and stable identity | two public reports of memoized rows or callback identity regressions |
 | D4 | direct | global listener ownership | two public reports of duplicate browser listeners or incomplete cleanup |
 | D5 | direct | storage read-through caching | two public reports of repeated browser storage reads or hydration work |

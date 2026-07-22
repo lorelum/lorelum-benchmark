@@ -6,6 +6,7 @@ baseline:
 coverage_status: partial
 active_task_set:
   - member-hub-loader-v4
+  - workspace-brief-react-cache-v1
   - connection-indicator-subscriptions-v2
   - delivery-notification-ingest-v3
   - project-summary-access-v1
@@ -39,7 +40,7 @@ covered_rules:
       - fulfilment-transition-service-v1
   - id: request-scope-deduplication
     tasks:
-      - account-summary-react-cache-v1
+      - workspace-brief-react-cache-v1
   - id: asynchronous-dependency-orchestration
     tasks:
       - member-hub-loader-v4
@@ -80,6 +81,7 @@ task_relevance:
   fulfilment-transition-service-v1: out-of-domain
   account-summary-request-cache-v1: direct
   account-summary-react-cache-v1: direct
+  workspace-brief-react-cache-v1: direct
   incident-board-view-model-v1: direct
   connection-indicator-subscriptions-v1: direct
   connection-indicator-subscriptions-v2: direct

@@ -1,0 +1,2 @@
+import { cache } from "react";
+export function createWorkspaceBriefLoader(api: any) { const read = cache(async (id: string) => { try { const [workspace, quota] = await Promise.all([api.getWorkspace(id), api.getQuota(id)]); if (!workspace) return null; const projects = await api.getProjectSummaries(await api.getPinnedProjectIds(workspace.id)); return { workspace, quota, projects }; } catch (error) { throw new Error(String(error)); } }); return ({ workspaceId }: { workspaceId: string }) => { const id = workspaceId.trim(); return id ? read(id) : Promise.resolve(null); }; }

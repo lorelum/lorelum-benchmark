@@ -7,7 +7,7 @@ mutations, and snapshot satisfy the offline calibration checklist.
 | Slot | Proposed slug | Relevance | Deterministic quality signal |
 | --- | --- | --- | --- |
 | D1 | `member-hub-loader/v2` | direct | controlled dependency-graph start trace |
-| D2 | `account-summary-react-cache/v1` | direct | real React server-render cache scope and repository counters |
+| D2 | `workspace-brief-react-cache/v1` | direct | real React cache scope plus deferred dependency-graph and repository-count probes |
 | D3 | `incident-board-view-model` | direct | object/callback identity and recomputation counters |
 | D4 | `connection-indicator-subscriptions` | direct | global listener and release counters |
 | D5 | `preference-hydration-store` | direct | storage read and notification counters |
