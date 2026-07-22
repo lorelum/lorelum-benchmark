@@ -1,6 +1,6 @@
 id: react-skill-comparison-g0-g1-d3-local-dry-run-v1
 version: v1
-lifecycle_stage: active
+lifecycle_stage: retired
 run_kind: smoke
 source_commit: e4ff7ed4e3082eedccebdb660e72c0cedcfaf15d
 suite:
@@ -41,3 +41,4 @@ analysis:
   excluded_from_official_conclusion: true
   excluded_from_formal_records: true
   purpose: verify-D3-G0-G1-rule-delivery-without-model-invocation
+  retirement_reason: verified-rerender-memo-rule-does-not-specify-required-row-identity-behavior

@@ -1,6 +1,6 @@
 # D3 — incident board React rows
 
-**Status:** pilot, offline calibrated in the pinned client runtime
+**Status:** retired after local delivery diagnostic
 **Proposed task:** `incident-board-view-model/v2`
 **Skill relevance:** direct
 **Pre-registered rule:** `rerender-memo.md`
@@ -90,6 +90,18 @@ incident. Offline calibration must use at least five independent mutations.
 4. Freeze the task, client runtime lockfile, evaluator, source record, rule
    audit, and snapshot before any API request. The first G0 check is a single
    local diagnostic; retire immediately on a baseline ceiling.
+
+## Retirement decision
+
+The local paired diagnostic verified that G1 received the complete, hashed
+`rerender-memo.md` body and read it before the first edit. Both G0 and G1
+passed semantic checks but scored `30/100`: neither established the hidden
+row-cache identity behavior. This is not an injection failure. The selected
+rule recommends extracting memoized components for early returns; it does not
+specify the row-object cache required by this evaluator. D3 therefore cannot
+support a direct-treatment claim, and further API repetitions are not
+justified. This revision remains intact for history but is excluded from the
+active set and future request generation.
 
 ## Source abstraction
 

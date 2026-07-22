@@ -6,7 +6,6 @@ baseline:
 coverage_status: partial
 active_task_set:
   - workspace-brief-react-cache-v1
-  - incident-board-view-model-v2
   - project-summary-access-v1
   - fulfilment-transition-service-v1
 historical_task_set:
@@ -19,6 +18,7 @@ historical_task_set:
   - workspace-overview-loader-v1
   - issue-workbench-model-v2
   - incident-board-view-model-v1
+  - incident-board-view-model-v2
   - notification-preference-store-v1
   - preference-hydration-store-v1
   - preference-hydration-store-v2

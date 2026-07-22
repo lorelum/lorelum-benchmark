@@ -18,9 +18,9 @@ bun run pi:coordinate -- scratch/requests/<run-id>.json --dry-run
 bun run pi:coordinate -- scratch/requests/<run-id>.json
 ```
 
-当前仅有 `g0-g1-d3-local-dry-run-v1` 这一 active 本地诊断计划；它只用于
-验证 G0/G1 的规则交付，明确排除正式 record 与结论。历史 smoke、pilot 与
-正式计划均已 retired；九题候选集及其激活前提记录在
+当前不存在 active G0/G1 计划。`g0-g1-d3-local-dry-run-v1` 已在验证规则
+交付后退役，明确排除正式 record 与结论。历史 smoke、pilot 与正式计划均已
+retired；九题候选集及其激活前提记录在
 `incubator/react-skill-comparison/g0-g1-nine-fixture-pilot-v1.pre-freeze.yaml`。
 
 `--dry-run` 会验证全部契约并输出将要使用的隔离工作区，不创建目录也不执行 Pi。正式运行
