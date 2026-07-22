@@ -13,8 +13,23 @@ const testSecret = "candidate-test-secret";
 
 test("profile adherence: malformed raw input is rejected before parsing", () => {
   const received: { type: string; id: string }[] = [];
+  const originalParse = JSON.parse;
+  let parseCalls = 0;
+  JSON.parse = ((text: string, reviver?: Parameters<typeof JSON.parse>[1]) => {
+    parseCalls += 1;
+    return originalParse(text, reviver);
+  }) as typeof JSON.parse;
 
-  expect(() => handleWebhook({ body: "{", signature: "wrong" }, testSecret, (event) => received.push(event))).not.toThrow();
+  const result = (() => {
+    try {
+      return handleWebhook({ body: "{", signature: "wrong" }, testSecret, (event) => received.push(event));
+    } finally {
+      JSON.parse = originalParse;
+    }
+  })();
+
+  expect(result.accepted).toBe(false);
+  expect(parseCalls).toBe(0);
   expect(received).toEqual([]);
 });
 

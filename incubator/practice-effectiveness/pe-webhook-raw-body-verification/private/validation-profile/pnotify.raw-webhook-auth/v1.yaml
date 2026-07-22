@@ -7,8 +7,8 @@ source_snapshot:
   pull_request: 2
   commit: a18318885755049f7a80ccc29ccbc123d5958d69
   files:
-    - src/webhook/verify-github.ts
-    - src/webhook/index.ts
+    - packages/server/src/lib/verify/github.ts
+    - packages/server/src/routes/webhook.ts
 relevance:
   applicable_scenario: A local webhook entry point has a configured secret and must prevent untrusted input from invoking an in-memory event handler.
   rationale: The source verifies an HMAC-SHA256 signature over the raw body before parse, render, route match, and dispatch.
