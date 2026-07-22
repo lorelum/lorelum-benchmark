@@ -8,11 +8,11 @@ source_snapshot:
     - number: 2
       commit: a18318885755049f7a80ccc29ccbc123d5958d69
       files:
-        - src/config/match-route.ts
+        - packages/server/src/lib/config/index.ts
     - number: 11
       commit: 0c6df34130dc72e8d6a256d4442adeae36609fa5
       files:
-        - src/config/match-route.ts
+        - packages/server/src/lib/config/index.ts
 relevance:
   applicable_scenario: A local notification service selects one usable route for a matching event from fixed configuration.
   rationale: The source sorts matching routes by ascending priority and dispatches the first, while explicit action exclusion overrides action matching and unavailable routes are not viable.
