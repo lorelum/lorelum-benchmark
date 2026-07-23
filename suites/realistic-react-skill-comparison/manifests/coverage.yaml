@@ -14,9 +14,9 @@ covered_rules:
   - id: bundle-conditional.md
     tasks: [report-insights-conditional-loading-v6]
   - id: server-dedup-props.md
-    tasks: [team-directory-rsc-payload-v2]
+    tasks: [team-directory-rsc-payload-v3]
   - id: server-serialization.md
-    tasks: [team-directory-rsc-payload-v2]
+    tasks: [team-directory-rsc-payload-v3]
 acceptance:
   semantic_gate_required: true
   deterministic_dynamic_quality_required: true

@@ -22,10 +22,10 @@ const cases: CalibrationCase[] = [
   { task: "report-insights-conditional-loading/v6", label: "starter", expectedScore: 0 },
   { task: "report-insights-conditional-loading/v6", label: "reference", expectedScore: 100, overlay: "reference/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
   { task: "report-insights-conditional-loading/v6", label: "eager-load", expectedScore: 0, overlay: "mutations/eager-load/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
-  { task: "team-directory-rsc-payload/v2", label: "starter", expectedScore: 0 },
-  { task: "team-directory-rsc-payload/v2", label: "reference", expectedScore: 100, overlay: "reference/app/team/page.tsx", destination: "app/team/page.tsx" },
-  { task: "team-directory-rsc-payload/v2", label: "serialization-leak", expectedScore: 50, overlay: "mutations/serialization-leak/app/team/page.tsx", destination: "app/team/page.tsx" },
-  { task: "team-directory-rsc-payload/v2", label: "duplicate-props", expectedScore: 50, overlay: "mutations/duplicate-props/app/team/page.tsx", destination: "app/team/page.tsx" },
+  { task: "team-directory-rsc-payload/v3", label: "starter", expectedScore: 0 },
+  { task: "team-directory-rsc-payload/v3", label: "reference", expectedScore: 100, overlay: "reference/app/team/page.tsx", destination: "app/team/page.tsx" },
+  { task: "team-directory-rsc-payload/v3", label: "serialization-leak", expectedScore: 50, overlay: "mutations/serialization-leak/app/team/page.tsx", destination: "app/team/page.tsx" },
+  { task: "team-directory-rsc-payload/v3", label: "duplicate-props", expectedScore: 50, overlay: "mutations/duplicate-props/app/team/page.tsx", destination: "app/team/page.tsx" },
 ];
 
 function evaluatorResult(stdout: string): { semantic: { passed: boolean }; quality: { score: number } } {
