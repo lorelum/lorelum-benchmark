@@ -35,7 +35,7 @@ issues:
     rules:
       - bundle-conditional.md
   - id: team-directory-rsc-payload-v1
-    lifecycle: preregistered
+    lifecycle: candidate
     relevance: direct
     dossier: dossiers/team-directory-rsc-payload-v1.md
     public_issue: public/issues/team-directory-rsc-payload.md

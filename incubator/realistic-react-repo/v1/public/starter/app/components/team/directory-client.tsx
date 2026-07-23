@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 export type DirectoryMember = { id: string; name: string; role: "admin" | "member" };
 
-export function DirectoryClient({ members }: { members: readonly DirectoryMember[] }) {
+export function DirectoryClient({ members, memberIds: _memberIds }: { members: readonly DirectoryMember[]; memberIds?: readonly string[] }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const visible = useMemo(() => members.filter((member) => member.name.toLowerCase().includes(query.toLowerCase())).slice().sort((a, b) => a.name.localeCompare(b.name)), [members, query]);
