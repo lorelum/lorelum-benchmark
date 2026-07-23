@@ -1,6 +1,6 @@
 id: realistic-react-g0-g1-local-smoke
 version: v1
-lifecycle_stage: active
+lifecycle_stage: retired
 run_kind: smoke
 source_commit: 98cd05a115409a1a49dd3f59def1427745324154
 suite: { id: realistic-react-skill-comparison, version: 1.0.0 }
