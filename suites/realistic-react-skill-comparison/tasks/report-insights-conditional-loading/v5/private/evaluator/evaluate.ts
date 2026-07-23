@@ -18,7 +18,7 @@ async function filesAt(root: string): Promise<string[]> {
   const files: string[] = [];
   async function visit(directory: string): Promise<void> {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
-      if (["node_modules", ".next", ".playwright", "test-results", "playwright-report", "tsconfig.tsbuildinfo"].includes(entry.name)) continue;
+      if (["node_modules", ".next", ".playwright", ".playwright-browsers", "test-results", "playwright-report", "tsconfig.tsbuildinfo"].includes(entry.name)) continue;
       const path = join(directory, entry.name);
       if (entry.isDirectory()) await visit(path);
       else if (entry.isFile()) files.push(relative(root, path));
