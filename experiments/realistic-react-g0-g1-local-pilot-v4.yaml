@@ -1,6 +1,6 @@
 id: realistic-react-g0-g1-local-pilot-v4
 version: v1
-lifecycle_stage: active
+lifecycle_stage: retired
 run_kind: pilot
 source_commit: 8b859fec0c196b3acf57365ae3f3a4d9fc951672
 suite: { id: realistic-react-skill-comparison, version: 1.0.0 }

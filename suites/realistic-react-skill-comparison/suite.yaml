@@ -28,10 +28,13 @@ tasks:
   - id: report-insights-conditional-loading-v4
     path: tasks/report-insights-conditional-loading/v4
     lifecycle_stage: pilot
+  - id: report-insights-conditional-loading-v5
+    path: tasks/report-insights-conditional-loading/v5
+    lifecycle_stage: pilot
   - id: team-directory-rsc-payload-v2
     path: tasks/team-directory-rsc-payload/v2
     lifecycle_stage: pilot
 default_active_task_set:
   - workspace-dashboard-rsc-v2
-  - report-insights-conditional-loading-v4
+  - report-insights-conditional-loading-v5
   - team-directory-rsc-payload-v2
