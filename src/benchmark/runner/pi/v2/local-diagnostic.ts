@@ -11,7 +11,7 @@ export type LocalDiagnosticEntry = {
   task: string;
   condition: string;
   repeat: number;
-  status: "execution-failed" | "evaluated";
+  status: "execution-failed" | "evaluation-failed" | "evaluated";
   pi?: PiRunResultV2;
   evaluator?: EvaluatorDiagnostic;
   error?: string;

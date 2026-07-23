@@ -1,10 +1,10 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { joinPath, workspaceRoot } from "../../fs";
 import { evaluatorResultFromOutput, failedExecutionEntry, piResultFromOutput, taskReferenceFromId, type LocalDiagnosticEntry } from "./v2/local-diagnostic";
 import type { PiRunRequestV2 } from "./v2/types";
 
-type Options = { planPath: string; outputPath: string; smoke: boolean; dryRun: boolean; continueOnFailure: boolean };
+type Options = { planPath: string; outputPath: string; smoke: boolean; dryRun: boolean; continueOnFailure: boolean; resume: boolean };
 
 function fail(message: string): never { throw new Error(message); }
 
@@ -13,11 +13,13 @@ function parseOptions(): Options {
   const plan = args.shift();
   if (!plan) fail("Usage: bun run pi:diagnose -- <experiment-plan.yaml> [--smoke] [--output <ignored-directory>] [--dry-run] [--continue-on-failure]");
   const outputIndex = args.indexOf("--output");
+  const resume = args.includes("--resume");
   const output = outputIndex === -1 ? joinPath(workspaceRoot, "scratch", "local-diagnostics", `${new Date().toISOString().replaceAll(/[:.]/g, "-")}`) : args[outputIndex + 1];
   if (!output) fail("--output requires a directory");
   const outputPath = resolve(workspaceRoot, output);
   if (!outputPath.startsWith(resolve(workspaceRoot, "scratch"))) fail("Local diagnostic output must stay under ignored scratch/");
-  return { planPath: resolve(workspaceRoot, plan), outputPath, smoke: args.includes("--smoke"), dryRun: args.includes("--dry-run"), continueOnFailure: args.includes("--continue-on-failure") };
+  if (resume && outputIndex === -1) fail("--resume requires --output <existing-diagnostic-directory>");
+  return { planPath: resolve(workspaceRoot, plan), outputPath, smoke: args.includes("--smoke"), dryRun: args.includes("--dry-run"), continueOnFailure: args.includes("--continue-on-failure"), resume };
 }
 
 async function command(command: string[], env = Bun.env): Promise<{ code: number; stdout: string; stderr: string }> {
@@ -52,6 +54,12 @@ async function writeSummary(path: string, plan: Record<string, unknown>, request
   }, null, 2)}\n`);
 }
 
+async function existingEntries(path: string, resume: boolean): Promise<LocalDiagnosticEntry[]> {
+  if (!resume || !(await Bun.file(joinPath(path, "summary.json")).exists())) return [];
+  const document = JSON.parse(await Bun.file(joinPath(path, "summary.json")).text()) as { entries?: unknown };
+  return Array.isArray(document.entries) ? document.entries as LocalDiagnosticEntry[] : [];
+}
+
 const options = parseOptions();
 const plan = Bun.YAML.parse(await Bun.file(options.planPath).text()) as Record<string, unknown>;
 assertLocalPlan(plan);
@@ -65,12 +73,18 @@ if (options.dryRun) {
 
 await mkdir(options.outputPath, { recursive: true });
 await Bun.write(joinPath(options.outputPath, "requests.json"), `${JSON.stringify(requests, null, 2)}\n`);
-const entries: LocalDiagnosticEntry[] = [];
+const entries = await existingEntries(options.outputPath, options.resume);
+const completedRunIds = new Set(entries.filter((entry) => entry.status === "evaluated").map((entry) => entry.run_id));
 let interrupted = false;
 process.on("SIGINT", () => { interrupted = true; });
 
 for (const request of requests) {
   if (interrupted) break;
+  if (completedRunIds.has(request.run_id)) continue;
+  if (options.resume) {
+    await rm(joinPath(workspaceRoot, ".run-workspaces", request.run_id), { recursive: true, force: true });
+    await rm(joinPath(workspaceRoot, "artifacts", "runs", request.run_id), { recursive: true, force: true });
+  }
   const requestPath = joinPath(options.outputPath, `${request.run_id}.json`);
   await Bun.write(requestPath, `${JSON.stringify(request, null, 2)}\n`);
   const pi = await command([process.execPath, "run", "src/benchmark/runner/pi/v2/execute.ts", requestPath]);
@@ -89,7 +103,7 @@ for (const request of requests) {
   );
   try {
     const evaluator = evaluatorResultFromOutput(evaluation.stdout);
-    entries.push({ run_id: request.run_id, task: request.task.id, condition: request.condition_id, repeat: request.repeat, status: "evaluated", pi: piResult, evaluator });
+    entries.push({ run_id: request.run_id, task: request.task.id, condition: request.condition_id, repeat: request.repeat, status: evaluator.semantic.passed ? "evaluated" : "evaluation-failed", pi: piResult, evaluator });
   } catch (error) {
     entries.push(failedExecutionEntry(request, `Evaluator did not emit a structured result: ${error instanceof Error ? error.message : String(error)}`, piResult));
   }
@@ -98,4 +112,4 @@ for (const request of requests) {
 
 await writeSummary(options.outputPath, plan, requests, entries, interrupted);
 console.log(JSON.stringify({ output: options.outputPath, planned_runs: requests.length, completed_entries: entries.length, interrupted }, null, 2));
-process.exit(interrupted || entries.some((entry) => entry.status === "execution-failed") ? 1 : 0);
+process.exit(interrupted || entries.some((entry) => entry.status !== "evaluated") ? 1 : 0);
