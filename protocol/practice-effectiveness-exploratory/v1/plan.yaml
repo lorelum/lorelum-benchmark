@@ -28,6 +28,13 @@ execution:
   max_duration_ms: 600000
   seed: null
   seed_note: DeepSeek public API does not expose a usable seed; repeats are independent attempts.
+  local_direct:
+    mode: local-direct-docker
+    dockerfile: Dockerfile.formal-pi
+    network: bridge
+    image_tag_prefix: lorelum-exploratory-pi
+    isolation: public-workspace-and-readonly-treatment-only
+    boundary: Direct egress is permitted only for this non-formal exploratory run; it is not the formal allowlist sandbox.
 tasks:
   - id: pe-loopback-admin-deployment
     candidate: incubator/practice-effectiveness/pe-loopback-admin-deployment
