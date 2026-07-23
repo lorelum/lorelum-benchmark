@@ -4,6 +4,10 @@ import type { PiRunRequestV2 } from "./types";
 
 type JsonRecord = Record<string, unknown>;
 
+export type PiToolTimeoutEvent =
+  | { type: "start"; toolCallId: string; timeoutMs: number }
+  | { type: "end"; toolCallId: string };
+
 export type PiTraceAudit = {
   schema_version: "pi-trace-audit/v1";
   treatment_id: string;
@@ -22,6 +26,20 @@ export type PiTraceAudit = {
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export function piToolTimeoutEvent(line: string): PiToolTimeoutEvent | undefined {
+  try {
+    const event = JSON.parse(line) as unknown;
+    if (!isRecord(event) || typeof event.toolCallId !== "string") return undefined;
+    if (event.type === "tool_execution_end" && event.toolName === "bash") return { type: "end", toolCallId: event.toolCallId };
+    if (event.type !== "tool_execution_start" || event.toolName !== "bash" || !isRecord(event.args) || typeof event.args.timeout !== "number") return undefined;
+    const timeoutSeconds = event.args.timeout;
+    if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) return undefined;
+    return { type: "start", toolCallId: event.toolCallId, timeoutMs: Math.ceil(timeoutSeconds * 1000) };
+  } catch {
+    return undefined;
+  }
 }
 
 function messageText(value: unknown): string {

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { auditPiJsonTrace, piJsonTraceArgs } from "./trace";
+import { auditPiJsonTrace, piJsonTraceArgs, piToolTimeoutEvent } from "./trace";
 import type { RuleContext } from "./rule-router";
 import type { TaskRuleAudit } from "./task-rule-audit";
 
@@ -38,6 +38,12 @@ function context(): RuleContext {
 test("converts pinned Pi print mode into a JSON event stream", () => {
   expect(piJsonTraceArgs(["--model", "test", "--print", "--no-session"])).toEqual(["--model", "test", "--mode", "json", "--no-session"]);
   expect(() => piJsonTraceArgs(["--model", "test"])).toThrow("requires the pinned --print argument");
+});
+
+test("extracts only declared bash tool timeouts from Pi trace events", () => {
+  expect(piToolTimeoutEvent(JSON.stringify({ type: "tool_execution_start", toolCallId: "build", toolName: "bash", args: { command: "bun run build", timeout: 120 } }))).toEqual({ type: "start", toolCallId: "build", timeoutMs: 120_000 });
+  expect(piToolTimeoutEvent(JSON.stringify({ type: "tool_execution_end", toolCallId: "build", toolName: "bash" }))).toEqual({ type: "end", toolCallId: "build" });
+  expect(piToolTimeoutEvent(JSON.stringify({ type: "tool_execution_start", toolCallId: "read", toolName: "read", args: { timeout: 120 } }))).toBeUndefined();
 });
 
 test("accepts a baseline trace without Skill access", () => {

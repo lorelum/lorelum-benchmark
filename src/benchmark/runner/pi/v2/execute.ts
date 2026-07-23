@@ -5,7 +5,7 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { joinPath, listFiles, pathExists, relativePath, sha256File, sha256Text, workspaceRoot } from "../../../fs";
 import { findTask } from "../../../task-discovery";
 import { containerCommand, containerEnvironment, containerImageInspectCommand, containerRemoveCommand, containerVersionCommand, formalContainerSandbox, localContainerImageInspectCommand, localContainerSandbox, type ContainerSandbox } from "./sandbox";
-import { auditPiJsonTrace, piJsonTraceArgs } from "./trace";
+import { auditPiJsonTrace, piJsonTraceArgs, piToolTimeoutEvent } from "./trace";
 import { declaredRuleContext, routedRuleNames, type RuleContext } from "./rule-router";
 import { declaredSkillBundle, resolveSkillBundle, stageSkillBundle, type SkillBundle } from "./treatment-resolver";
 import { taskRuleAuditFromDocument, type TaskRuleAudit } from "./task-rule-audit";
@@ -370,6 +370,28 @@ async function terminateProcessTree(pid: number): Promise<void> {
   try { process.kill(pid, "SIGTERM"); } catch { }
 }
 
+async function collectPiStdout(stream: ReadableStream<Uint8Array>, onLine: (line: string) => void): Promise<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let stdout = "";
+  let pending = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    stdout += chunk;
+    pending += chunk;
+    const lines = pending.split(/\r?\n/);
+    pending = lines.pop() ?? "";
+    for (const line of lines) if (line) onLine(line);
+  }
+  const tail = decoder.decode();
+  stdout += tail;
+  pending += tail;
+  if (pending) onLine(pending);
+  return stdout;
+}
+
 async function runSandboxCommand(command: string[], env: Record<string, string>, label: string): Promise<string> {
   const child = Bun.spawn(command, { cwd: workspaceRoot, env, stdout: "pipe", stderr: "pipe" });
   const exitCode = await child.exited;
@@ -530,6 +552,7 @@ try {
   let timedOut = false;
   let stdout = "";
   let stderr = "";
+  let timeoutReason: string | undefined;
   try {
     const executionEnv = contracts.containerSandbox
       ? { PATH: Bun.env.PATH ?? "", ...containerEnvironment(Bun.env.DEEPSEEK_API_KEY, contracts.containerSandbox) }
@@ -544,8 +567,13 @@ try {
       stdout: "pipe",
       stderr: "pipe"
     });
-    const timeout = setTimeout(() => {
+    const toolTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+    let terminating = false;
+    const terminate = (reason: string) => {
+      if (terminating) return;
+      terminating = true;
       timedOut = true;
+      timeoutReason = reason;
       void terminateProcessTree(child.pid).finally(async () => {
         if (contracts.containerSandbox) {
           const cleanup = Bun.spawn(containerRemoveCommand(request.run_id), { cwd: workspaceRoot, env: executionEnv, stdout: "ignore", stderr: "ignore" });
@@ -553,10 +581,26 @@ try {
         }
         child.kill();
       });
-    }, request.execution.budget.max_duration_ms);
+    };
+    const timeout = setTimeout(() => terminate(`Pi run exceeded ${request.execution.budget.max_duration_ms}ms execution budget`), request.execution.budget.max_duration_ms);
+    const stdoutPromise = collectPiStdout(child.stdout, (line) => {
+      const event = piToolTimeoutEvent(line);
+      if (!event) return;
+      if (event.type === "end") {
+        const timer = toolTimeouts.get(event.toolCallId);
+        if (timer) clearTimeout(timer);
+        toolTimeouts.delete(event.toolCallId);
+        return;
+      }
+      const existing = toolTimeouts.get(event.toolCallId);
+      if (existing) clearTimeout(existing);
+      // Pi exposes bash tool timeouts in seconds; the runner adds a small transport grace period.
+      toolTimeouts.set(event.toolCallId, setTimeout(() => terminate(`Pi bash tool ${event.toolCallId} exceeded its declared ${event.timeoutMs}ms timeout`), event.timeoutMs + 10_000));
+    });
     exitCode = await child.exited;
-    [stdout, stderr] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text()]);
+    [stdout, stderr] = await Promise.all([stdoutPromise, new Response(child.stderr).text()]);
     clearTimeout(timeout);
+    for (const timer of toolTimeouts.values()) clearTimeout(timer);
   } catch (error) {
     console.error(`Pi command failed to start: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -568,7 +612,7 @@ try {
   const stdoutPath = joinPath(artifactPath, "pi.stdout.jsonl");
   const stderrPath = joinPath(artifactPath, "pi.stderr.log");
   await Bun.write(stdoutPath, stdout);
-  await Bun.write(stderrPath, stderr);
+  await Bun.write(stderrPath, `${stderr}${timeoutReason ? `${stderr ? "\n" : ""}${timeoutReason}\n` : ""}`);
   manifest.trace = { stdout_path: repositoryRelative(stdoutPath), stderr_path: repositoryRelative(stderrPath) };
   if (request.agent.id === "pi" && effectiveExecution.args.includes("--mode")) {
     const traceAudit = auditPiJsonTrace(stdout, request, contracts.ruleAudit, contracts.ruleContext);
