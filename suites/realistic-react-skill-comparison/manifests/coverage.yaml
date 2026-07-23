@@ -12,7 +12,7 @@ covered_rules:
   - id: async-dependencies.md
     tasks: [workspace-dashboard-rsc-v2]
   - id: bundle-conditional.md
-    tasks: [report-insights-conditional-loading-v3]
+    tasks: [report-insights-conditional-loading-v4]
   - id: server-dedup-props.md
     tasks: [team-directory-rsc-payload-v2]
   - id: server-serialization.md
