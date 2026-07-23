@@ -104,6 +104,10 @@ for (const request of requests) {
   try {
     const evaluator = evaluatorResultFromOutput(evaluation.stdout);
     entries.push({ run_id: request.run_id, task: request.task.id, condition: request.condition_id, repeat: request.repeat, status: evaluator.semantic.passed ? "evaluated" : "evaluation-failed", pi: piResult, evaluator });
+    if (!evaluator.semantic.passed && !options.continueOnFailure) {
+      await writeSummary(options.outputPath, plan, requests, entries, interrupted);
+      break;
+    }
   } catch (error) {
     entries.push(failedExecutionEntry(request, `Evaluator did not emit a structured result: ${error instanceof Error ? error.message : String(error)}`, piResult));
   }
