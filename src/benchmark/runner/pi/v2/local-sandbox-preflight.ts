@@ -19,7 +19,7 @@ function requireSuccess(result: { exitCode: number; stdout: string; stderr: stri
 
 if (Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("Local sandbox preflight requires LORELUM_LOCAL_EXPERIMENT=1");
 
-const environmentPath = join(workspaceRoot, "environments", "local-wsl-pi", "v1", "environment.yaml");
+const environmentPath = join(workspaceRoot, "environments", "local-wsl-pi", "v2", "environment.yaml");
 const environment = Bun.YAML.parse(await Bun.file(environmentPath).text()) as Record<string, unknown>;
 const sandbox = localContainerSandbox(environment);
 const cliEnv = { PATH: Bun.env.PATH ?? "", ...containerEnvironment("sandbox-preflight", sandbox) };
