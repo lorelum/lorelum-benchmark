@@ -9,10 +9,12 @@
     "pi": "bun run src/benchmark/runner/pi/v2/execute.ts",
     "pi:coordinate": "bun run src/benchmark/runner/pi/v2/coordinator.ts",
     "pi:requests": "bun run src/benchmark/runner/pi/request-generator.ts",
+    "exploratory:practice": "bun run src/benchmark/exploratory-practice-effectiveness.ts",
     "pi:v1": "bun run src/benchmark/runner/pi/v1/execute.ts",
     "test:pi:v2": "bun test src/benchmark/runner/pi/v2",
     "test:sandbox": "bun run src/benchmark/runner/pi/v2/sandbox-preflight.ts",
     "test:fixtures": "bun run src/benchmark/fixtures.ts",
+    "test:exploratory:practice": "bun test src/benchmark/exploratory-practice-effectiveness.test.ts",
     "test:contracts": "bun test src/benchmark/validate.test.ts src/benchmark/runner/pi/v2 src/benchmark/runner/pi/request-generator.test.ts"
   },
   "dependencies": {
