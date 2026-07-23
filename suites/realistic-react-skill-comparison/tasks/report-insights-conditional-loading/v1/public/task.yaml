@@ -1,0 +1,17 @@
+id: report-insights-conditional-loading-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 2
+evaluator_contract: structured/v2
+skill_relevance: direct
+source:
+  kind: public-case-abstraction
+  reviewed_cases: [https://github.com/vercel/next.js/issues/61066, https://github.com/vercel/next.js/issues/69865]
+  scenario: optional authorised report insights
+  non_derivative_statement: Original report domain, task material, evaluator and reference; neither linked issue's patch, test, reproduction nor solution is copied.
+runtime: { command: bun run evaluate -- realistic-react-skill-comparison report-insights-conditional-loading/v1 }
+agent_input: { prompt: task.md, starter: starter, candidate: app/package.json }
+applicable_conditions: [baseline, vercel-skill]
+skill_context:
+  rules: [bundle-conditional.md]

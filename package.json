@@ -15,13 +15,9 @@
     "test:pi:v2": "bun test src/benchmark/runner/pi/v2",
     "test:sandbox": "bun run src/benchmark/runner/pi/v2/sandbox-preflight.ts",
     "test:local-sandbox": "bun run src/benchmark/runner/pi/v2/local-sandbox-preflight.ts",
-    "test:fixtures": "bun run src/benchmark/fixtures.ts",
-    "test:react-runtime": "bun --conditions=react-server test incubator/react-skill-comparison/react-server-runtime/react-cache-runtime.test.ts && bun --conditions=react-server test incubator/react-skill-comparison/react-server-runtime/react-rsc-serialization-runtime.test.ts",
-    "test:exploratory:practice": "bun test src/benchmark/exploratory-practice-effectiveness.test.ts",
-    "test:react-client-runtime": "bun test incubator/react-skill-comparison/react-server-runtime/react-client-runtime.test.ts",
-    "test:realistic-repo": "bun test incubator/realistic-react-repo/v1/private/dashboard-rsc/evaluator/evaluate.test.ts incubator/realistic-react-repo/v1/private/team-directory/evaluator/evaluate.test.ts && bun run incubator/realistic-react-repo/v1/private/dashboard-rsc/evaluator/verify-baseline.ts && bun run incubator/realistic-react-repo/v1/private/report-insights/evaluator/calibrate.ts && bun run incubator/realistic-react-repo/v1/private/team-directory/evaluator/calibrate.ts",
-    "calibrate:realistic-repo": "bun run incubator/realistic-react-repo/v1/private/dashboard-rsc/evaluator/calibrate.ts && bun run incubator/realistic-react-repo/v1/private/report-insights/evaluator/calibrate.ts && bun run incubator/realistic-react-repo/v1/private/team-directory/evaluator/calibrate.ts",
-    "test:contracts": "bun test src/benchmark/validate.test.ts src/benchmark/evaluator/v2/harness.test.ts src/benchmark/runner/pi/v2 src/benchmark/runner/pi/request-generator.test.ts && bun run test:react-runtime && bun run test:react-client-runtime"
+    "test:realistic-repo": "bun run src/benchmark/calibrate-realistic-suite.ts",
+    "calibrate:realistic-repo": "bun run src/benchmark/calibrate-realistic-suite.ts",
+    "test:contracts": "bun test src/benchmark/validate.test.ts src/benchmark/evaluator/v2/harness.test.ts src/benchmark/runner/pi/v2"
   },
   "dependencies": {
     "ajv": "^8.17.1"

@@ -1,0 +1,18 @@
+id: realistic-react-skill-comparison
+version: 1.0.0
+track: performance-skill-comparison
+lifecycle_stage: pilot
+protocol: ../../docs/BENCHMARK_PROTOCOL.md
+conditions:
+  - baseline
+  - vercel-skill
+tasks:
+  - id: workspace-dashboard-rsc-v1
+    path: tasks/workspace-dashboard-rsc/v1
+    lifecycle_stage: pilot
+  - id: report-insights-conditional-loading-v1
+    path: tasks/report-insights-conditional-loading/v1
+    lifecycle_stage: pilot
+  - id: team-directory-rsc-payload-v1
+    path: tasks/team-directory-rsc-payload/v1
+    lifecycle_stage: pilot
