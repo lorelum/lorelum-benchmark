@@ -2,7 +2,7 @@ id: realistic-react-g0-g1-local-pilot-v5
 version: v1
 lifecycle_stage: active
 run_kind: pilot
-source_commit: 9e09bdd819d7515bc362b0b562418d9f53514d54
+source_commit: 46c7cd1dffa8733e6205c9ea659c25fe055bebc5
 suite: { id: realistic-react-skill-comparison, version: 1.0.0 }
 conditions:
   - { id: baseline, label: G0 local pilot, treatment: baseline/v1 }
