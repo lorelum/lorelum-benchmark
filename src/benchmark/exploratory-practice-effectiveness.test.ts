@@ -6,3 +6,8 @@ test("exploratory practice plan preflight verifies private references without ru
   expect(exitCode, stderr).toBe(0);
   expect(stdout).toContain("Exploratory plan preflight passed");
 });
+
+test("local proxied mode overrides the Pi image entrypoint for the proxy", async () => {
+  const source = await Bun.file("src/benchmark/exploratory-practice-effectiveness.ts").text();
+  expect(source).toContain('"--entrypoint", "node", image, "/proxy/egress.mjs"');
+});

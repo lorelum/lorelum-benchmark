@@ -220,7 +220,7 @@ async function startLocalProxy(image: string, session: string): Promise<LocalPro
   const created = await docker(["network", "create", "--internal", network], 30000);
   if (created.exit_code !== 0) fail("Unable to create internal exploratory network: " + created.stderr.trim());
   const proxyPath = joinPath(workspaceRoot, "src", "benchmark", "exploratory-deepseek-egress-proxy.mjs");
-  const started = await docker(["run", "-d", "--name", container, "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit", "128", "--memory", "256m", "--network", "bridge", "--tmpfs", "/tmp:rw,noexec,nosuid,size=32m", "--mount", "type=bind,src=" + proxyPath + ",dst=/proxy/egress.mjs,readonly", image, "node", "/proxy/egress.mjs"], 30000);
+  const started = await docker(["run", "-d", "--name", container, "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit", "128", "--memory", "256m", "--network", "bridge", "--tmpfs", "/tmp:rw,noexec,nosuid,size=32m", "--mount", "type=bind,src=" + proxyPath + ",dst=/proxy/egress.mjs,readonly", "--entrypoint", "node", image, "/proxy/egress.mjs"], 30000);
   if (started.exit_code !== 0) { await docker(["network", "rm", network], 30000); fail("Unable to start local egress proxy: " + started.stderr.trim()); }
   const connected = await docker(["network", "connect", "--alias", "lorelum-egress-proxy", network, container], 30000);
   if (connected.exit_code !== 0) { await docker(["rm", "--force", container], 30000); await docker(["network", "rm", network], 30000); fail("Unable to attach local egress proxy: " + connected.stderr.trim()); }
