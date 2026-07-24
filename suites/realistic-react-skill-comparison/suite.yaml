@@ -1,5 +1,5 @@
 id: realistic-react-skill-comparison
-version: 0.2.0
+version: 1.0.1
 track: performance-skill-comparison
 lifecycle_stage: pilot
 protocol: ../../docs/BENCHMARK_PROTOCOL.md
@@ -34,6 +34,16 @@ tasks:
   - id: report-insights-conditional-loading-v7
     path: tasks/report-insights-conditional-loading/v7
     lifecycle_stage: pilot
+  - id: team-directory-rsc-payload-v1
+    path: tasks/team-directory-rsc-payload/v1
+    lifecycle_stage: retired
+  - id: team-directory-rsc-payload-v2
+    path: tasks/team-directory-rsc-payload/v2
+    lifecycle_stage: retired
+  - id: team-directory-rsc-payload-v3
+    path: tasks/team-directory-rsc-payload/v3
+    lifecycle_stage: pilot
 default_active_task_set:
   - workspace-dashboard-rsc-v2
   - report-insights-conditional-loading-v7
+  - team-directory-rsc-payload-v3
