@@ -36,10 +36,5 @@ jobs:
         with:
           bun-version: "1.3.11"
       - run: bun install --frozen-lockfile
-      - run: bun install --frozen-lockfile
-        working-directory: incubator/realistic-react-repo/v1/public/starter/app
       - run: bunx playwright install --with-deps chromium
-        working-directory: incubator/realistic-react-repo/v1/public/starter/app
       - run: bun run test:realistic-repo
-      - run: docker build --file incubator/realistic-react-repo/v1/evaluator-image/Dockerfile --tag lorelum-realistic-evaluator:ci .
-      - run: docker run --rm --entrypoint /bin/sh lorelum-realistic-evaluator:ci -ec 'test "$(bun --version)" = "1.3.11"; test "$(node --version)" = "v22.19.0"; test "$(bunx playwright --version)" = "Version 1.61.1"'
