@@ -18,9 +18,9 @@ bun run pi:coordinate -- scratch/requests/<run-id>.json --dry-run
 bun run pi:coordinate -- scratch/requests/<run-id>.json
 ```
 
-当前不存在 active G0/G1 计划或正式 record。React Skill 对比处于
-`incubator/realistic-react-repo/v1` 的离线校准阶段；三份问题预注册完成前，
-不得生成 Pi 请求或调用模型 API。
+当前不存在 active G0/G1 计划或正式 record。React Skill 对比的三个 pilot revision
+已在 `suites/realistic-react-skill-comparison` 冻结；在新的实验计划、离线校准与运行
+前置条件全部通过前，不得生成 Pi 请求或调用模型 API。
 
 `--dry-run` 会验证全部契约并输出将要使用的隔离工作区，不创建目录也不执行 Pi。正式运行
 会在 `artifacts/runs/<run-id>/<manifest_name>` 写入 `pi-run-artifact/v2` manifest，记录经过

@@ -5,17 +5,16 @@ G0/G1 的主证据将来自真实 Next App Router 仓库，而不是单文件微
 
 ## 当前状态
 
-[`incubator/realistic-react-repo/v1`](incubator/realistic-react-repo/v1) 是当前唯一的
-React Skill 对比候选基座。它包含冻结的 Next、React、Playwright 依赖，预注册的三份
-真实问题 dossier，以及已离线校准的 dashboard 首题。尚未创建正式 task revision、Pi
-请求或运行记录，也不会在离线校准前调用模型 API。
+[`realistic-react-skill-comparison`](suites/realistic-react-skill-comparison) 是当前的
+React Skill 对比 suite。它包含三个冻结依赖的多文件 Next App Router pilot revision：
+dashboard RSC、report 条件加载和 team directory RSC payload。没有正式 Pi 请求或运行
+记录；已被后续 revision 取代的候选仍保留在原路径，并标记为 `retired`。
 
 `practice-effectiveness` 保持独立的候选轨道，不与 React Skill 对比共享结论。
 
 ## 目录结构
 
-- `incubator/realistic-react-repo/`：真实仓库候选、public starter 与 private evaluator。
-- `suites/`：未来冻结后的正式任务 revision。
+- `suites/`：冻结的正式任务 revision 与私有 evaluator。
 - `schemas/`：机器可读契约。
 - `src/benchmark/`：Bun/TypeScript 校验器、evaluator 和 Pi v2 adapter。
 - `treatments/`、`environments/`：固定 Skill、运行环境与隔离策略。
@@ -29,8 +28,9 @@ bun run test:contracts
 bun run test:realistic-repo
 ```
 
-真实仓库的候选路径、私有边界和离线校准规则见
-[`incubator/realistic-react-repo/v1/benchmark.yaml`](incubator/realistic-react-repo/v1/benchmark.yaml)。
+真实仓库任务的候选路径、私有边界和离线校准由
+[`suites/realistic-react-skill-comparison`](suites/realistic-react-skill-comparison) 中的
+task card、snapshot 和 `bun run test:realistic-repo` 共同定义。
 
 ## Pi 自动化
 

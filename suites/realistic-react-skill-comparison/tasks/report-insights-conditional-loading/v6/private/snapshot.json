@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "1dab29eabebb494e2902481559d99f83870a0532e7a529b0d3cf0e03cc06f058",
+  "snapshot_id": "209f4b11482c15d2bf370b446f67b5b6669fa6ad13f9affc9f49101fe91730b8",
   "files": {
     "private/evaluator/evaluate.ts": "19fa67aada4e3743172f02120c02a9c627350616c080ba77bb39d82a8c5eea45",
     "private/mutations/eager-load/components/reports/insights-panel.tsx": "c3cd05f13cae1d9e9a67ad8fd4e30adc58e9953ecf805337899d7733a6241f57",
@@ -31,7 +31,6 @@
     "public/starter/app/tests/run-e2e.ts": "2845c3f3a5136be9a056bc0d8a16c3f411c97fcb65a88794481e511720ce58f1",
     "public/starter/app/tests/workspace.spec.ts": "085369359740fa3d492fd53166045a917d5178158e4594335ee8fdbbdf5837f0",
     "public/starter/app/tsconfig.json": "a0c65e588a6b07bcb9e44bce959fceb7a44a220d797700bc703a1ae53c1a9342",
-    "public/starter/app/tsconfig.tsbuildinfo": "1d7f18303eacab45840d8a95fdc556989dda57ecd3413547cbaef27c99028d4f",
     "public/task.md": "0d2e516081e39d97cc377d7e847d7ec4cf6de58df0f8e621a159520f1873875c",
     "public/task.yaml": "286d1da04d6ed2c3a6593ee2519f1e20617296c8b3ebad37e7b69da88eb51874"
   }

@@ -1,5 +1,5 @@
 id: realistic-react-skill-comparison
-version: 1.0.0
+version: 1.0.1
 track: performance-skill-comparison
 lifecycle_stage: pilot
 protocol: ../../docs/BENCHMARK_PROTOCOL.md
@@ -9,34 +9,34 @@ conditions:
 tasks:
   - id: workspace-dashboard-rsc-v1
     path: tasks/workspace-dashboard-rsc/v1
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: report-insights-conditional-loading-v1
     path: tasks/report-insights-conditional-loading/v1
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: team-directory-rsc-payload-v1
     path: tasks/team-directory-rsc-payload/v1
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: workspace-dashboard-rsc-v2
     path: tasks/workspace-dashboard-rsc/v2
     lifecycle_stage: pilot
   - id: report-insights-conditional-loading-v2
     path: tasks/report-insights-conditional-loading/v2
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: report-insights-conditional-loading-v3
     path: tasks/report-insights-conditional-loading/v3
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: report-insights-conditional-loading-v4
     path: tasks/report-insights-conditional-loading/v4
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: report-insights-conditional-loading-v5
     path: tasks/report-insights-conditional-loading/v5
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: report-insights-conditional-loading-v6
     path: tasks/report-insights-conditional-loading/v6
     lifecycle_stage: pilot
   - id: team-directory-rsc-payload-v2
     path: tasks/team-directory-rsc-payload/v2
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: team-directory-rsc-payload-v3
     path: tasks/team-directory-rsc-payload/v3
     lifecycle_stage: pilot

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "4b3a2b476cbe518a2ea29bfe24c428b4693051187cc3d8bbcdccf7e54308428d",
+  "snapshot_id": "61c9eaf606a9f65e31a90af0802b3044f7fd5c8b690f4e52bf6509f65c1124d5",
   "files": {
     "private/evaluator/evaluate.ts": "4353d730e0de60d40e6bac384489cbb88eff37bb41ef8fab23c74cb605bc5e72",
     "private/mutations/duplicate-props/app/team/page.tsx": "571984873626367213224fd0d881d067092428b6686cfba8dfb84dd88908d955",
@@ -32,7 +32,6 @@
     "public/starter/app/tests/run-e2e.ts": "a99171d8563b7b7fedaee638cbebf5926d8743dcc94d0b50311355774db945ae",
     "public/starter/app/tests/workspace.spec.ts": "085369359740fa3d492fd53166045a917d5178158e4594335ee8fdbbdf5837f0",
     "public/starter/app/tsconfig.json": "a0c65e588a6b07bcb9e44bce959fceb7a44a220d797700bc703a1ae53c1a9342",
-    "public/starter/app/tsconfig.tsbuildinfo": "1d7f18303eacab45840d8a95fdc556989dda57ecd3413547cbaef27c99028d4f",
     "public/task.md": "919979acd0c747dc0659deb4d60dfd29305c61f22afcaa030b3c25c13235ca00",
     "public/task.yaml": "fd55e109e28ef2b18213a7069647a1f30d72dc311e7938add141ba3b10d1d67d"
   }
