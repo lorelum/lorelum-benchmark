@@ -29,3 +29,20 @@ UTC 时间、hash、预算及 evaluator outcome 只会写至被忽略的
 这只产生方向性探索信号，不能支持 Lorelum 产品整体有效、Practice 已被证明有效、可复现效果、
 candidate 升级或正式 benchmark 结论。正式四条件矩阵仍分别受 provider immutable snapshot、版本化
 retrieval adapter/pinned output，以及独立 candidate 升级决定阻塞。
+
+经明确授权后，可用 `--mode local-direct` 在本地构建 Pi `0.80.10` Docker 镜像并直连 DeepSeek API。该模式仍只挂载 public workspace 和只读 treatment，但不具备 allowlist egress、固定 registry image 或 protected runner；其 scratch record 会明确标记该非正式网络边界：
+
+```sh
+bun run exploratory:practice -- execute --mode local-direct --auth-file "$HOME/.pi/agent/auth.json"
+```
+
+若一个 scratch-only 尝试因本机 Docker 或进程中断而未完成，可用其已计划的 run ID 精确重试，避免重跑
+其他条件；该诊断尝试仍留在被忽略的 scratch 目录，不能计入 36 次有效尝试：
+
+```sh
+bun run exploratory:practice -- execute --mode local-direct --auth-file "$HOME/.pi/agent/auth.json" \
+  --run-id pe-webhook-raw-body-verification-irrelevant-practice-02
+```
+
+每个新 scratch record 会写入本地执行模式、非正式直连网络边界和本地镜像标识；这些信息只用于
+运行配置审计，不会成为正式 artifact manifest 或 benchmark record。
