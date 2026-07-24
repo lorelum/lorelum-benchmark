@@ -1,0 +1,17 @@
+version: 1
+baseline:
+  repository: vercel-labs/agent-skills
+  revision: f8a72b9603728bb92a217a879b7e62e43ad76c81
+  skill: skills/react-best-practices
+coverage_status: partial
+covered_rules:
+  - id: server-cache-react.md
+    tasks: [workspace-dashboard-rsc-v2]
+  - id: async-parallel.md
+    tasks: [workspace-dashboard-rsc-v2]
+  - id: async-dependencies.md
+    tasks: [workspace-dashboard-rsc-v2]
+acceptance:
+  semantic_gate_required: true
+  deterministic_dynamic_quality_required: true
+  wall_clock_thresholds_prohibited: true

@@ -1,0 +1,11 @@
+id: workspace-dashboard-rsc-v1
+reference_solution: reference/dashboard-runtime.ts
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+quality_probes:
+  - { id: request-scope-workspace-dedup, rule_behavior_id: request-scope-workspace-dedup }
+  - { id: independent-root-start, rule_behavior_id: independent-root-start }
+  - { id: projects-after-workspace, rule_behavior_id: projects-after-workspace }
+mutations:
+  - { id: duplicate-workspace-read, rule_behavior_id: request-scope-workspace-dedup }
+  - { id: quota-after-workspace, rule_behavior_id: independent-root-start }
+  - { id: projects-after-quota, rule_behavior_id: projects-after-workspace }

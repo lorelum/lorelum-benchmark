@@ -1,0 +1,17 @@
+id: realistic-react-skill-comparison
+version: 0.1.0
+track: performance-skill-comparison
+lifecycle_stage: pilot
+protocol: ../../docs/BENCHMARK_PROTOCOL.md
+conditions:
+  - baseline
+  - vercel-skill
+tasks:
+  - id: workspace-dashboard-rsc-v1
+    path: tasks/workspace-dashboard-rsc/v1
+    lifecycle_stage: retired
+  - id: workspace-dashboard-rsc-v2
+    path: tasks/workspace-dashboard-rsc/v2
+    lifecycle_stage: pilot
+default_active_task_set:
+  - workspace-dashboard-rsc-v2
