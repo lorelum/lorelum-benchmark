@@ -27,6 +27,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build --file Dockerfile.formal-pi --tag lorelum-formal-pi:ci .
-      - run: |
-          docker run --rm --entrypoint /bin/sh lorelum-formal-pi:ci -ec \
-            "test \"\$(bun --version)\" = \"1.3.11\"; test \"\$(node --version)\" = \"v22.19.0\"; command -v pi >/dev/null; grep -q '\"version\": \"0.80.10\"' node_modules/@earendil-works/pi-coding-agent/package.json"
+      - run: docker run --rm --entrypoint /bin/sh lorelum-formal-pi:ci -ec 'test "$(bun --version)" = "1.3.11"; test "$(node --version)" = "v22.19.0"; test "$(pi --version)" = "0.80.10"'
+
+  realistic-repository:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:realistic-repo

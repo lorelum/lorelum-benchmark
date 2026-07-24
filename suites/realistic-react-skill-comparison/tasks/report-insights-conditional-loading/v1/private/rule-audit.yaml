@@ -1,0 +1,10 @@
+schema_version: task-rule-audit/v1
+task_id: report-insights-conditional-loading-v1
+treatment:
+  id: vercel-skill
+  version: v2
+required_rules:
+  - bundle-conditional.md
+behaviors:
+  - id: explicit-insights-module-loading
+    rule: bundle-conditional.md

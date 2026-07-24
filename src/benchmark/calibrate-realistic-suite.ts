@@ -21,7 +21,12 @@ const cases: CalibrationCase[] = [
   { task: "workspace-dashboard-rsc/v2", label: "duplicate-workspace-read", expectedScore: 66, overlay: "mutations/duplicate-workspace-read.ts", destination: "lib/dashboard-runtime.ts" },
   { task: "workspace-dashboard-rsc/v2", label: "quota-after-workspace", expectedScore: 67, overlay: "mutations/quota-after-workspace.ts", destination: "lib/dashboard-runtime.ts" },
   { task: "workspace-dashboard-rsc/v2", label: "projects-after-quota", expectedScore: 67, overlay: "mutations/projects-after-quota.ts", destination: "lib/dashboard-runtime.ts" },
-  { task: "workspace-dashboard-rsc/v2", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" }
+  { task: "workspace-dashboard-rsc/v2", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" },
+  { task: "report-insights-conditional-loading/v7", label: "starter", expectedScore: 0 },
+  { task: "report-insights-conditional-loading/v7", label: "reference", expectedScore: 100, overlay: "reference/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
+  { task: "report-insights-conditional-loading/v7", label: "react-lazy", expectedScore: 100, overlay: "accepted/react-lazy/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
+  { task: "report-insights-conditional-loading/v7", label: "next-dynamic", expectedScore: 100, overlay: "accepted/next-dynamic/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
+  { task: "report-insights-conditional-loading/v7", label: "eager-load", expectedScore: 0, overlay: "mutations/eager-load/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" }
 ];
 
 function evaluatorResult(stdout: string): { semantic: { passed: boolean }; quality: { score: number } } {
