@@ -5,7 +5,7 @@ import { joinPath, sha256File, sha256Text, workspaceRoot } from "./fs";
 
 type RecordValue = Record<string, unknown>;
 type Treatment = { id: string; version: string; content_sha256: string; length: number };
-type Task = { id: string; candidate: string; task_snapshot_sha256: string; profile: string; profile_sha256: string; oracle: Treatment; irrelevant: Treatment };
+type Task = { id: string; candidate: string; candidate_entrypoint: string; task_snapshot_sha256: string; profile: string; profile_sha256: string; oracle: Treatment; irrelevant: Treatment };
 type Plan = { id: string; version: string; source_commit: string; scope: { repetitions: number; conditions: string[]; total_executions: number }; execution: RecordValue; tasks: Task[] };
 
 const planPath = joinPath(workspaceRoot, "protocol", "practice-effectiveness-exploratory", "v1", "plan.yaml");
@@ -73,6 +73,16 @@ async function verifyTreatment(task: Task, key: "oracle_practice" | "irrelevant_
   return content;
 }
 
+async function verifyCandidateEntrypoint(task: Task, publicRoot: string): Promise<void> {
+  if (typeof task.candidate_entrypoint !== "string" || task.candidate_entrypoint.length === 0) fail(`Candidate entrypoint is missing: ${task.id}`);
+  const starterRoot = resolve(publicRoot, "starter");
+  const entrypoint = resolve(publicRoot, task.candidate_entrypoint);
+  const entrypointRelative = relative(starterRoot, entrypoint);
+  if (entrypointRelative.startsWith("..") || isAbsolute(entrypointRelative)) fail(`Candidate entrypoint escapes public starter: ${task.id}`);
+  const stats = await lstat(entrypoint);
+  if (!stats.isFile() && !stats.isDirectory()) fail(`Candidate entrypoint is not a file or directory: ${task.id}`);
+}
+
 async function verifyPlan(plan: Plan): Promise<Map<string, { oracle: string; irrelevant: string }>> {
   const execution = plan.execution;
   if (plan.id !== "practice-effectiveness-exploratory" || plan.version !== "v1" || plan.scope.repetitions !== 2 || plan.scope.total_executions !== 36 || JSON.stringify(plan.scope.conditions) !== JSON.stringify(["baseline", "oracle-practice", "irrelevant-practice"])) fail("Exploratory plan scope is not the authorized 36-run design");
@@ -89,6 +99,7 @@ async function verifyPlan(plan: Plan): Promise<Map<string, { oracle: string; irr
     const evaluatorRoot = joinPath(candidateRoot, "private", "evaluator");
     if (!(await Bun.file(joinPath(publicRoot, "task.md")).exists()) || !(await Bun.file(joinPath(publicRoot, "task.yaml")).exists()) || !(await Bun.file(joinPath(evaluatorRoot, "functional.test.ts")).exists())) fail(`Candidate public/private boundary is incomplete: ${task.id}`);
     await verifyCandidateSnapshot(task.candidate, task.task_snapshot_sha256);
+    await verifyCandidateEntrypoint(task, publicRoot);
     const publicFiles = (await walkFiles(publicRoot)).map((file) => joinPath(publicRoot, file));
     const oracle = await verifyTreatment(task, "oracle_practice", task.oracle, publicFiles);
     const irrelevant = await verifyTreatment(task, "irrelevant_control", task.irrelevant, publicFiles);
@@ -226,7 +237,7 @@ async function execute(plan: Plan, treatments: Map<string, { oracle: string; irr
       ? { PATH: Bun.env.PATH ?? "", ...containerEnvironment(key, sandbox!) }
       : { PATH: Bun.env.PATH ?? "", DEEPSEEK_API_KEY: key }, Number(execution.max_duration_ms), mode === "local-direct" ? () => removeLocalContainer(runId) : undefined);
     await writeFile(join(runRoot, "pi.stdout.log"), pi.stdout); await writeFile(join(runRoot, "pi.stderr.log"), pi.stderr);
-    const evaluator = pi.exit_code === 0 && !pi.timed_out ? await runProcess([process.execPath, "test", joinPath(workspaceRoot, task.candidate, "private", "evaluator")], workspaceRoot, { ...Bun.env, CANDIDATE_PATH: join(workspace, "starter") }, Number(execution.max_duration_ms)) : undefined;
+    const evaluator = pi.exit_code === 0 && !pi.timed_out ? await runProcess([process.execPath, "test", joinPath(workspaceRoot, task.candidate, "private", "evaluator")], workspaceRoot, { ...Bun.env, CANDIDATE_PATH: join(workspace, task.candidate_entrypoint) }, Number(execution.max_duration_ms)) : undefined;
     if (evaluator) { await writeFile(join(runRoot, "evaluator.stdout.log"), evaluator.stdout); await writeFile(join(runRoot, "evaluator.stderr.log"), evaluator.stderr); }
     const diff = await runProcess(["git", "diff", "--no-index", "--", joinPath(workspaceRoot, task.candidate, "public", "starter"), join(workspace, "starter")], workspaceRoot, Bun.env, 30000);
     await writeFile(join(runRoot, "candidate.diff"), `${diff.stdout}${diff.stderr}`);

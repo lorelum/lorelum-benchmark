@@ -38,6 +38,7 @@ execution:
 tasks:
   - id: pe-loopback-admin-deployment
     candidate: incubator/practice-effectiveness/pe-loopback-admin-deployment
+    candidate_entrypoint: starter
     task_snapshot_sha256: cb652a10eae125bc3449e6a2289a20541a631979182197e1a1c8f78728dd53fa
     profile: incubator/practice-effectiveness/pe-loopback-admin-deployment/private/validation-profile/pnotify.loopback-deployment/v1.yaml
     profile_sha256: 47db14fbd9899758f3e40c1cfa3f8a84e2cf45409e5d93e8c90446c05f1d2562
@@ -45,6 +46,7 @@ tasks:
     irrelevant: { id: pnotify.loopback-deployment-irrelevant-v1, version: v1, content_sha256: c985d657add8c8c52d1603a62feca539e53bf7aae328271446f40ee1ea966e46, length: 259 }
   - id: pe-validation-report-grading
     candidate: incubator/practice-effectiveness/pe-validation-report-grading
+    candidate_entrypoint: starter/src/validation-report.ts
     task_snapshot_sha256: 670835732ea3b448d119648a7c6636594588106fefc6ec6f8a82812e7833e1e6
     profile: incubator/practice-effectiveness/pe-validation-report-grading/private/validation-profile/pformat.report-grading/v1.yaml
     profile_sha256: fa8ef2b0ded94e92f2f1db37b431328d26cb043c0ef0a6b4a3873b7f6e4afd91
@@ -52,6 +54,7 @@ tasks:
     irrelevant: { id: pformat-report-grading-irrelevant-v1, version: v1, content_sha256: faae193ad0ac9582dc4809e6df1019e707c0e58556168fe16d9bf21752498931, length: 201 }
   - id: pe-declared-dependency-compatibility
     candidate: incubator/practice-effectiveness/pe-declared-dependency-compatibility
+    candidate_entrypoint: starter/src/release-check.ts
     task_snapshot_sha256: 680173534fe442646dd311a2818e12bbd1c3d3b31e1f511b8d54efabb64cc1db
     profile: incubator/practice-effectiveness/pe-declared-dependency-compatibility/private/validation-profile/pformat.v1-compat-boundary/v1.yaml
     profile_sha256: 6e41fa055300fde054fef7a405d3e4c5078f65944cf4af188d79b2e05bff367c
@@ -59,6 +62,7 @@ tasks:
     irrelevant: { id: pformat-v1-compat-boundary-irrelevant-v1, version: v1, content_sha256: 7aab4b157c77149be0b25b8537b3bd5630d15e3f406bb625e2618cc202a4f413, length: 191 }
   - id: pe-dangling-recommendation-reference
     candidate: incubator/practice-effectiveness/pe-dangling-recommendation-reference
+    candidate_entrypoint: starter/src/publication-check.ts
     task_snapshot_sha256: b074037cb0d7522833630fcbd585c4786022669ee105fd54439b79a7f200d42a
     profile: incubator/practice-effectiveness/pe-dangling-recommendation-reference/private/validation-profile/pformat.reference-graph/v1.yaml
     profile_sha256: b23c4917b8e52aec0fd4868bfb4f105a191e8298b61cbd4497e6938d631ce713
@@ -66,6 +70,7 @@ tasks:
     irrelevant: { id: pformat-reference-graph-irrelevant-v1, version: v1, content_sha256: e78b8093dcd49cb0df0279e378024acc741a82f2691589cf5cd8af01a6251b7d, length: 202 }
   - id: pe-priority-route-selection
     candidate: incubator/practice-effectiveness/pe-priority-route-selection
+    candidate_entrypoint: starter/src/route-selector.ts
     task_snapshot_sha256: 9ac6d1f53fcc461c4c77d8be6eb2fccdb22137a64d8be2c516c7b74b3971189c
     profile: incubator/practice-effectiveness/pe-priority-route-selection/private/validation-profile/pnotify.route-selection/v1.yaml
     profile_sha256: 830af38e930f785cc4f0b74d26031097a7047f054ef73bb454246afa963ae17a
@@ -73,6 +78,7 @@ tasks:
     irrelevant: { id: pnotify-route-selection-irrelevant-v1, version: v1, content_sha256: b66d58716dddcae618304efc5bcba8d01898e9622e70fd0f330305d561a9209e, length: 191 }
   - id: pe-webhook-raw-body-verification
     candidate: incubator/practice-effectiveness/pe-webhook-raw-body-verification
+    candidate_entrypoint: starter/src/webhook-entry.ts
     task_snapshot_sha256: 77dc2c1ed407f0ee35321e730e5529ddb4840da0da3eb1545ae578d1a096038f
     profile: incubator/practice-effectiveness/pe-webhook-raw-body-verification/private/validation-profile/pnotify.raw-webhook-auth/v1.yaml
     profile_sha256: b52080cb9aeeebd8741ac15e89bcbba24ecef8c179bb74119d0c4e4902fc6680
