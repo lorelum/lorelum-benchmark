@@ -23,7 +23,11 @@ const snapshotCheck = Bun.spawn([process.execPath, "run", "src/benchmark/snapsho
 });
 if ((await snapshotCheck.exited) !== 0) process.exit(1);
 
-const evaluator = Bun.spawn([process.execPath, "test", evaluatorPath], {
+const taskCard = Bun.YAML.parse(await Bun.file(joinPath(task.path, "public", "task.yaml")).text()) as { evaluator_contract?: unknown };
+const evaluatorCommand = taskCard.evaluator_contract === "structured/v2"
+  ? [process.execPath, "run", "src/benchmark/evaluator/v2/run.ts", suite, taskReference]
+  : [process.execPath, "test", evaluatorPath];
+const evaluator = Bun.spawn(evaluatorCommand, {
   cwd: workspaceRoot,
   env: Bun.env,
   stdin: "inherit",
