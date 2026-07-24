@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "209f4b11482c15d2bf370b446f67b5b6669fa6ad13f9affc9f49101fe91730b8",
+  "snapshot_id": "539abf96afc1f4773f2158afff96420684d1f184c7f2ff33998f0f6ba9a9dbbd",
   "files": {
     "private/evaluator/evaluate.ts": "19fa67aada4e3743172f02120c02a9c627350616c080ba77bb39d82a8c5eea45",
     "private/mutations/eager-load/components/reports/insights-panel.tsx": "c3cd05f13cae1d9e9a67ad8fd4e30adc58e9953ecf805337899d7733a6241f57",
@@ -9,6 +9,7 @@
     "private/oracle.yaml": "fa3a21d56f45740fdb4d4987ee48dbb76d455cbea1cee241433fc8be720dc69a",
     "private/reference/components/reports/insights-panel.tsx": "541babe97583d2d81d46de571b4a4f36b6060ee947ae3bc4950f9d5bcb4ea4d5",
     "private/rule-audit.yaml": "beceee3e9b61f5e4bd9dc34c70d54a82023febe4b548771367c54e644d1ac8e8",
+    "public/starter/app/.gitignore": "a0da68b32f2c9b35d2af19654b5c926843c1689cfc44ab01daa601b08ae0be6a",
     "public/starter/app/app/layout.tsx": "86594b7950e6a26ceb6bdcbd1d73b18797c72e585555d4b920a4e4bd0a370e97",
     "public/starter/app/app/reports/[reportId]/page.tsx": "4a3a421b75553bb57750707562edf40b0c7ca8642cb5ebcebc76eb855f824621",
     "public/starter/app/app/team/page.tsx": "b93bc7f819968d1cadc6c0e07207b0c6317ed4e6f17b537ad54ee057c92b25fb",
