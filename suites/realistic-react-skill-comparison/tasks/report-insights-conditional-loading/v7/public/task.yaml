@@ -1,7 +1,7 @@
-id: report-insights-conditional-loading-v6
-version: 6
+id: report-insights-conditional-loading-v7
+version: 7
 track: performance-skill-comparison
-lifecycle_stage: retired
+lifecycle_stage: pilot
 evaluator_version: 2
 evaluator_contract: structured/v2
 skill_relevance: direct
