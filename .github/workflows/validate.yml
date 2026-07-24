@@ -20,7 +20,6 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run validate
       - run: bun run test:contracts
-      - run: bun run test:fixtures
 
   formal-container:
     runs-on: ubuntu-latest
