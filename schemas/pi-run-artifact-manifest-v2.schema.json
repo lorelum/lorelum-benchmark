@@ -8,7 +8,7 @@
     "run_id": { "type": "string" },
     "experiment_id": { "type": "string", "minLength": 1 },
     "experiment_plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "run_kind": { "enum": ["smoke", "official"] },
+    "run_kind": { "enum": ["smoke", "pilot", "official"] },
     "condition_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
     "repeat": { "type": "integer", "minimum": 1 },
     "source_commit": { "type": "string", "minLength": 1 },
@@ -22,6 +22,70 @@
     "agent": { "type": "object" },
     "execution": { "type": "object" },
     "inputs": { "type": "object" },
+    "rule_audit": {
+      "type": "object",
+      "required": ["manifest_path", "sha256", "treatment", "required_rules"],
+      "properties": {
+        "manifest_path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "treatment": {
+          "type": "object",
+          "required": ["id", "version"],
+          "properties": {
+            "id": { "type": "string" },
+            "version": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "required_rules": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "rule_context": {
+      "type": "object",
+      "required": ["schema_version", "router", "public_input_sha256", "bundle_sha256", "rules", "sha256"],
+      "properties": {
+        "schema_version": { "const": "pi-rule-context/v1" },
+        "router": {
+          "type": "object",
+          "required": ["id", "version", "maxRules"],
+          "properties": {
+            "id": { "const": "public-bm25" },
+            "version": { "const": "v1" },
+            "maxRules": { "const": 3 }
+          },
+          "additionalProperties": false
+        },
+        "public_input_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bundle_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "rules": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["path", "sha256", "score"],
+            "properties": {
+              "path": { "type": "string", "pattern": "^rules/[a-z0-9-]+\\.md$" },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "score": { "type": "number", "exclusiveMinimum": 0 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "trace": {
+      "type": "object",
+      "required": ["stdout_path", "stderr_path"],
+      "properties": {
+        "stdout_path": { "type": "string", "minLength": 1 },
+        "stderr_path": { "type": "string", "minLength": 1 },
+        "audit_path": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "workspace": {
       "type": "object",
       "required": ["path", "task_md_sha256", "starter_files"],

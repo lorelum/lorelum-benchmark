@@ -30,7 +30,7 @@
     "run_id": { "type": "string" },
     "experiment_id": { "type": "string", "minLength": 1 },
     "experiment_plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "run_kind": { "enum": ["smoke", "official"] },
+    "run_kind": { "enum": ["smoke", "pilot", "official"] },
     "condition_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
     "repeat": { "type": "integer", "minimum": 1 },
     "suite_version": { "type": "string" },
@@ -121,7 +121,35 @@
         "automated_checks_passed": { "type": "boolean" },
         "blind_review": { "enum": ["pass", "partial", "fail", "pending"] },
         "diff_path": { "type": "string" },
-        "failure_reason": { "type": "string", "minLength": 1 }
+        "failure_reason": { "type": "string", "minLength": 1 },
+        "quality_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "evaluator": {
+          "type": "object",
+          "required": ["schema_version", "evaluator_version", "semantic", "quality"],
+          "properties": {
+            "schema_version": { "const": "evaluator-result/v2" },
+            "evaluator_version": { "const": 2 },
+            "semantic": {
+              "type": "object",
+              "required": ["passed", "checks"],
+              "properties": {
+                "passed": { "type": "boolean" },
+                "checks": { "type": "array" }
+              },
+              "additionalProperties": false
+            },
+            "quality": {
+              "type": "object",
+              "required": ["score", "probes"],
+              "properties": {
+                "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+                "probes": { "type": "array" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
       }
     }
   },

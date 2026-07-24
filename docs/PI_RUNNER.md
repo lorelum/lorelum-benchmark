@@ -7,8 +7,9 @@ treatment manifest 和 environment manifest，随后在 `.run-workspaces/<run-id
 
 工作区只包含 `public/task.md` 和 `public/starter/`；`private/`、evaluator、oracle 与
 snapshot 永远不会复制给 Pi。请求中的 Pi 命令和参数仍保持显式，但命令必须与 environment
-manifest 中固定的 agent runtime command 一致。`skill`、`oracle` 和 `control` treatment 的固定 `SKILL.md` 会在
-hash 校验后作为 Pi `--skill` 参数注入；baseline 不注入任何内容。adapter 约束命令的工作目录；正式环境还
+manifest 中固定的 agent runtime command 一致。`vercel-skill/v2` 通过仓库、commit、子路径和目录 hash
+固定原生 `SKILL.md` 与 `rules/`；adapter 在宿主侧校验并缓存 bundle，再作为只读 Pi Skill 注入。
+baseline 不下载或挂载 Skill。adapter 约束命令的工作目录；正式环境还
 必须由 environment manifest 指定的 sandbox 阻止 Pi 逃逸到宿主文件系统。
 
 ```sh
@@ -22,12 +23,22 @@ bun run pi:coordinate -- scratch/requests/<run-id>.json
 核验的输入、实际工作区、公开文件 hash、命令、状态和退出码。大体积 trace、输出与 diff
 应从该目录上传到 artifact storage；仓库只提交其索引和校验和。
 
-`pi:requests` 会将 experiment ID、计划 hash 和 `smoke`/`official` run kind 写入请求，并按实验计划中的 task、condition 与重复次数生成稳定 run ID。`pi:coordinate`
+`pi:requests` 会将 experiment ID、计划 hash 和 `smoke`/`pilot`/`official` run kind 写入请求，并按实验计划中的 task、condition 与重复次数生成稳定 run ID。retired 计划不能生成新请求；pilot 至少重复两次，只用于校准而不进入正式结论。`pi:coordinate`
 先执行 adapter preflight，再运行 Pi、以 `CANDIDATE_PATH` 桥接私有 evaluator，并捕获 Pi
 输出、evaluator 输出、候选 diff 与 adapter manifest。它会写入
 `artifacts/runs/<run-id>/formal-run-manifest.json` 和
 `results/records/<suite>/<task>/<run-id>.json`；record 显式保存 Pi v2、treatment、environment、
 模型版本、任务与 snapshot 版本，故可独立解释一次结果。正式 environment 只接受提供商的不可变模型快照 ID；`pending-provider-snapshot` 只能用于 dry-run。
+
+显式声明 `skill_context` 的 direct 任务必须同时提供私有 `rule-audit.yaml`。公开声明决定最多三条
+agent 可见规则，私有审计只用于验证规则和行为映射。Pi 以 JSON event stream 运行；runner 要求 G1 在
+首次编辑前完整读取全部声明规则，拒绝分页、失败、编辑后补读和 G0 规则访问，并把 trace 审计写入 artifact
+manifest、run manifest 与 record。
+
+本地诊断使用单独标记的容器环境，不复用正式 runner 身份或不可变记录路径。先构建本地镜像并运行
+`LORELUM_LOCAL_EXPERIMENT=1 bun run test:local-sandbox`，再以
+`LORELUM_LOCAL_EXPERIMENT=1 bun run pi:diagnose -- <plan> --output scratch/<run>` 执行；结果只写入被忽略的
+`scratch/`，不得作为正式实验记录。
 
 正式运行要求 `LORELUM_ARTIFACT_STORAGE_URI` 与 environment 中的 S3 URI 完全一致。coordinator 会先将输出、评测日志、diff、环境与 Pi manifest 上传到启用 Object Lock 的版本化 S3 对象，再写入引用带 `versionId` URI 的 run manifest 和 record；任一上传或锁定验证失败都不会创建 record。
 

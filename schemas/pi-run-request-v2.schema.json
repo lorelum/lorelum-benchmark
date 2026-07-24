@@ -8,7 +8,7 @@
     "run_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
     "experiment_id": { "type": "string", "minLength": 1 },
     "experiment_plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-    "run_kind": { "enum": ["smoke", "official"] },
+    "run_kind": { "enum": ["smoke", "pilot", "official"] },
     "condition_id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
     "repeat": { "type": "integer", "minimum": 1 },
     "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
