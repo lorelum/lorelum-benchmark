@@ -233,7 +233,7 @@ async function validateVersionedManifests(path: string, manifestName: string, sc
 }
 
 const suitesPath = joinPath(workspaceRoot, "suites");
-for (const schema of ["suite.schema.json", "task-card.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
+for (const schema of ["suite.schema.json", "task-card.schema.json", "evaluator-result-v2.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
   await requirePath(joinPath(workspaceRoot, "schemas", schema));
 }
 
@@ -270,6 +270,7 @@ for (const suite of await listDirectories(suitesPath)) {
         if (taskDocument.id !== expectedId) failures.push(`Task id '${taskDocument.id}' must match ${expectedId} in ${relativePath(taskCard)}`);
         if (taskDocument.version !== Number(revision.slice(1))) failures.push(`Task version must match ${revision} in ${relativePath(taskCard)}`);
         if (!Number.isInteger(taskDocument.evaluator_version) || Number(taskDocument.evaluator_version) < 1) failures.push(`evaluator_version must be a positive integer in ${relativePath(taskCard)}`);
+        if (taskDocument.evaluator_contract === "structured/v2") await requirePath(joinPath(privatePath, "evaluator", "evaluate.ts"));
         if (!lifecycleStages.has(String(taskDocument.lifecycle_stage))) failures.push(`Invalid lifecycle_stage in ${relativePath(taskCard)}`);
         discovered.set(expectedId, { document: taskDocument, manifestPath: `tasks/${taskSlug}/${revision}` });
       }

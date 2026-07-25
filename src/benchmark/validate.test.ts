@@ -29,6 +29,7 @@ async function fixture(track: "practice-effectiveness" | "performance-skill-comp
     "runtime:",
     "  command: bun",
     "evaluator_version: 1",
+    "skill_relevance: partial",
     "agent_input:",
     "  prompt: task.md",
     "  starter: starter",
@@ -84,6 +85,19 @@ test("rejects suite documents that violate their JSON Schema", async () => {
     const result = await validate(workspace);
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("Schema violation in suites/fixture/suite.yaml");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("requires a structured evaluator entry when a task opts into the v2 contract", async () => {
+  const workspace = await fixture("practice-effectiveness");
+  try {
+    const taskCard = join(workspace, "suites", "fixture", "tasks", "example", "v1", "public", "task.yaml");
+    await write(taskCard, `${await Bun.file(taskCard).text()}evaluator_contract: structured/v2\n`);
+    const result = await validate(workspace);
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("Missing required path: suites/fixture/tasks/example/v1/private/evaluator/evaluate.ts");
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
