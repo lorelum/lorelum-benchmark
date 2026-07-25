@@ -10,7 +10,7 @@ async function write(path: string, content: string): Promise<void> {
   await Bun.write(path, content);
 }
 
-async function fixture(track: "practice-effectiveness" | "performance-skill-comparison"): Promise<string> {
+async function fixture(): Promise<string> {
   const workspace = await mkdtemp(join(tmpdir(), "lorelum-validator-"));
   await cp(join(root, "schemas"), join(workspace, "schemas"), { recursive: true });
   await mkdir(join(workspace, "treatments"), { recursive: true });
@@ -24,7 +24,7 @@ async function fixture(track: "practice-effectiveness" | "performance-skill-comp
   await write(join(taskPath, "public", "task.yaml"), [
     "id: example-v1",
     "version: 1",
-    `track: ${track}`,
+    "track: performance-skill-comparison",
     "lifecycle_stage: pilot",
     "source: {}",
     "runtime:",
@@ -68,7 +68,7 @@ async function fixture(track: "practice-effectiveness" | "performance-skill-comp
   await write(join(suitePath, "suite.yaml"), [
     "id: fixture",
     "version: 0.1.0",
-    `track: ${track}`,
+    "track: performance-skill-comparison",
     "lifecycle_stage: pilot",
     "conditions:",
     "  - baseline",
@@ -78,23 +78,21 @@ async function fixture(track: "practice-effectiveness" | "performance-skill-comp
     "    lifecycle_stage: pilot",
     ""
   ].join("\n"));
-  if (track === "performance-skill-comparison") {
-    await mkdir(join(suitePath, "manifests"), { recursive: true });
-    await write(join(suitePath, "manifests", "coverage.yaml"), [
-      "version: 1",
-      "baseline:",
-      "  repository: fixture",
-      "  revision: fixture",
-      "  skill: fixture",
-      "coverage_status: partial",
-      "covered_rules:",
-      "  - id: fixture-rule",
-      "    tasks:",
-      "      - missing-v1",
-      "acceptance: {}",
-      ""
-    ].join("\n"));
-  }
+  await mkdir(join(suitePath, "manifests"), { recursive: true });
+  await write(join(suitePath, "manifests", "coverage.yaml"), [
+    "version: 1",
+    "baseline:",
+    "  repository: fixture",
+    "  revision: fixture",
+    "  skill: fixture",
+    "coverage_status: partial",
+    "covered_rules:",
+    "  - id: fixture-rule",
+    "    tasks:",
+    "      - example-v1",
+    "acceptance: {}",
+    ""
+  ].join("\n"));
   return workspace;
 }
 
@@ -105,9 +103,9 @@ async function validate(workspace: string): Promise<{ exitCode: number; output: 
 }
 
 test("rejects suite documents that violate their JSON Schema", async () => {
-  const workspace = await fixture("practice-effectiveness");
+  const workspace = await fixture();
   try {
-    await write(join(workspace, "suites", "fixture", "suite.yaml"), "id: fixture\nversion: 0.1.0\ntrack: practice-effectiveness\nlifecycle_stage: pilot\nconditions: baseline\ntasks: []\n");
+    await write(join(workspace, "suites", "fixture", "suite.yaml"), "id: fixture\nversion: 0.1.0\ntrack: performance-skill-comparison\nlifecycle_stage: pilot\nconditions: baseline\ntasks: []\n");
     const result = await validate(workspace);
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("Schema violation in suites/fixture/suite.yaml");
@@ -117,7 +115,7 @@ test("rejects suite documents that violate their JSON Schema", async () => {
 });
 
 test("requires a structured evaluator entry when a task opts into the v2 contract", async () => {
-  const workspace = await fixture("practice-effectiveness");
+  const workspace = await fixture();
   try {
     const taskCard = join(workspace, "suites", "fixture", "tasks", "example", "v1", "public", "task.yaml");
     await write(taskCard, `${await Bun.file(taskCard).text()}evaluator_contract: structured/v2\n`);
@@ -130,7 +128,7 @@ test("requires a structured evaluator entry when a task opts into the v2 contrac
 });
 
 test("requires a frozen private rule audit for active direct tasks", async () => {
-  const workspace = await fixture("practice-effectiveness");
+  const workspace = await fixture();
   try {
     await rm(join(workspace, "suites", "fixture", "tasks", "example", "v1", "private", "rule-audit.yaml"));
     const result = await validate(workspace);
@@ -142,7 +140,7 @@ test("requires a frozen private rule audit for active direct tasks", async () =>
 });
 
 test("does not impose the rule audit contract on legacy direct tasks", async () => {
-  const workspace = await fixture("practice-effectiveness");
+  const workspace = await fixture();
   try {
     const taskCard = join(workspace, "suites", "fixture", "tasks", "example", "v1", "public", "task.yaml");
     await write(taskCard, (await Bun.file(taskCard).text()).replace("skill_context:\n  rules:\n    - async-parallel.md\n", ""));
@@ -155,7 +153,7 @@ test("does not impose the rule audit contract on legacy direct tasks", async () 
 });
 
 test("requires active direct oracle mappings to reference delivered rule behaviors", async () => {
-  const workspace = await fixture("practice-effectiveness");
+  const workspace = await fixture();
   try {
     const oracle = join(workspace, "suites", "fixture", "tasks", "example", "v1", "private", "oracle.yaml");
     await write(oracle, (await Bun.file(oracle).text()).replace("rule_behavior_id: share-work", "rule_behavior_id: missing-behavior"));
@@ -168,8 +166,10 @@ test("requires active direct oracle mappings to reference delivered rule behavio
 });
 
 test("rejects coverage manifests that reference undeclared tasks", async () => {
-  const workspace = await fixture("performance-skill-comparison");
+  const workspace = await fixture();
   try {
+    const coverage = join(workspace, "suites", "fixture", "manifests", "coverage.yaml");
+    await write(coverage, (await Bun.file(coverage).text()).replace("example-v1", "missing-v1"));
     const result = await validate(workspace);
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("Coverage manifest references missing task: fixture/missing-v1");
@@ -179,7 +179,7 @@ test("rejects coverage manifests that reference undeclared tasks", async () => {
 });
 
 test("rejects active experiments that reference retired tasks", async () => {
-  const workspace = await fixture("practice-effectiveness");
+  const workspace = await fixture();
   try {
     const taskCard = join(workspace, "suites", "fixture", "tasks", "example", "v1", "public", "task.yaml");
     await write(taskCard, (await Bun.file(taskCard).text()).replace("lifecycle_stage: pilot", "lifecycle_stage: retired"));
@@ -203,7 +203,7 @@ test("rejects active experiments that reference retired tasks", async () => {
 });
 
 test("allows retired experiments to retain a historical source commit", async () => {
-  const workspace = await fixture("practice-effectiveness");
+  const workspace = await fixture();
   try {
     await write(join(workspace, "experiments", "retired.yaml"), [
       "id: fixture-retired", "version: v1", "lifecycle_stage: retired", "run_kind: pilot",
@@ -222,7 +222,7 @@ test("allows retired experiments to retain a historical source commit", async ()
 });
 
 test("rejects pilot experiments with fewer than two repetitions", async () => {
-  const workspace = await fixture("practice-effectiveness");
+  const workspace = await fixture();
   try {
     await write(join(workspace, "experiments", "pilot.yaml"), [
       "id: fixture-pilot", "version: v1", "lifecycle_stage: active", "run_kind: pilot",

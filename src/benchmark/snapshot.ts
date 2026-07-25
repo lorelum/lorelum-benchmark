@@ -10,7 +10,7 @@ type Snapshot = {
 };
 
 type CandidateLocation = {
-  track: "practice-effectiveness";
+  track: string;
   reference: string;
   path: string;
 };
@@ -26,11 +26,12 @@ const [group, reference] = argumentsList.filter((argument) => !argument.startsWi
 const failures: string[] = [];
 
 async function discoverCandidates(): Promise<CandidateLocation[]> {
-  const track: CandidateLocation["track"] = "practice-effectiveness";
-  const candidatesPath = joinPath(workspaceRoot, "incubator", track);
   const candidates: CandidateLocation[] = [];
-  for (const candidate of await listDirectories(candidatesPath)) {
-    candidates.push({ track, reference: candidate, path: joinPath(candidatesPath, candidate) });
+  for (const track of await listDirectories(joinPath(workspaceRoot, "incubator"))) {
+    const candidatesPath = joinPath(workspaceRoot, "incubator", track);
+    for (const candidate of await listDirectories(candidatesPath)) {
+      candidates.push({ track, reference: candidate, path: joinPath(candidatesPath, candidate) });
+    }
   }
   return candidates.sort((left, right) => left.reference.localeCompare(right.reference));
 }

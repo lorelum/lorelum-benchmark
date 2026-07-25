@@ -1,25 +1,21 @@
 id: example-task-v1
 version: 1
-track: practice-effectiveness
+track: performance-skill-comparison
 evaluator_version: 1
 source:
   kind: real-lorelum-task
   task_reference: task-guid-or-issue-url
   baseline_commit: replace-with-immutable-commit
 runtime:
-  command: bun run evaluate -- practice-effectiveness example-task/v1
+  command: bun run evaluate -- performance-skill-comparison example-task/v1
 agent_input:
   prompt: task.md
   starter: starter
 applicable_conditions:
   - baseline
-  - oracle-practice
-  - lorelum-retrieval
-  - irrelevant-practice
-oracle_practices:
-  - replace-with-practice-id
+  - vercel-skill
 review:
   requires_blind_review: true
   assertions:
     - functional
-    - practice-compliance
+    - skill-compliance

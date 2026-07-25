@@ -1,8 +1,0 @@
-id: pe-webhook-raw-body-verification-v1
-version: 1
-lifecycle_stage: candidate
-runtime:
-  kind: local-typescript
-agent_input:
-  prompt: task.md
-  starter: starter

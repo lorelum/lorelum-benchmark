@@ -1,8 +1,0 @@
-id: pe-loopback-admin-deployment-v1
-version: 1
-lifecycle_stage: candidate
-runtime:
-  kind: static-local-configuration
-agent_input:
-  prompt: task.md
-  starter: starter
