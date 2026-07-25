@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "93accd9d6538b2a6bc9ae667705d7ceddf1688d9b49c2a673477a421fff18d2f",
+  "snapshot_id": "96d8243ecd38c8080023320a096b1bb22470bdd79f3b48c292b5baf874064383",
   "files": {
     "private/evaluator/evaluate.ts": "03c37e5532f93c074189b6fd2ebbd1536322b6c4a8483f2bb3c32ff3bf932621",
     "private/mutations/cache-errors.ts": "6fff140afa0457b34d67ee4f10c3c5c13dc530e5cd5028f462eaf098952cc859",
@@ -36,6 +36,6 @@
     "public/starter/app/tests/workspace.spec.ts": "0b532f2ac8df29fa115651cfab5452176f1e1f22a8b5337cb4084dba4efc9401",
     "public/starter/app/tsconfig.json": "a0c65e588a6b07bcb9e44bce959fceb7a44a220d797700bc703a1ae53c1a9342",
     "public/task.md": "2f1496e0aa1c26f22d30e23df8feef51eadf9d776db739e6137906826b598a5e",
-    "public/task.yaml": "5de66aa03dfbdf8bf096e8bd005503eaaaff3b53ba22b777908b40a6c10a9410"
+    "public/task.yaml": "fec9f249270aaa397b6d1fd5d5d6e4b428559bb4cfe211a64f0db3ac6b3e8900"
   }
 }
