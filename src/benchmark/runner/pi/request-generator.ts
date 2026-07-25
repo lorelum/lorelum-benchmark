@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { joinPath, listFiles, relativePath, sha256File, sha256Text, workspaceRoot } from "../../fs";
 import { findTask } from "../../task-discovery";
 import type { PiRunRequestV2 } from "./v2/types";
+import { declaredRuleContext, routedRuleNames } from "./v2/rule-router";
+import { resolveSkillBundle } from "./v2/treatment-resolver";
 
 type PlanCondition = { id: string; treatment: string };
 
@@ -38,6 +40,25 @@ function fail(message: string): never {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function verifyPublicRuleCoverage(taskPath: string, taskCard: Record<string, unknown>, treatmentId: string, treatmentVersion: string): Promise<void> {
+  if (treatmentId !== "vercel-skill" || treatmentVersion !== "v2") return;
+  if (taskCard.skill_relevance !== "direct" || taskCard.lifecycle_stage === "retired") return;
+  if (!isRecord(taskCard.skill_context)) return;
+  const treatmentPath = joinPath(workspaceRoot, "treatments", treatmentId, treatmentVersion, "treatment.yaml");
+  const treatment = Bun.YAML.parse(await Bun.file(treatmentPath).text()) as unknown;
+  if (!isRecord(treatment)) fail(`Skill treatment is invalid: ${relativePath(treatmentPath)}`);
+  const bundle = await resolveSkillBundle(treatment);
+  const declaration = taskCard.skill_context;
+  const declaredRules = Array.isArray(declaration.rules) && declaration.rules.every((rule) => typeof rule === "string") ? declaration.rules as string[] : [];
+  const context = await declaredRuleContext(taskPath, bundle, declaredRules);
+  const auditPath = joinPath(taskPath, "private", "rule-audit.yaml");
+  const audit = Bun.YAML.parse(await Bun.file(auditPath).text()) as Record<string, unknown>;
+  const required = Array.isArray(audit.required_rules) && audit.required_rules.every((rule) => typeof rule === "string") ? audit.required_rules : undefined;
+  if (!required) fail(`Task rule audit is invalid: ${relativePath(auditPath)}`);
+  const selected = routedRuleNames(context);
+  if (selected.length !== required.length || selected.some((rule) => !required.includes(rule))) fail(`Public rule context does not exactly match ${taskCard.id}`);
 }
 
 function asPlan(value: unknown): ExperimentPlan {
@@ -91,6 +112,7 @@ async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPoli
   if (!candidateFile || !starterFiles.includes(candidateFile.replaceAll("\\", "/")) && !starterFiles.includes(candidateFile)) fail(`Task must declare a candidate starter file when it has multiple starter files: ${relativePath(task.path)}`);
   const [treatmentId, treatmentVersion] = condition.treatment.split("/");
   if (!treatmentId || !treatmentVersion) fail(`Invalid treatment reference: ${condition.treatment}`);
+  await verifyPublicRuleCoverage(task.path, taskCard, treatmentId, treatmentVersion);
   const repeatId = String(repeat).padStart(3, "0");
   const runId = `${plan.id}-${taskId}-${condition.id}-${repeatId}`;
   return {

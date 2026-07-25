@@ -2,3 +2,4 @@
 .run-workspaces/
 artifacts/
 scratch/
+.lorelum-cache/
