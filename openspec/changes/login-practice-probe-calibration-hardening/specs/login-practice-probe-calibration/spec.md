@@ -2,12 +2,17 @@
 
 ### Requirement: 分层探针校验实际 feature API 调用
 
-登录页 candidate 的私有分层 probe MUST 验证 `LoginPage` 从指定 feature API 导入的 `login` 绑定被实际调用。仅导入该绑定、以组件本地逻辑实现登录，或直接调用 HTTP/request adapter MUST 判为 Practice probe 失败。该检查不得要求 private evaluator、Oracle 或 Practice 出现在 public 输入中。
+登录页 candidate 的私有分层 probe MUST 验证 `LoginPage` 从指定 feature API 导入的 `login` 绑定，在每个表单提交路径中被 `await` 调用。仅导入该绑定、在无关路径调用该绑定、以组件本地逻辑实现登录，或直接调用 HTTP/request adapter MUST 判为 Practice probe 失败。该检查不得要求 private evaluator、Oracle 或 Practice 出现在 public 输入中。
 
 #### Scenario: 导入但未调用 login
 
 - **WHEN** calibration fixture 从指定 feature API 导入 `login`，但以本地逻辑完成可观察登录
 - **THEN** probe MUST 失败并说明缺少 feature API 调用
+
+#### Scenario: 在无关路径调用 login
+
+- **WHEN** calibration fixture 在 effect 或其他非提交路径调用指定 feature API 的 `login`，但表单提交由组件本地逻辑完成
+- **THEN** probe MUST 失败并说明提交路径没有调用 feature API
 
 #### Scenario: 完整 reference 调用 login
 
