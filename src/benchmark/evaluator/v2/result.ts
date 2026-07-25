@@ -20,14 +20,23 @@ function validId(value: unknown): value is string {
   return typeof value === "string" && /^[a-z0-9-]+$/.test(value);
 }
 
+function exactKeys(value: Record<string, unknown>, allowed: string[], label: string): void {
+  const unexpected = Object.keys(value).filter((key) => !allowed.includes(key));
+  if (unexpected.length > 0) fail(`${label} has unexpected fields: ${unexpected.join(", ")}`);
+}
+
 export function assertEvaluatorResultV2(value: unknown): EvaluatorResultV2 {
   if (!isRecord(value) || value.schema_version !== "evaluator-result/v2" || value.evaluator_version !== 2 || !isRecord(value.semantic) || !isRecord(value.quality)) fail("missing top-level fields");
+  exactKeys(value, ["schema_version", "evaluator_version", "semantic", "quality"], "result");
   const semantic = value.semantic;
   const quality = value.quality;
+  exactKeys(semantic, ["passed", "checks"], "semantic result");
+  exactKeys(quality, ["score", "probes"], "quality result");
   if (typeof semantic.passed !== "boolean" || !Array.isArray(semantic.checks) || semantic.checks.length === 0) fail("semantic checks are required");
   const checkIds = new Set<string>();
   for (const check of semantic.checks) {
     if (!isRecord(check) || !validId(check.id) || typeof check.passed !== "boolean" || (check.failure_reason !== undefined && (typeof check.failure_reason !== "string" || !check.failure_reason))) fail("semantic check is invalid");
+    exactKeys(check, ["id", "passed", "failure_reason"], "semantic check");
     if (!checkIds.add(check.id)) fail(`duplicate semantic check: ${check.id}`);
     if (check.passed && check.failure_reason !== undefined) fail(`passing semantic check has failure reason: ${check.id}`);
     if (!check.passed && check.failure_reason === undefined) fail(`failing semantic check has no failure reason: ${check.id}`);
@@ -37,7 +46,8 @@ export function assertEvaluatorResultV2(value: unknown): EvaluatorResultV2 {
   const probeIds = new Set<string>();
   let points = 0;
   for (const probe of quality.probes) {
-    if (!isRecord(probe) || !validId(probe.id) || !Number.isInteger(probe.points) || !Number.isInteger(probe.max_points) || probe.points < 0 || probe.max_points < 1 || probe.points > probe.max_points) fail("quality probe is invalid");
+    if (!isRecord(probe) || !validId(probe.id) || !Number.isInteger(probe.points) || !Number.isInteger(probe.max_points) || probe.points < 0 || probe.max_points < 1 || probe.max_points > 100 || probe.points > probe.max_points) fail("quality probe is invalid");
+    exactKeys(probe, ["id", "points", "max_points"], "quality probe");
     if (!probeIds.add(probe.id)) fail(`duplicate quality probe: ${probe.id}`);
     points += probe.points;
   }

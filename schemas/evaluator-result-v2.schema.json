@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Lorelum evaluator result v2",
+  "$comment": "Cross-item ID uniqueness and score totals are enforced by assertEvaluatorResultV2 because JSON Schema cannot express those invariants.",
   "type": "object",
   "required": ["schema_version", "evaluator_version", "semantic", "quality"],
   "properties": {
@@ -22,6 +23,21 @@
               "passed": { "type": "boolean" },
               "failure_reason": { "type": "string", "minLength": 1 }
             },
+            "allOf": [
+              {
+                "if": { "properties": { "passed": { "const": true } }, "required": ["passed"] },
+                "then": {
+                  "not": {
+                    "properties": { "failure_reason": {} },
+                    "required": ["failure_reason"]
+                  }
+                },
+                "else": {
+                  "properties": { "failure_reason": { "type": "string", "minLength": 1 } },
+                  "required": ["failure_reason"]
+                }
+              }
+            ],
             "additionalProperties": false
           }
         }
@@ -52,8 +68,66 @@
   },
   "allOf": [
     {
-      "if": { "properties": { "semantic": { "properties": { "passed": { "const": false } } } } },
-      "then": { "properties": { "quality": { "properties": { "score": { "const": 0 }, "probes": { "maxItems": 0 } } } } }
+      "if": {
+        "properties": {
+          "semantic": {
+            "type": "object",
+            "properties": { "passed": { "const": true } },
+            "required": ["passed"]
+          }
+        },
+        "required": ["semantic"]
+      },
+      "then": {
+        "properties": {
+          "semantic": {
+            "type": "object",
+            "properties": {
+              "checks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": { "passed": { "const": true } },
+                  "required": ["passed"]
+                }
+              }
+            },
+            "required": ["checks"]
+          },
+          "quality": {
+            "type": "object",
+            "properties": { "probes": { "type": "array", "minItems": 1 } },
+            "required": ["probes"]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "semantic": {
+            "type": "object",
+            "properties": {
+              "checks": {
+                "type": "array",
+                "contains": {
+                  "type": "object",
+                  "properties": { "passed": { "const": false } },
+                  "required": ["passed"]
+                },
+                "minContains": 1
+              }
+            },
+            "required": ["checks"]
+          },
+          "quality": {
+            "type": "object",
+            "properties": {
+              "score": { "const": 0 },
+              "probes": { "type": "array", "maxItems": 0 }
+            },
+            "required": ["score", "probes"]
+          }
+        }
+      }
     }
   ],
   "additionalProperties": false
