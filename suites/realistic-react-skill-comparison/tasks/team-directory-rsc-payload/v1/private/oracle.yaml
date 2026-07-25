@@ -1,0 +1,9 @@
+id: team-directory-rsc-payload-v1
+reference_solution: reference/app/team/page.tsx
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+quality_probes:
+  - { id: avoid-duplicate-member-identities, rule_behavior_id: avoid-duplicate-member-identities }
+  - { id: keep-server-notes-out-of-flight, rule_behavior_id: keep-server-notes-out-of-flight }
+mutations:
+  - { id: duplicate-props, rule_behavior_id: avoid-duplicate-member-identities }
+  - { id: serialization-leak, rule_behavior_id: keep-server-notes-out-of-flight }

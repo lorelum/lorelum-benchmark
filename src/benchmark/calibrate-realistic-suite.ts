@@ -27,7 +27,12 @@ const cases: CalibrationCase[] = [
   { task: "report-insights-conditional-loading/v7", label: "react-lazy", expectedScore: 100, overlay: "accepted/react-lazy/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
   { task: "report-insights-conditional-loading/v7", label: "next-dynamic", expectedScore: 100, overlay: "accepted/next-dynamic/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
   { task: "report-insights-conditional-loading/v7", label: "eager-load", expectedScore: 0, overlay: "mutations/eager-load/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
-  { task: "report-insights-conditional-loading/v7", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" }
+  { task: "report-insights-conditional-loading/v7", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" },
+  { task: "team-directory-rsc-payload/v3", label: "starter", expectedScore: 0 },
+  { task: "team-directory-rsc-payload/v3", label: "reference", expectedScore: 100, overlay: "reference/app/team/page.tsx", destination: "app/team/page.tsx" },
+  { task: "team-directory-rsc-payload/v3", label: "serialization-leak", expectedScore: 50, overlay: "mutations/serialization-leak/app/team/page.tsx", destination: "app/team/page.tsx" },
+  { task: "team-directory-rsc-payload/v3", label: "duplicate-props", expectedScore: 50, overlay: "mutations/duplicate-props/app/team/page.tsx", destination: "app/team/page.tsx" },
+  { task: "team-directory-rsc-payload/v3", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" }
 ];
 
 function evaluatorResult(stdout: string): { semantic: { passed: boolean }; quality: { score: number } } {
