@@ -1,0 +1,23 @@
+id: login-page-layered-api-v1
+semantic_oracle:
+  command: bun run test
+  assertions:
+    - 正确凭证在原页面显示欢迎状态。
+    - 错误凭证显示通用认证错误。
+    - 请求期间禁用控件且拒绝重复提交。
+practice_probe:
+  command: bun run private/evaluator/verify-layering.ts public/starter/app
+  component: src/LoginPage.tsx
+  feature_api: src/features/auth/api/login.ts
+  required_export: login
+  required_api_responsibilities:
+    - 请求调用
+    - 输入与输出 DTO 映射
+    - 401 到 AuthError 的翻译
+  forbidden_component_responsibilities:
+    - 直接导入 services/http
+    - 直接调用 postLogin 或 fetch
+    - 判断原始响应状态
+baseline_expected_result:
+  semantic: pass
+  practice_probe: fail

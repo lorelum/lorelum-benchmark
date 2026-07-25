@@ -1,0 +1,142 @@
+## 背景
+
+Issue #74、任务与调研文档定义了一个面向登录页编码任务的首个 Practice 注入候选。仓库当前只支持
+`performance-skill-comparison` 的 G0/G1 轨道。提交 `b6b0310` 有意移除了此前的
+Practice 有效性轨道及其 treatments、schemas、runner、fixtures 和 records。因此，本
+变更必须建立独立的候选契约，不能恢复或重新解释已经移除的工作。
+
+`incubator/` 是候选在成为 suite 任务前的仓库存放位置。`src/benchmark/snapshot.ts`
+可以为 incubator 候选生成快照，但 `bun run validate` 不会强制候选卡的 schema。本变更
+中的候选格式必须足以支持评审，同时保持在活跃 suite 和 Pi 请求路径之外。
+
+## 目标与非目标
+
+**目标：**
+
+ - 在 `incubator/` 下定义一个具有清晰公开/私有边界和快照、可供评审的登录页候选。
+ - 定义版本化且与任务相关的 `react.api.layered-design` Oracle Practice，以及长度和格式
+   匹配的无关对照，二者均不得通过题面或 starter 暴露。
+ - 声明四个具名比较条件与其固定输入接口，为后续执行提供不可变候选基线。
+ - 将人工尝试、原始观测、盲评和决策门移交 Issue #75 的独立 OpenSpec change。
+
+**非目标：**
+
+- 不重新引入已移除的 Practice 有效性 suite、此前的 fixtures、schemas、treatments、
+  runner、protocol 或结果。
+- 本次初始 PR 不调用模型、不运行 Pi、不从 Lorelum 检索、不创建正式 run record，也不宣称产品有效。
+- 不修改活跃的 Vercel Skill 比较契约。
+- 不在本 change 执行 baseline、Oracle 或无关 Practice；这些尝试只能在 #75 的独立 PR 中进行。
+
+## 设计决策
+
+### 1. 将完整候选置于 `incubator/practice-injection/` 下
+
+实现会使用一个候选目录，例如
+`incubator/practice-injection/login-page-layered-api-v1/` with `public/` and
+`private/` 子树。公开子树仅包含 `task.md` 和 `starter/`；私有材料包含候选卡、Oracle
+Practice、无关 Practice、evaluator 草案、相关性量表、条件清单和快照。Practice 卡是
+condition-scoped treatment input：只可在对应运行的私有运行时通道中提供给模型，绝不可写入
+Agent 工作区、公开 task prompt、公开 trace 或日志。evaluator、oracle 断言和评分材料永远
+不得进入任何模型输入。这样既保留处理变量，又防止验收细节泄露。
+
+放入 `suites/` 的替代方案会让候选看起来已经活跃，并要求现有 suite manifest。根目录的
+`practices/` 会在首个候选尚未证明需要前建立共享内容 API。两者均推迟处理。
+
+### 2. 将人工探针移交 Issue #75
+
+候选会声明四个条件，`lorelum-retrieval` 保持 `status: unavailable` 和显式必需输入契约；
+不得以 Oracle 结果悄然替代它。baseline、Oracle 与无关对照的实际人工运行、证据保存、
+盲评和预注册决策改由 Issue #75 处理。
+
+这使 #74 只交付候选和执行交接，不在尚未合并的 candidate PR 中扩展 runner、存储或模型调用。
+
+### 3. 将条件清单作为执行交接
+
+条件清单将固定任务快照、源码提交、模型与模型版本、系统提示哈希、工具策略、时间/token
+预算和干净工作区策略。Oracle 和无关 Practice 卡具有可比的渲染长度及相同的交付模板，
+baseline 不接收 Practice。#75 必须以该清单和候选快照作为执行输入；任何新增的 artifact
+URI、校验和、diff、测试输出、成本、时延和盲评映射都属于后续 change，不写入本 change。
+
+这排除了更长或不同格式的指令改善结果这一替代解释。后续 change 仍不得使用单一合成分数
+掩盖功能或 Practice 遵循失败。
+
+### 4. 仅交付私有评测层
+
+私有 evaluator 草案分别规定确定性的语义检查和 Practice 专属质量探针，并以 reference/naive
+校准。独立盲评的随机化、脱敏包、评审执行和映射保存移交 #75；LLM 评判始终不能作为唯一 oracle。
+
+公开任务提示仅陈述可外部观察的登录行为。它不得命名 `react.api.layered-design`、要求组件/API
+分层，或暴露私有断言。在提示中写明该约束会让 baseline 接收到实验 treatment，因而使因果
+对比失效；Oracle 或无关 Practice 仅通过前述 condition-scoped 私有通道提供。
+
+### 5. 以同一 OpenSpec PR 保持变更证据链
+
+除本 change 已声明的一次性引导例外外，每个 benchmark change 先由可追溯 issue 收敛单一问题、
+边界和验收口径，再创建一个仅含 OpenSpec artifacts 和必要流程约束的 PR。候选 fixture、
+私有验收、验证和后续实现必须继续追加至该同一分支和同一 PR，而不是拆分到新的实现 PR。
+未完成或未归档的 change 不得合并或关闭该 PR。这样评审者可以从 proposal、设计、规范和任务
+清单连续追溯至实现与验证证据。
+
+未建立 issue 就创建 OpenSpec，会失去需求来源和验收依据；在首次 PR 合并前创建独立的实现 PR，
+会打断设计与实现之间的证据链；在不改变 change 的前提下
+切换分支，则可能遗漏已经评审的约束。两种做法均不采用。
+
+### 6. 在实现前完成规划澄清
+
+OpenSpec strict validation 通过和初始 PR 创建，只证明变更契约形式完整，不能替代对实验
+问题的实质性选择。开始候选 fixture 前，维护者必须询问并记录：登录页要验证的可观察行为
+与 Practice 行为、预期 baseline 缺陷和区分度、相关 Practice 和等长无关对照、私有语义和
+质量验收、starter 来源与不可变提交，以及模型、提示、预算和盲评边界。
+
+这些答案必须写回 issue 与 OpenSpec design/tasks。若其中任何一项会改变题面、oracle、对照、
+评测、treatment、environment 或结论解释，未决状态即为实现门禁。直接选择一个“看起来合理”
+的登录页问题会使 Oracle 成功无法说明 Practice 注入带来了独立增益，因此不采用。
+
+## 风险与取舍
+
+- [候选任务过易或过难，无法区分条件] -> 在人工/模型比较前进行确定性的私有校准；若
+  baseline 与 Oracle 无法形成有意义的对比，则拒绝该候选。
+- [对照在内容形状或长度上不同] -> 在条件清单中记录渲染字符数和标题；评审必须拒绝不匹配。
+- [Practice 或 evaluator 细节泄露给 Agent] -> 限制暂存工作区仅含 `public/task.md` 和
+  `public/starter/`；仅允许声明的 Practice 卡通过条件私有通道进入模型，并在接受运行前审计
+  公共提示、starter、trace 和日志。
+- [人工执行的可复现性不足] -> #75 必须要求不可变 hash、版本化资产、记录的命令和原始产物；
+  使用已提交的私有证据索引引用受保护 artifact，而非把原始日志或 diff 提交到仓库。
+- [意外复用旧移除轨道资产] -> 以当前 HEAD 为唯一真源；不得将历史私有 fixtures 或旧
+  protocol 契约复制进候选。
+- [实现被分散到多个 PR，评审难以追溯] -> 在 `AGENTS.md` 强制同一 change 使用同一分支和
+  同一 PR，所有后续提交持续追加。
+- [OpenSpec 缺少可追溯的问题来源] -> 除已声明的 #73 引导例外外，在 `AGENTS.md` 强制先确认
+  或创建 issue，并在 proposal 和 PR 正文中记录 issue 编号。
+- [形式校验通过但实验任务缺乏区分度] -> 在实现前进行规划澄清，并将回答写回 issue 与
+  OpenSpec；未解决的问题阻断 fixture 实现。
+
+## 推进与回退
+
+1. 新增并快照 incubator 候选，随后进行泄露评审。
+2. 不运行模型，校准私有语义检查和质量探针。
+3. 在 #73 合并后，从最新 `main` 为 Issue #75 创建仅含 OpenSpec 的新分支和 PR；该 change
+   执行人工条件、保存受保护证据并应用预注册决策规则。
+4. 放弃是正常结果：在后续变更中删除未记录的候选。候选晋升为冻结 suite revision 后，
+   绝不重写。
+
+## 已确认的规划决策
+
+- starter 使用仓库内新增的最小 Vite 候选，固定 React/React DOM `19.2.3`、Vite `7.1.7`、
+  `@vitejs/plugin-react` `5.0.2`、TypeScript `5.9.3`、Playwright `1.61.1` 和提交的
+  `bun.lock`。它以当前分支的 `76b34686ea1e3643abb21dbe727c639ca3cb7aab` 为来源基线，并由候选快照冻结。
+- 公开行为固定为：`demo@example.com` / `password123` 成功并在原页显示“欢迎，演示用户”；
+  其他凭证返回 `401` 并显示通用错误；请求固定延迟 300 毫秒，期间禁用输入和按钮且拒绝
+  重复提交。公开题面不提 API 分层或 Practice。
+- 初始 naive starter 有意令 `LoginPage` 直接调用请求适配器并解释认证响应，因此功能可用但
+  分层探针应失败。Oracle 要求组件经 `src/features/auth/api/login.ts` 的 `login()` 调用，
+  API 层独占请求、DTO 映射与 `401 -> AuthError` 翻译。
+- 无关对照为“身份列表呈现”，与 Oracle 使用同一 Practice 卡模板，渲染字符数差异不超过
+  10%，且不规定登录或 API 行为。
+- 私有验收由 Playwright 语义检查与 TypeScript AST 分层探针组成；reference/naive 校准必须
+  分别证明通过/失败。盲评使用全新、无上下文的 `deepseek/deepseek-v4-pro` 会话，只接收匿名
+  编号、脱敏 diff、测试摘要和量表；相关性、利用率各标为“高 / 低 / 无法判断”，每项附证据和
+  不确定点，且不替代自动 oracle。
+- 后续每条件执行两次、使用 `local-pi/v2`、Pi `0.80.10`、`deepseek/deepseek-v4-pro`、每次
+  最多 20 轮、10 分钟、无额外共享系统提示，以及推进门槛，均为 Issue #75 的输入约束；其
+  artifact storage、实际执行授权与盲评映射必须在新的 OpenSpec 中重新确认。
