@@ -53,8 +53,7 @@ async function snapshotFiles(target: SnapshotTarget): Promise<Record<string, str
     if (file === "private/snapshot.json") return false;
     const segments = file.split("/");
     if (target.kind === "incubator-candidate" && ["node_modules", "dist", "test-results", "playwright-report"].some((directory) => segments.includes(directory))) return false;
-    // Evidence indexes are written after a candidate input has been executed.
-    // They must not invalidate the snapshot that identifies that input.
+    // 证据索引在候选输入执行后才写入，不得使该输入对应的快照失效。
     return target.kind !== "incubator-candidate" || !file.startsWith("private/evidence-index/");
   }).sort();
   return Object.fromEntries(await Promise.all(included.map(async (file) => [file, await sha256File(joinPath(target.path, file))])));

@@ -1,11 +1,11 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "24191c1948db9467572eb40c084f24458a8182c21ddca547afc4a5a782d43b82",
+  "snapshot_id": "e841a8b79c075c5b7b72182782c1ec8f9e21b065a62773cbaf309add156eedf5",
   "files": {
     "private/calibration.md": "e7f043d1e24976acf50c9169ac9803a84dec0c10b7136a4ad9ef91dce53f2b8c",
     "private/calibration/reference/src/LoginPage.tsx": "1e1e687d81e1dee1df4188a031c00c665720fd32db29f5c70ff0d45eb09824ed",
-    "private/calibration/reference/src/features/auth/api/login.ts": "ae8a9b53044e38e02318258f856f149369b2d9b5c7a562f5df22a6ac824509b1",
+    "private/calibration/reference/src/features/auth/api/login.ts": "5734abfa01ffd9ad9acb3428234b4746b2d0a221a571cde200e7103c58b93ed9",
     "private/calibration/reference/src/services/http.ts": "dab939245a2c0632d06f77f6e75c7ca28800f840a3f330562cab86cc88a4ab0c",
     "private/candidate.yaml": "7cac5e968055a5776883f9d4c2d4ef2636b020876e63744e4eb4a077b2a8686a",
     "private/conditions.yaml": "c9a64225cb6b825c6b2242a80ea415fcf2fa9937019c4d4b5d98f9e63c5d5337",

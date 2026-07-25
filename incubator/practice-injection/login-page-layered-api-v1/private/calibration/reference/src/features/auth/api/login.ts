@@ -16,6 +16,6 @@ function toLoginResult(response: { body: { display_name: string } }): LoginResul
 
 export async function login(input: LoginInput): Promise<LoginResult> {
   const response = await postLogin(toLoginRequest(input));
-  if (response.status === 401) throw new AuthError("Invalid credentials");
+  if (response.status === 401) throw new AuthError("邮箱或密码错误");
   return toLoginResult(response);
 }
