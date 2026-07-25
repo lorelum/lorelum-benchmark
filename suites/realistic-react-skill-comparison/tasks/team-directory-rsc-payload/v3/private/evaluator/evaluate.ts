@@ -5,6 +5,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { evaluateV2 } from "../../../../../../../src/benchmark/evaluator/v2/harness";
 
 type ProcessResult = { code: number; stdout: string; stderr: string };
+const processTimeoutMs = 120_000;
 
 const taskRoot = resolve(import.meta.dir, "..", "..");
 const baselineRoot = join(taskRoot, "public", "starter", "app");
@@ -39,16 +40,31 @@ async function protectionFailures(candidateRoot: string): Promise<string[]> {
   const failures: string[] = [];
   for (const path of protectedPaths) if (await sha256(join(candidateRoot, path)) !== await sha256(join(baselineRoot, path))) failures.push(`protected file changed: ${path}`);
   const baseline = new Set(await filesAt(baselineRoot));
-  for (const path of await filesAt(candidateRoot)) {
+  const candidate = new Set(await filesAt(candidateRoot));
+  for (const path of candidate) {
     if (!baseline.has(path) && !isAllowed(path)) failures.push(`unauthorized added file: ${path}`);
     if (baseline.has(path) && !isAllowed(path) && await sha256(join(candidateRoot, path)) !== await sha256(join(baselineRoot, path))) failures.push(`unauthorized changed file: ${path}`);
   }
+  for (const path of baseline) if (!candidate.has(path) && !isAllowed(path)) failures.push(`unauthorized removed file: ${path}`);
   return failures;
+}
+
+async function terminateProcessTree(pid: number): Promise<void> {
+  if (process.platform === "win32") {
+    const killer = Bun.spawn(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
+    await killer.exited;
+    return;
+  }
+  try { process.kill(pid, "SIGTERM"); } catch { }
 }
 
 async function run(command: string[], cwd: string): Promise<ProcessResult> {
   const child = Bun.spawn(command, { cwd, env: Bun.env, stdout: "pipe", stderr: "pipe" });
-  return { code: await child.exited, stdout: await new Response(child.stdout).text(), stderr: await new Response(child.stderr).text() };
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; void terminateProcessTree(child.pid); }, processTimeoutMs);
+  const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
+  clearTimeout(timeout);
+  return { code: timedOut ? 1 : code, stdout, stderr: timedOut ? `${stderr}\nCommand timed out after ${processTimeoutMs}ms` : stderr };
 }
 
 async function waitForServer(): Promise<void> {
