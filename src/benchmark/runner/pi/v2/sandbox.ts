@@ -2,6 +2,7 @@ import { dirname } from "node:path";
 import type { PiRunRequestV2 } from "./types";
 
 export type FormalContainerSandbox = {
+  mode: "formal";
   runtime: "docker";
   image: string;
   network: string;
@@ -12,6 +13,19 @@ export type FormalContainerSandbox = {
   pids_limit: number;
   memory_limit: string;
 };
+
+export type LocalContainerSandbox = {
+  mode: "local";
+  runtime: "docker";
+  image: string;
+  network: "bridge";
+  workspace_path: "/workspace";
+  skill_path: "/lorelum/treatment/SKILL.md";
+  pids_limit: number;
+  memory_limit: string;
+};
+
+export type ContainerSandbox = FormalContainerSandbox | LocalContainerSandbox;
 
 type Environment = Record<string, unknown>;
 
@@ -44,7 +58,25 @@ export function formalContainerSandbox(environment: Environment): FormalContaine
   ) {
     fail("Formal container sandbox is invalid");
   }
-  return container as FormalContainerSandbox;
+  return { ...(container as Omit<FormalContainerSandbox, "mode">), mode: "formal" };
+}
+
+export function localContainerSandbox(environment: Environment): LocalContainerSandbox {
+  const sandbox = environment.sandbox;
+  if (!isRecord(sandbox) || sandbox.enforcement !== "local-container-experiment" || !isRecord(sandbox.container)) fail("Local experiment environment must define a container sandbox");
+  const container = sandbox.container;
+  if (
+    container.runtime !== "docker" ||
+    typeof container.image !== "string" || !/^lorelum-formal-pi:[a-z0-9][a-z0-9._-]*$/.test(container.image) ||
+    container.network !== "bridge" ||
+    container.workspace_path !== "/workspace" ||
+    container.skill_path !== "/lorelum/treatment/SKILL.md" ||
+    !Number.isInteger(container.pids_limit) || container.pids_limit < 1 ||
+    typeof container.memory_limit !== "string" || !/^[1-9][0-9]*[kKmMgG]$/.test(container.memory_limit)
+  ) {
+    fail("Local container sandbox is invalid");
+  }
+  return { ...(container as Omit<LocalContainerSandbox, "mode">), mode: "local" };
 }
 
 function mount(source: string, destination: string, readonly = false): string {
@@ -55,40 +87,41 @@ export function containerName(runId: string): string {
   return `lorelum-pi-${runId}`;
 }
 
-export function containerEnvironment(apiKey: string | undefined, sandbox: FormalContainerSandbox): Record<string, string> {
-  if (!apiKey) fail("Formal Pi execution requires DEEPSEEK_API_KEY");
-  return {
-    DEEPSEEK_API_KEY: apiKey,
-    HTTPS_PROXY: sandbox.proxy_url,
-    HTTP_PROXY: sandbox.proxy_url,
-    NO_PROXY: ""
-  };
+export function containerEnvironment(apiKey: string | undefined, sandbox: ContainerSandbox): Record<string, string> {
+  if (!apiKey) fail(`${sandbox.mode === "formal" ? "Formal Pi execution" : "Local Pi experiment"} requires DEEPSEEK_API_KEY`);
+  if (sandbox.mode === "local") return { DEEPSEEK_API_KEY: apiKey };
+  return { DEEPSEEK_API_KEY: apiKey, HTTPS_PROXY: sandbox.proxy_url, HTTP_PROXY: sandbox.proxy_url, NO_PROXY: "" };
 }
 
-export function containerCommand(request: PiRunRequestV2, sandbox: FormalContainerSandbox, workspacePath: string, skillPath?: string, command = request.execution.command, args = request.execution.args): string[] {
+export function containerCommand(request: PiRunRequestV2, sandbox: ContainerSandbox, workspacePath: string, skillPath?: string, command = request.execution.command, args = request.execution.args): string[] {
   const commandLine = [
     "docker", "run", "--rm", "--name", containerName(request.run_id), "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit", String(sandbox.pids_limit), "--memory", sandbox.memory_limit,
     "--network", sandbox.network, "--workdir", sandbox.workspace_path,
     "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
     "--mount", mount(workspacePath, sandbox.workspace_path),
-    "-e", "DEEPSEEK_API_KEY", "-e", `HTTPS_PROXY=${sandbox.proxy_url}`, "-e", `HTTP_PROXY=${sandbox.proxy_url}`, "-e", "NO_PROXY="
+    "-e", "DEEPSEEK_API_KEY"
   ];
+  if (sandbox.mode === "formal") commandLine.push("-e", `HTTPS_PROXY=${sandbox.proxy_url}`, "-e", `HTTP_PROXY=${sandbox.proxy_url}`, "-e", "NO_PROXY=");
   if (skillPath) commandLine.push("--mount", mount(dirname(skillPath), dirname(sandbox.skill_path), true));
   commandLine.push(sandbox.image);
   if (command !== "pi") fail("Formal container execution must use pi");
   return [...commandLine, ...args];
 }
 
-export function containerVersionCommand(sandbox: FormalContainerSandbox): string[] {
+export function containerVersionCommand(sandbox: ContainerSandbox): string[] {
   return [
     "docker", "run", "--rm", "--network", "none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
     "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--entrypoint", "/bin/sh", sandbox.image,
-    "-ec", "test \"$(bun --version)\" = \"1.3.11\"; test \"$(node --version)\" = \"v22.19.0\"; command -v pi >/dev/null; grep -q '\"version\": \"0.80.10\"' node_modules/@earendil-works/pi-coding-agent/package.json"
+    "-ec", "test \"$(bun --version)\" = \"1.3.11\"; test \"$(node --version)\" = \"v22.19.0\"; test \"$(pi --version)\" = \"0.80.10\""
   ];
 }
 
 export function containerImageInspectCommand(sandbox: FormalContainerSandbox): string[] {
   return ["docker", "image", "inspect", "--format", "{{index .RepoDigests 0}}", sandbox.image];
+}
+
+export function localContainerImageInspectCommand(sandbox: LocalContainerSandbox): string[] {
+  return ["docker", "image", "inspect", "--format", "{{.Id}}", sandbox.image];
 }
 
 export function containerRemoveCommand(runId: string): string[] {

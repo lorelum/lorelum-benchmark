@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { containerCommand, containerEnvironment, containerName, containerRemoveCommand, containerVersionCommand, formalContainerSandbox } from "./sandbox";
+import { containerCommand, containerEnvironment, containerName, containerRemoveCommand, formalContainerSandbox, localContainerSandbox } from "./sandbox";
 
 const image = "ghcr.io/lorelum/lorelum-benchmark/formal-pi@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const environment = {
@@ -55,13 +55,6 @@ test("provides a deterministic force-remove command for timeout cleanup", () => 
   expect(containerRemoveCommand("test-run")).toEqual(["docker", "rm", "--force", "lorelum-pi-test-run"]);
 });
 
-test("checks the installed Pi package version without requiring TTY output", () => {
-  const command = containerVersionCommand(formalContainerSandbox(environment)).join(" ");
-
-  expect(command).toContain("@earendil-works/pi-coding-agent/package.json");
-  expect(command).toContain("grep -q");
-});
-
 test("mounts only the staged G1 skill as read-only", () => {
   const sandbox = formalContainerSandbox(environment);
   const command = containerCommand(request, sandbox, "/host/public-workspace", "/host/staged/SKILL.md");
@@ -79,4 +72,26 @@ test("passes only the API key and fixed proxy environment", () => {
     NO_PROXY: ""
   });
   expect(() => containerEnvironment(undefined, formalContainerSandbox(environment))).toThrow("DEEPSEEK_API_KEY");
+});
+
+test("uses a separately marked local container without proxy credentials", () => {
+  const local = localContainerSandbox({
+    sandbox: {
+      enforcement: "local-container-experiment",
+      container: {
+        runtime: "docker",
+        image: "lorelum-formal-pi:local",
+        network: "bridge",
+        workspace_path: "/workspace",
+        skill_path: "/lorelum/treatment/SKILL.md",
+        pids_limit: 128,
+        memory_limit: "1g"
+      }
+    }
+  });
+  const command = containerCommand(request, local, "/host/public-workspace");
+
+  expect(command).toContain("bridge");
+  expect(command).not.toContain("HTTPS_PROXY");
+  expect(containerEnvironment("api-key", local)).toEqual({ DEEPSEEK_API_KEY: "api-key" });
 });

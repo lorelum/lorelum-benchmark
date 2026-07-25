@@ -6,6 +6,12 @@ import { directoryExists, joinPath, listDirectories, listFiles, pathExists, rela
 const failures: string[] = [];
 const lifecycleStages = new Set(["candidate", "pilot", "frozen", "official", "published", "retired"]);
 const ajv = new Ajv2020({ allErrors: true });
+ajv.addFormat("date-time", {
+  type: "string",
+  validate(value: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(Date.parse(value));
+  }
+});
 const schemaValidators = new Map<string, ValidateFunction>();
 
 type DiscoveredTask = {
@@ -113,6 +119,7 @@ async function commitIsAncestor(commit: string): Promise<boolean> {
 }
 
 async function validateExperimentPlan(path: string, plan: Record<string, unknown>): Promise<void> {
+  const retiredPlan = plan.lifecycle_stage === "retired";
   const suite = plan.suite;
   if (!isRecord(suite) || typeof suite.id !== "string" || typeof suite.version !== "string") return;
   const suitePath = joinPath(workspaceRoot, "suites", suite.id);
@@ -120,7 +127,7 @@ async function validateExperimentPlan(path: string, plan: Record<string, unknown
   await requirePath(suiteManifestPath);
   const suiteDocument = await validateYaml(suiteManifestPath, "suite.schema.json");
   if (!suiteDocument) return;
-  if (suiteDocument.id !== suite.id || suiteDocument.version !== suite.version) failures.push(`Experiment suite does not match suite manifest: ${relativePath(path)}`);
+  if (!retiredPlan && (suiteDocument.id !== suite.id || suiteDocument.version !== suite.version)) failures.push(`Experiment suite does not match suite manifest: ${relativePath(path)}`);
 
   const declaredTasks = new Map<string, Record<string, unknown>>();
   if (Array.isArray(suiteDocument.tasks)) {
@@ -142,6 +149,10 @@ async function validateExperimentPlan(path: string, plan: Record<string, unknown
         continue;
       }
       if (typeof declared.path !== "string") continue;
+      if (!retiredPlan && declared.lifecycle_stage === "retired") {
+        failures.push(`Active experiment ${setName} references retired task: ${suite.id}/${taskId}`);
+        continue;
+      }
       const taskCardPath = joinPath(suitePath, declared.path, "public", "task.yaml");
       const taskCard = await validateYaml(taskCardPath, "task-card.schema.json");
       if (!taskCard || taskCard.id !== taskId) failures.push(`Experiment task does not match task card: ${suite.id}/${taskId}`);
@@ -191,8 +202,9 @@ async function validateExperimentPlan(path: string, plan: Record<string, unknown
   }
 
   if (plan.run_kind === "smoke" && plan.repetitions !== 1) failures.push(`Smoke experiment must use exactly one repetition: ${relativePath(path)}`);
+  if (plan.run_kind === "pilot" && Number(plan.repetitions) < 2) failures.push(`Pilot experiment must use at least two repetitions: ${relativePath(path)}`);
 
-  if (typeof plan.source_commit === "string" && !(await commitIsAncestor(plan.source_commit))) failures.push(`Experiment source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
+  if (!retiredPlan && typeof plan.source_commit === "string" && !(await commitIsAncestor(plan.source_commit))) failures.push(`Experiment source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
   if (typeof plan.system_prompt_path === "string" && typeof plan.system_prompt_hash === "string") {
     const promptPath = resolve(workspaceRoot, plan.system_prompt_path);
     if (!insideWorkspace(promptPath)) failures.push(`Experiment system prompt escapes workspace: ${plan.system_prompt_path}`);

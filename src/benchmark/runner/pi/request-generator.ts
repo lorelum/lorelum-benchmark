@@ -10,7 +10,8 @@ type PlanCondition = { id: string; treatment: string };
 
 type ExperimentPlan = {
   id: string;
-  run_kind: "smoke" | "official";
+  lifecycle_stage?: "active" | "retired";
+  run_kind: "smoke" | "pilot" | "official";
   source_commit: string;
   suite: { id: string; version: string };
   conditions: PlanCondition[];
@@ -109,7 +110,9 @@ async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPoli
   const agentInput = taskCard.agent_input;
   const declaredCandidate = isRecord(agentInput) && typeof agentInput.candidate === "string" ? agentInput.candidate : undefined;
   const candidateFile = declaredCandidate ?? (starterFiles.length === 1 ? starterFiles[0] : undefined);
-  if (!candidateFile || !starterFiles.includes(candidateFile.replaceAll("\\", "/")) && !starterFiles.includes(candidateFile)) fail(`Task must declare a candidate starter file when it has multiple starter files: ${relativePath(task.path)}`);
+  const normalizedStarterFiles = starterFiles.map((file) => file.replaceAll("\\", "/"));
+  const normalizedCandidateFile = candidateFile?.replaceAll("\\", "/");
+  if (!normalizedCandidateFile || !normalizedStarterFiles.includes(normalizedCandidateFile)) fail(`Task must declare a candidate starter file when it has multiple starter files: ${relativePath(task.path)}`);
   const [treatmentId, treatmentVersion] = condition.treatment.split("/");
   if (!treatmentId || !treatmentVersion) fail(`Invalid treatment reference: ${condition.treatment}`);
   await verifyPublicRuleCoverage(task.path, taskCard, treatmentId, treatmentVersion);
@@ -124,7 +127,7 @@ async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPoli
     condition_id: condition.id,
     repeat,
     source_commit: plan.source_commit,
-    candidate_path: `starter/${candidateFile.replaceAll("\\", "/")}`,
+    candidate_path: `starter/${normalizedCandidateFile}`,
     suite: plan.suite,
     task: { id: taskId, revision, snapshot_id: snapshot.snapshot_id },
     treatment: { id: treatmentId, version: treatmentVersion },
@@ -146,6 +149,7 @@ async function requestFor(plan: ExperimentPlan, planHash: string, policy: PiPoli
 async function main(): Promise<void> {
   const { planPath, outputPath, smoke, dryRun } = parseArguments();
   const plan = asPlan(Bun.YAML.parse(await Bun.file(planPath).text()));
+  if (plan.lifecycle_stage === "retired") fail(`Experiment plan is retired: ${plan.id}`);
   const planHash = await sha256File(planPath);
   if (!(await sourceCommitIsAncestor(plan.source_commit))) fail(`Experiment plan source_commit is not an ancestor of HEAD: ${plan.source_commit}`);
   const systemPromptPath = resolve(workspaceRoot, plan.system_prompt_path);

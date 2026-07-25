@@ -6,6 +6,9 @@ import { joinPath, pathExists, relativePath, sha256File, workspaceRoot } from ".
 import { findTask } from "../../../task-discovery";
 import type { PiRunRequestV2 } from "./types";
 import { parseS3Uri, uploadImmutableS3Artifact } from "./s3";
+import { auditPiJsonTrace, type PiTraceAudit } from "./trace";
+import { taskRuleAuditFromArtifact, type TaskRuleAudit } from "./task-rule-audit";
+import { evaluatorResultFromOutput, type EvaluatorResultV2 } from "../../../evaluator/v2/result";
 
 type Artifact = { kind: "trace" | "patch" | "raw-output" | "evaluator-output" | "environment" | "review"; uri: string; sha256: string };
 
@@ -161,13 +164,18 @@ async function createDiff(request: PiRunRequestV2, candidatePath: string, artifa
   return { path, success: result.exitCode === 0 || result.exitCode === 1 };
 }
 
-async function taskMetadata(request: PiRunRequestV2): Promise<{ track: string; evaluatorVersion: number }> {
+async function taskMetadata(request: PiRunRequestV2): Promise<{ track: string; evaluatorVersion: number; evaluatorContract?: string; requiresRuleAudit: boolean }> {
   const reference = taskReference(request);
   const task = await findTask(request.suite.id, reference.reference);
   if (!task) fail(`Task not found while creating record: ${request.task.id}`);
   const card = await readYaml(joinPath(task.path, "public", "task.yaml"));
-  if (typeof card.track !== "string" || !Number.isInteger(card.evaluator_version)) fail(`Task card metadata is invalid: ${relativePath(task.path)}`);
-  return { track: card.track, evaluatorVersion: card.evaluator_version as number };
+  if (typeof card.track !== "string" || !Number.isInteger(card.evaluator_version) || typeof card.skill_relevance !== "string") fail(`Task card metadata is invalid: ${relativePath(task.path)}`);
+  return {
+    track: card.track,
+    evaluatorVersion: card.evaluator_version as number,
+    ...(typeof card.evaluator_contract === "string" ? { evaluatorContract: card.evaluator_contract } : {}),
+    requiresRuleAudit: card.skill_relevance === "direct" && card.lifecycle_stage !== "retired" && isRecord(card.skill_context)
+  };
 }
 
 if (!requestPath) {
@@ -194,30 +202,43 @@ try {
     fail("Formal Pi coordination requires an immutable provider model snapshot ID");
   }
   const storageUri = isRecord(environmentManifest.artifact_storage) ? requireProtectedArtifactStorage(environmentManifest) : undefined;
+  const metadata = await taskMetadata(request);
   const runner = await runProcess([process.execPath, "run", "src/benchmark/runner/pi/v2/execute.ts", requestPath], workspaceRoot, Bun.env, request.execution.budget.max_duration_ms);
   await writeText(joinPath(artifactPath, "pi.stdout.log"), runner.stdout);
   await writeText(joinPath(artifactPath, "pi.stderr.log"), runner.stderr);
-  const localArtifacts: Artifact[] = [
-    await artifact("raw-output", joinPath(artifactPath, "pi.stdout.log")),
-    await artifact("raw-output", joinPath(artifactPath, "pi.stderr.log"))
-  ];
   const piManifestPath = joinPath(artifactPath, request.artifacts.manifest_name);
   let executedExecution: Record<string, unknown> = request.execution;
+  let ruleAudit: TaskRuleAudit | undefined;
+  let traceAudit: PiTraceAudit | undefined;
   if (await pathExists(piManifestPath)) {
-    localArtifacts.push(await artifact("trace", piManifestPath));
     const piManifest = await readJson(piManifestPath);
     if (isRecord(piManifest)) {
       if (isRecord(piManifest.execution)) executedExecution = piManifest.execution;
       if (typeof piManifest.adapter_commit === "string") currentAdapterCommit = piManifest.adapter_commit;
+      ruleAudit = taskRuleAuditFromArtifact(piManifest.rule_audit);
+      if (isRecord(piManifest.trace) && typeof piManifest.trace.audit_path === "string") {
+        const auditPath = repositoryPath(piManifest.trace.audit_path);
+        if (await pathExists(auditPath)) traceAudit = await readJson(auditPath) as PiTraceAudit;
+      }
     }
   }
+  traceAudit ??= request.agent.id === "pi" ? auditPiJsonTrace(runner.stdout, request, ruleAudit) : undefined;
+  if (traceAudit) await writeText(joinPath(artifactPath, "pi-trace-audit.json"), `${JSON.stringify(traceAudit, null, 2)}\n`);
+  const localArtifacts: Artifact[] = [
+    await artifact("raw-output", joinPath(artifactPath, "pi.stdout.log")),
+    await artifact("raw-output", joinPath(artifactPath, "pi.stderr.log")),
+    ...(traceAudit ? [await artifact("trace", joinPath(artifactPath, "pi-trace-audit.json"))] : []),
+    ...(await pathExists(piManifestPath) ? [await artifact("trace", piManifestPath)] : [])
+  ];
 
   let evaluator: ProcessResult | undefined;
+  let evaluatorResult: EvaluatorResultV2 | undefined;
   let diffPath: string | undefined;
-  let failureReason: string | undefined;
+  let failureReason: string | undefined = metadata.requiresRuleAudit && !ruleAudit ? "Direct task is missing its frozen rule audit" : undefined;
   const workspacePath = repositoryPath(".run-workspaces", request.run_id);
   const candidatePath = resolve(workspacePath, request.candidate_path);
   if (runner.exitCode === 0 && !runner.timedOut) {
+    if (traceAudit && !traceAudit.valid) failureReason ??= traceAudit.failure_reason;
     try {
       await candidateIsSafe(candidatePath);
       const diff = await createDiff(request, candidatePath, artifactPath);
@@ -230,9 +251,18 @@ try {
       await writeText(joinPath(artifactPath, "evaluator.stderr.log"), evaluator.stderr);
       localArtifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stdout.log")));
       localArtifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stderr.log")));
-      if (evaluator.exitCode !== 0 || evaluator.timedOut) failureReason = evaluator.timedOut ? "Evaluator timed out" : "Evaluator failed";
+      if (metadata.evaluatorContract === "structured/v2") {
+        try {
+          evaluatorResult = evaluatorResultFromOutput(evaluator.stdout);
+          if (!evaluatorResult) throw new Error("Structured evaluator did not emit a result");
+          if (!evaluatorResult.semantic.passed) failureReason ??= "Evaluator semantic gate failed";
+        } catch (error) {
+          failureReason ??= error instanceof Error ? error.message : String(error);
+        }
+      }
+      if (evaluator.exitCode !== 0 || evaluator.timedOut) failureReason ??= evaluator.timedOut ? "Evaluator timed out" : "Evaluator failed";
     } catch (error) {
-      failureReason = error instanceof Error ? error.message : String(error);
+      failureReason ??= error instanceof Error ? error.message : String(error);
     }
   } else {
     failureReason = runner.timedOut ? "Pi timed out" : `Pi failed with exit code ${runner.exitCode ?? "unknown"}`;
@@ -260,6 +290,15 @@ try {
     agent: request.agent,
     execution: executedExecution,
     inputs: request.inputs,
+    ...(ruleAudit ? {
+      rule_audit: {
+        manifest_path: ruleAudit.manifestPath,
+        sha256: ruleAudit.sha256,
+        treatment: ruleAudit.treatment,
+        required_rules: ruleAudit.requiredRules,
+        ...(traceAudit ? { trace_audit: traceAudit } : {})
+      }
+    } : {}),
     artifacts
   };
   await validateSchema("run-manifest.schema.json", runManifest, "formal run manifest");
@@ -268,7 +307,6 @@ try {
   const manifestReference = storageUri
     ? await uploadImmutableS3Artifact(runManifestPath, storageUri, request.run_id)
     : { uri: repositoryRelative(runManifestPath), sha256: await sha256File(runManifestPath) };
-  const metadata = await taskMetadata(request);
   const record = {
     run_id: request.run_id,
     experiment_id: request.experiment_id,
@@ -289,10 +327,16 @@ try {
     run_manifest: manifestReference,
     track: metadata.track,
     condition: request.treatment.id,
-    model: { id: request.agent.model, version: request.agent.model_version, parameters: { seed: request.execution.seed } },
+    model: { id: request.agent.model, version: request.agent.model_version },
     started_at: startedAt,
     cost: { duration_ms: Date.now() - Date.parse(startedAt) },
-    outcome: { automated_checks_passed: evaluator?.exitCode === 0 && !evaluator.timedOut && !failureReason, blind_review: "pending", ...(diffPath ? { diff_path: repositoryRelative(diffPath) } : {}), ...(failureReason ? { failure_reason: failureReason } : {}) }
+    outcome: {
+      automated_checks_passed: evaluator?.exitCode === 0 && !evaluator.timedOut && !failureReason,
+      blind_review: "pending",
+      ...(evaluatorResult ? { evaluator: evaluatorResult, quality_score: evaluatorResult.quality.score } : {}),
+      ...(diffPath ? { diff_path: repositoryRelative(diffPath) } : {}),
+      ...(failureReason ? { failure_reason: failureReason } : {})
+    }
   };
   await validateSchema("run-record.schema.json", record, "formal run record");
   if (await pathExists(recordPath)) fail(`Run record already exists: ${relativePath(recordPath)}`);
