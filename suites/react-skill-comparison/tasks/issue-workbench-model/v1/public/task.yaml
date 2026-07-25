@@ -15,4 +15,3 @@ agent_input:
 applicable_conditions:
   - baseline
   - vercel-skill
-  - lorelum-retrieval

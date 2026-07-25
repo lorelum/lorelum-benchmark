@@ -6,7 +6,7 @@
   "properties": {
     "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
     "version": { "type": "string" },
-    "track": { "enum": ["practice-effectiveness", "performance-skill-comparison"] },
+    "track": { "const": "performance-skill-comparison" },
     "lifecycle_stage": { "enum": ["candidate", "pilot", "frozen", "official", "published", "retired"] },
     "conditions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } },
     "tasks": {

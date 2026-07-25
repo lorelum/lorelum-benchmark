@@ -1,25 +1,16 @@
 # Benchmark 协议
 
-本仓库为两个有关联但结论彼此独立的问题维护可复现的编程任务：
+本仓库为固定 Vercel React Skill 的性能对比维护可复现的编程任务：
 
 | 轨道 | 问题 | 必需条件 |
 | --- | --- | --- |
-| `practice-effectiveness` | 相关的团队 Practice 是否能改善编码结果？ | 基线、Oracle Practice、Lorelum 检索、无关 Practice |
 | `performance-skill-comparison` | 固定 Vercel React Skill 能否改善真实 Next 仓库问题的解决质量？ | 基线、Vercel Skill |
 
-两条轨道共用任务卡、评测器、运行记录和评审流程，但不共享结论：外部性能 Skill
-不能证明团队特定的 Practice 检索有效，Oracle Practice 实验也不能证明与 Vercel
-Skill 的能力对等。
+任务卡、评测器、运行记录和评审流程共同保证对比只改变预先声明的实验条件。
 
 ## 实验条件
 
-- `baseline` (`G0`)：不注入 Practice、Vercel Skill，也不执行 Lorelum 查询。
-- `oracle-practice`：注入评审者选定的相关 Practice 内容，用于隔离内容本身和注入
-  格式的价值。
-- `lorelum-retrieval` (`G2`)：由 Lorelum 选择并返回 Practice 内容，衡量完整产品链路；
-  在 CLI 可用前暂缓执行。
-- `irrelevant-practice`：注入长度可比但刻意无关的 Practice，用于控制额外上下文而非
-  相关性带来的影响。
+- `baseline` (`G0`)：不注入外部 Skill。
 - `vercel-skill` (`G1`)：启用固定版本的 Vercel React Skill，仅适用于外部性能对比轨道。
 
 每组对比运行必须使用相同的任务版本、初始代码、模型及模型版本、系统 prompt、工具
@@ -42,19 +33,11 @@ tasks/task-slug/v1/
 ```
 
 runner 只能将 `public/task.md` 和 `public/starter/` 复制到编码 Agent 的工作区，
-绝不能复制 `private/` 或 `oracle.yaml`。任务题面必须描述目标产品行为，不得点名或
-引用预期 Practice。
-
-`practice-effectiveness` 的 pilot 任务必须有一到两条独立评审过的 Oracle Practice，
-并具备能区分“可运行但不合规”与“合规”结果的验收检查。缺少可复现检查、答案泄露或
-不可避免的外部依赖的任务均不合格。
+绝不能复制 `private/` 或 `oracle.yaml`。任务题面必须描述目标产品行为，不得泄露私有验收材料。
 
 ## 数据集扩展
 
-维护真实 Lorelum 任务的候选池，先冻结 6 张 pilot 任务卡，再扩展到 8–12 个正式的
-Practice 有效性任务。性能轨道先在真实 Next App Router 候选仓库中预注册多个端到端
-问题；每题必须具备公开 issue、私有 reference/naive/mutation 校准、稳定浏览器评估和
-rule-behavior 映射后，才能冻结为正式 revision。
+性能轨道在真实 Next App Router 候选仓库中预注册多个端到端问题；每题必须具备公开 issue、私有 reference/naive/mutation 校准、稳定浏览器评估和 rule-behavior 映射后，才能冻结为正式 revision。
 
 修改 prompt、starter 代码、evaluator、Oracle 映射、treatment 或模型设置时，应视情况
 创建新的任务、treatment、环境、scorer 或 suite 版本。既有运行记录不可修改。每个任务
@@ -74,7 +57,7 @@ rule-behavior 映射后，才能冻结为正式 revision。
 支持且 adapter 确实传递该参数时，run record 才能在 `model.parameters` 中声明模型 seed。
 不支持 seed 的模型必须依靠固定采样参数和多次重复估计结果分布。
 
-这样两条轨道可使用同一数据集而不会覆盖彼此证据。每份不可变记录存放于
+每份不可变记录存放于
 `results/records/<suite>/<task>/<run_id>.json`；大日志和 diff 作为 artifact，以校验和或
 URI 引用。已提交的运行记录还必须包含按校验和寻址的 `run_manifest` 引用。
 

@@ -10,7 +10,6 @@ baseline:
 conditions:
   - baseline
   - vercel-skill
-  - lorelum-retrieval
 tasks:
   - id: workspace-overview-loader-v1
     path: tasks/workspace-overview-loader/v1

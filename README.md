@@ -11,12 +11,10 @@ React Skill 对比 suite。它包含三个冻结依赖的多文件 Next App Rout
 `team-directory-rsc-payload-v3`。没有正式 Pi 请求或运行记录；已被后续 revision 取代的
 候选仍保留在原路径，并标记为 `retired`。
 
-`practice-effectiveness` 保持独立的候选轨道，不与 React Skill 对比共享结论。
-
 ## 目录结构
 
 - `suites/`：冻结的正式任务 revision 与私有 evaluator。
-- `incubator/`：尚未冻结的候选任务，当前主要用于 Practice effectiveness 轨道。
+- `incubator/`：尚未冻结的候选任务。
 - `schemas/`：机器可读契约。
 - `src/benchmark/`：Bun/TypeScript 校验器、evaluator 和 Pi v2 adapter。
 - `treatments/`、`environments/`：固定 Skill、运行环境与隔离策略。
