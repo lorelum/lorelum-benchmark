@@ -1,6 +1,6 @@
 id: r7p3
 version: v1
-lifecycle_stage: active
+lifecycle_stage: retired
 run_kind: pilot
 source_commit: e6baa10a3d27a59d9783f2066d8e7b29e1761363
 suite: { id: realistic-react-skill-comparison, version: 1.0.1 }

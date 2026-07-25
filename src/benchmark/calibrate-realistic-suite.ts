@@ -11,6 +11,7 @@ type CalibrationCase = {
   overlay?: string;
   destination?: string;
   remove?: string;
+  overlays?: Array<{ source: string; destination: string }>;
 };
 
 const suite = "realistic-react-skill-comparison";
@@ -22,12 +23,20 @@ const cases: CalibrationCase[] = [
   { task: "workspace-dashboard-rsc/v2", label: "quota-after-workspace", expectedScore: 67, overlay: "mutations/quota-after-workspace.ts", destination: "lib/dashboard-runtime.ts" },
   { task: "workspace-dashboard-rsc/v2", label: "projects-after-quota", expectedScore: 67, overlay: "mutations/projects-after-quota.ts", destination: "lib/dashboard-runtime.ts" },
   { task: "workspace-dashboard-rsc/v2", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" },
-  { task: "report-insights-conditional-loading/v7", label: "starter", expectedScore: 0 },
-  { task: "report-insights-conditional-loading/v7", label: "reference", expectedScore: 100, overlay: "reference/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
-  { task: "report-insights-conditional-loading/v7", label: "react-lazy", expectedScore: 100, overlay: "accepted/react-lazy/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
-  { task: "report-insights-conditional-loading/v7", label: "next-dynamic", expectedScore: 100, overlay: "accepted/next-dynamic/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
-  { task: "report-insights-conditional-loading/v7", label: "eager-load", expectedScore: 0, overlay: "mutations/eager-load/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
-  { task: "report-insights-conditional-loading/v7", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" },
+  { task: "report-insights-conditional-loading/v8", label: "starter", expectedScore: 25 },
+  { task: "report-insights-conditional-loading/v8", label: "reference", expectedScore: 100, overlay: "reference/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
+  { task: "report-insights-conditional-loading/v8", label: "eager-load", expectedScore: 0, overlays: [
+    { source: "mutations/eager-load/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
+    { source: "mutations/eager-load/components/reports/guest-insights-leak.tsx", destination: "components/reports/guest-insights-leak.tsx" },
+    { source: "mutations/eager-load/app/reports/[reportId]/page.tsx", destination: "app/reports/[reportId]/page.tsx" }
+  ] },
+  { task: "report-insights-conditional-loading/v8", label: "unauthorized-leak", expectedScore: 65, overlays: [
+    { source: "mutations/unauthorized-leak/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
+    { source: "mutations/unauthorized-leak/components/reports/guest-insights-leak.tsx", destination: "components/reports/guest-insights-leak.tsx" },
+    { source: "mutations/unauthorized-leak/app/reports/[reportId]/page.tsx", destination: "app/reports/[reportId]/page.tsx" }
+  ] },
+  { task: "report-insights-conditional-loading/v8", label: "duplicate-fetch", expectedScore: 75, overlay: "mutations/duplicate-fetch/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
+  { task: "report-insights-conditional-loading/v8", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" },
   { task: "team-directory-rsc-payload/v3", label: "starter", expectedScore: 0 },
   { task: "team-directory-rsc-payload/v3", label: "reference", expectedScore: 100, overlay: "reference/app/team/page.tsx", destination: "app/team/page.tsx" },
   { task: "team-directory-rsc-payload/v3", label: "serialization-leak", expectedScore: 50, overlay: "mutations/serialization-leak/app/team/page.tsx", destination: "app/team/page.tsx" },
@@ -53,6 +62,9 @@ for (const calibration of cases) {
     await cp(join(source, "public", "starter", "app"), candidateRoot, { recursive: true });
     if (calibration.overlay && calibration.destination) {
       await cp(join(source, "private", calibration.overlay), join(candidateRoot, calibration.destination));
+    }
+    for (const overlay of calibration.overlays ?? []) {
+      await cp(join(source, "private", overlay.source), join(candidateRoot, overlay.destination));
     }
     if (calibration.remove) await rm(join(candidateRoot, calibration.remove), { force: true });
     const child = Bun.spawn([process.execPath, "run", "src/benchmark/evaluate.ts", suite, calibration.task], {
