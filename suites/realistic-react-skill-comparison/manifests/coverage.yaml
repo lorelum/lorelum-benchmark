@@ -11,6 +11,10 @@ covered_rules:
     tasks: [workspace-dashboard-rsc-v2]
   - id: async-dependencies.md
     tasks: [workspace-dashboard-rsc-v2]
+  - id: server-cache-lru.md
+    tasks: [workspace-profile-lru-cache-v1]
+  - id: server-no-shared-module-state.md
+    tasks: [workspace-profile-lru-cache-v1]
   - id: server-dedup-props.md
     tasks: [team-directory-rsc-payload-v3]
   - id: server-serialization.md

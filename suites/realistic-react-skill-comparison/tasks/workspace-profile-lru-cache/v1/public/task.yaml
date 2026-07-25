@@ -1,0 +1,17 @@
+id: workspace-profile-lru-cache-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 2
+evaluator_contract: structured/v2
+skill_relevance: direct
+source:
+  kind: public-case-abstraction
+  reviewed_cases: [https://vercel.com/docs/fluid-compute]
+  scenario: bounded reuse of stable workspace profiles across sequential server requests
+  non_derivative_statement: Original workspace data, task material, evaluator and reference; no external implementation, test or patch is copied.
+runtime: { command: bun run evaluate -- realistic-react-skill-comparison workspace-profile-lru-cache/v1 }
+agent_input: { prompt: task.md, starter: starter, candidate: app/package.json }
+applicable_conditions: [baseline, vercel-skill]
+skill_context:
+  rules: [server-cache-lru.md, server-no-shared-module-state.md]

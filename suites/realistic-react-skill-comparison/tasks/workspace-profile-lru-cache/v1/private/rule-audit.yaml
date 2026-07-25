@@ -1,0 +1,17 @@
+schema_version: task-rule-audit/v1
+task_id: workspace-profile-lru-cache-v1
+treatment:
+  id: vercel-skill
+  version: v2
+required_rules:
+  - server-cache-lru.md
+  - server-no-shared-module-state.md
+behaviors:
+  - id: sequential-profile-reuse
+    rule: server-cache-lru.md
+  - id: bounded-recent-profile-cache
+    rule: server-cache-lru.md
+  - id: rejected-reads-are-not-cached
+    rule: server-cache-lru.md
+  - id: concurrent-profile-isolation
+    rule: server-no-shared-module-state.md
