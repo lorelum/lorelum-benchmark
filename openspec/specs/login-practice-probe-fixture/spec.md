@@ -59,4 +59,3 @@ execution snapshot、条件、受保护 artifact 的不可变 URI 与 SHA-256、
 - **当** baseline、Oracle 或无关条件完成时
 - **则** 评审者能通过已提交索引解析该次执行的输入快照和全部原始证据，而不需要访问被忽略的
   本地 `artifacts/` 目录
-

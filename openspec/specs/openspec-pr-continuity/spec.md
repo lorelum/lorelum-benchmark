@@ -40,4 +40,3 @@ change。该 PR 正文必须引用 change 对应的 issue。
 #### Scenario: 变更需要新的能力范围
 - **当** 实现发现需要扩展候选池、修改 runner/schema 或创建正式运行记录时
 - **则** 必须为该新范围创建独立 OpenSpec change，并为其建立自己的仅含 OpenSpec 的 PR
-
