@@ -1,0 +1,16 @@
+schema_version: task-rule-audit/v1
+task_id: workspace-dashboard-rsc-v2
+treatment:
+  id: vercel-skill
+  version: v2
+required_rules:
+  - server-cache-react.md
+  - async-parallel.md
+  - async-dependencies.md
+behaviors:
+  - id: request-scope-workspace-dedup
+    rule: server-cache-react.md
+  - id: independent-root-start
+    rule: async-parallel.md
+  - id: projects-after-workspace
+    rule: async-dependencies.md

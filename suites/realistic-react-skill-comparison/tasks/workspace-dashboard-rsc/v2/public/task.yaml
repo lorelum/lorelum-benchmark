@@ -1,0 +1,17 @@
+id: workspace-dashboard-rsc-v2
+version: 2
+track: performance-skill-comparison
+lifecycle_stage: pilot
+evaluator_version: 2
+evaluator_contract: structured/v2
+skill_relevance: direct
+source:
+  kind: public-case-abstraction
+  reviewed_cases: [https://github.com/vercel/next.js/issues/62961, https://github.com/vercel/next.js/issues/58723]
+  scenario: workspace dashboard server reads and dependency graph
+  non_derivative_statement: Original Atlas data, repository interface, public issue, evaluator and reference; no source patch, reproduction or solution is copied.
+runtime: { command: bun run evaluate -- realistic-react-skill-comparison workspace-dashboard-rsc/v2 }
+agent_input: { prompt: task.md, starter: starter, candidate: app/package.json }
+applicable_conditions: [baseline, vercel-skill]
+skill_context:
+  rules: [server-cache-react.md, async-parallel.md, async-dependencies.md]
