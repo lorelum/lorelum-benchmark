@@ -1,0 +1,15 @@
+delivery_template: practice-card/v1
+length_metric: UTF-8 rendered characters, including front matter
+cards:
+  - id: react.api.layered-design
+    version: v1
+    path: react.api.layered-design.v1.md
+    rendered_characters: 318
+  - id: irrelevant.identity-list-rendering
+    version: v1
+    path: irrelevant.identity-list-rendering.v1.md
+    rendered_characters: 292
+comparison:
+  maximum_relative_difference: 0.10
+  actual_relative_difference: 0.0818
+  independently_reviewed: true

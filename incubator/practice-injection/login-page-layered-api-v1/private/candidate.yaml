@@ -1,0 +1,32 @@
+id: login-page-layered-api-v1
+lifecycle_stage: candidate
+source:
+  kind: repository-local-starter
+  repository: lorelum/lorelum-benchmark
+  base_commit: 76b34686ea1e3643abb21dbe727c639ca3cb7aab
+  public_root: public/starter/app
+  immutable_by: private/snapshot.json
+runtime:
+  package_manager: bun
+  node: 22.19.x
+  frontend:
+    vite: 7.1.7
+    react: 19.2.3
+    typescript: 5.9.3
+  browser_test:
+    playwright: 1.61.1
+public_behavior:
+  credential: demo@example.com / password123
+  successful_message: 欢迎，演示用户
+  invalid_credential_status: 401
+  request_delay_ms: 300
+  prevent_duplicate_submit: true
+public_boundary:
+  excludes:
+    - Practice 卡文本与标识
+    - 分层验收断言
+    - 私有评测器与 Oracle
+baseline_expectation:
+  functional: true
+  practice_adherence: false
+  reason: LoginPage 直接调用请求适配器并处理认证响应。

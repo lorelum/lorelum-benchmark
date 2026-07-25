@@ -36,9 +36,9 @@ Practice 专属质量探针结果、相关性标签、利用率标签、成本�
 - **则** 尝试必须分别报告功能通过和遵循失败，且不得标记为完整的 Practice 成功
 
 ### Requirement: 定性标签必须盲评且有边界
-MUST：独立评审者必须从隐藏条件标识和顺序的产物中，将相关性标为 `irrelevant`、
-`partially-relevant` 或 `clearly-relevant`，并将利用率标为 `ignored`、
-`mentioned-not-implemented` 或 `implemented`。LLM 评判不得作为唯一验收 oracle。
+MUST：独立评审者必须从隐藏条件标识和顺序的产物中，分别将相关性和利用率标为“高”、“低”或
+“无法判断”。每一项标签都必须附带至少一条脱敏产物证据和一个不确定点。LLM 评判不得作为唯一
+验收 oracle。
 
 #### Scenario: 向定性评审展示产物
 - **当** 评审者接收用于评估相关性和利用率的候选输出时

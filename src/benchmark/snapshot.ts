@@ -49,7 +49,14 @@ async function listSnapshotFiles(path: string, relative = ""): Promise<string[]>
 
 async function snapshotFiles(target: SnapshotTarget): Promise<Record<string, string>> {
   const files = await listSnapshotFiles(target.path);
-  const included = files.filter((file) => file !== "private/snapshot.json").sort();
+  const included = files.filter((file) => {
+    if (file === "private/snapshot.json") return false;
+    const segments = file.split("/");
+    if (target.kind === "incubator-candidate" && ["node_modules", "dist", "test-results", "playwright-report"].some((directory) => segments.includes(directory))) return false;
+    // Evidence indexes are written after a candidate input has been executed.
+    // They must not invalidate the snapshot that identifies that input.
+    return target.kind !== "incubator-candidate" || !file.startsWith("private/evidence-index/");
+  }).sort();
   return Object.fromEntries(await Promise.all(included.map(async (file) => [file, await sha256File(joinPath(target.path, file))])));
 }
 

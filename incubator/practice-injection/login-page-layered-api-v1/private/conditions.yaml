@@ -1,0 +1,46 @@
+version: v1
+candidate_snapshot_manifest: private/snapshot.json
+source_commit: 76b34686ea1e3643abb21dbe727c639ca3cb7aab
+shared_execution:
+  agent:
+    id: local-pi
+    version: v2
+  pi_version: 0.80.10
+  model:
+    id: deepseek/deepseek-v4-pro
+  additional_shared_system_prompt: none
+  additional_shared_system_prompt_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  tool_policy: private/execution/tool-policy.yaml
+  tool_policy_sha256: bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6
+  budget:
+    max_turns: 20
+    max_duration_minutes: 10
+  workspace: clean-copy-per-attempt
+  repetitions: 2
+conditions:
+  - id: baseline
+    status: declared
+    practice: none
+  - id: oracle-practice
+    status: declared
+    practice:
+      path: private/practices/react.api.layered-design.v1.md
+      injection_channel: condition-scoped-private-runtime
+      sha256: fbab026c5cd3b2df79dc34c967735af7d15cb9ff9063df87eeca6089fd009ae0
+  - id: irrelevant-practice
+    status: declared
+    practice:
+      path: private/practices/irrelevant.identity-list-rendering.v1.md
+      injection_channel: condition-scoped-private-runtime
+      sha256: fdacf814cf70603e55f6880234e53d3dd211db8ff7be4669b09405c57304712c
+  - id: lorelum-retrieval
+    status: unavailable
+    required_input_contract:
+      - 带来源的检索输出
+      - 输出内容 SHA-256
+      - 可复现的检索版本
+    practice: unavailable
+decision_rule:
+  metric: 语义与分层探针均通过的尝试次数
+  advance_only_when: Oracle 次数严格高于 baseline 与无关对照。
+  otherwise: 仅报告诊断性或不确定结果。

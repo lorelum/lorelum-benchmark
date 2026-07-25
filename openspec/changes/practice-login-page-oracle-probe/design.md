@@ -125,9 +125,25 @@ OpenSpec strict validation 通过和初始 PR 创建，只证明变更契约形�
 5. 放弃是正常结果：在后续变更中删除未记录的候选。候选晋升为冻结 suite revision 后，
    绝不重写。
 
-## 待决问题
+## 已确认的规划决策
 
-- 哪个具体登录页 starter 仓库及不可变源码提交，能提供可在本地评测公开行为的任务？
-- 哪一张经过独立评审的无关 Practice，可以匹配最终 Oracle 卡的结构和渲染长度，且不共享
-  同一行为？
-- 谁将执行相关性/利用率盲评，人工探针期间脱敏产物将存放在哪里？
+- starter 使用仓库内新增的最小 Vite 候选，固定 React/React DOM `19.2.3`、Vite `7.1.7`、
+  `@vitejs/plugin-react` `5.0.2`、TypeScript `5.9.3`、Playwright `1.61.1` 和提交的
+  `bun.lock`。它以当前分支的 `76b34686ea1e3643abb21dbe727c639ca3cb7aab` 为来源基线，并由候选快照冻结。
+- 公开行为固定为：`demo@example.com` / `password123` 成功并在原页显示“欢迎，演示用户”；
+  其他凭证返回 `401` 并显示通用错误；请求固定延迟 300 毫秒，期间禁用输入和按钮且拒绝
+  重复提交。公开题面不提 API 分层或 Practice。
+- 初始 naive starter 有意令 `LoginPage` 直接调用请求适配器并解释认证响应，因此功能可用但
+  分层探针应失败。Oracle 要求组件经 `src/features/auth/api/login.ts` 的 `login()` 调用，
+  API 层独占请求、DTO 映射与 `401 -> AuthError` 翻译。
+- 无关对照为“身份列表呈现”，与 Oracle 使用同一 Practice 卡模板，渲染字符数差异不超过
+  10%，且不规定登录或 API 行为。
+- 私有验收由 Playwright 语义检查与 TypeScript AST 分层探针组成；reference/naive 校准必须
+  分别证明通过/失败。盲评使用全新、无上下文的 `deepseek/deepseek-v4-pro` 会话，只接收匿名
+  编号、脱敏 diff、测试摘要和量表；相关性、利用率各标为“高 / 低 / 无法判断”，每项附证据和
+  不确定点，且不替代自动 oracle。
+- 后续每条件执行两次，使用 `local-pi/v2`、Pi `0.80.10`、`deepseek/deepseek-v4-pro`，
+  每次最多 20 轮、10 分钟、无额外共享系统提示。原始产物存于受保护不可变存储，仓库仅保存
+  URI、哈希和索引；本次实现不执行这些尝试。
+- 推进门槛是 Oracle 的“语义与分层探针均通过”次数严格高于 baseline 和无关对照；并列、
+  无效或无法完成的结果只报告为诊断性或不确定，不能推进到新的 change。
