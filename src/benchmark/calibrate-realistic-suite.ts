@@ -7,8 +7,10 @@ type CalibrationCase = {
   task: string;
   label: string;
   expectedScore: number;
+  expectedSemantic?: boolean;
   overlay?: string;
   destination?: string;
+  remove?: string;
 };
 
 const suite = "realistic-react-skill-comparison";
@@ -18,7 +20,8 @@ const cases: CalibrationCase[] = [
   { task: "workspace-dashboard-rsc/v2", label: "reference", expectedScore: 100, overlay: "reference/dashboard-runtime.ts", destination: "lib/dashboard-runtime.ts" },
   { task: "workspace-dashboard-rsc/v2", label: "duplicate-workspace-read", expectedScore: 66, overlay: "mutations/duplicate-workspace-read.ts", destination: "lib/dashboard-runtime.ts" },
   { task: "workspace-dashboard-rsc/v2", label: "quota-after-workspace", expectedScore: 67, overlay: "mutations/quota-after-workspace.ts", destination: "lib/dashboard-runtime.ts" },
-  { task: "workspace-dashboard-rsc/v2", label: "projects-after-quota", expectedScore: 67, overlay: "mutations/projects-after-quota.ts", destination: "lib/dashboard-runtime.ts" }
+  { task: "workspace-dashboard-rsc/v2", label: "projects-after-quota", expectedScore: 67, overlay: "mutations/projects-after-quota.ts", destination: "lib/dashboard-runtime.ts" },
+  { task: "workspace-dashboard-rsc/v2", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" }
 ];
 
 function evaluatorResult(stdout: string): { semantic: { passed: boolean }; quality: { score: number } } {
@@ -40,6 +43,7 @@ for (const calibration of cases) {
     if (calibration.overlay && calibration.destination) {
       await cp(join(source, "private", calibration.overlay), join(candidateRoot, calibration.destination));
     }
+    if (calibration.remove) await rm(join(candidateRoot, calibration.remove), { force: true });
     const child = Bun.spawn([process.execPath, "run", "src/benchmark/evaluate.ts", suite, calibration.task], {
       cwd: workspaceRoot,
       env: { ...Bun.env, CANDIDATE_PATH: join(candidateRoot, "package.json") },
@@ -48,8 +52,9 @@ for (const calibration of cases) {
     });
     const [exitCode, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
     const result = evaluatorResult(stdout);
-    if (exitCode !== 0 || !result.semantic.passed || result.quality.score !== calibration.expectedScore) {
-      throw new Error(`${calibration.task} ${calibration.label}: expected semantic pass and ${calibration.expectedScore}/100, received ${stdout}\n${stderr}`);
+    const expectedSemantic = calibration.expectedSemantic ?? true;
+    if (exitCode !== (expectedSemantic ? 0 : 1) || result.semantic.passed !== expectedSemantic || result.quality.score !== calibration.expectedScore) {
+      throw new Error(`${calibration.task} ${calibration.label}: expected semantic ${expectedSemantic ? "pass" : "failure"} and ${calibration.expectedScore}/100, received ${stdout}\n${stderr}`);
     }
     console.log(`${calibration.task} ${calibration.label}: ${result.quality.score}/100`);
   } finally {
