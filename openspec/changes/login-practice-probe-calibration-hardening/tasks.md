@@ -1,7 +1,7 @@
 ## 0. 流程门禁
 
 - [x] 0.1 创建并回读 Issue #76，收敛 candidate 校准完整性与可复现条件缺口。 [写入范围：GitHub Issue #76]
-- [ ] 0.2 严格验证本 change，并在 `codex/login-practice-probe-calibration-hardening` 从最新 main 创建只含 OpenSpec artifacts 的初始 PR；在 #73 合并前不得实施候选代码修复。 [写入范围：`openspec/changes/login-practice-probe-calibration-hardening/`、GitHub PR]
+- [x] 0.2 严格验证本 change，并在 `codex/login-practice-probe-calibration-hardening` 从最新 main 创建只含 OpenSpec artifacts 的初始 PR #77；在 #73 合并前不得实施候选代码修复。 [写入范围：`openspec/changes/login-practice-probe-calibration-hardening/`、GitHub PR]
 
 ## 1. 私有 Probe 与校准
 
