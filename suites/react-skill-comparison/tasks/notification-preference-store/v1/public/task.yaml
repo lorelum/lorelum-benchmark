@@ -1,0 +1,18 @@
+id: notification-preference-store-v1
+version: 1
+track: performance-skill-comparison
+lifecycle_stage: candidate
+evaluator_version: 1
+skill_relevance: partial
+source:
+  kind: synthetic-realistic-workflow
+  scenario: versioned browser preferences with cross-tab synchronization
+runtime:
+  command: bun run evaluate -- react-skill-comparison notification-preference-store/v1
+agent_input:
+  prompt: task.md
+  starter: starter
+applicable_conditions:
+  - baseline
+  - vercel-skill
+  - lorelum-retrieval

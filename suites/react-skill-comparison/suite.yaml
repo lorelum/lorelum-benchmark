@@ -1,0 +1,35 @@
+id: react-skill-comparison
+version: 0.2.0
+track: performance-skill-comparison
+lifecycle_stage: retired
+protocol: ../../docs/BENCHMARK_PROTOCOL.md
+baseline:
+  repository: vercel-labs/agent-skills
+  revision: f8a72b9603728bb92a217a879b7e62e43ad76c81
+  skill: skills/react-best-practices
+conditions:
+  - baseline
+  - vercel-skill
+  - lorelum-retrieval
+tasks:
+  - id: workspace-overview-loader-v1
+    path: tasks/workspace-overview-loader/v1
+    profile: rsc
+    category: async-dependency-graph
+    lifecycle_stage: candidate
+  - id: issue-workbench-model-v1
+    path: tasks/issue-workbench-model/v1
+    profile: spa
+    category: rerender-stateful-model
+    lifecycle_stage: candidate
+  - id: notification-preference-store-v1
+    path: tasks/notification-preference-store/v1
+    profile: spa
+    category: client-persistence-sync
+    lifecycle_stage: candidate
+  - id: order-route-loader-v1
+    path: tasks/order-route-loader/v1
+    profile: rsc
+    category: server-authorization-serialization
+    lifecycle_stage: candidate
+default_active_task_set: []
