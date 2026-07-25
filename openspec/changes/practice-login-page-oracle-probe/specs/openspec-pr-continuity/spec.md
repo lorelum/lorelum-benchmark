@@ -10,6 +10,16 @@ benchmark OpenSpec change 前必须确认已有可追溯的 GitHub issue；若�
 - **当** 维护者准备创建非引导例外的 benchmark OpenSpec change，且未找到对应 issue 时
 - **则** 必须先创建 issue，随后才可创建 OpenSpec artifacts 或实现分支
 
+### Requirement: 实现前完成规划澄清
+MUST：OpenSpec strict validation 通过且初始 PR 创建后，在开始任何候选 fixture 或 benchmark
+代码实现前，维护者必须向需求方确认并记录：被测的可观察行为与 Practice 行为、预期
+baseline 缺陷和区分度、相关 Practice 与等长无关对照、私有语义/质量验收、starter 与不可变
+源码提交、模型/提示/预算和盲评边界。回答必须写回 issue 与 OpenSpec design/tasks。
+
+#### Scenario: 关键实验问题尚未确认
+- **当** 未确认的问题会改变题面、oracle、对照、评测、treatment、environment 或结论解释时
+- **则** 必须暂停实现并向需求方询问，且不得创建候选 fixture 或执行模型
+
 ### Requirement: OpenSpec change 保持单一 PR 证据链
 MUST：仓库对 benchmark change 必须先创建仅含 OpenSpec artifacts 和必要流程约束的 PR。后续
 实现、验证、任务清单勾选和修订必须提交到同一分支与同一 PR。该 PR 在 change 的所有任务完成

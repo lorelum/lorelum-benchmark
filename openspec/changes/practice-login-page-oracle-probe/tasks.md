@@ -2,6 +2,8 @@
 
 - [x] 0.1 创建 issue #74，并在 `AGENTS.md` 固定 issue 先行、OpenSpec 先行、初始 PR 仅含 OpenSpec artifacts、后续实现持续追加到同一分支与同一 PR 的规则。#73 发生在该规则落库前，其 issue 时序作为一次明确的引导例外，不得作为后续 change 的先例。 [写入范围：`AGENTS.md`]
 - [x] 0.2 修订流程与 OpenSpec，使未完成 change 不得关闭或合并初始 PR；明确 Practice 的条件私有注入、evaluator/oracle 的模型输入禁令和证据索引要求。 [写入范围：`AGENTS.md`、`openspec/changes/practice-login-page-oracle-probe/`]
+- [x] 0.3 在 `AGENTS.md` 固定严格验证后的规划澄清门：关键实验问题未确认时暂停实现。 [写入范围：`AGENTS.md`]
+- [ ] 0.4 向需求方完成登录页实验的规划澄清，将答案写回 issue #74 与本 change 的 design/tasks，再开始候选 fixture 实现。 [写入范围：issue #74、`openspec/changes/practice-login-page-oracle-probe/`]
 
 ## 1. 候选契约与 fixture
 

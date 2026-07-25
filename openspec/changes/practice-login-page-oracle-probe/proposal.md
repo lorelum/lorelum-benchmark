@@ -10,6 +10,7 @@ Lorelum 需要先验证“给出正确的团队 Practice 是否改善同一编�
 - 定义版本化的 `react.api.layered-design` Oracle Practice 卡、等长且呈现形式匹配的无关 Practice 对照卡，以及预留给真实检索输出的声明性接口。
 - 预注册四个比较条件：无 Practice baseline、Oracle 相关 Practice、真实检索 Practice、无关 Practice；为首轮人工小试明确固定输入、有效运行、原始证据、私有注入与排除规则。
 - 在仓库 `AGENTS.md` 固定 issue 先行、OpenSpec 先行、初始 PR 仅含 OpenSpec、未完成 change 不得合并初始 PR、后续实现持续追加至同一分支与同一 PR 的工作流；#73 的 issue 时序作为一次明确的引导例外，不得复用。
+- 固定严格验证后的规划澄清门：先与需求方确认任务行为、区分度、Practice/对照、私有验收和运行边界，再创建候选 fixture。
 - 明确本次初始 PR 不运行模型、不创建正式 suite revision 或结果 record，也不改变现有 G0/G1 treatment、Pi runner 或 schema。
 
 ## 能力范围
