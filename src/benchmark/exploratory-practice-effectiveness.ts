@@ -4,19 +4,22 @@ import { containerCommand, containerEnvironment, formalContainerSandbox } from "
 import { joinPath, sha256File, sha256Text, workspaceRoot } from "./fs";
 
 type RecordValue = Record<string, unknown>;
-type Treatment = { id: string; version: string; content_sha256: string; length: number };
+type Treatment = { id: string; version: string; content_sha256: string; length: number; content_path?: string; content_key?: string };
 type Task = { id: string; candidate: string; candidate_entrypoint: string; task_snapshot_sha256: string; profile: string; profile_sha256: string; oracle: Treatment; irrelevant: Treatment };
 type Plan = { id: string; version: string; source_commit: string; scope: { repetitions: number; conditions: string[]; total_executions: number }; execution: RecordValue; tasks: Task[] };
-
-const planPath = joinPath(workspaceRoot, "protocol", "practice-effectiveness-exploratory", "v1", "plan.yaml");
 
 function fail(message: string): never { throw new Error(message); }
 function isRecord(value: unknown): value is RecordValue { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
 function relativePath(path: string): string { return relative(workspaceRoot, path).replaceAll("\\", "/"); }
 function insideWorkspace(path: string): boolean { const result = relative(workspaceRoot, resolve(path)); return !result.startsWith("..") && !isAbsolute(result); }
 
-async function readPlan(): Promise<Plan> {
-  const parsed = Bun.YAML.parse(await Bun.file(planPath).text()) as unknown;
+function planPath(version: string): string {
+  if (!/^v[1-9][0-9]*$/.test(version)) fail(`Invalid exploratory plan version: ${version}`);
+  return joinPath(workspaceRoot, "protocol", "practice-effectiveness-exploratory", version, "plan.yaml");
+}
+
+async function readPlan(path: string): Promise<Plan> {
+  const parsed = Bun.YAML.parse(await Bun.file(path).text()) as unknown;
   if (!isRecord(parsed) || !isRecord(parsed.scope) || !isRecord(parsed.execution) || !Array.isArray(parsed.tasks)) fail("Exploratory plan is invalid");
   return parsed as unknown as Plan;
 }
@@ -58,7 +61,19 @@ function profileTreatments(profile: RecordValue): RecordValue {
   return treatments;
 }
 
-async function verifyTreatment(task: Task, key: "oracle_practice" | "irrelevant_control", expected: Treatment, publicFiles: string[]): Promise<string> {
+async function verifyTreatment(task: Task, key: "oracle_practice" | "irrelevant_control", expected: Treatment, publicFiles: string[], activePlanPath: string): Promise<string> {
+  if (expected.content_path || expected.content_key) {
+    if (typeof expected.content_path !== "string" || typeof expected.content_key !== "string" || !expected.content_path.includes("/private/") || !insideWorkspace(expected.content_path)) fail(`Versioned private treatment reference mismatch: ${task.id}/${key}`);
+    const source = Bun.YAML.parse(await Bun.file(joinPath(workspaceRoot, expected.content_path)).text()) as unknown;
+    if (!isRecord(source) || source.version !== expected.version || !isRecord(source.treatments) || !isRecord(source.treatments[expected.content_key])) fail(`Versioned private treatment content mismatch: ${task.id}/${key}`);
+    const entry = source.treatments[expected.content_key];
+    if (entry.id !== expected.id || typeof entry.content !== "string") fail(`Versioned private treatment identity mismatch: ${task.id}/${key}`);
+    const content = entry.content;
+    if ((await sha256Text(content)) !== expected.content_sha256 || [...content].length !== expected.length) fail(`Private treatment hash mismatch: ${task.id}/${key}`);
+    for (const file of publicFiles) if ((await Bun.file(file).text()).includes(content)) fail(`Private treatment leaked into public material: ${relativePath(file)}`);
+    if ((await Bun.file(activePlanPath).text()).includes(content)) fail("Private treatment leaked into committed plan");
+    return content;
+  }
   const profilePath = joinPath(workspaceRoot, task.profile);
   if (!insideWorkspace(profilePath) || !task.profile.includes("/private/validation-profile/")) fail(`Profile must be a private validation profile: ${task.id}`);
   if ((await sha256File(profilePath)) !== task.profile_sha256) fail(`Profile hash mismatch: ${task.id}`);
@@ -69,7 +84,7 @@ async function verifyTreatment(task: Task, key: "oracle_practice" | "irrelevant_
   const content = entry.content;
   if ((await sha256Text(content)) !== expected.content_sha256 || [...content].length !== expected.length) fail(`Private treatment hash mismatch: ${task.id}/${key}`);
   for (const file of publicFiles) if ((await Bun.file(file).text()).includes(content)) fail(`Private treatment leaked into public material: ${relativePath(file)}`);
-  if ((await Bun.file(planPath).text()).includes(content)) fail("Private treatment leaked into committed plan");
+  if ((await Bun.file(activePlanPath).text()).includes(content)) fail("Private treatment leaked into committed plan");
   return content;
 }
 
@@ -83,9 +98,9 @@ async function verifyCandidateEntrypoint(task: Task, publicRoot: string): Promis
   if (!stats.isFile() && !stats.isDirectory()) fail(`Candidate entrypoint is not a file or directory: ${task.id}`);
 }
 
-async function verifyPlan(plan: Plan): Promise<Map<string, { oracle: string; irrelevant: string }>> {
+async function verifyPlan(plan: Plan, activePlanPath: string): Promise<Map<string, { oracle: string; irrelevant: string }>> {
   const execution = plan.execution;
-  if (plan.id !== "practice-effectiveness-exploratory" || plan.version !== "v1" || plan.scope.repetitions !== 2 || plan.scope.total_executions !== 36 || JSON.stringify(plan.scope.conditions) !== JSON.stringify(["baseline", "oracle-practice", "irrelevant-practice"])) fail("Exploratory plan scope is not the authorized 36-run design");
+  if (plan.id !== "practice-effectiveness-exploratory" || !["v1", "v2"].includes(plan.version) || plan.scope.repetitions !== 2 || plan.scope.total_executions !== 36 || JSON.stringify(plan.scope.conditions) !== JSON.stringify(["baseline", "oracle-practice", "irrelevant-practice"])) fail("Exploratory plan scope is not the authorized 36-run design");
   if (execution.pi_version !== "0.80.10" || execution.model_alias !== "deepseek-v4-pro" || execution.pi_model !== "deepseek/deepseek-v4-pro" || execution.max_turns !== 20 || execution.max_duration_ms !== 600000 || execution.seed !== null) fail("Exploratory execution envelope is invalid");
   const promptPath = joinPath(workspaceRoot, String(execution.system_prompt_path));
   const policyPath = joinPath(workspaceRoot, String(execution.tool_policy_path));
@@ -101,8 +116,8 @@ async function verifyPlan(plan: Plan): Promise<Map<string, { oracle: string; irr
     await verifyCandidateSnapshot(task.candidate, task.task_snapshot_sha256);
     await verifyCandidateEntrypoint(task, publicRoot);
     const publicFiles = (await walkFiles(publicRoot)).map((file) => joinPath(publicRoot, file));
-    const oracle = await verifyTreatment(task, "oracle_practice", task.oracle, publicFiles);
-    const irrelevant = await verifyTreatment(task, "irrelevant_control", task.irrelevant, publicFiles);
+    const oracle = await verifyTreatment(task, "oracle_practice", task.oracle, publicFiles, activePlanPath);
+    const irrelevant = await verifyTreatment(task, "irrelevant_control", task.irrelevant, publicFiles, activePlanPath);
     const ratio = task.irrelevant.length / task.oracle.length;
     if (ratio < 0.75 || ratio > 1.25) fail(`Irrelevant treatment is not length comparable: ${task.id}`);
     content.set(task.id, { oracle, irrelevant });
@@ -165,9 +180,11 @@ async function docker(command: string[], timeoutMs = 120000): Promise<{ exit_cod
   return runProcess(["docker", ...command], workspaceRoot, { PATH: Bun.env.PATH ?? "" }, timeoutMs);
 }
 
-async function localDirectImage(plan: Plan): Promise<{ tag: string; image_id: string }> {
-  const local = isRecord(plan.execution.local_direct) ? plan.execution.local_direct : fail("Exploratory plan has no local-direct configuration");
-  if (local.mode !== "local-direct-docker" || local.dockerfile !== "Dockerfile.formal-pi" || local.network !== "bridge" || local.isolation !== "public-workspace-and-readonly-treatment-only") fail("Local-direct configuration is invalid");
+async function localExecutionImage(plan: Plan, mode: "local-direct" | "local-proxied"): Promise<{ tag: string; image_id: string }> {
+  const key = mode === "local-direct" ? "local_direct" : "local_proxied";
+  const local = isRecord(plan.execution[key]) ? plan.execution[key] : fail(`Exploratory plan has no ${mode} configuration`);
+  const expectedMode = mode === "local-direct" ? "local-direct-docker" : "local-proxied-docker";
+  if (local.mode !== expectedMode || local.dockerfile !== "Dockerfile.formal-pi" || local.isolation !== "public-workspace-and-readonly-treatment-only") fail(`${mode} configuration is invalid`);
   const revision = await runProcess(["git", "rev-parse", "--short=12", "HEAD"], workspaceRoot, { PATH: Bun.env.PATH ?? "" }, 30000);
   if (revision.exit_code !== 0) fail("Unable to identify local exploratory source revision: " + revision.stderr.trim());
   const tag = String(local.image_tag_prefix) + ":" + revision.stdout.trim();
@@ -184,12 +201,35 @@ async function localDirectImage(plan: Plan): Promise<{ tag: string; image_id: st
   return { tag, image_id: inspected.stdout.trim() };
 }
 
-function localDirectCommand(runId: string, image: string, workspace: string, skillPath: string | undefined, args: string[]): string[] {
-  const command = ["docker", "run", "--rm", "--name", "lorelum-exploratory-" + runId, "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit", "256", "--memory", "2g", "--network", "bridge", "--workdir", "/workspace", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--mount", "type=bind,src=" + workspace + ",dst=/workspace"];
+function localCommand(runId: string, image: string, workspace: string, skillPath: string | undefined, args: string[], network: string, proxyUrl?: string): string[] {
+  const command = ["docker", "run", "--rm", "--name", "lorelum-exploratory-" + runId, "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit", "256", "--memory", "2g", "--network", network, "--workdir", "/workspace", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--mount", "type=bind,src=" + workspace + ",dst=/workspace"];
   if (skillPath) command.push("--mount", "type=bind,src=" + dirname(skillPath) + ",dst=/lorelum/treatment,readonly");
-  command.push("-e", "DEEPSEEK_API_KEY", "-e", "NO_PROXY=", image, ...args);
+  command.push("-e", "DEEPSEEK_API_KEY", "-e", "NO_PROXY=");
+  if (proxyUrl) command.push("-e", "HTTPS_PROXY=" + proxyUrl, "-e", "HTTP_PROXY=" + proxyUrl);
+  command.push(image, ...args);
   if (skillPath) command.push("--skill", "/lorelum/treatment/SKILL.md");
   return command;
+}
+
+type LocalProxy = { network: string; container: string; proxy_url: string };
+
+async function startLocalProxy(image: string, session: string): Promise<LocalProxy> {
+  const suffix = session.replaceAll(/[^a-zA-Z0-9]/g, "").slice(-20);
+  const network = "lorelum-exploratory-" + suffix;
+  const container = "lorelum-egress-proxy-" + suffix;
+  const created = await docker(["network", "create", "--internal", network], 30000);
+  if (created.exit_code !== 0) fail("Unable to create internal exploratory network: " + created.stderr.trim());
+  const proxyPath = joinPath(workspaceRoot, "src", "benchmark", "exploratory-deepseek-egress-proxy.mjs");
+  const started = await docker(["run", "-d", "--name", container, "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit", "128", "--memory", "256m", "--network", "bridge", "--tmpfs", "/tmp:rw,noexec,nosuid,size=32m", "--mount", "type=bind,src=" + proxyPath + ",dst=/proxy/egress.mjs,readonly", "--entrypoint", "node", image, "/proxy/egress.mjs"], 30000);
+  if (started.exit_code !== 0) { await docker(["network", "rm", network], 30000); fail("Unable to start local egress proxy: " + started.stderr.trim()); }
+  const connected = await docker(["network", "connect", "--alias", "lorelum-egress-proxy", network, container], 30000);
+  if (connected.exit_code !== 0) { await docker(["rm", "--force", container], 30000); await docker(["network", "rm", network], 30000); fail("Unable to attach local egress proxy: " + connected.stderr.trim()); }
+  return { network, container, proxy_url: "http://lorelum-egress-proxy:3128" };
+}
+
+async function stopLocalProxy(proxy: LocalProxy): Promise<void> {
+  await docker(["rm", "--force", proxy.container], 30000);
+  await docker(["network", "rm", proxy.network], 30000);
 }
 
 async function removeLocalContainer(runId: string): Promise<void> {
@@ -201,9 +241,9 @@ function plannedRunIds(plan: Plan): Set<string> {
   return new Set(plan.tasks.flatMap((task) => Array.from({ length: plan.scope.repetitions }, (_, index) => plan.scope.conditions.map((condition) => `${task.id}-${condition}-${String(index + 1).padStart(2, "0")}`)).flat()));
 }
 
-async function execute(plan: Plan, treatments: Map<string, { oracle: string; irrelevant: string }>, authFile: string | undefined, mode: "formal" | "local-direct", selectedRunIds: Set<string>): Promise<void> {
+async function execute(plan: Plan, treatments: Map<string, { oracle: string; irrelevant: string }>, authFile: string | undefined, mode: "formal" | "local-direct" | "local-proxied", selectedRunIds: Set<string>): Promise<void> {
   const key = await apiKey(authFile);
-  const localImage = mode === "local-direct" ? await localDirectImage(plan) : undefined;
+  const localImage = mode === "formal" ? undefined : await localExecutionImage(plan, mode);
   if (mode === "formal") await sandboxPreflight();
   const environment = mode === "formal" ? Bun.YAML.parse(await Bun.file(joinPath(workspaceRoot, "environments", "formal-pi-deepseek-v4-pro", "v1", "environment.yaml")).text()) as RecordValue : undefined;
   const sandbox = environment ? formalContainerSandbox(environment) : undefined;
@@ -214,40 +254,45 @@ async function execute(plan: Plan, treatments: Map<string, { oracle: string; irr
   const session = "issue-59-" + mode + "-" + new Date().toISOString().replaceAll(/[:.]/g, "-");
   const scratchRoot = joinPath(workspaceRoot, "scratch", "practice-effectiveness-exploratory", session);
   await mkdir(scratchRoot, { recursive: true });
-  await writeFile(join(scratchRoot, "session.json"), `${JSON.stringify({ kind: "scratch-only-exploratory-session", execution_mode: mode === "local-direct" ? "local-direct-docker" : "formal", network_boundary: mode === "local-direct" ? "direct-egress-non-formal" : "formal-allowlist-sandbox", local_image: localImage ?? null, selected_run_ids: [...selectedRunIds] }, null, 2)}\n`);
-  const summary: Array<RecordValue> = [];
-  for (const task of plan.tasks) for (let repeat = 1; repeat <= plan.scope.repetitions; repeat += 1) for (const condition of plan.scope.conditions) {
-    const runId = `${task.id}-${condition}-${String(repeat).padStart(2, "0")}`;
-    if (selectedRunIds.size > 0 && !selectedRunIds.has(runId)) continue;
-    const runRoot = await mkdtemp(join(scratchRoot, `${runId}-`));
-    const workspace = join(runRoot, "workspace");
-    const treatment = condition === "oracle-practice" ? treatments.get(task.id)?.oracle : condition === "irrelevant-practice" ? treatments.get(task.id)?.irrelevant : undefined;
-    if (condition !== "baseline" && !treatment) fail(`Missing pinned treatment for ${runId}`);
-    await copyPublicTree(joinPath(workspaceRoot, task.candidate, "public", "task.md"), join(workspace, "task.md"));
-    await copyPublicTree(joinPath(workspaceRoot, task.candidate, "public", "starter"), join(workspace, "starter"));
-    if (mode === "local-direct") await makeStarterWritableForContainer(join(workspace, "starter"));
-    const skillPath = treatment ? join(runRoot, "treatment", "SKILL.md") : undefined;
-    if (skillPath) { await mkdir(dirname(skillPath), { recursive: true }); await writeFile(skillPath, treatment); }
-    const args = ["--model", String(execution.pi_model), "--system-prompt", await Bun.file(joinPath(workspaceRoot, String(execution.system_prompt_path))).text(), ...requiredArgs, "--tools", String(piPolicy.tools), String(piPolicy.task_prompt), String(piPolicy.task_instruction)];
-    const command = mode === "formal"
-      ? containerCommand({ run_id: runId, execution: { command: "pi", args } } as never, sandbox!, workspace, skillPath)
-      : localDirectCommand(runId, localImage!.tag, workspace, skillPath, args);
-    const startedAt = new Date().toISOString();
-    const pi = await runProcess(command, workspaceRoot, mode === "formal"
-      ? { PATH: Bun.env.PATH ?? "", ...containerEnvironment(key, sandbox!) }
-      : { PATH: Bun.env.PATH ?? "", DEEPSEEK_API_KEY: key }, Number(execution.max_duration_ms), mode === "local-direct" ? () => removeLocalContainer(runId) : undefined);
-    await writeFile(join(runRoot, "pi.stdout.log"), pi.stdout); await writeFile(join(runRoot, "pi.stderr.log"), pi.stderr);
-    const evaluator = pi.exit_code === 0 && !pi.timed_out ? await runProcess([process.execPath, "test", joinPath(workspaceRoot, task.candidate, "private", "evaluator")], workspaceRoot, { ...Bun.env, CANDIDATE_PATH: join(workspace, task.candidate_entrypoint) }, Number(execution.max_duration_ms)) : undefined;
-    if (evaluator) { await writeFile(join(runRoot, "evaluator.stdout.log"), evaluator.stdout); await writeFile(join(runRoot, "evaluator.stderr.log"), evaluator.stderr); }
-    const diff = await runProcess(["git", "diff", "--no-index", "--", joinPath(workspaceRoot, task.candidate, "public", "starter"), join(workspace, "starter")], workspaceRoot, Bun.env, 30000);
-    await writeFile(join(runRoot, "candidate.diff"), `${diff.stdout}${diff.stderr}`);
-    const treatmentHash = treatment ? await sha256Text(treatment) : await sha256Text("");
-    const record = { kind: "scratch-only-exploratory-run", run_id: runId, task: { candidate: task.candidate, snapshot_sha256: task.task_snapshot_sha256, profile: task.profile, profile_sha256: task.profile_sha256 }, condition, repeat, treatment_content_sha256: treatmentHash, model_alias: execution.model_alias, pi_version: execution.pi_version, execution_mode: mode === "local-direct" ? "local-direct-docker" : "formal", network_boundary: mode === "local-direct" ? "direct-egress-non-formal" : "formal-allowlist-sandbox", local_image: localImage ?? null, started_at_utc: startedAt, completed_at_utc: new Date().toISOString(), system_prompt_sha256: execution.system_prompt_sha256, tool_policy_sha256: execution.tool_policy_sha256, budget: { max_turns: execution.max_turns, max_duration_ms: execution.max_duration_ms }, pi: { exit_code: pi.exit_code, timed_out: pi.timed_out, stdout: "pi.stdout.log", stderr: "pi.stderr.log" }, evaluator: evaluator ? { exit_code: evaluator.exit_code, timed_out: evaluator.timed_out, stdout: "evaluator.stdout.log", stderr: "evaluator.stderr.log" } : null, output: "pi.stdout.log", diff: "candidate.diff" };
-    await writeFile(join(runRoot, "scratch-run.json"), `${JSON.stringify(record, null, 2)}\n`);
-    summary.push({ run_id: runId, condition, repeat, execution_mode: mode, pi_exit_code: pi.exit_code, evaluator_exit_code: evaluator?.exit_code ?? null, scratch_directory: relativePath(runRoot) });
+  const proxy = mode === "local-proxied" ? await startLocalProxy(localImage!.tag, session) : undefined;
+  try {
+    await writeFile(join(scratchRoot, "session.json"), `${JSON.stringify({ kind: "scratch-only-exploratory-session", execution_mode: mode === "local-direct" ? "local-direct-docker" : mode === "local-proxied" ? "local-proxied-docker" : "formal", network_boundary: mode === "local-direct" ? "direct-egress-non-formal" : mode === "local-proxied" ? "internal-network-deepseek-allowlist-non-formal" : "formal-allowlist-sandbox", local_image: localImage ?? null, proxy: proxy ? { allowed_endpoint: "api.deepseek.com:443" } : null, selected_run_ids: [...selectedRunIds] }, null, 2)}\n`);
+    const summary: Array<RecordValue> = [];
+    for (const task of plan.tasks) for (let repeat = 1; repeat <= plan.scope.repetitions; repeat += 1) for (const condition of plan.scope.conditions) {
+      const runId = `${task.id}-${condition}-${String(repeat).padStart(2, "0")}`;
+      if (selectedRunIds.size > 0 && !selectedRunIds.has(runId)) continue;
+      const runRoot = await mkdtemp(join(scratchRoot, `${runId}-`));
+      const workspace = join(runRoot, "workspace");
+      const treatment = condition === "oracle-practice" ? treatments.get(task.id)?.oracle : condition === "irrelevant-practice" ? treatments.get(task.id)?.irrelevant : undefined;
+      if (condition !== "baseline" && !treatment) fail(`Missing pinned treatment for ${runId}`);
+      await copyPublicTree(joinPath(workspaceRoot, task.candidate, "public", "task.md"), join(workspace, "task.md"));
+      await copyPublicTree(joinPath(workspaceRoot, task.candidate, "public", "starter"), join(workspace, "starter"));
+      if (mode !== "formal") await makeStarterWritableForContainer(join(workspace, "starter"));
+      const skillPath = treatment ? join(runRoot, "treatment", "SKILL.md") : undefined;
+      if (skillPath) { await mkdir(dirname(skillPath), { recursive: true }); await writeFile(skillPath, treatment); }
+      const args = ["--model", String(execution.pi_model), "--system-prompt", await Bun.file(joinPath(workspaceRoot, String(execution.system_prompt_path))).text(), ...requiredArgs, "--tools", String(piPolicy.tools), String(piPolicy.task_prompt), String(piPolicy.task_instruction)];
+      const command = mode === "formal"
+        ? containerCommand({ run_id: runId, execution: { command: "pi", args } } as never, sandbox!, workspace, skillPath)
+        : localCommand(runId, localImage!.tag, workspace, skillPath, args, proxy?.network ?? "bridge", proxy?.proxy_url);
+      const startedAt = new Date().toISOString();
+      const pi = await runProcess(command, workspaceRoot, mode === "formal"
+        ? { PATH: Bun.env.PATH ?? "", ...containerEnvironment(key, sandbox!) }
+        : { PATH: Bun.env.PATH ?? "", DEEPSEEK_API_KEY: key }, Number(execution.max_duration_ms), mode !== "formal" ? () => removeLocalContainer(runId) : undefined);
+      await writeFile(join(runRoot, "pi.stdout.log"), pi.stdout); await writeFile(join(runRoot, "pi.stderr.log"), pi.stderr);
+      const evaluator = pi.exit_code === 0 && !pi.timed_out ? await runProcess([process.execPath, "test", joinPath(workspaceRoot, task.candidate, "private", "evaluator")], workspaceRoot, { ...Bun.env, CANDIDATE_PATH: join(workspace, task.candidate_entrypoint) }, Number(execution.max_duration_ms)) : undefined;
+      if (evaluator) { await writeFile(join(runRoot, "evaluator.stdout.log"), evaluator.stdout); await writeFile(join(runRoot, "evaluator.stderr.log"), evaluator.stderr); }
+      const diff = await runProcess(["git", "diff", "--no-index", "--", joinPath(workspaceRoot, task.candidate, "public", "starter"), join(workspace, "starter")], workspaceRoot, Bun.env, 30000);
+      await writeFile(join(runRoot, "candidate.diff"), `${diff.stdout}${diff.stderr}`);
+      const treatmentHash = treatment ? await sha256Text(treatment) : await sha256Text("");
+      const record = { kind: "scratch-only-exploratory-run", run_id: runId, task: { candidate: task.candidate, snapshot_sha256: task.task_snapshot_sha256, profile: task.profile, profile_sha256: task.profile_sha256 }, condition, repeat, treatment_content_sha256: treatmentHash, model_alias: execution.model_alias, pi_version: execution.pi_version, execution_mode: mode === "local-direct" ? "local-direct-docker" : mode === "local-proxied" ? "local-proxied-docker" : "formal", network_boundary: mode === "local-direct" ? "direct-egress-non-formal" : mode === "local-proxied" ? "internal-network-deepseek-allowlist-non-formal" : "formal-allowlist-sandbox", local_image: localImage ?? null, started_at_utc: startedAt, completed_at_utc: new Date().toISOString(), system_prompt_sha256: execution.system_prompt_sha256, tool_policy_sha256: execution.tool_policy_sha256, budget: { max_turns: execution.max_turns, max_duration_ms: execution.max_duration_ms }, pi: { exit_code: pi.exit_code, timed_out: pi.timed_out, stdout: "pi.stdout.log", stderr: "pi.stderr.log" }, evaluator: evaluator ? { exit_code: evaluator.exit_code, timed_out: evaluator.timed_out, stdout: "evaluator.stdout.log", stderr: "evaluator.stderr.log" } : null, output: "pi.stdout.log", diff: "candidate.diff" };
+      await writeFile(join(runRoot, "scratch-run.json"), `${JSON.stringify(record, null, 2)}\n`);
+      summary.push({ run_id: runId, condition, repeat, execution_mode: mode, pi_exit_code: pi.exit_code, evaluator_exit_code: evaluator?.exit_code ?? null, scratch_directory: relativePath(runRoot) });
+    }
+    await writeFile(join(scratchRoot, "summary.json"), `${JSON.stringify({ kind: "scratch-only-exploratory-summary", execution_count: summary.length, runs: summary }, null, 2)}\n`);
+    console.log(`Completed ${summary.length} scratch-only exploratory executions in ${relativePath(scratchRoot)}`);
+  } finally {
+    if (proxy) await stopLocalProxy(proxy);
   }
-  await writeFile(join(scratchRoot, "summary.json"), `${JSON.stringify({ kind: "scratch-only-exploratory-summary", execution_count: summary.length, runs: summary }, null, 2)}\n`);
-  console.log(`Completed ${summary.length} scratch-only exploratory executions in ${relativePath(scratchRoot)}`);
 }
 
 const [action = "preflight", ...argumentsList] = Bun.argv.slice(2);
@@ -255,14 +300,18 @@ const authIndex = argumentsList.indexOf("--auth-file");
 const authFile = authIndex === -1 ? undefined : argumentsList[authIndex + 1];
 const modeIndex = argumentsList.indexOf("--mode");
 const mode = modeIndex === -1 ? "formal" : argumentsList[modeIndex + 1];
+const planIndex = argumentsList.indexOf("--plan");
+const planVersion = planIndex === -1 ? "v1" : argumentsList[planIndex + 1];
 const selectedRunIds = new Set(argumentsList.flatMap((argument, index) => argument === "--run-id" ? [argumentsList[index + 1]] : []).filter((value): value is string => Boolean(value)));
 if (argumentsList.some((argument, index) => argument === "--run-id" && !argumentsList[index + 1])) fail("Missing value for --run-id");
-if (!(["preflight", "execute"] as string[]).includes(action) || (authIndex !== -1 && !authFile) || (modeIndex !== -1 && !mode) || !["formal", "local-direct"].includes(mode)) fail("Usage: bun run exploratory:practice -- preflight | execute [--mode formal|local-direct] [--auth-file /path/to/auth.json]");
-const plan = await readPlan();
-const treatments = await verifyPlan(plan);
+if (!(["preflight", "execute"] as string[]).includes(action) || (authIndex !== -1 && !authFile) || (modeIndex !== -1 && !mode) || !["formal", "local-direct", "local-proxied"].includes(mode)) fail("Usage: bun run exploratory:practice -- preflight | execute [--plan v1|v2] [--mode formal|local-direct|local-proxied] [--auth-file /path/to/auth.json]");
+const activePlanPath = planPath(planVersion);
+const plan = await readPlan(activePlanPath);
+if (plan.version !== planVersion) fail(`Plan version does not match requested version: ${planVersion}`);
+const treatments = await verifyPlan(plan, activePlanPath);
 if (action === "preflight") console.log("Exploratory plan preflight passed for " + mode + ": six candidate snapshots, private treatments, public isolation, hashes, and fixed execution envelope verified.");
 else {
   const knownRunIds = plannedRunIds(plan);
   for (const runId of selectedRunIds) if (!knownRunIds.has(runId)) fail(`Unknown planned run ID: ${runId}`);
-  await execute(plan, treatments, authFile, mode as "formal" | "local-direct", selectedRunIds);
+  await execute(plan, treatments, authFile, mode as "formal" | "local-direct" | "local-proxied", selectedRunIds);
 }

@@ -1,0 +1,20 @@
+version: v2
+treatments:
+  oracle:
+    id: pnotify-route-selection-oracle-v2
+    content: >-
+      Treat this rule as a binding implementation checklist. Before editing,
+      identify each constraint; make the smallest compatible change; then
+      inspect the finished starter files against every constraint. Select one
+      viable matching route deterministically: exclusion wins over a positive
+      action match, unavailable routes cannot block later viable routes, and
+      the lowest numeric priority wins independently of source order.
+  irrelevant:
+    id: pnotify-route-selection-irrelevant-v2
+    content: >-
+      Treat this rule as a binding implementation checklist. Before editing,
+      identify each constraint; make the smallest compatible change; then
+      inspect the finished starter files against every constraint. Select one
+      release-note reviewer deterministically: an explicit absence wins over a
+      positive preference, unavailable reviewers cannot block later reviewers,
+      and the lowest numeric review priority wins independently of list order.
