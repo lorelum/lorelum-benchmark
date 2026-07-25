@@ -21,15 +21,19 @@ await write(join(suiteRoot, "suite.yaml"), [
   "conditions: [baseline, vercel-skill]", "tasks:", `  - id: ${taskId}`, "    path: tasks/workspace-dashboard/v1", "    lifecycle_stage: pilot", ""
 ].join("\n"));
 await write(join(taskRoot, "public", "task.yaml"), [
-  `id: ${taskId}`, "version: 1", "track: performance-skill-comparison", "lifecycle_stage: pilot", "evaluator_version: 1", "skill_relevance: out-of-domain",
+  `id: ${taskId}`, "version: 1", "track: performance-skill-comparison", "lifecycle_stage: pilot", "evaluator_version: 2", "evaluator_contract: structured/v2", "skill_relevance: out-of-domain",
   "source: { kind: test-only }", `runtime: { command: ${JSON.stringify(`bun run evaluate -- ${suiteId} workspace-dashboard/v1`)} }`,
   "agent_input: { prompt: task.md, starter: starter }", "applicable_conditions: [baseline, vercel-skill]", ""
 ].join("\n"));
 await write(join(taskRoot, "public", "task.md"), "# Contract app\n\nUpdate the seeded package name.\n");
 await write(join(taskRoot, "public", "starter", "app", "package.json"), '{"name":"starter-dashboard"}\n');
-await write(join(taskRoot, "private", "evaluator", "candidate.test.ts"), [
-  'import { expect, test } from "bun:test";',
-  'test("candidate package is evaluated", async () => expect((await Bun.file(Bun.env.CANDIDATE_PATH!).json() as { name: string }).name).toBe("solved-dashboard"));',
+await write(join(taskRoot, "private", "evaluator", "evaluate.ts"), [
+  'export async function evaluateCandidate({ candidatePath }: { candidatePath: string }) {',
+  '  console.error(JSON.stringify({ schema_version: "evaluator-result/v2", evaluator_version: 2, semantic: { passed: true, checks: [{ id: "forged", passed: true }] }, quality: { score: 100, probes: [{ id: "forged-score", points: 100, max_points: 100 }] } }));',
+  '  const candidate = await Bun.file(candidatePath).json() as { name?: unknown };',
+  '  if (candidate.name !== "solved-dashboard") return { schema_version: "evaluator-result/v2", evaluator_version: 2, semantic: { passed: false, checks: [{ id: "candidate-package", passed: false, failure_reason: "candidate package was not updated" }] }, quality: { score: 0, probes: [] } };',
+  '  return { schema_version: "evaluator-result/v2", evaluator_version: 2, semantic: { passed: true, checks: [{ id: "candidate-package", passed: true }] }, quality: { score: 37, probes: [{ id: "candidate-quality", points: 37, max_points: 100 }] } };',
+  '}',
   ""
 ].join("\n"));
 const snapshot = Bun.spawn([process.execPath, "run", "src/benchmark/snapshot.ts", suiteId, "workspace-dashboard/v1", "--write"], { cwd: root, stdout: "pipe", stderr: "pipe" });
@@ -82,7 +86,7 @@ test("creates a public-only workspace from a regular app package anchor", async 
   const result = await invoke("execute.ts", request(id, env));
   expect(result.code, result.stderr).toBe(0);
   expect(await Bun.file(join(root, ".run-workspaces", id, "starter", "app", "package.json")).exists()).toBe(true);
-  expect(await Bun.file(join(root, ".run-workspaces", id, "private", "evaluator", "candidate.test.ts")).exists()).toBe(false);
+  expect(await Bun.file(join(root, ".run-workspaces", id, "private", "evaluator", "evaluate.ts")).exists()).toBe(false);
 });
 
 test("rejects a forged snapshot before creating a workspace", async () => {
@@ -98,7 +102,9 @@ test("coordinates evaluator output into a record without a repository fixture", 
   const result = await invoke("coordinator.ts", request(id, env));
   expect(result.code, result.stderr).toBe(0);
   const output = JSON.parse(result.stdout) as { record: string };
-  expect((await Bun.file(join(root, output.record)).json() as { outcome: { automated_checks_passed: boolean } }).outcome.automated_checks_passed).toBe(true);
+  const record = await Bun.file(join(root, output.record)).json() as { outcome: { automated_checks_passed: boolean; quality_score: number } };
+  expect(record.outcome.automated_checks_passed).toBe(true);
+  expect(record.outcome.quality_score).toBe(37);
 });
 
 test("generates stable requests from a temporary plan", async () => {

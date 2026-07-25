@@ -253,7 +253,7 @@ try {
       localArtifacts.push(await artifact("evaluator-output", joinPath(artifactPath, "evaluator.stderr.log")));
       if (metadata.evaluatorContract === "structured/v2") {
         try {
-          evaluatorResult = evaluatorResultFromOutput(`${evaluator.stdout}\n${evaluator.stderr}`);
+          evaluatorResult = evaluatorResultFromOutput(evaluator.stdout);
           if (!evaluatorResult) throw new Error("Structured evaluator did not emit a result");
           if (!evaluatorResult.semantic.passed) failureReason ??= "Evaluator semantic gate failed";
         } catch (error) {
