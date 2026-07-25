@@ -1,7 +1,7 @@
 id: react-skill-comparison
 version: 0.2.0
 track: performance-skill-comparison
-lifecycle_stage: pilot
+lifecycle_stage: retired
 protocol: ../../docs/BENCHMARK_PROTOCOL.md
 baseline:
   repository: vercel-labs/agent-skills
@@ -32,3 +32,4 @@ tasks:
     profile: rsc
     category: server-authorization-serialization
     lifecycle_stage: candidate
+default_active_task_set: []

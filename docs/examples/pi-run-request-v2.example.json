@@ -1,22 +1,22 @@
 {
   "schema_version": "pi-run/v2",
-  "run_id": "react-skill-comparison-g0-g1-smoke-v1-workspace-overview-loader-v1-baseline-001",
-  "experiment_id": "react-skill-comparison-g0-g1-smoke-v1",
+  "run_id": "realistic-react-skill-comparison-g0-g1-smoke-v1-workspace-dashboard-rsc-v2-baseline-001",
+  "experiment_id": "realistic-react-skill-comparison-g0-g1-smoke-v1",
   "experiment_plan_hash": "e6ab9444657616c4325c88e54cf3bb747efcf5f5b5ed6065c6ca3c0ce82ba9cd",
   "run_kind": "smoke",
   "condition_id": "baseline",
   "repeat": 1,
   "source_commit": "073d466b01c1edf12e8d0330ace6110950c3df9c",
-  "candidate_path": "starter/src/workspace-overview.ts",
-  "suite": { "id": "react-skill-comparison", "version": "0.2.0" },
+  "candidate_path": "starter/app/package.json",
+  "suite": { "id": "realistic-react-skill-comparison", "version": "1.0.1" },
   "task": {
-    "id": "workspace-overview-loader-v1",
-    "revision": "v1",
-    "snapshot_id": "2a8c08b6765ace825185b5b252974427cf38dcade88ccd21a964f02436322c10"
+    "id": "workspace-dashboard-rsc-v2",
+    "revision": "v2",
+    "snapshot_id": "ae76d86de447065301784c0f56d9a756db533e6e8d78f38d740e9b958ecaaf75"
   },
   "treatment": { "id": "baseline", "version": "v1" },
   "environment": { "id": "local-pi", "version": "v1" },
-  "scorer": { "id": "workspace-overview-loader", "version": "v1" },
+  "scorer": { "id": "workspace-dashboard-rsc", "version": "v2" },
   "agent": {
     "id": "pi",
     "version": "operator-managed",
