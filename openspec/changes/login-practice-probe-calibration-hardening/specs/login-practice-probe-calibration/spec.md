@@ -28,20 +28,11 @@ candidate calibration MUST 以同一公开浏览器语义和私有 probe 验证�
 - **WHEN** 在 private reference 安装锁定依赖后运行同一浏览器语义检查和私有 probe
 - **THEN** 两项检查 MUST 通过
 
-### Requirement: 未固定模型身份阻止比较执行
-
-candidate 条件在没有 provider、不可变部署或模型版本及解析策略时 MUST 标记为 pending，而不是将可变模型别名声明为固定执行条件。后续 pilot 只有在独立、快照化的 execution manifest 固定这些输入后才能开始。
-
-#### Scenario: 模型版本不可用
-
-- **WHEN** provider 无法提供可复现的模型或部署版本
-- **THEN** candidate MUST 保持不可执行，且不得运行任何比较或创建结果记录
-
 ### Requirement: 校准修复重新固定候选输入
 
-修改 candidate private evaluator、reference、calibration 或 execution condition 后，维护者 MUST 重新生成并验证 `private/snapshot.json`。快照 MUST 继续排除 post-run evidence-index 和生成的依赖、构建及测试输出。
+修改 candidate private evaluator、reference 或 calibration 后，维护者 MUST 重新生成并验证 `private/snapshot.json`。快照 MUST 继续排除 post-run evidence-index 和生成的依赖、构建及测试输出。
 
 #### Scenario: 校准资产已更新
 
-- **WHEN** probe、reference、calibration 或条件清单发生变化
+- **WHEN** probe、reference 或 calibration 发生变化
 - **THEN** 旧 snapshot 验证 MUST 失败，直到提交重新生成的 snapshot

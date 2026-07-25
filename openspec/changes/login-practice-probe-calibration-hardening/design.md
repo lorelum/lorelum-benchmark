@@ -10,7 +10,6 @@ Agent workspace 只能接收 `public/task.md` 与 `public/starter/`。private ev
 
 - 证明私有 probe 拒绝“导入 `login` 但绕过它”的组件，并要求实际调用指定 feature API。
 - 以同一公开 Playwright 语义校准 naive starter 与完整 private reference，分别获得“语义通过/探针失败”和“双通过”。
-- 不将未解析的模型别名表述为固定可复现执行条件；在 candidate 条件中显式标记 pending，并把实际 pinning 留给 #75 的独立 execution manifest。
 - 在 private 输入变更后重写 candidate snapshot，并确认其不包含 post-run evidence 或生成物。
 
 **Non-Goals:**
@@ -33,12 +32,7 @@ private reference 将包含运行同一浏览器语义所需的 app 配置、测
 
 复制完整最小 app 会有少量重复，但避免测试在 public starter 上运行而没有证明 reference 行为；共享 public tests 的副本不含 private assertion，因此不会泄露私有规则。
 
-### 3. 将模型版本 pinning 显式延后
-
-candidate 的 `conditions.yaml` 将模型条件标为 pending，并说明 #75 只有在独立 execution manifest 固定 provider、不可变部署或模型版本、解析策略与时间戳后才能执行。不得猜测 provider 的版本标识，也不得用可变别名代替。
-
 ## Risks / Trade-offs
 
 - [静态检查仍无法证明所有运行时数据流] -> 语义与 API 边界保持两份独立检查；新增已知绕过 fixture 以保护最关键的假阳性。
 - [#73 未合并导致实现基线缺失] -> 初始 PR 只含 OpenSpec，并把 #73 合并设为实现门禁；实施前重新验证 snapshot 与路径。
-- [模型提供商没有可固定版本] -> 条件保持 pending，#75 不得开始比较，而非创建不可复现的 pilot。
