@@ -6,9 +6,8 @@ G0/G1 的主证据将来自真实 Next App Router 仓库，而不是单文件微
 ## 当前状态
 
 [`realistic-react-skill-comparison`](suites/realistic-react-skill-comparison) 是当前的
-React Skill 对比 suite。它包含三个冻结依赖的多文件 Next App Router pilot revision：
-`workspace-dashboard-rsc-v2`、`report-insights-conditional-loading-v8` 和
-`team-directory-rsc-payload-v3`。没有正式 Pi 请求或运行记录；已被后续 revision 取代的
+React Skill 对比 suite。当前默认集包含两个冻结依赖的多文件 Next App Router pilot revision：
+`workspace-dashboard-rsc-v2` 和 `team-directory-rsc-payload-v3`。没有正式 Pi 请求或运行记录；已被后续 revision 取代的
 候选仍保留在原路径，并标记为 `retired`。
 
 `practice-effectiveness` 保持独立的候选轨道，不与 React Skill 对比共享结论。

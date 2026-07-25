@@ -36,7 +36,7 @@ tasks:
     lifecycle_stage: retired
   - id: report-insights-conditional-loading-v8
     path: tasks/report-insights-conditional-loading/v8
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: team-directory-rsc-payload-v1
     path: tasks/team-directory-rsc-payload/v1
     lifecycle_stage: retired
@@ -48,5 +48,4 @@ tasks:
     lifecycle_stage: pilot
 default_active_task_set:
   - workspace-dashboard-rsc-v2
-  - report-insights-conditional-loading-v8
   - team-directory-rsc-payload-v3

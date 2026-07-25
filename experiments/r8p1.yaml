@@ -1,6 +1,6 @@
 id: r8p1
 version: v1
-lifecycle_stage: active
+lifecycle_stage: retired
 run_kind: pilot
 source_commit: 208a78261f3d116bd908911a21ace71b81e1bcf5
 suite: { id: realistic-react-skill-comparison, version: 1.0.1 }
