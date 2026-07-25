@@ -40,10 +40,12 @@ async function protectionFailures(candidateRoot: string): Promise<string[]> {
   const failures: string[] = [];
   for (const path of protectedPaths) if (await sha256(join(candidateRoot, path)) !== await sha256(join(baselineRoot, path))) failures.push(`protected file changed: ${path}`);
   const baseline = new Set(await filesAt(baselineRoot));
-  for (const path of await filesAt(candidateRoot)) {
+  const candidate = new Set(await filesAt(candidateRoot));
+  for (const path of candidate) {
     if (!baseline.has(path) && !isAllowed(path)) failures.push(`unauthorized added file: ${path}`);
     if (baseline.has(path) && !isAllowed(path) && await sha256(join(candidateRoot, path)) !== await sha256(join(baselineRoot, path))) failures.push(`unauthorized changed file: ${path}`);
   }
+  for (const path of baseline) if (!candidate.has(path) && !isAllowed(path)) failures.push(`unauthorized removed file: ${path}`);
   return failures;
 }
 

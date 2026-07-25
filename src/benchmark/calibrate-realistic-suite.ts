@@ -26,7 +26,8 @@ const cases: CalibrationCase[] = [
   { task: "report-insights-conditional-loading/v7", label: "reference", expectedScore: 100, overlay: "reference/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
   { task: "report-insights-conditional-loading/v7", label: "react-lazy", expectedScore: 100, overlay: "accepted/react-lazy/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
   { task: "report-insights-conditional-loading/v7", label: "next-dynamic", expectedScore: 100, overlay: "accepted/next-dynamic/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
-  { task: "report-insights-conditional-loading/v7", label: "eager-load", expectedScore: 0, overlay: "mutations/eager-load/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" }
+  { task: "report-insights-conditional-loading/v7", label: "eager-load", expectedScore: 0, overlay: "mutations/eager-load/components/reports/insights-panel.tsx", destination: "components/reports/insights-panel.tsx" },
+  { task: "report-insights-conditional-loading/v7", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" }
 ];
 
 function evaluatorResult(stdout: string): { semantic: { passed: boolean }; quality: { score: number } } {
