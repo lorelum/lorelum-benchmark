@@ -1,6 +1,6 @@
 ## 背景
 
-任务与调研文档定义了一个面向登录页编码任务的首个人工 Oracle 试验。仓库当前只支持
+Issue #74、任务与调研文档定义了一个面向登录页编码任务的首个人工 Oracle 试验。仓库当前只支持
 `performance-skill-comparison` 的 G0/G1 轨道。提交 `b6b0310` 有意移除了此前的
 Practice 有效性轨道及其 treatments、schemas、runner、fixtures 和 records。因此，本
 变更必须建立独立的候选契约，不能恢复或重新解释已经移除的工作。
@@ -70,11 +70,13 @@ baseline 不接收 Practice。每次尝试都必须创建独立工作区，并�
 
 ### 5. 以同一 OpenSpec PR 保持变更证据链
 
-每个 benchmark change 先创建一个仅含 OpenSpec artifacts 和必要流程约束的 PR。候选 fixture、
+每个 benchmark change 先由可追溯 issue 收敛单一问题、边界和验收口径，再创建一个仅含
+OpenSpec artifacts 和必要流程约束的 PR。候选 fixture、
 私有验收、验证和后续实现必须继续追加至该同一分支和同一 PR，而不是拆分到新的实现 PR。
 这样评审者可以从 proposal、设计、规范和任务清单连续追溯至实现与验证证据。
 
-在首次 PR 合并前创建独立的实现 PR，会打断设计与实现之间的证据链；在不改变 change 的前提下
+未建立 issue 就创建 OpenSpec，会失去需求来源和验收依据；在首次 PR 合并前创建独立的实现 PR，
+会打断设计与实现之间的证据链；在不改变 change 的前提下
 切换分支，则可能遗漏已经评审的约束。两种做法均不采用。
 
 ## 风险与取舍
@@ -90,6 +92,8 @@ baseline 不接收 Practice。每次尝试都必须创建独立工作区，并�
   protocol 契约复制进候选。
 - [实现被分散到多个 PR，评审难以追溯] -> 在 `AGENTS.md` 强制同一 change 使用同一分支和
   同一 PR，所有后续提交持续追加。
+- [OpenSpec 缺少可追溯的问题来源] -> 在 `AGENTS.md` 强制先确认或创建 issue，并在 proposal
+  和 PR 正文中记录 issue 编号。
 
 ## 推进与回退
 

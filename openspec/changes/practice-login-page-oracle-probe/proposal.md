@@ -2,12 +2,14 @@
 
 Lorelum 需要先验证“给出正确的团队 Practice 是否改善同一编码任务的结果”，再判断真实检索是否足够好。当前仓库只有 Vercel React Skill 的 G0/G1 轨道，尚没有一个不泄露验收细节、可复现的 Practice 注入候选小试来隔离这一假设。
 
+关联 issue：#74。
+
 ## 变更内容
 
 - 在 `incubator/` 中定义一个登录页候选任务的可提交 fixture：仅包含 Agent 可见题面和 starter，以及与其隔离的私有验收草案。
 - 定义版本化的 `react.api.layered-design` Oracle Practice 卡、等长且呈现形式匹配的无关 Practice 对照卡，以及预留给真实检索输出的声明性接口。
 - 预注册四个比较条件：无 Practice baseline、Oracle 相关 Practice、真实检索 Practice、无关 Practice；为首轮人工小试明确固定输入、有效运行、原始证据和排除规则。
-- 在仓库 `AGENTS.md` 固定 OpenSpec 先行、初始 PR 仅含 OpenSpec、后续实现持续追加至同一分支与同一 PR 的工作流。
+- 在仓库 `AGENTS.md` 固定 issue 先行、OpenSpec 先行、初始 PR 仅含 OpenSpec、后续实现持续追加至同一分支与同一 PR 的工作流。
 - 明确本变更不运行模型、不创建正式 suite revision 或结果 record，也不改变现有 G0/G1 treatment、Pi runner 或 schema。
 
 ## 能力范围

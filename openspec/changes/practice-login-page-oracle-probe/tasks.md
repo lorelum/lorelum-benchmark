@@ -1,6 +1,6 @@
 ## 0. OpenSpec 交付流程
 
-- [x] 0.1 在 `AGENTS.md` 固定 OpenSpec 先行、初始 PR 仅含 OpenSpec artifacts、后续实现持续追加到同一分支与同一 PR 的规则。 [写入范围：`AGENTS.md`]
+- [x] 0.1 创建 issue #74，并在 `AGENTS.md` 固定 issue 先行、OpenSpec 先行、初始 PR 仅含 OpenSpec artifacts、后续实现持续追加到同一分支与同一 PR 的规则。 [写入范围：`AGENTS.md`]
 
 ## 1. 候选契约与 fixture
 

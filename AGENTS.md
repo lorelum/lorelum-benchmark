@@ -20,7 +20,10 @@
 ## OpenSpec 与 PR 流程
 
 - 对 suite、任务、schema、evaluator、runner、treatment、environment、实验协议或记录的
-  新增与修改，必须先在 `openspec/changes/<change-name>/` 创建并严格验证 OpenSpec change。
+  新增与修改，必须先确认已有可追溯 GitHub issue；没有时先创建一个只收敛单一问题、边界、
+  依赖、验收口径与验证要求的 issue。
+- issue 创建或确认后，必须在 `openspec/changes/<change-name>/` 创建并严格验证 OpenSpec
+  change，并在 proposal 与 PR 正文中引用 issue 编号。
 - 在开始实现前，必须从最新主线创建 `codex/<change-name>` 分支并创建一个仅包含 OpenSpec
   artifacts 和必要流程约束的 PR；该初始 PR 不得包含候选 fixture、任务、runner、模型运行或
   结果记录。
