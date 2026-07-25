@@ -1,0 +1,8 @@
+node_modules/
+package-lock.json
+.next/
+test-results/
+playwright-report/
+.playwright-browsers/
+blob-report/
+tsconfig.tsbuildinfo

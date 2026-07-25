@@ -11,6 +11,8 @@ covered_rules:
     tasks: [workspace-dashboard-rsc-v2]
   - id: async-dependencies.md
     tasks: [workspace-dashboard-rsc-v2]
+  - id: bundle-conditional.md
+    tasks: [report-insights-conditional-loading-v7]
 acceptance:
   semantic_gate_required: true
   deterministic_dynamic_quality_required: true
