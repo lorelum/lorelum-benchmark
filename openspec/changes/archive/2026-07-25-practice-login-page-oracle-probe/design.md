@@ -1,6 +1,6 @@
 ## 背景
 
-Issue #74、任务与调研文档定义了一个面向登录页编码任务的首个人工 Oracle 试验。仓库当前只支持
+Issue #74、任务与调研文档定义了一个面向登录页编码任务的首个 Practice 注入候选。仓库当前只支持
 `performance-skill-comparison` 的 G0/G1 轨道。提交 `b6b0310` 有意移除了此前的
 Practice 有效性轨道及其 treatments、schemas、runner、fixtures 和 records。因此，本
 变更必须建立独立的候选契约，不能恢复或重新解释已经移除的工作。
@@ -16,8 +16,8 @@ Practice 有效性轨道及其 treatments、schemas、runner、fixtures 和 reco
  - 在 `incubator/` 下定义一个具有清晰公开/私有边界和快照、可供评审的登录页候选。
  - 定义版本化且与任务相关的 `react.api.layered-design` Oracle Practice，以及长度和格式
    匹配的无关对照，二者均不得通过题面或 starter 暴露。
- - 预注册四个具名比较条件，以及判断 Oracle 效果是否有别于额外上下文所需的人工证据。
- - 保留语义、Practice 遵循、相关性/利用率、成本和时延的原始观测值，不使用加权总分。
+ - 声明四个具名比较条件与其固定输入接口，为后续执行提供不可变候选基线。
+ - 将人工尝试、原始观测、盲评和决策门移交 Issue #75 的独立 OpenSpec change。
 
 **非目标：**
 
@@ -25,6 +25,7 @@ Practice 有效性轨道及其 treatments、schemas、runner、fixtures 和 reco
   runner、protocol 或结果。
 - 本次初始 PR 不调用模型、不运行 Pi、不从 Lorelum 检索、不创建正式 run record，也不宣称产品有效。
 - 不修改活跃的 Vercel Skill 比较契约。
+- 不在本 change 执行 baseline、Oracle 或无关 Practice；这些尝试只能在 #75 的独立 PR 中进行。
 
 ## 设计决策
 
@@ -41,32 +42,28 @@ Agent 工作区、公开 task prompt、公开 trace 或日志。evaluator、orac
 放入 `suites/` 的替代方案会让候选看起来已经活跃，并要求现有 suite manifest。根目录的
 `practices/` 会在首个候选尚未证明需要前建立共享内容 API。两者均推迟处理。
 
-### 2. 将首轮运行作为自动化之前的人工探针
+### 2. 将人工探针移交 Issue #75
 
-候选会声明四个条件，但本步骤的交付序列只包含人工 baseline、Oracle 与无关对照运行。
-`lorelum-retrieval` 条件保持已声明状态，并标记为 `status: unavailable` 和显式的必需输入
-契约；不得以 Oracle 结果悄然替代它。这样先隔离 Practice 的价值，避免与检索质量混淆。
+候选会声明四个条件，`lorelum-retrieval` 保持 `status: unavailable` 和显式必需输入契约；
+不得以 Oracle 结果悄然替代它。baseline、Oracle 与无关对照的实际人工运行、证据保存、
+盲评和预注册决策改由 Issue #75 处理。
 
-立即扩展 runner/schema 会把候选设计扩大为已移除轨道的重新实现。此举推迟到 Oracle 探针
-通过决策门之后。
+这使 #74 只交付候选和执行交接，不在尚未合并的 candidate PR 中扩展 runner、存储或模型调用。
 
-### 3. 将比较条件设为唯一的预期输入变量
+### 3. 将条件清单作为执行交接
 
 条件清单将固定任务快照、源码提交、模型与模型版本、系统提示哈希、工具策略、时间/token
-预算和干净工作区策略。Oracle 和无关 Practice 卡具有可比的渲染长度及相同的交付模板。
-baseline 不接收 Practice。每次尝试都必须创建独立工作区；公开运行记录只保留公共任务输入
-与 Practice 卡的版本/哈希，完整私有输入与代码 diff、测试输出、结构化观测、成本、时延和
-重试次数存入受访问控制的不可变 artifact。候选的已提交私有证据索引仅记录 artifact URI、
-校验和、execution snapshot 和盲评映射的受限位置，不能包含原始提示、trace 或 diff。
+预算和干净工作区策略。Oracle 和无关 Practice 卡具有可比的渲染长度及相同的交付模板，
+baseline 不接收 Practice。#75 必须以该清单和候选快照作为执行输入；任何新增的 artifact
+URI、校验和、diff、测试输出、成本、时延和盲评映射都属于后续 change，不写入本 change。
 
-这排除了更长或不同格式的指令改善结果这一替代解释。拒绝使用单一合成分数：功能成功不得
-掩盖 Practice 遵循失败。
+这排除了更长或不同格式的指令改善结果这一替代解释。后续 change 仍不得使用单一合成分数
+掩盖功能或 Practice 遵循失败。
 
-### 4. 采用独立评测层并对定性评审盲化
+### 4. 仅交付私有评测层
 
-私有 evaluator 草案将分别规定确定性的语义检查和 Practice 专属质量探针。独立评审者将对
-随机化且隐藏组别的产物，盲标注注入内容相关性和生成代码的利用率。LLM 评判可辅助后续
-分析，但不能作为唯一的验收 oracle。
+私有 evaluator 草案分别规定确定性的语义检查和 Practice 专属质量探针，并以 reference/naive
+校准。独立盲评的随机化、脱敏包、评审执行和映射保存移交 #75；LLM 评判始终不能作为唯一 oracle。
 
 公开任务提示仅陈述可外部观察的登录行为。它不得命名 `react.api.layered-design`、要求组件/API
 分层，或暴露私有断言。在提示中写明该约束会让 baseline 接收到实验 treatment，因而使因果
@@ -103,8 +100,8 @@ OpenSpec strict validation 通过和初始 PR 创建，只证明变更契约形�
 - [Practice 或 evaluator 细节泄露给 Agent] -> 限制暂存工作区仅含 `public/task.md` 和
   `public/starter/`；仅允许声明的 Practice 卡通过条件私有通道进入模型，并在接受运行前审计
   公共提示、starter、trace 和日志。
-- [人工执行的可复现性不足] -> 要求不可变 hash、版本化资产、记录的命令和原始产物；使用已提交
-  的私有证据索引引用受保护 artifact，而非把原始日志或 diff 提交到仓库。
+- [人工执行的可复现性不足] -> #75 必须要求不可变 hash、版本化资产、记录的命令和原始产物；
+  使用已提交的私有证据索引引用受保护 artifact，而非把原始日志或 diff 提交到仓库。
 - [意外复用旧移除轨道资产] -> 以当前 HEAD 为唯一真源；不得将历史私有 fixtures 或旧
   protocol 契约复制进候选。
 - [实现被分散到多个 PR，评审难以追溯] -> 在 `AGENTS.md` 强制同一 change 使用同一分支和
@@ -118,11 +115,9 @@ OpenSpec strict validation 通过和初始 PR 创建，只证明变更契约形�
 
 1. 新增并快照 incubator 候选，随后进行泄露评审。
 2. 不运行模型，校准私有语义检查和质量探针。
-3. 仅在干净工作区中执行已声明的人工条件，将原始产物存于受保护的不可变 artifact storage，
-   并在已提交的私有证据索引中记录 URI 与校验和；直至正式 record 变更获批。
-4. 应用预注册的决策规则。只有 Oracle 相对于 baseline/对照呈现正向结果，才可推动一个
-   独立 proposal，用于候选池、检索 adapter、treatment schema 或 Pi 自动化。
-5. 放弃是正常结果：在后续变更中删除未记录的候选。候选晋升为冻结 suite revision 后，
+3. 在 #73 合并后，从最新 `main` 为 Issue #75 创建仅含 OpenSpec 的新分支和 PR；该 change
+   执行人工条件、保存受保护证据并应用预注册决策规则。
+4. 放弃是正常结果：在后续变更中删除未记录的候选。候选晋升为冻结 suite revision 后，
    绝不重写。
 
 ## 已确认的规划决策
@@ -142,8 +137,6 @@ OpenSpec strict validation 通过和初始 PR 创建，只证明变更契约形�
   分别证明通过/失败。盲评使用全新、无上下文的 `deepseek/deepseek-v4-pro` 会话，只接收匿名
   编号、脱敏 diff、测试摘要和量表；相关性、利用率各标为“高 / 低 / 无法判断”，每项附证据和
   不确定点，且不替代自动 oracle。
-- 后续每条件执行两次，使用 `local-pi/v2`、Pi `0.80.10`、`deepseek/deepseek-v4-pro`，
-  每次最多 20 轮、10 分钟、无额外共享系统提示。原始产物存于受保护不可变存储，仓库仅保存
-  URI、哈希和索引；本次实现不执行这些尝试。
-- 推进门槛是 Oracle 的“语义与分层探针均通过”次数严格高于 baseline 和无关对照；并列、
-  无效或无法完成的结果只报告为诊断性或不确定，不能推进到新的 change。
+- 后续每条件执行两次、使用 `local-pi/v2`、Pi `0.80.10`、`deepseek/deepseek-v4-pro`、每次
+  最多 20 轮、10 分钟、无额外共享系统提示，以及推进门槛，均为 Issue #75 的输入约束；其
+  artifact storage、实际执行授权与盲评映射必须在新的 OpenSpec 中重新确认。
