@@ -2,12 +2,13 @@ import { joinPath, listFiles, sha256File, sha256Text } from "../../../fs";
 import type { SkillBundle } from "./treatment-resolver";
 
 export const publicRuleRouter = { id: "public-bm25", version: "v1", maxRules: 3 } as const;
+export const declaredRuleRouter = { id: "public-task-context", version: "v1", maxRules: 3 } as const;
 
 export type RoutedRule = { path: string; sha256: string; score: number };
 
 export type RuleContext = {
   schema_version: "pi-rule-context/v1";
-  router: typeof publicRuleRouter;
+  router: typeof publicRuleRouter | typeof declaredRuleRouter;
   public_input_sha256: string;
   bundle_sha256: string;
   rules: RoutedRule[];
@@ -94,22 +95,22 @@ export async function routePublicRules(taskPath: string, bundle: SkillBundle): P
 }
 
 export async function declaredRuleContext(taskPath: string, bundle: SkillBundle, ruleNames: string[]): Promise<RuleContext> {
-  if (ruleNames.length === 0 || ruleNames.length > publicRuleRouter.maxRules || new Set(ruleNames).size !== ruleNames.length || ruleNames.some((rule) => !/^[a-z0-9-]+\.md$/.test(rule))) {
+  if (ruleNames.length === 0 || ruleNames.length > declaredRuleRouter.maxRules || new Set(ruleNames).size !== ruleNames.length || ruleNames.some((rule) => !/^[a-z0-9-]+\.md$/.test(rule))) {
     throw new Error("Public rule context must declare one to three unique rule files");
   }
   const input = await publicInput(taskPath);
   const ranked = await Promise.all(ruleNames.map(async (name, index) => {
     const path = joinPath(bundle.path, "rules", name);
     if (!(await Bun.file(path).exists())) throw new Error(`Public rule context references missing rule: ${name}`);
-    return { path: `rules/${name}`, text: await Bun.file(path).text(), sha256: await sha256File(path), score: publicRuleRouter.maxRules - index };
+    return { path: `rules/${name}`, text: await Bun.file(path).text(), sha256: await sha256File(path), score: declaredRuleRouter.maxRules - index };
   }));
   const rules = ranked.map(({ path, sha256, score }) => ({ path, sha256, score }));
   const text = [
-    `<lorelum-rule-context schema="pi-rule-context/v1" router="public-task-context/v1" public-input-sha256="${input.sha256}" bundle-sha256="${bundle.sha256}">`,
+    `<lorelum-rule-context schema="pi-rule-context/v1" router="${declaredRuleRouter.id}/${declaredRuleRouter.version}" public-input-sha256="${input.sha256}" bundle-sha256="${bundle.sha256}">`,
     ...ranked.map((rule) => `<lorelum-rule path="${rule.path}" sha256="${rule.sha256}">\n${rule.text}</lorelum-rule>`),
     "</lorelum-rule-context>"
   ].join("\n");
-  return { schema_version: "pi-rule-context/v1", router: publicRuleRouter, public_input_sha256: input.sha256, bundle_sha256: bundle.sha256, rules, sha256: await sha256Text(text), text };
+  return { schema_version: "pi-rule-context/v1", router: declaredRuleRouter, public_input_sha256: input.sha256, bundle_sha256: bundle.sha256, rules, sha256: await sha256Text(text), text };
 }
 
 export function routedRuleNames(context: Pick<RuleContext, "rules">): string[] {

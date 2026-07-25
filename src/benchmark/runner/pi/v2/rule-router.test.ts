@@ -3,7 +3,7 @@ import { mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { sha256Directory } from "../../../fs";
-import { routePublicRules } from "./rule-router";
+import { declaredRuleContext, routePublicRules } from "./rule-router";
 
 test("routes only public task material into a stable bounded rule context", async () => {
   const root = join(tmpdir(), `lorelum-rule-router-${crypto.randomUUID()}`);
@@ -25,6 +25,7 @@ test("routes only public task material into a stable bounded rule context", asyn
     const first = await routePublicRules(task, skillBundle);
     await Bun.write(join(task, "private", "rule-audit.yaml"), "required_rules: [changed-private-audit.md]\n");
     const second = await routePublicRules(task, skillBundle);
+    const declared = await declaredRuleContext(task, skillBundle, ["bundle-conditional.md"]);
 
     expect(first.rules.length).toBeLessThanOrEqual(3);
     expect(first.rules.map((rule) => rule.path)).toContain("rules/bundle-conditional.md");
@@ -32,6 +33,8 @@ test("routes only public task material into a stable bounded rule context", asyn
     expect(second).toEqual(first);
     expect(first.text).toContain("<lorelum-rule path=\"rules/bundle-conditional.md\"");
     expect(first.text).not.toContain("private-only");
+    expect(declared.router).toEqual({ id: "public-task-context", version: "v1", maxRules: 3 });
+    expect(declared.text).toContain('router="public-task-context/v1"');
   } finally {
     await rm(root, { recursive: true, force: true });
   }
