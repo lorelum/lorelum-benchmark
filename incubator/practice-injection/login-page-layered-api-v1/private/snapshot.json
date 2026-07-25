@@ -1,8 +1,9 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "e841a8b79c075c5b7b72182782c1ec8f9e21b065a62773cbaf309add156eedf5",
+  "snapshot_id": "8467cd526eacdf457a1d6e27a18e0ef54754025a97f2fe53093f5e4308d73875",
   "files": {
+    "private/README.md": "5bb2ba0dd8b05544f2d38d92886f3de4dd3acddcc57cb985ed82d35350e13acf",
     "private/calibration.md": "e7f043d1e24976acf50c9169ac9803a84dec0c10b7136a4ad9ef91dce53f2b8c",
     "private/calibration/reference/src/LoginPage.tsx": "1e1e687d81e1dee1df4188a031c00c665720fd32db29f5c70ff0d45eb09824ed",
     "private/calibration/reference/src/features/auth/api/login.ts": "5734abfa01ffd9ad9acb3428234b4746b2d0a221a571cde200e7103c58b93ed9",
