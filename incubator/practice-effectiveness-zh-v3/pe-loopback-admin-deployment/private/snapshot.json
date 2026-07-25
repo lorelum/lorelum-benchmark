@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "algorithm": "sha256",
+  "snapshot_id": "b58498629f7f6dd2f6c0d0e1e355a22fca64f79b9e406efd636f1992602a884f",
+  "files": {
+    "private/evaluator/functional.test.ts": "9b814ae5bf0a9828ee2fbce72fda2bf844f957141835963c06d644a819393c06",
+    "private/evaluator/profile-adherence.test.ts": "ad54ba92e2ba125dd9acdc7b78d5729f26bd1cce7b91b71a055f88d5bc7bcc4d",
+    "private/oracle.yaml": "c9aa63ea77d105d0efcc452bab2af01b67ae3113c690daa6b7aefc26f6f0364d",
+    "private/reference/.env.example": "bb458a5c852b642100360fd992c782089a82ec66895858647851c5d8b6a6e889",
+    "private/reference/docker-compose.yaml": "588b276a76964025a8b09c4048e8e8dcaf4c74d4208c3caaf8bab2dd1c27b55f",
+    "private/validation-profile/pnotify.loopback-deployment/v2.yaml": "43777735472d34db9cd70b95c8757dc0b69a8d426867c93fbd11f0620989f10d",
+    "public/starter/.env.example": "a31082b348ef0ba5071179b1af75a8b20e8cc850b60ec7bba138f46219ea06d9",
+    "public/starter/docker-compose.yaml": "e1d1b6adf16756c583624e55ac0f79d982f5fff7ee34724510b7c7e9ecf22b10",
+    "public/task.md": "1cf54a6159b4cc51f993b628c6650986bd8d3be434a7e855a3dd56e1e62a5d95",
+    "public/task.yaml": "22210e64a4724587ba749aecf07d1560f60123c3c2914d8522f6aca78f707244"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "algorithm": "sha256",
+  "snapshot_id": "221986a38ef87b1aa6a26c10a0ab0fcec32e3f8cbf0ad12bf1c8077249410e8f",
+  "files": {
+    "private/evaluator/functional.test.ts": "3decf5faf1ac7900e70945e47cd75915f6c2b0c9a5c6c5fc65e0764e3c8e98e9",
+    "private/evaluator/profile-adherence.test.ts": "2949c5cd98ca1f9d596792ac4fe1a7d669015cb721b210ea61f0ab356349c951",
+    "private/oracle.yaml": "6b61bec7713721ca43a7663d1876e7b8d0a6ba60b90776ffbd5dfcbbdd8e0520",
+    "private/reference/src/webhook-entry.ts": "ad4fcfe1651d947715eaa05870d437b269115f8bdb4171a43f86d5a29f7a7fd1",
+    "private/validation-profile/pnotify.raw-webhook-auth/v2.yaml": "15924cabe515f40125417ab839fee98c4bd50ccd2052a1fd578a061c72a6216c",
+    "public/starter/src/webhook-entry.ts": "b9e584c94a2f2413e8902e51ddf3e81636b5832f2243b349c79aea1d1a1bc2e2",
+    "public/task.md": "348359809452c43e396c55deb85e9329e5d2532bf8eafd148eb4ffc6707925b6",
+    "public/task.yaml": "e5a640ffe3c82f7e2bb7d8e43a955c0699b8c19f79cfe53d982fdc7c21fdd620"
+  }
+}

@@ -1,0 +1,24 @@
+id: pformat.report-grading
+version: 2
+kind: source-derived-test-practice
+lifecycle_stage: candidate
+source_snapshot:
+  repository: lorelum/lorelum
+  pull_request: 10
+  commit: bd0479b8bc02f5a1d1aa445cfa377875c4fe8bb4
+  files: [packages/format/src/validate/report.ts, packages/format/src/validate/validate.ts]
+practice_documents:
+  oracle: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-validation-report-grading.oracle.md
+  irrelevant: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-validation-report-grading.irrelevant.md
+relevance:
+  applicable_scenario: 本地校验 API 向调用方返回需要展示和处理的结果。
+  rationale: 来源按错误、警告和提示分类，且只有错误决定报告是否有效。
+  unsupported_semantics:
+    - 不保证诊断排序、完整问题累积或阶段级校验行为。
+    - 不验证图结构、正文引用或动态检索时机。
+functional_acceptance:
+  - 报告分别返回三种来源支持的结构化结果类别。
+profile_adherence_probes:
+  - 警告和提示保持可见但不使报告失效。
+  - 错误会使报告失效。
+conclusion_boundary: 此档案只评估该候选内核的静态注入相关性，不证明生产校验质量、动态注入或产品整体有效性。

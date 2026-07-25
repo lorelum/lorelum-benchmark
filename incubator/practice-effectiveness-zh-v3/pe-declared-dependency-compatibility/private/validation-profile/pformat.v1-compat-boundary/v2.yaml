@@ -1,0 +1,25 @@
+id: pformat.v1-compat-boundary
+version: 2
+kind: source-derived-test-practice
+lifecycle_stage: candidate
+source_snapshot:
+  repository: lorelum/lorelum
+  adr: docs/adr/0003-practice-pack-format.md
+  pull_request: 10
+  commit: bd0479b8bc02f5a1d1aa445cfa377875c4fe8bb4
+  files: [docs/adr/0003-practice-pack-format.md, packages/format/src/validate/validate.ts]
+practice_documents:
+  oracle: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-declared-dependency-compatibility.oracle.md
+  irrelevant: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-declared-dependency-compatibility.irrelevant.md
+relevance:
+  applicable_scenario: 本地发布描述声明了当前版本尚未实现的字段。
+  rationale: 来源保留 depends_on，但在 v1 中只产生警告，不启动依赖解析。
+  unsupported_semantics:
+    - 不验证跨包依赖、版本范围、身份冲突、归属或依赖图环。
+    - 不验证动态检索时机。
+functional_acceptance:
+  - 必填元数据仍会阻断，校验返回结构化错误和警告。
+profile_adherence_probes:
+  - 非空依赖声明保持非阻断并产生反馈。
+  - 未知名称或看似无效的范围不会启动解析器。
+conclusion_boundary: 此档案只评估该候选内核的静态注入相关性，不证明生产发布安全、动态注入或产品整体有效性。

@@ -1,0 +1,14 @@
+id: pe-webhook-raw-body-verification-v1
+source_snapshot:
+  repository: lorelum/notify-bus
+  pull_request: 2
+  commit: a18318885755049f7a80ccc29ccbc123d5958d69
+functional_checks:
+  - id: fixed-authorized-request-is-accepted-and-handled
+  - id: fixed-unauthorized-request-is-rejected
+profile_adherence_checks:
+  - id: raw-request-content-is-verified-before-parsing
+  - id: rejected-request-never-reaches-the-handler
+boundaries:
+  - Test-only secret and in-memory handler only; no HTTP server, network, production secret, or external adapter.
+  - No development mode without a configured secret or dynamic-injection behavior.

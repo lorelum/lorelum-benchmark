@@ -1,0 +1,24 @@
+id: pformat.reference-graph
+version: 2
+kind: source-derived-test-practice
+lifecycle_stage: candidate
+source_snapshot:
+  repository: lorelum/lorelum
+  pull_request: 10
+  commit: bd0479b8bc02f5a1d1aa445cfa377875c4fe8bb4
+  files: [packages/format/src/validate/validate.ts]
+practice_documents:
+  oracle: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-dangling-recommendation-reference.oracle.md
+  irrelevant: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-dangling-recommendation-reference.irrelevant.md
+relevance:
+  applicable_scenario: 本地发布检查校验决策配置所指向的独立声明条目。
+  rationale: 来源将无法解析为 Practice ID 的推荐目标视为校验错误。
+  unsupported_semantics:
+    - 不验证正文引用、决策环、重复身份、阶段短路或依赖解析。
+    - 不验证动态检索时机。
+functional_acceptance:
+  - 本地条目和决策形状保持被校验，完整配置可以发布。
+profile_adherence_probes:
+  - 所有相关决策目标能在本地条目和决策文件中解析。
+  - 即使另一个目标有效，悬空目标仍会阻断发布。
+conclusion_boundary: 此档案只评估该候选内核的静态注入相关性，不证明生产发布安全、动态注入或产品整体有效性。

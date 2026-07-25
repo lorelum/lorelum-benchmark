@@ -1,0 +1,24 @@
+id: pnotify.raw-webhook-auth
+version: 2
+kind: source-derived-test-practice
+lifecycle_stage: candidate
+source_snapshot:
+  repository: lorelum/notify-bus
+  pull_request: 2
+  commit: a18318885755049f7a80ccc29ccbc123d5958d69
+  files: [packages/server/src/lib/verify/github.ts, packages/server/src/routes/webhook.ts]
+practice_documents:
+  oracle: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-webhook-raw-body-verification.oracle.md
+  irrelevant: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-webhook-raw-body-verification.irrelevant.md
+relevance:
+  applicable_scenario: 本地 Webhook 入口配置了密钥，且必须阻止不可信输入调用内存中的事件处理器。
+  rationale: 来源先对原始请求体做 HMAC-SHA256 验签，再解析、渲染、路由和分发。
+  unsupported_semantics:
+    - 不验证 HTTP 服务、生产密钥、密钥管理、外部投递或未配置密钥的开发模式。
+    - 不验证动态检索时机。
+functional_acceptance:
+  - 固定的已授权本地请求到达内存处理器，未授权请求被拒绝。
+profile_adherence_probes:
+  - 无效原始输入在认证拒绝前不会被解析。
+  - 缺失或无效认证不会调用下游处理器。
+conclusion_boundary: 此档案只评估该候选内核的静态注入相关性，不证明生产 Webhook 安全、动态注入或产品整体有效性。

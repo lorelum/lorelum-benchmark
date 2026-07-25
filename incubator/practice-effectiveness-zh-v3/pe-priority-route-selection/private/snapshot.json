@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "algorithm": "sha256",
+  "snapshot_id": "e82b9dc30de6f7c52567729eea1aa520b3077833988f5baea6f1c770708bedef",
+  "files": {
+    "private/evaluator/functional.test.ts": "a0e7f802d7acca6429dbead7aa1528322ba6605a34629b6577a4149ac716006c",
+    "private/evaluator/profile-adherence.test.ts": "1228f5ebd054eda12080429e5031bc80a58ab1dc8523d995c6f3634d9ca3d54b",
+    "private/oracle.yaml": "c50fafa1e230b54eb1b79be8c2277c5e3c745b03dc4b30460cff556cd2d3c7bb",
+    "private/reference/src/route-selector.ts": "2fd649b2c3d9c4b53723ff43e1e2a9b57541d8dc6effa22951d2e6676a7b0066",
+    "private/validation-profile/pnotify.route-selection/v2.yaml": "b96042794f20ed47ec8647f684ffcff665b552ef226d1e3dd0484c1c2bab56b0",
+    "public/starter/src/route-selector.ts": "9b219ec6862e9cd6ee9434371d079f12fe97ba2c20a8f7ca5d6554389382eea5",
+    "public/task.md": "836af4c931b25345b685a81f2bb3fed867c051bccf5965804047a0add87a7c65",
+    "public/task.yaml": "eb3e57a1386bd53e46762cc886800d9166195e6448a4b040e031d57fc7dc4bac"
+  }
+}

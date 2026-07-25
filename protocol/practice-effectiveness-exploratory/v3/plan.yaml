@@ -1,0 +1,87 @@
+id: practice-effectiveness-exploratory
+version: v3
+kind: scratch-only
+source_commit: 76ffef2527cf94dee4fa424c0e52b68b9d664e39
+scope:
+  lifecycle: candidate/pre-incubator
+  repetitions: 2
+  conditions:
+    - baseline
+    - oracle-practice
+    - irrelevant-practice
+  total_executions: 36
+  excludes:
+    - lorelum-retrieval
+    - formal-run-manifest
+    - run-record
+    - artifact-upload
+execution:
+  pi_version: 0.80.10
+  model_alias: deepseek-v4-pro
+  pi_model: deepseek/deepseek-v4-pro
+  command: pi
+  system_prompt_path: prompts/formal-pi/v1/system.md
+  system_prompt_sha256: a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a
+  tool_policy_path: policies/public-only-workspace/v1/policy.yaml
+  tool_policy_sha256: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+  max_turns: 20
+  max_duration_ms: 600000
+  seed: null
+  seed_note: DeepSeek public API does not expose a usable seed; repeats are independent attempts.
+  local_proxied:
+    mode: local-proxied-docker
+    dockerfile: Dockerfile.formal-pi
+    network: internal-plus-allowlist-proxy
+    image_tag_prefix: lorelum-exploratory-pi
+    allowed_endpoint: api.deepseek.com:443
+    isolation: public-workspace-and-readonly-treatment-only
+    boundary: Non-formal local mode; Pi has only an internal Docker network and an allowlist CONNECT proxy for the DeepSeek API.
+tasks:
+  - id: pe-loopback-admin-deployment-v2
+    candidate: incubator/practice-effectiveness-zh-v3/pe-loopback-admin-deployment
+    candidate_entrypoint: starter
+    task_snapshot_sha256: b58498629f7f6dd2f6c0d0e1e355a22fca64f79b9e406efd636f1992602a884f
+    profile: incubator/practice-effectiveness-zh-v3/pe-loopback-admin-deployment/private/validation-profile/pnotify.loopback-deployment/v2.yaml
+    profile_sha256: 43777735472d34db9cd70b95c8757dc0b69a8d426867c93fbd11f0620989f10d
+    oracle: { id: pnotify-loopback-deployment-oracle-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-loopback-admin-deployment.oracle.md, content_sha256: 686b8129b11806e8d7370a85f79ae3166fad28d0cc012d4038d8c2c8f4657caa, length: 329 }
+    irrelevant: { id: pnotify-loopback-deployment-irrelevant-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-loopback-admin-deployment.irrelevant.md, content_sha256: f5a2e990cd3c7257fa8bf47dba290565a710691a462a3046e2330f754fdca79c, length: 313 }
+  - id: pe-validation-report-grading-v2
+    candidate: incubator/practice-effectiveness-zh-v3/pe-validation-report-grading
+    candidate_entrypoint: starter/src/validation-report.ts
+    task_snapshot_sha256: 32c82805c2454b73b6c8eb414e826a0f2871b3406a09b3bf27e68507bbd51fa9
+    profile: incubator/practice-effectiveness-zh-v3/pe-validation-report-grading/private/validation-profile/pformat.report-grading/v2.yaml
+    profile_sha256: fc79a60897d9873ffc389a2c07c3952b4647fe4f49b52c4b5cffac9207f2472c
+    oracle: { id: pformat-report-grading-oracle-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-validation-report-grading.oracle.md, content_sha256: 860110bed476c692964ac96e8f32cf7dd8a13f1c9ed6813fdd312b7980dc0beb, length: 314 }
+    irrelevant: { id: pformat-report-grading-irrelevant-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-validation-report-grading.irrelevant.md, content_sha256: 3b428a4c1656a0e48cdd5091d0a92d25956cce309c417eb07c2f587449ff17fd, length: 308 }
+  - id: pe-declared-dependency-compatibility-v2
+    candidate: incubator/practice-effectiveness-zh-v3/pe-declared-dependency-compatibility
+    candidate_entrypoint: starter/src/release-check.ts
+    task_snapshot_sha256: 8cc709ff1fe6a3ec3744f9151e6f172bb06824148ea895096442680f302011cf
+    profile: incubator/practice-effectiveness-zh-v3/pe-declared-dependency-compatibility/private/validation-profile/pformat.v1-compat-boundary/v2.yaml
+    profile_sha256: a9fbf058d9644485c34b8909d2a0c9387180cb29f88814509e292da75cdd0657
+    oracle: { id: pformat-v1-compat-boundary-oracle-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-declared-dependency-compatibility.oracle.md, content_sha256: 6aefa342ccbfe582e7d02fdbda17e53a44859a6c02586fd19233aca3bb087bc4, length: 316 }
+    irrelevant: { id: pformat-v1-compat-boundary-irrelevant-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-declared-dependency-compatibility.irrelevant.md, content_sha256: 49f11c016a8a535a227d57508be2ca75a8918ff8602f3d34f2453e3e35048975, length: 312 }
+  - id: pe-dangling-recommendation-reference-v2
+    candidate: incubator/practice-effectiveness-zh-v3/pe-dangling-recommendation-reference
+    candidate_entrypoint: starter/src/publication-check.ts
+    task_snapshot_sha256: 3e62c621b50a72a92e292cf1c62c079fcb6a723133c8bd45cb8780455b99d4ff
+    profile: incubator/practice-effectiveness-zh-v3/pe-dangling-recommendation-reference/private/validation-profile/pformat.reference-graph/v2.yaml
+    profile_sha256: 26935af7a430a245f624ab93fe6d05052eb2056db49ec67a3a9740ede7646df0
+    oracle: { id: pformat-reference-graph-oracle-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-dangling-recommendation-reference.oracle.md, content_sha256: 06c556cdbdbf11b568cd362423dd1c90932ad5d7d7089ce5716e85f1b6049c3d, length: 311 }
+    irrelevant: { id: pformat-reference-graph-irrelevant-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-dangling-recommendation-reference.irrelevant.md, content_sha256: 3b07b0229ce8afe2ad87a25a94c3b936a5b1a7b68b435e5381b0c31de1673f68, length: 309 }
+  - id: pe-priority-route-selection-v2
+    candidate: incubator/practice-effectiveness-zh-v3/pe-priority-route-selection
+    candidate_entrypoint: starter/src/route-selector.ts
+    task_snapshot_sha256: e82b9dc30de6f7c52567729eea1aa520b3077833988f5baea6f1c770708bedef
+    profile: incubator/practice-effectiveness-zh-v3/pe-priority-route-selection/private/validation-profile/pnotify.route-selection/v2.yaml
+    profile_sha256: b96042794f20ed47ec8647f684ffcff665b552ef226d1e3dd0484c1c2bab56b0
+    oracle: { id: pnotify-route-selection-oracle-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-priority-route-selection.oracle.md, content_sha256: 680c029c81f9c9835268c87b72c1022e91c1221826c492fb72a7e2aee17e34ae, length: 302 }
+    irrelevant: { id: pnotify-route-selection-irrelevant-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-priority-route-selection.irrelevant.md, content_sha256: b37ab7cb291785d53a8d11deba5c0241d36a1b4b4f7904de64da19b4ba196b07, length: 309 }
+  - id: pe-webhook-raw-body-verification-v2
+    candidate: incubator/practice-effectiveness-zh-v3/pe-webhook-raw-body-verification
+    candidate_entrypoint: starter/src/webhook-entry.ts
+    task_snapshot_sha256: 221986a38ef87b1aa6a26c10a0ab0fcec32e3f8cbf0ad12bf1c8077249410e8f
+    profile: incubator/practice-effectiveness-zh-v3/pe-webhook-raw-body-verification/private/validation-profile/pnotify.raw-webhook-auth/v2.yaml
+    profile_sha256: 15924cabe515f40125417ab839fee98c4bd50ccd2052a1fd578a061c72a6216c
+    oracle: { id: pnotify-raw-webhook-auth-oracle-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-webhook-raw-body-verification.oracle.md, content_sha256: 727da1ecd15691c8e46efe3de8caae7b18e8916933c658f6f741139b61eca59b, length: 321 }
+    irrelevant: { id: pnotify-raw-webhook-auth-irrelevant-v3, version: v3, content_path: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-webhook-raw-body-verification.irrelevant.md, content_sha256: d6d4eb1ba88749ce7a2f784579536cf8e29508d7e538902fd01b254f9d00e1ea, length: 315 }

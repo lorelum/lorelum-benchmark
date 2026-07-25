@@ -62,6 +62,19 @@ function profileTreatments(profile: RecordValue): RecordValue {
 }
 
 async function verifyTreatment(task: Task, key: "oracle_practice" | "irrelevant_control", expected: Treatment, publicFiles: string[], activePlanPath: string): Promise<string> {
+  if (expected.content_path?.endsWith(".md")) {
+    if (expected.content_key !== undefined || !expected.content_path.includes("/private/") || !insideWorkspace(expected.content_path)) fail(`Markdown Practice reference mismatch: ${task.id}/${key}`);
+    const content = await Bun.file(joinPath(workspaceRoot, expected.content_path)).text();
+    const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+    if (!frontmatter) fail(`Markdown Practice front matter is missing: ${task.id}/${key}`);
+    const metadata = Bun.YAML.parse(frontmatter[1]) as unknown;
+    const role = key === "oracle_practice" ? "oracle-practice" : "irrelevant-practice";
+    if (!isRecord(metadata) || metadata.id !== expected.id || metadata.version !== expected.version || metadata.role !== role) fail(`Markdown Practice identity mismatch: ${task.id}/${key}`);
+    if ((await sha256Text(content)) !== expected.content_sha256 || [...content].length !== expected.length) fail(`Markdown Practice hash mismatch: ${task.id}/${key}`);
+    for (const file of publicFiles) if ((await Bun.file(file).text()).includes(content)) fail(`Private treatment leaked into public material: ${relativePath(file)}`);
+    if ((await Bun.file(activePlanPath).text()).includes(content)) fail("Private treatment leaked into committed plan");
+    return content;
+  }
   if (expected.content_path || expected.content_key) {
     if (typeof expected.content_path !== "string" || typeof expected.content_key !== "string" || !expected.content_path.includes("/private/") || !insideWorkspace(expected.content_path)) fail(`Versioned private treatment reference mismatch: ${task.id}/${key}`);
     const source = Bun.YAML.parse(await Bun.file(joinPath(workspaceRoot, expected.content_path)).text()) as unknown;
@@ -100,7 +113,7 @@ async function verifyCandidateEntrypoint(task: Task, publicRoot: string): Promis
 
 async function verifyPlan(plan: Plan, activePlanPath: string): Promise<Map<string, { oracle: string; irrelevant: string }>> {
   const execution = plan.execution;
-  if (plan.id !== "practice-effectiveness-exploratory" || !["v1", "v2"].includes(plan.version) || plan.scope.repetitions !== 2 || plan.scope.total_executions !== 36 || JSON.stringify(plan.scope.conditions) !== JSON.stringify(["baseline", "oracle-practice", "irrelevant-practice"])) fail("Exploratory plan scope is not the authorized 36-run design");
+  if (plan.id !== "practice-effectiveness-exploratory" || !["v1", "v2", "v3"].includes(plan.version) || plan.scope.repetitions !== 2 || plan.scope.total_executions !== 36 || JSON.stringify(plan.scope.conditions) !== JSON.stringify(["baseline", "oracle-practice", "irrelevant-practice"])) fail("Exploratory plan scope is not the authorized 36-run design");
   if (execution.pi_version !== "0.80.10" || execution.model_alias !== "deepseek-v4-pro" || execution.pi_model !== "deepseek/deepseek-v4-pro" || execution.max_turns !== 20 || execution.max_duration_ms !== 600000 || execution.seed !== null) fail("Exploratory execution envelope is invalid");
   const promptPath = joinPath(workspaceRoot, String(execution.system_prompt_path));
   const policyPath = joinPath(workspaceRoot, String(execution.tool_policy_path));
@@ -304,7 +317,7 @@ const planIndex = argumentsList.indexOf("--plan");
 const planVersion = planIndex === -1 ? "v1" : argumentsList[planIndex + 1];
 const selectedRunIds = new Set(argumentsList.flatMap((argument, index) => argument === "--run-id" ? [argumentsList[index + 1]] : []).filter((value): value is string => Boolean(value)));
 if (argumentsList.some((argument, index) => argument === "--run-id" && !argumentsList[index + 1])) fail("Missing value for --run-id");
-if (!(["preflight", "execute"] as string[]).includes(action) || (authIndex !== -1 && !authFile) || (modeIndex !== -1 && !mode) || !["formal", "local-direct", "local-proxied"].includes(mode)) fail("Usage: bun run exploratory:practice -- preflight | execute [--plan v1|v2] [--mode formal|local-direct|local-proxied] [--auth-file /path/to/auth.json]");
+if (!(["preflight", "execute"] as string[]).includes(action) || (authIndex !== -1 && !authFile) || (modeIndex !== -1 && !mode) || !["formal", "local-direct", "local-proxied"].includes(mode)) fail("Usage: bun run exploratory:practice -- preflight | execute [--plan v1|v2|v3] [--mode formal|local-direct|local-proxied] [--auth-file /path/to/auth.json]");
 const activePlanPath = planPath(planVersion);
 const plan = await readPlan(activePlanPath);
 if (plan.version !== planVersion) fail(`Plan version does not match requested version: ${planVersion}`);

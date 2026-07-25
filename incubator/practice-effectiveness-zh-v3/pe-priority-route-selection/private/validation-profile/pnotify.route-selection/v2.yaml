@@ -1,0 +1,29 @@
+id: pnotify.route-selection
+version: 2
+kind: source-derived-test-practice
+lifecycle_stage: candidate
+source_snapshot:
+  repository: lorelum/notify-bus
+  pull_requests:
+    - number: 2
+      commit: a18318885755049f7a80ccc29ccbc123d5958d69
+      files: [packages/server/src/lib/config/index.ts]
+    - number: 11
+      commit: 0c6df34130dc72e8d6a256d4442adeae36609fa5
+      files: [packages/server/src/lib/config/index.ts]
+practice_documents:
+  oracle: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-priority-route-selection.oracle.md
+  irrelevant: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-priority-route-selection.irrelevant.md
+relevance:
+  applicable_scenario: 本地通知服务从固定配置中为匹配事件选择一个可用路由。
+  rationale: 来源按升序优先级选择首个匹配路由；显式排除优先，且不可用路由不具备可选性。
+  unsupported_semantics:
+    - 不验证数据库排序、分页、重试、外部适配器投递或真实通道行为。
+    - 不验证动态检索时机。
+functional_acceptance:
+  - 匹配事件选中可用本地路由，未匹配事件不返回路由。
+profile_adherence_probes:
+  - 路由输入顺序不改变按优先级选中的结果。
+  - 显式排除覆盖正向 action 匹配。
+  - 不可用路由不会阻止选择可用目标。
+conclusion_boundary: 此档案只评估该候选内核的静态注入相关性，不证明生产通知投递、动态注入或产品整体有效性。

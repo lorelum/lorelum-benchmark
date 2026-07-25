@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "algorithm": "sha256",
+  "snapshot_id": "8cc709ff1fe6a3ec3744f9151e6f172bb06824148ea895096442680f302011cf",
+  "files": {
+    "private/evaluator/functional.test.ts": "3b79f933ec0f4ebe4ea9883dcc93128ac839d7da317e1c0bcc50b3f861bbb95a",
+    "private/evaluator/profile-adherence.test.ts": "52f9f35a73a7c646faa0faa1afd425c960cf02122f715d763c83bf82c9f8ae25",
+    "private/oracle.yaml": "2c292d2a2ed81213e0eab9fad0b1e052313af81c0247e43f62e8fc1b4502d47b",
+    "private/reference/src/release-check.ts": "c1babb75404e98b38c55979e90049ef9f27826f7e997697a389d9659d7c0e8bb",
+    "private/validation-profile/pformat.v1-compat-boundary/v2.yaml": "a9fbf058d9644485c34b8909d2a0c9387180cb29f88814509e292da75cdd0657",
+    "public/starter/src/release-check.ts": "db167b902caa0d215c4006a5a105c4feaeca3f77da28ed1cb486bc619368ae0f",
+    "public/task.md": "cde26bca24832005756eb1934f0d5999fb5779183dbd7993f190a69ee7a80af4",
+    "public/task.yaml": "1a5c84847c3238b6d2943ef3cb7da9dbf2dc55d3e74d98f5ef8e1e12f4ed93b2"
+  }
+}

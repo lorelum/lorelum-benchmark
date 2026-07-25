@@ -1,5 +1,9 @@
 # 探索性 Practice 验证
 
+> 中文 Markdown Practice 与中文任务题面的下一版候选设计见
+> [`PRACTICE_EFFECTIVENESS_V3_ZH.md`](PRACTICE_EFFECTIVENESS_V3_ZH.md)。该 v3 尚未运行；它与
+> v1、有效 v2 及失效的旧 v2 均为不可混合的独立输入版本。
+
 `protocol/practice-effectiveness-exploratory/v1/plan.yaml` 固定 Issue #59 已授权的探索范围：六张
 `candidate/pre-incubator` 卡、`baseline` / `oracle-practice` / `irrelevant-practice` 三个条件、每条件两次，合计 36 次。
 它不定义正式 experiment plan，不包含 `lorelum-retrieval`，也不创建 treatment 副本；每个注入内容由该 candidate 的 private validation profile `v1` 引用并以内容 hash 校验。

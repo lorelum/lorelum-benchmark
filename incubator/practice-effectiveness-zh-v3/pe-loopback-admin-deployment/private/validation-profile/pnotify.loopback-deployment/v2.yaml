@@ -1,0 +1,24 @@
+id: pnotify.loopback-deployment
+version: 2
+kind: source-derived-test-practice
+lifecycle_stage: candidate
+source_snapshot:
+  repository: lorelum/notify-bus
+  pull_request: 5
+  commit: d2a5a07bbe5e2b3cde3b9a3bd2db3a256d695123
+  files: [docker-compose.yml, .env.example]
+practice_documents:
+  oracle: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-loopback-admin-deployment.oracle.md
+  irrelevant: protocol/practice-effectiveness-exploratory/v3/private/treatments/pe-loopback-admin-deployment.irrelevant.md
+relevance:
+  applicable_scenario: 本地 Compose 部署从宿主机发布未认证的管理 API。
+  rationale: 来源变更收紧默认宿主机暴露边界，并说明经代理提供外部访问。
+  unsupported_semantics:
+    - 不验证运行中的反向代理、防火墙、TLS、Docker 守护进程或已部署主机。
+    - 不要求随机端口或特定代理产品，也不验证动态检索时机。
+functional_acceptance:
+  - Compose 可解析，并保留可配置宿主机端口到服务内部端口的映射。
+profile_adherence_probes:
+  - 管理端口显式绑定 loopback，而不是隐式或全网卡绑定。
+  - 示例配置说明由代理提供外部 TLS 访问。
+conclusion_boundary: 此档案只评估该候选内核的静态注入相关性，不证明生产部署安全、动态注入或产品整体有效性。

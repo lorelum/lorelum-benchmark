@@ -1,0 +1,8 @@
+id: pe-declared-dependency-compatibility-v2
+version: 2
+lifecycle_stage: candidate
+runtime:
+  kind: local-typescript
+agent_input:
+  prompt: task.md
+  starter: starter
