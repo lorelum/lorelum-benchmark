@@ -2,9 +2,10 @@
 
 ### Requirement: 预注册四个条件
 MUST：候选必须声明 `baseline`、`oracle-practice`、`lorelum-retrieval` 和
-`irrelevant-practice` 条件。`baseline` 不注入 Practice；`oracle-practice` 注入相关私有卡；
-`irrelevant-practice` 仅注入匹配对照；`lorelum-retrieval` 必须在执行前标识其检索输出与
-来源。不具备可用检索实现时，必须标记为不可用，不得以 Oracle 内容替代。
+`irrelevant-practice` 条件。`baseline` 不注入 Practice；`oracle-practice` 仅经声明的
+condition-scoped 私有运行时通道注入相关卡；`irrelevant-practice` 仅通过同一通道注入匹配
+对照；`lorelum-retrieval` 必须在执行前标识其检索输出与来源。不具备可用检索实现时，必须标记
+为不可用，不得以 Oracle 内容替代。
 
 #### Scenario: 准备 Oracle 比较
 - **当** 创建 baseline、Oracle 和无关对照尝试时
@@ -16,17 +17,19 @@ MUST：候选必须声明 `baseline`、`oracle-practice`、`lorelum-retrieval` �
 
 ### Requirement: 可比较尝试固定共享输入与预算
 MUST：每个比较尝试必须记录候选快照、源码提交、模型及模型版本、系统提示哈希、工具策略、时间
-预算、token 预算、干净工作区策略和条件标识。任何共享输入差异或工作区复用，都必须使该
-尝试不可比较。
+预算、token 预算、干净工作区策略、条件标识及 Practice 卡版本/hash。完整私有输入只能存入受
+保护 artifact；公开的或已提交的记录不得包含卡文本。任何共享输入差异或工作区复用，都必须使
+该尝试不可比较。
 
 #### Scenario: 尝试使用不同模型版本
 - **当** 某次尝试使用与其配对尝试不同的模型版本时
 - **则** 两次尝试必须从条件比较中排除，除非创建新的预注册比较集
 
 ### Requirement: 按评测层保留原始证据
-MUST：每次尝试必须保留提示输入、生成 diff、确定性语义检查结果、Practice 专属质量探针结果、
-相关性标签、利用率标签、成本、时延、重试次数和执行状态。语义与质量结果必须作为独立的
-原始指标保留；pilot 不得使用加权合成总分。
+MUST：每次尝试必须在受保护的不可变 artifact 中保留提示输入、生成 diff、确定性语义检查结果、
+Practice 专属质量探针结果、相关性标签、利用率标签、成本、时延、重试次数和执行状态。候选的
+已提交私有证据索引必须引用每个 artifact 的 URI 与 SHA-256，并记录 execution snapshot 与
+条件；语义与质量结果必须作为独立的原始指标保留；pilot 不得使用加权合成总分。
 
 #### Scenario: 功能检查通过但 Practice 探针失败
 - **当** 确定性功能检查通过，而私有 Practice 专属质量探针失败时

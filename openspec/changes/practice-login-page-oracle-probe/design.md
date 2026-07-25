@@ -23,7 +23,7 @@ Practice 有效性轨道及其 treatments、schemas、runner、fixtures 和 reco
 
 - 不重新引入已移除的 Practice 有效性 suite、此前的 fixtures、schemas、treatments、
   runner、protocol 或结果。
-- 不调用模型、不运行 Pi、不从 Lorelum 检索、不创建正式 run record，也不宣称产品有效。
+- 本次初始 PR 不调用模型、不运行 Pi、不从 Lorelum 检索、不创建正式 run record，也不宣称产品有效。
 - 不修改活跃的 Vercel Skill 比较契约。
 
 ## 设计决策
@@ -33,8 +33,10 @@ Practice 有效性轨道及其 treatments、schemas、runner、fixtures 和 reco
 实现会使用一个候选目录，例如
 `incubator/practice-injection/login-page-layered-api-v1/` with `public/` and
 `private/` 子树。公开子树仅包含 `task.md` 和 `starter/`；私有材料包含候选卡、Oracle
-Practice、无关 Practice、evaluator 草案、相关性量表、条件清单和快照。该设计遵循工作区
-可见性边界，防止 Practice 文本或 oracle 断言进入 Agent 工作区。
+Practice、无关 Practice、evaluator 草案、相关性量表、条件清单和快照。Practice 卡是
+condition-scoped treatment input：只可在对应运行的私有运行时通道中提供给模型，绝不可写入
+Agent 工作区、公开 task prompt、公开 trace 或日志。evaluator、oracle 断言和评分材料永远
+不得进入任何模型输入。这样既保留处理变量，又防止验收细节泄露。
 
 放入 `suites/` 的替代方案会让候选看起来已经活跃，并要求现有 suite manifest。根目录的
 `practices/` 会在首个候选尚未证明需要前建立共享内容 API。两者均推迟处理。
@@ -52,8 +54,10 @@ Practice、无关 Practice、evaluator 草案、相关性量表、条件清单�
 
 条件清单将固定任务快照、源码提交、模型与模型版本、系统提示哈希、工具策略、时间/token
 预算和干净工作区策略。Oracle 和无关 Practice 卡具有可比的渲染长度及相同的交付模板。
-baseline 不接收 Practice。每次尝试都必须创建独立工作区，并保留提示输入、代码 diff、
-测试输出、结构化观测、成本、时延和重试次数。
+baseline 不接收 Practice。每次尝试都必须创建独立工作区；公开运行记录只保留公共任务输入
+与 Practice 卡的版本/哈希，完整私有输入与代码 diff、测试输出、结构化观测、成本、时延和
+重试次数存入受访问控制的不可变 artifact。候选的已提交私有证据索引仅记录 artifact URI、
+校验和、execution snapshot 和盲评映射的受限位置，不能包含原始提示、trace 或 diff。
 
 这排除了更长或不同格式的指令改善结果这一替代解释。拒绝使用单一合成分数：功能成功不得
 掩盖 Practice 遵循失败。
@@ -64,16 +68,17 @@ baseline 不接收 Practice。每次尝试都必须创建独立工作区，并�
 随机化且隐藏组别的产物，盲标注注入内容相关性和生成代码的利用率。LLM 评判可辅助后续
 分析，但不能作为唯一的验收 oracle。
 
-任务提示仅陈述可外部观察的登录行为。它不得命名 `react.api.layered-design`、要求组件/API
+公开任务提示仅陈述可外部观察的登录行为。它不得命名 `react.api.layered-design`、要求组件/API
 分层，或暴露私有断言。在提示中写明该约束会让 baseline 接收到实验 treatment，因而使因果
-对比失效。
+对比失效；Oracle 或无关 Practice 仅通过前述 condition-scoped 私有通道提供。
 
 ### 5. 以同一 OpenSpec PR 保持变更证据链
 
-每个 benchmark change 先由可追溯 issue 收敛单一问题、边界和验收口径，再创建一个仅含
-OpenSpec artifacts 和必要流程约束的 PR。候选 fixture、
+除本 change 已声明的一次性引导例外外，每个 benchmark change 先由可追溯 issue 收敛单一问题、
+边界和验收口径，再创建一个仅含 OpenSpec artifacts 和必要流程约束的 PR。候选 fixture、
 私有验收、验证和后续实现必须继续追加至该同一分支和同一 PR，而不是拆分到新的实现 PR。
-这样评审者可以从 proposal、设计、规范和任务清单连续追溯至实现与验证证据。
+未完成或未归档的 change 不得合并或关闭该 PR。这样评审者可以从 proposal、设计、规范和任务
+清单连续追溯至实现与验证证据。
 
 未建立 issue 就创建 OpenSpec，会失去需求来源和验收依据；在首次 PR 合并前创建独立的实现 PR，
 会打断设计与实现之间的证据链；在不改变 change 的前提下
@@ -85,22 +90,23 @@ OpenSpec artifacts 和必要流程约束的 PR。候选 fixture、
   baseline 与 Oracle 无法形成有意义的对比，则拒绝该候选。
 - [对照在内容形状或长度上不同] -> 在条件清单中记录渲染字符数和标题；评审必须拒绝不匹配。
 - [Practice 或 evaluator 细节泄露给 Agent] -> 限制暂存工作区仅含 `public/task.md` 和
-  `public/starter/`，并在接受运行前审计提示、starter、trace 和日志。
-- [人工执行的可复现性不足] -> 要求不可变哈希、版本化资产、记录的命令和原始产物；自动化
-  是后续变更，并非本探针的既有属性。
+  `public/starter/`；仅允许声明的 Practice 卡通过条件私有通道进入模型，并在接受运行前审计
+  公共提示、starter、trace 和日志。
+- [人工执行的可复现性不足] -> 要求不可变 hash、版本化资产、记录的命令和原始产物；使用已提交
+  的私有证据索引引用受保护 artifact，而非把原始日志或 diff 提交到仓库。
 - [意外复用旧移除轨道资产] -> 以当前 HEAD 为唯一真源；不得将历史私有 fixtures 或旧
   protocol 契约复制进候选。
 - [实现被分散到多个 PR，评审难以追溯] -> 在 `AGENTS.md` 强制同一 change 使用同一分支和
   同一 PR，所有后续提交持续追加。
-- [OpenSpec 缺少可追溯的问题来源] -> 在 `AGENTS.md` 强制先确认或创建 issue，并在 proposal
-  和 PR 正文中记录 issue 编号。
+- [OpenSpec 缺少可追溯的问题来源] -> 除已声明的 #73 引导例外外，在 `AGENTS.md` 强制先确认
+  或创建 issue，并在 proposal 和 PR 正文中记录 issue 编号。
 
 ## 推进与回退
 
 1. 新增并快照 incubator 候选，随后进行泄露评审。
 2. 不运行模型，校准私有语义检查和质量探针。
-3. 仅在干净工作区中执行已声明的人工条件，并将产物存于受跟踪源码之外，直至正式 record
-   变更获批。
+3. 仅在干净工作区中执行已声明的人工条件，将原始产物存于受保护的不可变 artifact storage，
+   并在已提交的私有证据索引中记录 URI 与校验和；直至正式 record 变更获批。
 4. 应用预注册的决策规则。只有 Oracle 相对于 baseline/对照呈现正向结果，才可推动一个
    独立 proposal，用于候选池、检索 adapter、treatment schema 或 Pi 自动化。
 5. 放弃是正常结果：在后续变更中删除未记录的候选。候选晋升为冻结 suite revision 后，

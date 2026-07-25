@@ -12,13 +12,19 @@
   helper version used by a frozen task.
 - Agent-visible files belong in `public/`. Evaluators, oracle material, and
   scoring configuration belong in `private/` and must never be copied into an
-  agent workspace.
+  agent workspace or model input. A versioned Practice card that is itself the
+  declared treatment may be injected through a condition-scoped private runtime
+  channel, but must not be materialized in the workspace or public task prompt;
+  public traces and logs record only its version and hash.
 - Never commit `node_modules/`, run workspaces, logs, or generated diffs.
   Commit dependency manifests and lockfiles needed to reconstruct a starter.
 - Run `bun run validate` after changing a suite, task, schema, or benchmark code.
 
 ## OpenSpec 与 PR 流程
 
+- `practice-login-page-oracle-probe` 是本规则落库时唯一的引导例外：#74 在其首个
+  OpenSpec commit 和 PR 创建后才建立。该顺序不得作为合规先例；本规则对其后的新
+  benchmark change 严格生效。
 - 对 suite、任务、schema、evaluator、runner、treatment、environment、实验协议或记录的
   新增与修改，必须先确认已有可追溯 GitHub issue；没有时先创建一个只收敛单一问题、边界、
   依赖、验收口径与验证要求的 issue。
@@ -28,7 +34,8 @@
   artifacts 和必要流程约束的 PR；该初始 PR 不得包含候选 fixture、任务、runner、模型运行或
   结果记录。
 - 此后的实现、验证、任务清单勾选和修订必须持续提交到该同一分支和同一 PR。不得为同一
-  change 另开实现 PR、迁移到另一分支，或在未关闭/合并原 PR 的情况下拆分其证据链。
+  change 另开实现 PR、迁移到另一分支，或拆分其证据链。未完成或未归档的 change 不得关闭
+  或合并其初始 PR；关闭或合并后发现的新范围必须创建独立 OpenSpec change。
 - 实现按 `tasks.md` 的依赖顺序推进。完成每项任务后立即勾选；触及 suite、任务、schema 或
   benchmark 代码时运行 `bun run validate`，并在 PR 中保留验证证据和未执行原因。
 - OpenSpec 的 strict validation、public/private 泄露审计及生命周期门禁未通过前，不得执行

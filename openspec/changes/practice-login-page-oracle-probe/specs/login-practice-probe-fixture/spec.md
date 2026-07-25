@@ -3,16 +3,19 @@
 ### Requirement: 候选 fixture 具有可评审且隔离的布局
 MUST：仓库必须将登录页 Practice 探针作为版本化候选存于
 `incubator/practice-injection/`。其 `public/` 子树只能包含 Agent 可见的任务说明和 starter
-材料。其 `private/` 子树必须包含候选卡、私有验收草案、Practice 卡、条件清单和快照；
-任何私有资产不得复制到 Agent 工作区、任务提示、starter、trace 或公开日志。
+材料。其 `private/` 子树必须包含候选卡、私有验收草案、Practice 卡、条件清单、私有证据索引
+和快照。所有私有资产不得复制到 Agent 工作区、公开任务提示、starter、公开 trace 或公开日志。
+只有已声明为 treatment 的 Practice 卡可经 condition-scoped 私有运行时通道提供给对应模型输入；
+evaluator、oracle 断言和评分材料不得进入任何模型输入。
 
 #### Scenario: 准备编码代理工作区
 - **当** 暂存一个比较尝试时
 - **则** 它只能包含候选的 `public/task.md` 和 `public/starter/` 材料，且不得包含任何私有
-  Practice 或 evaluator 文件
+  Practice 或 evaluator 文件；若条件声明 Practice 注入，卡只能在工作区外的私有运行时通道
+  中提供，并由版本和 hash 识别
 
 #### Scenario: 泄露评审在公开材料中发现私有断言
-- **当** 任务提示、starter、trace 或公开日志命名私有 Practice 规则或验收断言时
+- **当** 公开任务提示、starter、公开 trace 或公开日志命名私有 Practice 规则或验收断言时
 - **则** 必须拒绝该候选，直至移除泄露内容并重新生成其快照
 
 ### Requirement: 登录任务不预先规定实验 Practice
@@ -42,3 +45,14 @@ MUST：在任何比较尝试前，候选必须具有由仓库快照命令生成�
 #### Scenario: 快照后候选内容发生变化
 - **当** 修改了候选快照包含的文件时
 - **则** 快照验证必须失败，直至生成新的已评审快照
+
+### Requirement: Pilot 证据索引不重写候选输入
+MUST：候选必须在 `private/evidence-index/` 提交每个已完成 pilot 的证据索引。索引必须记录
+execution snapshot、条件、受保护 artifact 的不可变 URI 与 SHA-256、以及盲评映射的受限位置；
+不得包含原始 prompt、trace、日志或 diff。快照实现必须将该索引视为 post-run audit metadata，
+使新增索引不改变已执行比较所引用的 candidate input snapshot。
+
+#### Scenario: 记录完成的比较
+- **当** baseline、Oracle 或无关条件完成时
+- **则** 评审者能通过已提交索引解析该次执行的输入快照和全部原始证据，而不需要访问被忽略的
+  本地 `artifacts/` 目录
