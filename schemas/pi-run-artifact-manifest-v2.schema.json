@@ -50,7 +50,7 @@
           "type": "object",
           "required": ["id", "version", "maxRules"],
           "properties": {
-            "id": { "const": "public-bm25" },
+            "id": { "const": "public-task-context" },
             "version": { "const": "v1" },
             "maxRules": { "const": 3 }
           },

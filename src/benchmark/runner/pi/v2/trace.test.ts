@@ -32,7 +32,7 @@ function successfulRead(id: string, path: string): Record<string, unknown>[] {
 
 function context(): RuleContext {
   const text = '<lorelum-rule-context schema="pi-rule-context/v1">\n<lorelum-rule path="rules/async-parallel.md" sha256="a">rule body</lorelum-rule>\n</lorelum-rule-context>';
-  return { schema_version: "pi-rule-context/v1", router: { id: "public-bm25", version: "v1", maxRules: 3 }, public_input_sha256: "a".repeat(64), bundle_sha256: "b".repeat(64), rules: [{ path: "rules/async-parallel.md", sha256: "a".repeat(64), score: 1 }], sha256: new Bun.CryptoHasher("sha256").update(text).digest("hex"), text };
+  return { schema_version: "pi-rule-context/v1", router: { id: "public-task-context", version: "v1", maxRules: 3 }, public_input_sha256: "a".repeat(64), bundle_sha256: "b".repeat(64), rules: [{ path: "rules/async-parallel.md", sha256: "a".repeat(64), score: 1 }], sha256: new Bun.CryptoHasher("sha256").update(text).digest("hex"), text };
 }
 
 test("converts pinned Pi print mode into a JSON event stream", () => {

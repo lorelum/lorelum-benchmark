@@ -55,7 +55,7 @@ export type PiRunArtifactManifestV2 = {
   };
   rule_context?: {
     schema_version: "pi-rule-context/v1";
-    router: { id: "public-bm25"; version: "v1"; maxRules: 3 };
+    router: { id: "public-task-context"; version: "v1"; maxRules: 3 };
     public_input_sha256: string;
     bundle_sha256: string;
     rules: Array<{ path: string; sha256: string; score: number }>;
