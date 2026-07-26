@@ -1,4 +1,4 @@
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { workspaceRoot } from "./fs";
@@ -11,6 +11,7 @@ type CalibrationCase = {
   overlay?: string;
   destination?: string;
   remove?: string;
+  createDirectory?: string;
   overlays?: Array<{ source: string; destination: string }>;
 };
 
@@ -28,13 +29,14 @@ const cases: CalibrationCase[] = [
   { task: "team-directory-rsc-payload/v3", label: "serialization-leak", expectedScore: 50, overlay: "mutations/serialization-leak/app/team/page.tsx", destination: "app/team/page.tsx" },
   { task: "team-directory-rsc-payload/v3", label: "duplicate-props", expectedScore: 50, overlay: "mutations/duplicate-props/app/team/page.tsx", destination: "app/team/page.tsx" },
   { task: "team-directory-rsc-payload/v3", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" },
-  { task: "workspace-invitation-reconciliation/v1", label: "starter", expectedScore: 0 },
-  { task: "workspace-invitation-reconciliation/v1", label: "reference", expectedScore: 100, overlay: "reference/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
-  { task: "workspace-invitation-reconciliation/v1", label: "eager-policy-read", expectedScore: 60, overlay: "mutations/eager-policy-read/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
-  { task: "workspace-invitation-reconciliation/v1", label: "unfiltered-selection", expectedScore: 80, overlay: "mutations/unfiltered-selection/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
-  { task: "workspace-invitation-reconciliation/v1", label: "await-activity-record", expectedScore: 80, overlay: "mutations/await-activity-record/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
-  { task: "workspace-invitation-reconciliation/v1", label: "record-without-change", expectedScore: 80, overlay: "mutations/record-without-change/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
-  { task: "workspace-invitation-reconciliation/v1", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" }
+  { task: "workspace-invitation-reconciliation/v2", label: "starter", expectedScore: 0 },
+  { task: "workspace-invitation-reconciliation/v2", label: "incomplete-next-install", expectedScore: 0, createDirectory: "node_modules/next" },
+  { task: "workspace-invitation-reconciliation/v2", label: "reference", expectedScore: 100, overlay: "reference/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v2", label: "eager-policy-read", expectedScore: 60, overlay: "mutations/eager-policy-read/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v2", label: "unfiltered-selection", expectedScore: 80, overlay: "mutations/unfiltered-selection/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v2", label: "await-activity-record", expectedScore: 80, overlay: "mutations/await-activity-record/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v2", label: "record-without-change", expectedScore: 80, overlay: "mutations/record-without-change/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v2", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" }
 ];
 
 function evaluatorResult(stdout: string, stderr: string): { semantic: { passed: boolean }; quality: { score: number } } {
@@ -59,6 +61,7 @@ for (const calibration of cases) {
     for (const overlay of calibration.overlays ?? []) {
       await cp(join(source, "private", overlay.source), join(candidateRoot, overlay.destination));
     }
+    if (calibration.createDirectory) await mkdir(join(candidateRoot, calibration.createDirectory), { recursive: true });
     if (calibration.remove) await rm(join(candidateRoot, calibration.remove), { force: true });
     const child = Bun.spawn([process.execPath, "run", "src/benchmark/evaluate.ts", suite, calibration.task], {
       cwd: workspaceRoot,

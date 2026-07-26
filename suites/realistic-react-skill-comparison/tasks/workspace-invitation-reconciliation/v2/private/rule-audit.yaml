@@ -1,0 +1,20 @@
+schema_version: task-rule-audit/v1
+task_id: workspace-invitation-reconciliation-v2
+treatment:
+  id: vercel-skill
+  version: v2
+required_rules:
+  - async-cheap-condition-before-await.md
+  - async-defer-await.md
+  - server-after-nonblocking.md
+behaviors:
+  - id: empty-selection-short-circuit
+    rule: async-cheap-condition-before-await.md
+  - id: settled-selection-short-circuit
+    rule: async-defer-await.md
+  - id: normalized-actionable-selection
+    rule: async-cheap-condition-before-await.md
+  - id: response-does-not-await-activity
+    rule: server-after-nonblocking.md
+  - id: activity-record-is-causal-and-scoped
+    rule: server-after-nonblocking.md
