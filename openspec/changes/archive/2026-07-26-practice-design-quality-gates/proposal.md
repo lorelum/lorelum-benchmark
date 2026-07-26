@@ -1,8 +1,8 @@
-## 背景
+## Why
 
 Issue #81 follows the completed #75 local candidate validation. That work showed that a Practice can be useful only when it remains reusable guidance: treating a reference file path, helper name, or one error representation as the Practice turns an evaluator detail into hidden task input. The repository needs a reviewable contract for separating task requirements, Practice guidance, hard acceptance gates, and report-only quality signals before more Practice candidates are designed.
 
-## 变更内容
+## What Changes
 
 - Add a repository-level Practice benchmark boundary contract and a maintainer guide describing five information classes: public task behavior, injected Practice guidance, private semantic acceptance, private quality signals, and implementation preferences.
 - Define which checks may reject task completion, which checks may report Practice-related quality, and when a specific interface or location is legitimately a hard contract rather than a naming preference.
