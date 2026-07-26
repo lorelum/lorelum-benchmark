@@ -27,17 +27,24 @@ const cases: CalibrationCase[] = [
   { task: "team-directory-rsc-payload/v3", label: "reference", expectedScore: 100, overlay: "reference/app/team/page.tsx", destination: "app/team/page.tsx" },
   { task: "team-directory-rsc-payload/v3", label: "serialization-leak", expectedScore: 50, overlay: "mutations/serialization-leak/app/team/page.tsx", destination: "app/team/page.tsx" },
   { task: "team-directory-rsc-payload/v3", label: "duplicate-props", expectedScore: 50, overlay: "mutations/duplicate-props/app/team/page.tsx", destination: "app/team/page.tsx" },
-  { task: "team-directory-rsc-payload/v3", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" }
+  { task: "team-directory-rsc-payload/v3", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" },
+  { task: "workspace-invitation-reconciliation/v1", label: "starter", expectedScore: 0 },
+  { task: "workspace-invitation-reconciliation/v1", label: "reference", expectedScore: 100, overlay: "reference/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v1", label: "eager-policy-read", expectedScore: 60, overlay: "mutations/eager-policy-read/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v1", label: "unfiltered-selection", expectedScore: 80, overlay: "mutations/unfiltered-selection/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v1", label: "await-activity-record", expectedScore: 80, overlay: "mutations/await-activity-record/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v1", label: "record-without-change", expectedScore: 80, overlay: "mutations/record-without-change/invitation-resolution-runtime.ts", destination: "lib/invitation-resolution-runtime.ts" },
+  { task: "workspace-invitation-reconciliation/v1", label: "removed-unauthorized-file", expectedScore: 0, expectedSemantic: false, remove: "app/layout.tsx" }
 ];
 
-function evaluatorResult(stdout: string): { semantic: { passed: boolean }; quality: { score: number } } {
+function evaluatorResult(stdout: string, stderr: string): { semantic: { passed: boolean }; quality: { score: number } } {
   for (const line of stdout.split(/\r?\n/).reverse()) {
     try {
       const parsed = JSON.parse(line) as { schema_version?: unknown; semantic?: unknown; quality?: unknown };
       if (parsed.schema_version === "evaluator-result/v2" && parsed.semantic && parsed.quality) return parsed as { semantic: { passed: boolean }; quality: { score: number } };
     } catch { }
   }
-  throw new Error(`Structured evaluator result was not emitted:\n${stdout}`);
+  throw new Error(`Structured evaluator result was not emitted:\n${stdout}\n${stderr}`);
 }
 
 for (const calibration of cases) {
@@ -60,7 +67,7 @@ for (const calibration of cases) {
       stderr: "pipe"
     });
     const [exitCode, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
-    const result = evaluatorResult(stdout);
+    const result = evaluatorResult(stdout, stderr);
     const expectedSemantic = calibration.expectedSemantic ?? true;
     if (exitCode !== (expectedSemantic ? 0 : 1) || result.semantic.passed !== expectedSemantic || result.quality.score !== calibration.expectedScore) {
       throw new Error(`${calibration.task} ${calibration.label}: expected semantic ${expectedSemantic ? "pass" : "failure"} and ${calibration.expectedScore}/100, received ${stdout}\n${stderr}`);

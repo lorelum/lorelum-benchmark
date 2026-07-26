@@ -15,6 +15,12 @@ covered_rules:
     tasks: [team-directory-rsc-payload-v3]
   - id: server-serialization.md
     tasks: [team-directory-rsc-payload-v3]
+  - id: async-cheap-condition-before-await.md
+    tasks: [workspace-invitation-reconciliation-v1]
+  - id: async-defer-await.md
+    tasks: [workspace-invitation-reconciliation-v1]
+  - id: server-after-nonblocking.md
+    tasks: [workspace-invitation-reconciliation-v1]
 acceptance:
   semantic_gate_required: true
   deterministic_dynamic_quality_required: true

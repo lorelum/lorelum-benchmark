@@ -1,0 +1,14 @@
+id: workspace-invitation-reconciliation-v1
+reference_solution: reference/invitation-resolution-runtime.ts
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+quality_probes:
+  - { id: empty-selection-short-circuit, rule_behavior_id: empty-selection-short-circuit }
+  - { id: settled-selection-short-circuit, rule_behavior_id: settled-selection-short-circuit }
+  - { id: normalized-actionable-selection, rule_behavior_id: normalized-actionable-selection }
+  - { id: response-does-not-await-activity, rule_behavior_id: response-does-not-await-activity }
+  - { id: activity-record-is-causal-and-scoped, rule_behavior_id: activity-record-is-causal-and-scoped }
+mutations:
+  - { id: eager-policy-read, rule_behavior_id: empty-selection-short-circuit }
+  - { id: unfiltered-selection, rule_behavior_id: normalized-actionable-selection }
+  - { id: await-activity-record, rule_behavior_id: response-does-not-await-activity }
+  - { id: record-without-change, rule_behavior_id: activity-record-is-causal-and-scoped }
