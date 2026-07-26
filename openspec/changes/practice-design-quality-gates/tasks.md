@@ -13,4 +13,4 @@
 
 - [x] 3.1 审阅指南中的正反例和 #75 分类矩阵，确认其每条相关 probe 断言都归入五类信息之一，且未公开的 reference 路径、helper 或命名没有被列为硬门槛；确认 #75 的通用 Practice、职责等价 probe 校准和结果表可以按规则分类，且不把其两次本地结果升级为产品结论。
 - [x] 3.2 运行 `openspec validate practice-design-quality-gates --type change --strict`、`git diff --check` 和 `bun run validate`；在 PR 中记录通过结果及未执行模型运行的原因。
-- [ ] 3.3 更新 #81 的设计结论和 PR 验证证据；后续 candidate/evaluator 改动仅通过独立 issue 与 OpenSpec change 承接。
+- [x] 3.3 更新 #81 的设计结论和 PR 验证证据；后续 candidate/evaluator 改动仅通过独立 issue 与 OpenSpec change 承接。
