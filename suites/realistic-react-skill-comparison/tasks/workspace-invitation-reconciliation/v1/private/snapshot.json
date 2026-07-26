@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "64288d4e0f270c1deea32e06348bfb7178f8aeca7372502c49e07a97d0cb0891",
+  "snapshot_id": "b28f00ce1e3abe7ce5511cca7c39c2f7a531b6edc5fff22742f03154deec0a9a",
   "files": {
     "private/evaluator/evaluate.ts": "8ff871e52329203582a48fd56f9aec70af0b69c701ac164aaf3a5ddb2cb55121",
     "private/mutations/await-activity-record/invitation-resolution-runtime.ts": "1c9a5cd7d49eb2ca694f713c6a454a30b589ff79abbe7153592c2731946e2662",
@@ -39,6 +39,6 @@
     "public/starter/app/tests/workspace.spec.ts": "085369359740fa3d492fd53166045a917d5178158e4594335ee8fdbbdf5837f0",
     "public/starter/app/tsconfig.json": "a0c65e588a6b07bcb9e44bce959fceb7a44a220d797700bc703a1ae53c1a9342",
     "public/task.md": "5b5a51015ef65b4f3c30a72f1a8d149306ed6724c1935d5c92c7729506fb182d",
-    "public/task.yaml": "fea9ef1452515b23da688cb8c9e555ad62c2669c6c6960f407e90ab90ab0f907"
+    "public/task.yaml": "29a6994e9a867fd75e183a66715bc69d046db155260020e0f390dcb28ef3a5c1"
   }
 }
