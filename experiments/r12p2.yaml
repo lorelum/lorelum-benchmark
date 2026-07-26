@@ -1,0 +1,38 @@
+id: r12p2
+version: v1
+lifecycle_stage: active
+run_kind: pilot
+source_commit: 567b8fba5455a0a1640bcc84b5ac29cf40928b50
+suite: { id: realistic-react-skill-comparison, version: 1.0.1 }
+conditions:
+  - { id: baseline, label: G0 local follow-up, treatment: baseline/v1 }
+  - { id: vercel-skill, label: G1 local follow-up, treatment: vercel-skill/v2 }
+smoke_tasks: [workspace-invitation-reconciliation-v2]
+full_tasks: [workspace-invitation-reconciliation-v2]
+environment: { id: local-wsl-pi, version: v2 }
+agent: { id: pi, version: 0.80.10, command: pi }
+model: { id: deepseek/deepseek-v4-pro, version: operator-local-experiment }
+repetitions: 2
+seed: 20260729
+budget: { max_turns: 30, max_duration_ms: 900000 }
+system_prompt_path: prompts/formal-pi/v1/system.md
+system_prompt_hash: a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a
+tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+analysis:
+  purpose: local-only invitation v2 follow-up after r12p1 first-pair tie
+  prior_pair_plan: r12p1
+  formal_recording: prohibited
+  publication_use: prohibited
+  paired_dimensions: [model, model_version, system_prompt_hash, seed, budget, tool_policy_hash, source_commit]
+  permitted_difference: treatment
+  execution_order: [baseline-001, vercel-skill-001, baseline-002, vercel-skill-002]
+  execution_integrity_gate:
+    require_semantic_pass: true
+    require_valid_trace_audit: true
+    require_g1_rule_context_before_first_edit: true
+    on_failure: stop-and-classify-invalid
+  combined_with_r12p1_retention_criteria:
+    pairs: 3
+    minimum_mean_g1_minus_g0: 15
+    minimum_g1_non_inferior_pairs: 3
+    minimum_g1_strictly_higher_pairs: 2
