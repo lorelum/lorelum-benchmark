@@ -1,0 +1,11 @@
+id: report-insights-conditional-loading-v8
+reference_solution: reference/components/reports/insights-panel.tsx
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+quality_probes:
+  - { id: deferred-authorized-resources, rule_behavior_id: explicit-insights-module-loading }
+  - { id: unauthorized-insights-boundary, rule_behavior_id: explicit-insights-module-loading }
+  - { id: cached-reopen-data, rule_behavior_id: explicit-insights-module-loading }
+mutations:
+  - { id: eager-load, rule_behavior_id: explicit-insights-module-loading }
+  - { id: unauthorized-leak, rule_behavior_id: explicit-insights-module-loading }
+  - { id: duplicate-fetch, rule_behavior_id: explicit-insights-module-loading }

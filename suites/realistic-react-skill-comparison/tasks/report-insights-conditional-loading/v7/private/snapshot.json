@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "31fc04610f83a3295fb882541bd3f173c6d36dcd04d4d96f2840ff615832b5e2",
+  "snapshot_id": "5e4104d364217f97314481dc0ab3a32f800f6f6b4ef486f05b595b541b0511d2",
   "files": {
     "private/accepted/next-dynamic/components/reports/insights-panel.tsx": "cfd42450c14c5ab162b8589212d3be091e968704d6a22ff6fe8aed94ec3a30b8",
     "private/accepted/react-lazy/components/reports/insights-panel.tsx": "374540755802e768d185005049aeef64f55a13ba636f72eac289d9c40f8d419d",
@@ -36,6 +36,6 @@
     "public/starter/app/tests/workspace.spec.ts": "085369359740fa3d492fd53166045a917d5178158e4594335ee8fdbbdf5837f0",
     "public/starter/app/tsconfig.json": "a0c65e588a6b07bcb9e44bce959fceb7a44a220d797700bc703a1ae53c1a9342",
     "public/task.md": "0d2e516081e39d97cc377d7e847d7ec4cf6de58df0f8e621a159520f1873875c",
-    "public/task.yaml": "d15b1f2867adad0dd81179584960b4326ba445f4293d39e3064869db53b8068f"
+    "public/task.yaml": "57ea15a09ca8aa164a04ec380151c714d02229980535d015b8cdccc63722fbc3"
   }
 }

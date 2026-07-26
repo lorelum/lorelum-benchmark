@@ -33,7 +33,13 @@ tasks:
     lifecycle_stage: retired
   - id: report-insights-conditional-loading-v7
     path: tasks/report-insights-conditional-loading/v7
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
+  - id: report-insights-conditional-loading-v8
+    path: tasks/report-insights-conditional-loading/v8
+    lifecycle_stage: retired
+  - id: workspace-profile-lru-cache-v1
+    path: tasks/workspace-profile-lru-cache/v1
+    lifecycle_stage: retired
   - id: team-directory-rsc-payload-v1
     path: tasks/team-directory-rsc-payload/v1
     lifecycle_stage: retired
@@ -43,7 +49,14 @@ tasks:
   - id: team-directory-rsc-payload-v3
     path: tasks/team-directory-rsc-payload/v3
     lifecycle_stage: pilot
+  - id: workspace-invitation-reconciliation-v1
+    path: tasks/workspace-invitation-reconciliation/v1
+    lifecycle_stage: retired
+  - id: workspace-invitation-reconciliation-v2
+    path: tasks/workspace-invitation-reconciliation/v2
+    lifecycle_stage: pilot
 default_active_task_set:
   - workspace-dashboard-rsc-v2
-  - report-insights-conditional-loading-v7
   - team-directory-rsc-payload-v3
+  - workspace-invitation-reconciliation-v2
+

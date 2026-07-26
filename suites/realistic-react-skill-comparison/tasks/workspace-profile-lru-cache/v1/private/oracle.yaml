@@ -1,0 +1,13 @@
+id: workspace-profile-lru-cache-v1
+reference_solution: reference/workspace-profile-runtime.ts
+scoring: { semantic: required, deterministic_dynamic_quality: required, wall_clock_thresholds: prohibited, semantic_failure_score: 0 }
+quality_probes:
+  - { id: sequential-profile-reuse, rule_behavior_id: sequential-profile-reuse }
+  - { id: bounded-recent-profile-cache, rule_behavior_id: bounded-recent-profile-cache }
+  - { id: rejected-reads-are-not-cached, rule_behavior_id: rejected-reads-are-not-cached }
+  - { id: concurrent-profile-isolation, rule_behavior_id: concurrent-profile-isolation }
+mutations:
+  - { id: no-cache, rule_behavior_id: sequential-profile-reuse }
+  - { id: unbounded-cache, rule_behavior_id: bounded-recent-profile-cache }
+  - { id: cache-errors, rule_behavior_id: rejected-reads-are-not-cached }
+  - { id: shared-current-profile, rule_behavior_id: concurrent-profile-isolation }
