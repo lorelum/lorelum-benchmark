@@ -35,6 +35,8 @@ tasks/task-slug/v1/
 runner 只能将 `public/task.md` 和 `public/starter/` 复制到编码 Agent 的工作区，
 绝不能复制 `private/` 或 `oracle.yaml`。任务题面必须描述目标产品行为，不得泄露私有验收材料。
 
+Practice-injection 候选还需遵循 [Practice Benchmark 维护者指南](./PRACTICE_BENCHMARK_GUIDE.md)：区分公开任务、注入 Practice、私有语义验收、私有质量信号和实现偏好，禁止把 reference 偏好伪装成任务失败。
+
 ## 数据集扩展
 
 性能轨道在真实 Next App Router 候选仓库中预注册多个端到端问题；每题必须具备公开 issue、私有 reference/naive/mutation 校准、稳定浏览器评估和 rule-behavior 映射后，才能冻结为正式 revision。
