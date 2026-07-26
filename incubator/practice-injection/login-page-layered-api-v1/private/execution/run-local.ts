@@ -1,5 +1,6 @@
-import { cp, mkdir } from "node:fs/promises";
-import { basename, isAbsolute, relative, resolve } from "node:path";
+import { cp, mkdir, stat } from "node:fs/promises";
+import { basename, isAbsolute, relative, resolve, sep } from "node:path";
+import { generateUnifiedDiff } from "./unified-diff";
 
 type Practice = { path: string; injection_channel: string; sha256: string };
 type Condition = { id: string; status: string; practice: Practice | "none" | "unavailable" };
@@ -147,7 +148,8 @@ async function copyPublicWorkspace(workspace: string): Promise<void> {
 }
 
 async function workspaceFiles(workspace: string): Promise<string[]> {
-  return (await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: workspace, onlyFiles: true }))).sort();
+  const entries = await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: workspace, onlyFiles: true }));
+  return entries.map((entry) => entry.split(sep).join("/")).sort();
 }
 
 function evaluatorResult(stdout: string): { semantic: string; practiceProbe: string; dualPass: boolean } | undefined {
@@ -166,11 +168,24 @@ async function writeJson(path: string, value: unknown): Promise<void> {
   await Bun.write(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+async function usableCommand(path: string): Promise<string | undefined> {
+  try {
+    return (await stat(path)).size > 0 ? path : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function piCommand(): Promise<string> {
   const configured = Bun.env.LORELUM_PI_COMMAND;
   if (configured) return configured;
-  const bundled = resolve(repositoryRoot, "node_modules/.bin/pi");
-  if (await Bun.file(bundled).exists()) return bundled;
+  const names = process.platform === "win32"
+    ? ["pi.exe", "pi.cmd", "pi"]
+    : ["pi"];
+  for (const name of names) {
+    const command = await usableCommand(resolve(repositoryRoot, "node_modules/.bin", name));
+    if (command) return command;
+  }
   return "pi";
 }
 
@@ -220,17 +235,11 @@ async function runAttempt(
     evaluation = evaluatorResult(evaluator.stdout);
   }
 
-  const diff = await run([
-    "diff",
-    "-ru",
-    "--exclude=node_modules",
-    "--exclude=dist",
-    "--exclude=test-results",
-    "--exclude=playwright-report",
+  const diffOutput = await generateUnifiedDiff(
     resolve(candidateRoot, "public/starter/app"),
     resolve(workspace, "app")
-  ], repositoryRoot);
-  await Bun.write(resolve(attemptPath, "candidate.diff"), diff.stdout);
+  );
+  await Bun.write(resolve(attemptPath, "candidate.diff"), diffOutput);
 
   return {
     condition: condition.id,

@@ -101,6 +101,17 @@ bun run practice:login-local
 可用 `--repeat N` 覆盖每个条件的次数，或用 `--output scratch/<name>` 指定被忽略的输出目录。
 `summary.json` 会列出每次的语义结果、分层结果和双通过结果；Pi 输出、evaluator 输出与 diff 都只保存在该目录。
 
+### Windows 前提
+
+本执行器在原生 Windows PowerShell、macOS 与 Linux 上均可运行，不依赖 WSL、Git Bash 或外部 `diff` 命令。candidate diff 由进程内 TypeScript 生成，Pi 命令在 Windows 上优先解析 `node_modules/.bin/pi.cmd`。
+
+Windows 上的最小说明：
+
+- 安装 Bun。
+- 运行 `bun install` 还原依赖（包含 Pi）。
+- 设置 `DEEPSEEK_API_KEY` 环境变量以供模型调用。
+- 无需将 Git Bash 或 WSL 加入 `PATH`。
+
 ## 快照与推进
 
 `snapshot.json` 是候选输入的 SHA-256 清单。它排除 `node_modules` 和构建/测试产物；

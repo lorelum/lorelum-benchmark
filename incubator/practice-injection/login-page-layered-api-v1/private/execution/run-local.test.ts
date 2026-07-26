@@ -1,7 +1,8 @@
-import { chmod, mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { expect, test } from "bun:test";
+import { generateUnifiedDiff } from "./unified-diff";
 
 const candidateRoot = join(import.meta.dir, "../..");
 const repositoryRoot = join(candidateRoot, "../../..");
@@ -29,13 +30,12 @@ test("rejects local output outside ignored scratch", async () => {
 });
 
 test("copies only the starter app source into each agent workspace", async () => {
-  const fixtureRoot = await mkdtemp(join(tmpdir(), "lorelum-local-pi-"));
-  const fakePi = join(fixtureRoot, "pi");
   const output = "scratch/login-practice-local/test-workspace-boundary";
+  // `bun --version` exits 0 and prints a version; any real Pi args make `bun` fail,
+  // so the evaluator is skipped while the diff is still generated. No shell script,
+  // shebang, or chmod is required on any platform.
+  const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: process.execPath });
   try {
-    await Bun.write(fakePi, "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then echo 0.80.10; exit 0; fi\nexit 1\n");
-    await chmod(fakePi, 0o755);
-    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: fakePi });
     expect(result.code).toBe(0);
     const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: Array<{ initial_workspace_files: string[] }> };
     expect(summary.entries).toHaveLength(3);
@@ -45,7 +45,57 @@ test("copies only the starter app source into each agent workspace", async () =>
       expect(entry.initial_workspace_files.some((file) => file.includes("node_modules/") || file.includes("dist/"))).toBeFalse();
     }
   } finally {
-    await rm(fixtureRoot, { recursive: true, force: true });
     await rm(join(repositoryRoot, output), { recursive: true, force: true });
+  }
+});
+
+test("generates a unified diff covering identical, modified, added, and deleted files with forward-slash paths", async () => {
+  const leftRoot = await mkdtemp(join(tmpdir(), "lorelum-diff-left-"));
+  const rightRoot = await mkdtemp(join(tmpdir(), "lorelum-diff-right-"));
+  try {
+    // identical file -> empty diff contribution
+    await writeFile(join(leftRoot, "same.txt"), "line one\nline two\n");
+    await writeFile(join(rightRoot, "same.txt"), "line one\nline two\n");
+    // modified file -> --- / +++ with - and + lines
+    await writeFile(join(leftRoot, "changed.txt"), "alpha\nbeta\ngamma\n");
+    await writeFile(join(rightRoot, "changed.txt"), "alpha\nBETA\ngamma\n");
+    // added file -> only plus lines
+    await writeFile(join(rightRoot, "added.txt"), "new file\n");
+    // deleted file -> only minus lines
+    await writeFile(join(leftRoot, "removed.txt"), "gone\n");
+    // nested directory with a path that would contain backslashes on Windows
+    await mkdir(join(rightRoot, "src", "features"), { recursive: true });
+    await mkdir(join(leftRoot, "src", "features"), { recursive: true });
+    await writeFile(join(leftRoot, "src", "features", "old.ts"), "export const x = 1;\n");
+    await writeFile(join(rightRoot, "src", "features", "new.ts"), "export const y = 2;\n");
+
+    const diff = await generateUnifiedDiff(leftRoot, rightRoot);
+
+    // identical file produces no diff output
+    expect(diff).not.toContain("same.txt");
+
+    // modified file
+    expect(diff).toContain("--- a/changed.txt");
+    expect(diff).toContain("+++ b/changed.txt");
+    expect(diff).toContain("-beta\n");
+    expect(diff).toContain("+BETA\n");
+
+    // added file
+    expect(diff).toContain("--- a/added.txt");
+    expect(diff).toContain("+++ b/added.txt");
+    expect(diff).toContain("+new file\n");
+
+    // deleted file
+    expect(diff).toContain("--- a/removed.txt");
+    expect(diff).toContain("+++ b/removed.txt");
+    expect(diff).toContain("-gone\n");
+
+    // nested paths use forward slashes, never backslashes
+    expect(diff).toContain("src/features/new.ts");
+    expect(diff).toContain("src/features/old.ts");
+    expect(diff).not.toContain("\\");
+  } finally {
+    await rm(leftRoot, { recursive: true, force: true });
+    await rm(rightRoot, { recursive: true, force: true });
   }
 });
