@@ -30,6 +30,10 @@
   依赖、验收口径与验证要求的 issue。
 - issue 创建或确认后，必须在 `openspec/changes/<change-name>/` 创建并严格验证 OpenSpec
   change，并在 proposal 与 PR 正文中引用 issue 编号。
+- 每个 PR 必须保持单一声明范围。涉及 suite、任务、schema、evaluator、runner、treatment、
+  environment、实验协议或 record 的改动，其每个提交与最终 diff 都必须能追溯到关联 issue 和
+  OpenSpec；不触及这些契约的小型流程或文档修正可直接创建 PR，但 PR 正文必须说明范围。发现
+  无关改动时，必须从当前 PR 移除并以独立分支和 PR 交付；范围不清时暂停并向需求方澄清。
 - 在开始实现前，必须从最新主线创建 `codex/<change-name>` 分支并创建一个仅包含 OpenSpec
   artifacts 和必要流程约束的 PR；该初始 PR 不得包含候选 fixture、任务、runner、模型运行或
   结果记录。
