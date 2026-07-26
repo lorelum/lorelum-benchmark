@@ -4,10 +4,11 @@ Issue #81 follows the completed #75 local candidate validation. That work showed
 
 ## 变更内容
 
-- Add a repository-level Practice benchmark boundary contract and a maintainer guide describing the four information classes: public task behavior, private semantic acceptance, injected Practice guidance, and private quality signals.
+- Add a repository-level Practice benchmark boundary contract and a maintainer guide describing five information classes: public task behavior, injected Practice guidance, private semantic acceptance, private quality signals, and implementation preferences.
 - Define which checks may reject task completion, which checks may report Practice-related quality, and when a specific interface or location is legitimately a hard contract rather than a naming preference.
 - Require candidate calibration to accept a reference and a responsibility-equivalent implementation while rejecting registered anti-patterns.
 - Require results to expose human-readable raw counts for task semantics and quality signals separately; do not turn either into a hidden weighted score or a product conclusion.
+- Require the guide to include positive and negative classification examples, plus a review matrix that maps each relevant #75 probe assertion to one of the five classes.
 
 ## 能力范围
 

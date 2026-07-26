@@ -16,6 +16,10 @@
 - **WHEN** 任务要求兼容已声明的外部模块路径、导出或协议
 - **THEN** 该接口 MUST 在公开任务或稳定外部合同中声明，并可以作为语义验收条件，而非由 Practice 隐式补充
 
+#### Scenario: 维护者分类候选断言
+- **WHEN** 维护者编写或审阅 Practice benchmark 指南
+- **THEN** 指南 MUST 为五类信息各提供至少一个正例和反例，并用分类矩阵列出相关 candidate probe 断言及其归属；矩阵不得把未公开的 reference 路径、helper 或命名列为硬门槛
+
 ### Requirement: 硬门槛与 Practice 质量信号分开报告
 
 系统 MUST 将公开任务的语义结果与 Practice 相关质量信号分开记录和解释。语义失败、公开接口不兼容、public/private 泄露或生命周期违规 MUST 使尝试无效或任务失败。质量信号失败 MUST 在语义通过时报告为未观察到对应质量，不得改写为功能失败。质量信号必须映射到 Practice 的建议或 anti-pattern，并接受职责等价实现。
