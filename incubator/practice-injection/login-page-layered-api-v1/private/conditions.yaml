@@ -25,13 +25,13 @@ conditions:
     practice:
       path: private/practices/react.api.layered-design.v1.md
       injection_channel: condition-scoped-private-runtime
-      sha256: fbab026c5cd3b2df79dc34c967735af7d15cb9ff9063df87eeca6089fd009ae0
+      sha256: 602c59f3c608502a9c043dca8c96a6259380e06dccad0fdda0652d48f2fa537b
   - id: irrelevant-practice
     status: declared
     practice:
       path: private/practices/irrelevant.identity-list-rendering.v1.md
       injection_channel: condition-scoped-private-runtime
-      sha256: fdacf814cf70603e55f6880234e53d3dd211db8ff7be4669b09405c57304712c
+      sha256: bd2ae991b975ad2a76c53a03e0d46f92736b8204bf64c67b07316450fe398b6c
   - id: lorelum-retrieval
     status: unavailable
     required_input_contract:
@@ -40,6 +40,6 @@ conditions:
       - 可复现的检索版本
     practice: unavailable
 decision_rule:
-  metric: 语义与分层探针均通过的尝试次数
+  metric: 语义与分层质量探针均通过的尝试次数
   advance_only_when: Oracle 次数严格高于 baseline 与无关对照。
   otherwise: 仅报告诊断性或不确定结果。

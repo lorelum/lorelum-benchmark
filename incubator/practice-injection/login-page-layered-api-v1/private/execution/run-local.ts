@@ -1,5 +1,5 @@
 import { cp, mkdir } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
+import { basename, isAbsolute, relative, resolve } from "node:path";
 
 type Practice = { path: string; injection_channel: string; sha256: string };
 type Condition = { id: string; status: string; practice: Practice | "none" | "unavailable" };
@@ -138,7 +138,12 @@ function plannedConditions(conditions: Conditions): Condition[] {
 async function copyPublicWorkspace(workspace: string): Promise<void> {
   await mkdir(workspace, { recursive: true });
   await Bun.write(resolve(workspace, "task.md"), await Bun.file(resolve(candidateRoot, "public/task.md")).text());
-  await cp(resolve(candidateRoot, "public/starter"), resolve(workspace, "app"), { recursive: true, errorOnExist: true });
+  const generatedDirectories = new Set(["node_modules", "dist", "test-results", "playwright-report"]);
+  await cp(resolve(candidateRoot, "public/starter/app"), resolve(workspace, "app"), {
+    recursive: true,
+    errorOnExist: true,
+    filter: (source) => !generatedDirectories.has(basename(source))
+  });
 }
 
 async function workspaceFiles(workspace: string): Promise<string[]> {
@@ -215,7 +220,16 @@ async function runAttempt(
     evaluation = evaluatorResult(evaluator.stdout);
   }
 
-  const diff = await run(["git", "diff", "--no-index", "--", resolve(candidateRoot, "public/starter/app"), resolve(workspace, "app")], repositoryRoot);
+  const diff = await run([
+    "diff",
+    "-ru",
+    "--exclude=node_modules",
+    "--exclude=dist",
+    "--exclude=test-results",
+    "--exclude=playwright-report",
+    resolve(candidateRoot, "public/starter/app"),
+    resolve(workspace, "app")
+  ], repositoryRoot);
   await Bun.write(resolve(attemptPath, "candidate.diff"), diff.stdout);
 
   return {

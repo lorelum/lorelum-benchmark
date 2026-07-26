@@ -8,12 +8,11 @@ semantic_oracle:
 practice_probe:
   command: bun run private/evaluator/verify-layering.ts public/starter/app
   component: src/LoginPage.tsx
-  feature_api: src/features/auth/api/login.ts
-  required_export: login
+  boundary: 由提交路径实际调用的本地 feature API 或领域操作模块
   required_api_responsibilities:
-    - 请求调用
-    - 输入与输出 DTO 映射
-    - 401 到 AuthError 的翻译
+    - 请求调用位于组件外的边界模块
+    - 不将原始 response 或 response.body 作为领域结果返回给组件
+    - 401 在边界模块中转换为领域错误或领域结果
   forbidden_component_responsibilities:
     - 直接导入 services/http
     - 直接调用 postLogin 或 fetch

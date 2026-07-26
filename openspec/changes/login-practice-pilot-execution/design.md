@@ -2,13 +2,15 @@
 
 Issue #75 承接 #73 的登录页 Practice candidate 与 #77 的校准修复。公开 starter 已通过浏览器语义校准，但会失败私有 AST 分层探针；私有 reference 同时通过两者。因此，本地对照的唯一结果是每次尝试是否“双通过”。
 
-本地机器尚未配置可执行的 Pi 模型访问。本 change 实现可运行的执行路径和 dry-run，不在实现期间调用模型。
+本 change 先实现可运行的执行路径和 dry-run；本机 Pi 与模型访问可用后，按已固定的三条件和重复次数执行本地候选诊断。
 
 ## Decisions
 
 ### 1. 三条件、每组两次
 
 执行 baseline、Oracle Practice、无关 Practice 各两次。三组使用相同 public starter、模型标识、Pi 命令、任务提示、工具列表和十分钟时限；唯一预期差异是 Oracle 或无关 Practice 的运行时注入。`lorelum-retrieval` 继续保持 unavailable。
+
+本 candidate 测量的是可迁移 Practice 的运行时注入，不把 reference 的文件路径、导出、内部 helper 或命名当作题目补充。Oracle Practice 以适用场景、分层建议和 anti-pattern 传达组件与 API 边界、DTO 映射及错误翻译；私有 probe 只检查这些可替代实现仍可满足的边界归属。公开浏览器语义是任务完成的硬门槛，分层 probe 是用于比较 Practice 相关质量的独立信号。
 
 两次重复仅用于快速观察，不能用于显著性或泛化结论。Oracle 的双通过次数严格高于 baseline 和无关对照时，结果记为“有信号”；其余情况记为“无明显信号”。
 

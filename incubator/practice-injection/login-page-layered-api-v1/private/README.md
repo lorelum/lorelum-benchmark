@@ -66,12 +66,12 @@ incubator/              未进入活跃 suite 的候选
 | `oracle.yaml` | 私有验收契约；功能语义和分层探针必须分别报告。 |
 | `evaluator/evaluate.ts` | 组合运行语义测试与分层探针。 |
 | `evaluator/verify-layering.ts` | 使用 TypeScript AST 检查组件导入边界和 feature API 职责。 |
-| `calibration.md` | 定义 reference/naive 校准应得到的结果。 |
+| `calibration.md` | 定义 reference、等价实现与 naive 校准应得到的结果。 |
 | `calibration/reference/` | 独立可运行的完整 reference app，用来证明分层探针和公开浏览器语义可以同时通过。 |
 | `calibration/fixtures/` | 仅供私有探针回归校准的已知绕过实现。 |
 
-公开 starter 本身是 naive 校准对象：浏览器语义测试应通过，分层探针应失败。reference 则应
-通过分层探针。这证明“功能正确”和“Practice 遵循”是可区分的指标。
+公开 starter 本身是 naive 校准对象：浏览器语义测试应通过，分层探针应失败。reference 与
+不同命名、布局但职责等价的实现应通过分层探针。这证明“功能正确”和“Practice 相关质量”是可区分的指标，而探针不把 reference 的局部写法当作唯一答案。
 
 ## Practice 与执行治理
 

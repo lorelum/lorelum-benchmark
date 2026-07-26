@@ -13,5 +13,5 @@
 
 ## 3. 本地比较
 
-- [ ] 3.1 本机 Pi 和模型凭据配置完成后，运行三条件各两次；不运行 retrieval，不创建正式 record。
-- [ ] 3.2 查看 `scratch/` 汇总：Oracle 双通过次数严格领先时标记为有信号，否则标记为无明显信号。
+- [x] 3.1 使用本机 Pi `0.80.10` 与 `deepseek/deepseek-v4-pro` 运行三条件各两次；不运行 retrieval，不创建正式 record。最终已校准输出位于被忽略的 `scratch/login-practice-local/issue-75-practice-defined-calibrated-2026-07-26/`。
+- [x] 3.2 最终六次中，三组的登录语义测试均为 2/2 通过；baseline 的 API 分层质量 probe 为 0/2、Oracle Practice 为 2/2、无关 Practice 为 0/2。因而“登录语义与 API 分层质量均通过”的次数依次为 0/2、2/2、0/2，Oracle 严格领先，标记为有信号。该结果仅为本地候选诊断。
