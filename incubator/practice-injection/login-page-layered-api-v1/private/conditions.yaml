@@ -1,6 +1,6 @@
 version: v1
 candidate_snapshot_manifest: private/snapshot.json
-source_commit: 76b34686ea1e3643abb21dbe727c639ca3cb7aab
+source_commit: 5139346c90aa59e3d65f0a71526f762eb1c66c72
 shared_execution:
   agent:
     id: local-pi
@@ -13,7 +13,6 @@ shared_execution:
   tool_policy: private/execution/tool-policy.yaml
   tool_policy_sha256: bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6
   budget:
-    max_turns: 20
     max_duration_minutes: 10
   workspace: clean-copy-per-attempt
   repetitions: 2

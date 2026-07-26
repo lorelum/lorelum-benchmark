@@ -32,8 +32,8 @@ incubator/              未进入活跃 suite 的候选
    条件的改善也可能只是因为提示更长或形式不同。
 6. **在执行前固定可比较输入。** `conditions.yaml` 固定模型、预算、工作区和卡片哈希；
    `snapshot.json` 冻结候选输入。这样后续条件间唯一预期差异才是 Practice 注入。
-7. **把执行后证据与执行前输入分开。** artifact 索引在 `evidence-index/`，并从快照排除；
-   否则新增一条运行证据会改变候选身份，使旧结果无法再准确引用其输入。
+7. **本地结果只用于观察。** 每次运行的 diff、Pi 输出和评测摘要写入被忽略的 `scratch/`；
+   它们可以用于本机复跑和排查，但不构成正式 benchmark record。
 
 这套推导同时决定了“为什么有这些目录”和“为什么不能将它们合并”。它优先保证结论可解释，
 而不是追求最少文件数。
@@ -80,16 +80,31 @@ incubator/              未进入活跃 suite 的候选
 | `practices/react.api.layered-design.v1.md` | Oracle Practice 卡，仅可通过私有条件运行时通道注入。 |
 | `practices/irrelevant.identity-list-rendering.v1.md` | 与 Oracle 同模板、近似长度的无关 Practice 对照。 |
 | `practices/metadata.yaml` | 两张卡的长度、模板和独立评审记录。 |
-| `conditions.yaml` | 四条件、固定模型/预算、Practice 哈希、检索不可用状态和推进规则。 |
+| `conditions.yaml` | 三个可执行条件、固定模型/预算、Practice 哈希、检索不可用状态和推进规则。 |
 | `execution/tool-policy.yaml` | 代理工作区只可获得 `public/task.md` 与 `public/starter/`；私有 oracle/evaluator 不得进入模型输入。 |
-| `review-rubric.md` | 匿名复核的相关性、利用率双轴量表。 |
-| `evidence-index/README.md` | 后续运行只登记 artifact URI、哈希和受限映射位置，不能放 prompt、diff 或日志。 |
+| `execution/run-local.ts` | 本地三条件执行器；创建干净工作区、调用 Pi、运行 evaluator 并生成摘要。 |
+
+## 本地执行
+
+先检查条件、快照和计划的工作区，不调用模型：
+
+```sh
+bun run practice:login-local -- --dry-run
+```
+
+本机 Pi 与模型凭据可用后执行默认的六次对照：
+
+```sh
+bun run practice:login-local
+```
+
+可用 `--repeat N` 覆盖每个条件的次数，或用 `--output scratch/<name>` 指定被忽略的输出目录。
+`summary.json` 会列出每次的语义结果、分层结果和双通过结果；Pi 输出、evaluator 输出与 diff 都只保存在该目录。
 
 ## 快照与推进
 
-`snapshot.json` 是候选输入的 SHA-256 清单。它排除 `node_modules`、构建/测试产物和
-`evidence-index/`，避免运行后的证据登记改变执行时使用的候选输入身份。
+`snapshot.json` 是候选输入的 SHA-256 清单。它排除 `node_modules` 和构建/测试产物；
+运行输出始终留在被忽略的 `scratch/`，不会改变候选输入。
 
-后续仅当 Oracle 条件的“语义与分层探针均通过”次数严格高于 baseline 和无关对照，才可以
-通过新的 OpenSpec 变更推进自动化、检索接入或 suite 晋升。当前不执行模型调用、盲评或正式
-record。
+本地汇总中仅当 Oracle 条件的“双通过”次数高于 baseline 和无关对照时，才记为值得扩大样本的
+信号。无论结果如何，当前 candidate 都不会创建正式 record 或升级为 suite revision。
