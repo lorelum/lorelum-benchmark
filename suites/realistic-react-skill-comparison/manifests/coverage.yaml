@@ -21,7 +21,14 @@ covered_rules:
     tasks: [workspace-invitation-reconciliation-v2]
   - id: server-after-nonblocking.md
     tasks: [workspace-invitation-reconciliation-v2]
+  - id: bundle-conditional.md
+    tasks: [report-insights-conditional-loading-v8]
+  - id: server-cache-lru.md
+    tasks: [workspace-profile-lru-cache-v1]
+  - id: server-no-shared-module-state.md
+    tasks: [workspace-profile-lru-cache-v1]
 acceptance:
   semantic_gate_required: true
   deterministic_dynamic_quality_required: true
   wall_clock_thresholds_prohibited: true
+

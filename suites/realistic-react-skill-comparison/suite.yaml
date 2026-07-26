@@ -51,7 +51,7 @@ tasks:
     lifecycle_stage: pilot
   - id: workspace-invitation-reconciliation-v1
     path: tasks/workspace-invitation-reconciliation/v1
-    lifecycle_stage: pilot
+    lifecycle_stage: retired
   - id: workspace-invitation-reconciliation-v2
     path: tasks/workspace-invitation-reconciliation/v2
     lifecycle_stage: pilot
@@ -59,3 +59,4 @@ default_active_task_set:
   - workspace-dashboard-rsc-v2
   - team-directory-rsc-payload-v3
   - workspace-invitation-reconciliation-v2
+
