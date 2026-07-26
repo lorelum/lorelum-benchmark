@@ -21,6 +21,7 @@
 - 不修改共享 runner、schema、formal environment、正式 suite 或 `results/records/`。
 - 不把 Practice 变成 lint 规则、权重总分或强制统一架构风格的机制。
 - 不在本 change 中解决跨框架静态分析的通用实现；各 candidate 仍可选择适合其技术栈的私有质量 probe。
+- 本 change 只沉淀 #75 已有经验为维护者指南，不预设、不要求后续 candidate 才能写指南；不调用模型，不修改 incubator、suites、runner、schema、environment 或 record。
 
 ## 决策
 
@@ -75,7 +76,17 @@ Practice 卡必须包含稳定标识、标题、阶段、技术栈、适用场�
 
 回滚只需移除新增指南和协议链接；不涉及 runtime、snapshot、record 或已冻结输入。
 
-## 待确认问题
+## 已确认设计决策
 
-- benchmark 是否直接采用 Lorelum Practice 的完整 frontmatter，或由 treatment manifest 映射等价字段，将在实际引入 retrieval 或共享 treatment 时单独决定。
-- 哪些质量信号需要人工补充审阅而非自动 probe，取决于后续 candidate 的技术栈和可观察边界；本指南不把人工审阅设为当前小试的前置条件。
+以下决策已在规划澄清阶段与需求方确认，并写回 #81 与本节；指南据此落库。
+
+- **可自动识别的边界**：只有"职责边界"可被自动、稳定地识别为质量信号——组件不直接处理 transport、提交路径 await 一个组件外领域操作、该边界模块负责 transport 请求与 DTO/认证失败翻译。文件名、目录路径、helper 拆分和命名不作为可自动识别的通过条件。
+- **仅报告的质量信号**：所有 Practice 相关质量信号只单独报告，不影响任务完成。可使任务失败的硬门槛限于：公开语义测试失败、已声明公共接口不兼容、public/private 隔离泄露和生命周期违规。质量信号失败在语义通过时仅记为"未观察到对应 Practice 相关质量"。
+- **Practice 元数据**：benchmark 内 Practice 卡须含 `id`/`title`/`stage`/`tech_stack`/`applies_when` 与自然语言建议/反模式正文；不强制完整 Lorelum frontmatter。具体字段格式由 treatment manifest 适配，真实 retrieval 或共享 treatment 引入时再定。
+- **人工审阅**：不强制人工审阅；各 candidate 自行决定哪些信号需人工补充。人工审阅不是当前小试的前置条件。
+- **#75 矩阵范围**：指南的分类矩阵覆盖 `verify-layering.ts` 全部七条断言，映射到五类信息。
+- **归档**：tasks 全部完成且验证通过后，在同一 `codex/practice-design-quality-gates` 分支、同一 PR #82 执行 `openspec archive`，stable spec 同步到该 PR；不另开归档 PR，不合并。
+
+## 小样本结论边界
+
+#75 的每条件两次本地结果只是一题本地方向性信号：它不证明真实 Lorelum retrieval、产品效果、泛化能力，也不表明团队 Practice 已被证明有效。指南必须沿用此措辞，禁止由候选运行推导产品结论。
