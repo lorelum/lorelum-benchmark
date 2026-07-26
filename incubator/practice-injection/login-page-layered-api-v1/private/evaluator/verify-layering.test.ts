@@ -11,7 +11,7 @@ async function runProbe(relativeAppRoot: string): Promise<{ exitCode: number; ou
   return { exitCode, output: `${await new Response(child.stdout).text()}${await new Response(child.stderr).text()}` };
 }
 
-test("rejects known bypasses while accepting the reference", async () => {
+test("accepts equivalent boundaries and rejects transport work in the component", async () => {
   const naive = await runProbe("public/starter/app");
   expect(naive.exitCode).toBe(1);
 
@@ -25,4 +25,7 @@ test("rejects known bypasses while accepting the reference", async () => {
 
   const reference = await runProbe("private/calibration/reference");
   expect(reference.exitCode).toBe(0);
+
+  const equivalent = await runProbe("private/calibration/fixtures/equivalent-auth-boundary");
+  expect(equivalent.exitCode).toBe(0);
 });

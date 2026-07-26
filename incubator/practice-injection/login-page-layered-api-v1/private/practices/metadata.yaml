@@ -4,12 +4,12 @@ cards:
   - id: react.api.layered-design
     version: v1
     path: react.api.layered-design.v1.md
-    rendered_characters: 318
-  - id: irrelevant.identity-list-rendering
+    rendered_characters: 545
+  - id: react.identity-list-rendering
     version: v1
     path: irrelevant.identity-list-rendering.v1.md
-    rendered_characters: 292
+    rendered_characters: 506
 comparison:
   maximum_relative_difference: 0.10
-  actual_relative_difference: 0.0818
+  actual_relative_difference: 0.0716
   independently_reviewed: true
