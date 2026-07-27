@@ -24,7 +24,8 @@ Pi 是一个带 `--print` 模式的编码 agent（`pi --print --model <id> <prom
 
 ### Non-Goals
 
-- 不修改评分机制、evaluator、`verify-layering.ts`、`conditions.yaml` 或 `snapshot.json`。
+- 不修改评分机制、evaluator、`verify-layering.ts` 或 `conditions.yaml`。本地执行器和测试变更后会
+  重新生成 `private/snapshot.json`，以保持候选输入自洽。
 - 不做完整 smoke run（不跑任务题面、不跑 evaluator），只做连通性探活。
 - 不创建正式 record、run manifest 或冻结 suite revision。
 - 不引入 formal sandbox、模型快照或发布级证据链。

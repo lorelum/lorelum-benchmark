@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "4c29fef6472fff51d979110030bdbbb657c2325b4d72a3c55c5b842ff85b8c3e",
+  "snapshot_id": "9bcffb5325e1feb228fb05225bdf470dd828bf16f4555a9433940056c32d9d65",
   "files": {
     "private/README.md": "1bc98a3613e87ec242fbfbf0be3e5d37ab4ef74769cdca087858d69f39b84a30",
     "private/calibration.md": "3a546073ddcfd0d54ac63e30c1862f0b8e8c5aea5850fafdefbd8f154bff71e3",
@@ -34,8 +34,8 @@
     "private/evaluator/evaluate.ts": "faf184b4ad30d6e6a3c85bf3517bb6984ed3cab253a955f799162d9284b477ca",
     "private/evaluator/verify-layering.test.ts": "20e425e7750c54ea94b9a1f22afc3c8cd93fc59b76a3ddc794bd7f86574bd7d1",
     "private/evaluator/verify-layering.ts": "2cb98dbbdd427041b2ce47d705387168840c00b1a406cbdea227e65e99d44b92",
-    "private/execution/run-local.test.ts": "cac3fb5ee12ff95523ce40245442aafc80b7bf22c605676c7d220eac84250461",
-    "private/execution/run-local.ts": "cc8df0f03cc8dd42839e03df7ca85ee109c9d09616236d01ade272b1702b6121",
+    "private/execution/run-local.test.ts": "89149d3cf7cae61e28d1bec66f4767e058d39e0e0b76e050dc5d225a83a64c7b",
+    "private/execution/run-local.ts": "3fb58ab90417c40a31735e77c101dd643014ca42ccfbe23999ed5c6aa3b2037f",
     "private/execution/tool-policy.yaml": "bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6",
     "private/execution/unified-diff.ts": "7bc9f968a44030b0fb21dea1052b64463202acf6b02d90073e5cf827a93fad46",
     "private/oracle.yaml": "ec54cb8b02a74f3dd0a4d3174df74ac2897a8c24365f241c0c66ccb7fd78232a",

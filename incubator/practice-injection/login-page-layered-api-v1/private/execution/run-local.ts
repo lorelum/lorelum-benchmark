@@ -192,7 +192,9 @@ async function piCommand(): Promise<string> {
 const preflightTimeoutMs = 30_000;
 
 function redactSecrets(text: string): string {
-  return text.replace(/(?:sk-|api[_-]?key["']?\s*[:=]\s*["']?)[A-Za-z0-9_\-]{8,}/gi, "<redacted>");
+  return text
+    .replace(/(?:sk-|api[_-]?key["']?\s*[:=]\s*["']?|bearer\s+)[A-Za-z0-9._~+/\-]{8,}={0,2}/gi, "<redacted>")
+    .replace(/\b[A-Za-z0-9_\-]{20,}\b/g, "<redacted>");
 }
 
 function classifyPreflightFailure(result: CommandResult): string {

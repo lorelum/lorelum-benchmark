@@ -99,15 +99,13 @@ test("generates a unified diff covering identical, modified, added, and deleted 
   }
 });
 
-async function createFakePi(succeedPrint: boolean, leakKey = false): Promise<{ wrapper: string; cleanup: () => Promise<void> }> {
+async function createFakePi(succeedPrint: boolean, failureMessage = "error: connection refused"): Promise<{ wrapper: string; cleanup: () => Promise<void> }> {
   const fixtureRoot = await mkdtemp(join(tmpdir(), "lorelum-fake-pi-"));
   const fakeTs = join(fixtureRoot, "fake-pi.ts");
   const versionBranch = 'if (a.includes("--version")) { console.log("0.80.10"); process.exit(0); }';
   const printBranch = succeedPrint
     ? 'if (a.includes("--print")) { console.log("ok"); process.exit(0); }'
-    : leakKey
-      ? 'process.stderr.write("error: invalid api key sk-1234567890abcdef\\n"); process.exit(1);'
-      : 'process.stderr.write("error: connection refused\\n"); process.exit(1);';
+    : `if (a.includes("--print")) { process.stderr.write(${JSON.stringify(`${failureMessage}\n`)}); process.exit(1); }`;
   await writeFile(fakeTs, 'const a = process.argv.slice(2); ' + versionBranch + ' ' + printBranch + ' console.error("unknown args"); process.exit(1);');
   const isWin = process.platform === "win32";
   const wrapperPath = isWin ? join(fixtureRoot, "fake-pi.cmd") : join(fixtureRoot, "fake-pi");
@@ -149,12 +147,28 @@ test("preflight succeeds and enters the run loop, producing a summary", async ()
 
 test("preflight failure message does not leak the API key", async () => {
   const output = "scratch/login-practice-local/test-preflight-leak";
-  const { wrapper, cleanup } = await createFakePi(false, true);
+  const { wrapper, cleanup } = await createFakePi(false, "error: invalid api key sk-1234567890abcdef");
   try {
     const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("model unreachable");
     expect(result.stderr).not.toContain("sk-1234567890abcdef");
+  } finally {
+    await cleanup();
+    await rm(join(repositoryRoot, output), { recursive: true, force: true });
+  }
+});
+
+test("preflight fallback redacts a bearer token from provider stderr", async () => {
+  const output = "scratch/login-practice-local/test-preflight-bearer";
+  const token = "tok_live1";
+  const { wrapper, cleanup } = await createFakePi(false, `provider rejected request: Authorization: Bearer ${token}`);
+  try {
+    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("model unreachable: provider rejected request");
+    expect(result.stderr).not.toContain(token);
+    expect(await Bun.file(join(repositoryRoot, output, "summary.json")).exists()).toBeFalse();
   } finally {
     await cleanup();
     await rm(join(repositoryRoot, output), { recursive: true, force: true });

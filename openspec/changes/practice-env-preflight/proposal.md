@@ -14,7 +14,8 @@
   不创建摘要、不写 record。
 - 探活设独立短超时（建议 30 秒），不受 `conditions.yaml` 的 `max_duration_minutes` 任务预算
   约束。
-- 不修改评分机制、evaluator、`verify-layering.ts`、`conditions.yaml` 或 `snapshot.json`。
+- 不修改评分机制、evaluator、`verify-layering.ts` 或 `conditions.yaml`。由于本 change 修改了
+  候选快照覆盖的本地执行器，会重新生成 `private/snapshot.json`，仅固定新的执行器与测试哈希。
 
 ## Capabilities
 
@@ -32,6 +33,7 @@
 
 - 代码：`incubator/practice-injection/login-page-layered-api-v1/private/execution/run-local.ts`
   实跑入口；`run-local.test.ts` 新增探活测试。
-- 不影响：evaluator、verify-layering.ts、conditions.yaml、snapshot.json、评分机制、正式 runner。
+- 候选：重新生成 `private/snapshot.json`，使其覆盖新的本地执行器和测试；不改变 evaluator、
+  verify-layering.ts、conditions.yaml、评分机制或正式 runner。
 - 验证：`bun run validate` 与新增探活聚焦测试。
 - 关联 issue：#94。
