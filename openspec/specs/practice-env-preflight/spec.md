@@ -34,4 +34,3 @@ MUST：`--dry-run` 不得触发模型可达性探活。dry-run 不消耗任何�
 #### Scenario: dry-run 不触发探活
 - **当** 维护者执行 `--dry-run` 时
 - **则** 执行器不得调用 Pi `--print` 探活，只输出计划 JSON
-
