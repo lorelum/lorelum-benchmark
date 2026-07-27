@@ -1,9 +1,9 @@
 ## Context
 
 `incubator/practice-injection/login-page-layered-api-v1/private/execution/run-local.ts` 是
-登录页候选的本地执行器。当前实跑入口（`run-local.ts:281`）只执行 `pi --version` 探活，确认
+登录页候选的本地执行器。当前实跑入口（`run-local.ts:291`）只执行 `pi --version` 探活，确认
 Pi 二进制能启动，但不验证模型端点可达或 API key 有效。模型不可达的失败要等到第一次
-`runAttempt`（`run-local.ts:170`）实际调用 Pi `--print` 时才暴露，此时已进入实跑循环、已
+`runAttempt`（`run-local.ts:192`）实际调用 Pi `--print` 时才暴露，此时已进入实跑循环、已
 复制工作区、已消耗等待时间。
 
 #89 将新增多个候选，若环境问题在每次实跑时才暴露，会重复浪费工作区复制和时间。本 change 在
