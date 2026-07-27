@@ -189,6 +189,28 @@ async function piCommand(): Promise<string> {
   return "pi";
 }
 
+const preflightTimeoutMs = 30_000;
+
+function redactSecrets(text: string): string {
+  return text.replace(/(?:sk-|api[_-]?key["']?\s*[:=]\s*["']?)[A-Za-z0-9_\-]{8,}/gi, "<redacted>");
+}
+
+function classifyPreflightFailure(result: CommandResult): string {
+  const stderr = result.stderr || result.stdout;
+  if (result.timedOut) return "model unreachable: preflight timed out after 30s";
+  if (/api[_-]?key|unauthorized|401|invalid api key/i.test(stderr)) return "model unreachable: API key missing or invalid";
+  if (/connection|refused|unreachable|network|timeout|ENOTFOUND|ECONNREFUSED/i.test(stderr)) return "model unreachable: endpoint not reachable";
+  if (/model|not found|invalid/i.test(stderr)) return "model unreachable: model id invalid or unknown";
+  return `model unreachable: ${redactSecrets(stderr).trim() || "unknown error"}`;
+}
+
+async function preflightModel(command: string, modelId: string): Promise<void> {
+  const result = await run([command, "--print", "--no-session", "--model", modelId, "ok"], repositoryRoot, preflightTimeoutMs);
+  if (result.code !== 0 || result.timedOut) {
+    fail(classifyPreflightFailure(result));
+  }
+}
+
 async function runAttempt(
   outputPath: string,
   condition: Condition,
@@ -290,6 +312,8 @@ await mkdir(options.outputPath, { recursive: true });
 const command = await piCommand();
 const version = await run([command, "--version"], repositoryRoot);
 if (version.code !== 0) fail(`Unable to start Pi command ${command}: ${(version.stderr || version.stdout).trim()}`);
+
+await preflightModel(command, conditions.shared_execution.model.id);
 
 const entries: Record<string, unknown>[] = [];
 for (const condition of runnable) {
