@@ -8,11 +8,12 @@ Practice 效果与该题特有的 API 分层结构。#89 要求新增少量、�
 
 - 在规划澄清完成后，于 `incubator/practice-injection/` 新增 2-3 个 Practice-injection
   candidate；每个均有公开任务与 starter、私有相关/无关 Practice、私有语义验收、仅报告的
-  质量 probe 和候选 snapshot。
+  质量 probe 和候选 snapshot。其 conditions 固定 baseline（无注入）、oracle-practice 和按固定
+  计量方式等长的 irrelevant-practice，除注入内容外保持执行输入一致。
 - 为每个 candidate 提交不调用模型的 calibration：reference 和职责等价实现通过质量 probe，
-  已登记的 anti-pattern 在公开语义通过时被质量 probe 拒绝。
-- 为后续本地执行保留与 #94 一致的 Pi/模型可达 preflight 前提，但本 change 不运行候选、
-  不生成 scratch 结果、不创建 record。
+  public starter 与已登记的 anti-pattern 在公开语义通过时被质量 probe 拒绝。
+- 为后续本地执行保留与 #94 一致的 Pi/模型可达 preflight 前提；后续执行 change 必须将它集成到
+  多 candidate 执行入口。本 change 不运行候选、不生成 scratch 结果、不创建 record。
 
 ## Capabilities
 

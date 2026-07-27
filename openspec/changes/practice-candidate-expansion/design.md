@@ -29,8 +29,11 @@ OpenSpec strict validation 与初始 PR 创建后、任何 candidate 文件创�
 
 1. 每个 candidate 的公开可观察行为、所属技术栈与 candidate 数量（2 或 3）。
 2. 是否统一使用 React + Vite + TypeScript + Playwright 以控制混杂，或允许跨栈并明确其比较边界。
-3. 每个 candidate 的相关 Practice 主题、等长无关对照，以及它们为何均不泄露 reference 偏好。
-4. 每个 candidate 的预期 baseline/anti-pattern 缺陷、可区分性和可接受的职责等价实现。
+3. 每个 candidate 的 `baseline`、`oracle-practice` 与 `irrelevant-practice` 三条件；baseline
+   不注入 Practice，且无关对照按预先声明的固定计量方式等长，并说明它们为何均不泄露 reference
+   偏好。
+4. 每个 candidate 的预期 baseline 缺陷；public starter 必须在公开语义通过时缺失质量信号，以及
+   独立 anti-pattern、可区分性和可接受的职责等价实现。
 5. 私有语义硬门槛、仅报告的质量 probe、reference/equivalent/anti-pattern calibration 与
    public/private 泄露审计。
 6. 后续 #90/#91 执行所沿用的模型、提示、工具、预算、重复次数和盲评边界；本 change 不执行它们。
@@ -44,6 +47,10 @@ OpenSpec strict validation 与初始 PR 创建后、任何 candidate 文件创�
 - `public/` 只包含任务说明和 starter；题面只描述用户可观察行为和已声明公共接口。
 - `private/` 包含 candidate 声明、条件清单、相关/无关 Practice、私有 evaluator、校准样例、
   oracle 和 snapshot；这些材料不能复制到 agent workspace 或公开日志。
+- `private/conditions` 必须声明 `baseline`（不注入 Practice）、`oracle-practice`（只注入相关
+  Practice）和 `irrelevant-practice`（只注入等长无关 Practice）。三条件必须使用同一 public
+  snapshot、模型、系统提示、工具策略、预算、重复次数和干净工作区策略；除声明的注入内容外不得
+  改变执行输入。
 - 质量 probe 只报告与 Practice 映射的职责信号，不将内部路径、helper 或命名作为通过条件。
 - snapshot 覆盖候选输入；candidate 源、Practice、probe 或 calibration 变更后必须重新生成。
 
@@ -53,11 +60,15 @@ OpenSpec strict validation 与初始 PR 创建后、任何 candidate 文件创�
 
 1. reference 通过公开语义和质量 probe。
 2. 职责等价实现以不同命名/布局/领域结果形式通过质量 probe。
-3. 已登记 anti-pattern 或 naive starter 通过公开语义但失败质量 probe。
-4. public/private 边界审计与 candidate snapshot 验证。
-5. `bun run validate` 通过。
+3. public starter 通过公开语义但失败质量 probe，证明无 Practice 的初始输入可与 quality signal
+   区分。
+4. 已登记 anti-pattern 通过公开语义但失败质量 probe，证明 probe 能拒绝已知绕过。
+5. public/private 边界审计与 candidate snapshot 验证。
+6. `bun run validate` 通过。
 
-后续本地实跑由 #90 承接，且仅在 #94 preflight 成功后进行。
+后续本地实跑由 #90 承接。#94 当前的实现只覆盖登录页 candidate 的 `run-local.ts`；因此 #90
+必须在首次 candidate 执行前复用或抽取同等的 Pi/模型可达 preflight，并验证失败时不会进入任一
+candidate 的执行循环。仅曾运行登录页 preflight 不足以满足多 candidate 执行门禁。
 
 ## Risks / Trade-offs
 
