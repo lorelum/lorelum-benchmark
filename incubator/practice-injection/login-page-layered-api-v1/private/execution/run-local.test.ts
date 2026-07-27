@@ -31,11 +31,9 @@ test("rejects local output outside ignored scratch", async () => {
 
 test("copies only the starter app source into each agent workspace", async () => {
   const output = "scratch/login-practice-local/test-workspace-boundary";
-  // `bun --version` exits 0 and prints a version; any real Pi args make `bun` fail,
-  // so the evaluator is skipped while the diff is still generated. No shell script,
-  // shebang, or chmod is required on any platform.
-  const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: process.execPath });
+  const { wrapper, cleanup } = await createFakePi(true);
   try {
+    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
     const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: Array<{ initial_workspace_files: string[] }> };
     expect(summary.entries).toHaveLength(3);
@@ -45,6 +43,7 @@ test("copies only the starter app source into each agent workspace", async () =>
       expect(entry.initial_workspace_files.some((file) => file.includes("node_modules/") || file.includes("dist/"))).toBeFalse();
     }
   } finally {
+    await cleanup();
     await rm(join(repositoryRoot, output), { recursive: true, force: true });
   }
 });
@@ -97,5 +96,93 @@ test("generates a unified diff covering identical, modified, added, and deleted 
   } finally {
     await rm(leftRoot, { recursive: true, force: true });
     await rm(rightRoot, { recursive: true, force: true });
+  }
+});
+
+async function createFakePi(succeedPrint: boolean, failureMessage = "error: connection refused"): Promise<{ wrapper: string; cleanup: () => Promise<void> }> {
+  const fixtureRoot = await mkdtemp(join(tmpdir(), "lorelum-fake-pi-"));
+  const fakeTs = join(fixtureRoot, "fake-pi.ts");
+  const versionBranch = 'if (a.includes("--version")) { console.log("0.80.10"); process.exit(0); }';
+  const printBranch = succeedPrint
+    ? 'if (a.includes("--print")) { console.log("ok"); process.exit(0); }'
+    : `if (a.includes("--print")) { process.stderr.write(${JSON.stringify(`${failureMessage}\n`)}); process.exit(1); }`;
+  await writeFile(fakeTs, 'const a = process.argv.slice(2); ' + versionBranch + ' ' + printBranch + ' console.error("unknown args"); process.exit(1);');
+  const isWin = process.platform === "win32";
+  const wrapperPath = isWin ? join(fixtureRoot, "fake-pi.cmd") : join(fixtureRoot, "fake-pi");
+  const wrapper = isWin
+    ? "@echo off\r\n\"" + process.execPath + "\" \"" + fakeTs + "\" %*\r\n"
+    : "#!/bin/sh\nexec \"" + process.execPath + "\" \"" + fakeTs + "\" \"$@\"\n";
+  await writeFile(wrapperPath, wrapper);
+  if (!isWin) { const { chmod } = await import("node:fs/promises"); await chmod(wrapperPath, 0o755); }
+  return { wrapper: wrapperPath, cleanup: async () => { await rm(fixtureRoot, { recursive: true, force: true }); } };
+}
+
+test("preflight fails when the model endpoint is unreachable and does not create a summary", async () => {
+  const output = "scratch/login-practice-local/test-preflight-fail";
+  const { wrapper, cleanup } = await createFakePi(false);
+  try {
+    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("model unreachable");
+    expect(await Bun.file(join(repositoryRoot, output, "summary.json")).exists()).toBeFalse();
+  } finally {
+    await cleanup();
+    await rm(join(repositoryRoot, output), { recursive: true, force: true });
+  }
+});
+
+test("preflight succeeds and enters the run loop, producing a summary", async () => {
+  const output = "scratch/login-practice-local/test-preflight-success";
+  const { wrapper, cleanup } = await createFakePi(true);
+  try {
+    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    expect(result.code).toBe(0);
+    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: unknown[] };
+    expect(summary.entries).toHaveLength(3);
+  } finally {
+    await cleanup();
+    await rm(join(repositoryRoot, output), { recursive: true, force: true });
+  }
+});
+
+test("preflight failure message does not leak the API key", async () => {
+  const output = "scratch/login-practice-local/test-preflight-leak";
+  const { wrapper, cleanup } = await createFakePi(false, "error: invalid api key sk-1234567890abcdef");
+  try {
+    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("model unreachable");
+    expect(result.stderr).not.toContain("sk-1234567890abcdef");
+  } finally {
+    await cleanup();
+    await rm(join(repositoryRoot, output), { recursive: true, force: true });
+  }
+});
+
+test("preflight fallback redacts a bearer token from provider stderr", async () => {
+  const output = "scratch/login-practice-local/test-preflight-bearer";
+  const token = "tok_live1";
+  const { wrapper, cleanup } = await createFakePi(false, `provider rejected request: Authorization: Bearer ${token}`);
+  try {
+    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("model unreachable: provider rejected request");
+    expect(result.stderr).not.toContain(token);
+    expect(await Bun.file(join(repositoryRoot, output, "summary.json")).exists()).toBeFalse();
+  } finally {
+    await cleanup();
+    await rm(join(repositoryRoot, output), { recursive: true, force: true });
+  }
+});
+
+test("dry-run does not trigger the model preflight", async () => {
+  const { wrapper, cleanup } = await createFakePi(false);
+  try {
+    const result = await execute(["--dry-run", "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    expect(result.code).toBe(0);
+    const plan = JSON.parse(result.stdout) as { planned_runs: Array<{ condition: string }> };
+    expect(plan.planned_runs.map((entry) => entry.condition)).toEqual(["baseline", "oracle-practice", "irrelevant-practice"]);
+  } finally {
+    await cleanup();
   }
 });
