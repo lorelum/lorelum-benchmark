@@ -18,6 +18,12 @@ async function createCandidateWorkspace(): Promise<string> {
   await Bun.write(join(candidate, "public", "starter", "node_modules", "example", "index.js"), "export {};\n");
   await mkdir(join(candidate, "public", "starter", "dist"), { recursive: true });
   await Bun.write(join(candidate, "public", "starter", "dist", "index.html"), "<main />\n");
+  await mkdir(join(candidate, ".materialized", "public"), { recursive: true });
+  await Bun.write(join(candidate, ".materialized", "public", "task.md"), "# Generated\n");
+  await mkdir(join(candidate, "public", "starter", ".vite"), { recursive: true });
+  await Bun.write(join(candidate, "public", "starter", ".vite", "cache"), "cache\n");
+  await mkdir(join(candidate, "logs"), { recursive: true });
+  await Bun.write(join(candidate, "logs", "run.log"), "generated\n");
   await Bun.write(join(candidate, "private", "oracle.yaml"), "id: example-candidate-v1\n");
   await Bun.write(join(candidate, "private", "evaluator", ".env.example"), "TEST_PORT=3001\n");
   await mkdir(join(candidate, "private", "evidence-index"), { recursive: true });
@@ -42,6 +48,9 @@ test("writes and verifies a complete incubator candidate snapshot", async () => 
     expect(manifest.files["public/starter/.env.example"]).toBeString();
     expect(manifest.files["public/starter/node_modules/example/index.js"]).toBeUndefined();
     expect(manifest.files["public/starter/dist/index.html"]).toBeUndefined();
+    expect(manifest.files[".materialized/public/task.md"]).toBeUndefined();
+    expect(manifest.files["public/starter/.vite/cache"]).toBeUndefined();
+    expect(manifest.files["logs/run.log"]).toBeUndefined();
     expect(manifest.files["private/evaluator/.env.example"]).toBeString();
     expect(manifest.files["private/evidence-index/attempt-001.yaml"]).toBeUndefined();
     expect(manifest.files["private/snapshot.json"]).toBeUndefined();
