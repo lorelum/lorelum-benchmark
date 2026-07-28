@@ -1,5 +1,7 @@
 import { existsSync } from "node:fs";
+import { createServer as createHttpServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 type CalibrationCase = {
   id: string;
@@ -13,11 +15,6 @@ const stagedManifestPath = process.env.LORELUM_CALIBRATION_SETS_MANIFEST;
 if (!stagedManifestPath) throw new Error("Calibration fixtures must be staged by the kernel");
 const stagedPublicStarterRoot = process.env.LORELUM_CALIBRATION_PUBLIC_STARTER;
 if (!stagedPublicStarterRoot) throw new Error("Calibration public starter must be staged by the kernel");
-const calibrationBaseUrl = process.env.LORELUM_CALIBRATION_BASE_URL;
-if (!calibrationBaseUrl) throw new Error("Calibration base URL must be provided by the kernel");
-const portMatch = calibrationBaseUrl.match(/^http:\/\/127\.0\.0\.1:(\d+)$/);
-if (!portMatch) throw new Error(`Calibration base URL must be http://127.0.0.1:<port>: ${calibrationBaseUrl}`);
-const calibrationPort = Number(portMatch[1]);
 const stagedPublicStarter = join(stagedPublicStarterRoot, "app");
 const staged = JSON.parse(await Bun.file(stagedManifestPath).text()) as {
   sets: Record<string, { fixtures: Record<string, { path: string; tree_hash: string }> }>;
@@ -48,37 +45,46 @@ async function ensureDependencies(appPath: string): Promise<void> {
   }
 }
 
-async function startDevServer(appPath: string): Promise<{ kill: () => Promise<void> }> {
-  const child = Bun.spawn([process.execPath, "run", "dev", "--", "--port", String(calibrationPort), "--host", "127.0.0.1"], {
-    cwd: appPath,
-    stdout: "pipe",
-    stderr: "pipe",
-    env: { ...process.env },
-  });
-  const readyTimeout = 60_000;
-  const deadline = Date.now() + readyTimeout;
-  let ready = false;
-  const stderr = new Response(child.stderr).text();
-  while (Date.now() < deadline && !ready) {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    try {
-      const response = await fetch(calibrationBaseUrl, { signal: AbortSignal.timeout(1000) });
-      if (response.ok || response.status > 0) ready = true;
-    } catch {
-      // server not ready yet
-    }
-  }
-  if (!ready) {
-    child.kill("SIGKILL");
-    const log = await stderr;
-    throw new Error(`Calibration dev server did not become ready at ${calibrationBaseUrl}${log ? `: ${log}` : ""}`);
-  }
-  return {
-    kill: async () => {
-      child.kill("SIGTERM");
-      await child.exited.catch(() => {});
-    },
+type ViteDevServer = {
+  middlewares: (request: IncomingMessage, response: ServerResponse) => void;
+  close: () => Promise<void>;
+};
+
+async function startDevServer(appPath: string): Promise<{ baseUrl: string; kill: () => Promise<void> }> {
+  const viteModulePath = pathToFileURL(join(appPath, "node_modules", "vite", "dist", "node", "index.js")).href;
+  const { createServer } = await import(viteModulePath) as {
+    createServer: (options: { root: string; server: { host: string; hmr: false; middlewareMode: { server: Server } } }) => Promise<ViteDevServer>;
   };
+  const httpServer = createHttpServer();
+  const server = await createServer({ root: appPath, server: { host: "127.0.0.1", hmr: false, middlewareMode: { server: httpServer } } });
+  httpServer.on("request", server.middlewares);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      httpServer.once("error", reject);
+      httpServer.listen(0, "127.0.0.1", () => {
+        httpServer.removeListener("error", reject);
+        resolve();
+      });
+    });
+    const address = httpServer.address();
+    if (typeof address !== "object" || address === null || typeof address.port !== "number") {
+      throw new Error("Calibration dev server did not yield a valid local port");
+    }
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const response = await fetch(baseUrl, { signal: AbortSignal.timeout(10_000) });
+    if (!response.ok) throw new Error(`Calibration dev server returned ${response.status} at ${baseUrl}`);
+    return {
+      baseUrl,
+      kill: async () => {
+        await server.close();
+        if (httpServer.listening) await new Promise<void>((resolve, reject) => httpServer.close((error) => error ? reject(error) : resolve()));
+      },
+    };
+  } catch (error) {
+    await server.close().catch(() => {});
+    if (httpServer.listening) await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+    throw error;
+  }
 }
 
 const results: Array<{ id: string; semantic: "pass" | "fail"; practice_probe: "pass" | "fail"; expected_practice_probe: "pass" | "fail" }> = [];
@@ -87,7 +93,7 @@ for (const calibration of cases) {
   await ensureDependencies(appPath);
   const server = await startDevServer(appPath);
   try {
-    const semantic = await run(["bun", "run", "test"], appPath, { PLAYWRIGHT_BASE_URL: calibrationBaseUrl }) === 0 ? "pass" : "fail";
+    const semantic = await run(["bun", "run", "test"], appPath, { PLAYWRIGHT_BASE_URL: server.baseUrl }) === 0 ? "pass" : "fail";
     const probe = await run([process.execPath, "run", probePath, appPath, appPath], candidateRoot) === 0 ? "pass" : "fail";
     results.push({ id: calibration.id, semantic, practice_probe: probe, expected_practice_probe: calibration.expectedProbe });
   } finally {

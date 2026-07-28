@@ -1,10 +1,10 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "d1ed63477ae9f5e77ea85dcaaf817400d89bc7a10c7cde36f33f4bd7e75e83e4",
+  "snapshot_id": "5c4ece03bc123c5346a89243ab48f7b8b6e9e40c2a17928ffe1444a413b959f3",
   "files": {
     "private/calibration.md": "8188faf848abeb5d9309046c6589832c38b291ae70332534a778cc0364b188b9",
-    "private/calibration/run.ts": "42d11dc2dab3785421696172564d1be8350fa9bef18a3b28417213ce588416ad",
+    "private/calibration/run.ts": "1315ea521bd3ddcf118ca0f7cfdf8ebb6b3989c2f26020911142a702371f5dde",
     "private/calibration/sets.yaml": "20f793bdd7dbe903c643924836cf6914b47641f4dd2a0d55274b860cd8dc6f18",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/LoginPage.tsx": "43c4b50bfd6d8f5ac5a0043b4c6016d588ba7265847d25b1f40ade0d83912af1",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/profileClient.ts": "d75afe66343cfca18daa52985a0239e2c1c3ade8c990dee9d856a52f7fee9edd",
@@ -41,7 +41,7 @@
   },
   "resolved": {
     "core_version": "v1",
-    "core_hash": "4e291b974431dbc9580e5b5473c644f3dc51e4ea843f72f294fc0874f03b9974",
+    "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "injection-calibration/v1",
     "materializer_kind": "react-vite",
     "input_hash": "d5c5883ee1eb012df34fe8eac67ccab3478d956e9930c37a8375307d9e091cbd",

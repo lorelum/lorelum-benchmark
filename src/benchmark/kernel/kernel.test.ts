@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { calibrate, copySourceExcludingGenerated, hash, isolate, materialize, registerMaterializer } from "./core/v1/core";
 import { materializeReactVite, reactViteKind } from "./materializers";
 import { sha256Directory, listFiles } from "../fs";
@@ -306,7 +306,7 @@ test("frozen task immutability: core hash is deterministic for unchanged source"
 });
 
 
-test("calibrate allocates an exclusive port per role invocation", async () => {
+test("concurrent calibrate invocations start distinct Vite servers without EADDRINUSE", async () => {
   const output = await makeTempWorkspace();
   try {
     await materialize({
@@ -316,46 +316,46 @@ test("calibrate allocates an exclusive port per role invocation", async () => {
       outputPath: output,
       materializerKind: "react-vite",
     });
-    const results = await calibrate({
-      workspacePath: output,
-      roles: [
-        { id: "read-base-url", command: [process.execPath, "-e", "process.stdout.write(process.env.LORELUM_CALIBRATION_BASE_URL || '')"], expect: { kind: "pass" } },
-      ],
-    });
-    // The role exits 0 (pass) and the injected base URL is a private runtime value.
-    expect(results[0].passed).toBe(true);
-  } finally {
-    await rm(output, { force: true, recursive: true });
-  }
-});
-
-test("concurrent calibrate invocations receive distinct exclusive ports", async () => {
-  const output = await makeTempWorkspace();
-  try {
-    await materialize({
-      candidatePath: fixturePath,
-      publicTaskPath: join(fixturePath, "public", "task.md"),
-      publicStarterPath: join(fixturePath, "public", "starter"),
-      outputPath: output,
-      materializerKind: "react-vite",
-    });
-    // Two concurrent calibrate calls, each with a role that writes its injected
-    // base URL to a distinct temp file. If ports collide, one role would fail
-    // to bind or the URLs would be identical.
+    const appPath = resolve(import.meta.dir, "..", "..", "..", "incubator", "practice-injection", "profile-update-command-boundary-v1", "public", "starter", "app");
     const fileA = join(output, "port-a.txt");
     const fileB = join(output, "port-b.txt");
+    const viteModulePath = join(appPath, "node_modules", "vite", "dist", "node", "index.js");
+    const roleScript = (file: string) => `
+      const { writeFileSync } = require("node:fs");
+      const { pathToFileURL } = require("node:url");
+      const { createServer: createHttpServer } = require("node:http");
+      const vite = await import(pathToFileURL(${JSON.stringify(viteModulePath)}).href);
+      const httpServer = createHttpServer();
+      const server = await vite.createServer({ root: ${JSON.stringify(appPath)}, server: { host: "127.0.0.1", hmr: false, middlewareMode: { server: httpServer } } });
+      httpServer.on("request", server.middlewares);
+      try {
+        await new Promise((resolve, reject) => { httpServer.once("error", reject); httpServer.listen(0, "127.0.0.1", resolve); });
+        const address = httpServer.address();
+        if (!address || typeof address === "string") throw new Error("Vite did not expose a TCP port");
+        const baseUrl = "http://127.0.0.1:" + address.port;
+        const response = await fetch(baseUrl, { signal: AbortSignal.timeout(10_000) });
+        if (!response.ok) throw new Error("Vite readiness check failed: " + response.status);
+        writeFileSync(${JSON.stringify(file)}, baseUrl);
+      } finally {
+        await server.close();
+        if (httpServer.listening) await new Promise((resolve, reject) => httpServer.close((error) => error ? reject(error) : resolve()));
+      }
+    `;
     const runOne = (file: string) =>
       calibrate({
         workspacePath: output,
         roles: [
           {
-            id: "emit-port",
-            command: [process.execPath, "-e", `require('fs').writeFileSync(${JSON.stringify(file)}, process.env.LORELUM_CALIBRATION_BASE_URL || '')`],
+            id: "vite-port-zero",
+            command: [process.execPath, "-e", roleScript(file)],
             expect: { kind: "pass" },
           },
         ],
       });
     const [resA, resB] = await Promise.all([runOne(fileA), runOne(fileB)]);
+    if (!resA[0].passed || !resB[0].passed) {
+      throw new Error(`Vite calibration role failed: ${resA[0].output ?? ""}${resB[0].output ?? ""}`);
+    }
     expect(resA[0].passed).toBe(true);
     expect(resB[0].passed).toBe(true);
     const urlA = await Bun.file(fileA).text();
@@ -363,30 +363,6 @@ test("concurrent calibrate invocations receive distinct exclusive ports", async 
     expect(urlA).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
     expect(urlB).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
     expect(urlA).not.toBe(urlB);
-  } finally {
-    await rm(output, { force: true, recursive: true });
-  }
-});
-
-test("calibrate fails closed when a role does not consume the injected port", async () => {
-  const output = await makeTempWorkspace();
-  try {
-    await materialize({
-      candidatePath: fixturePath,
-      publicTaskPath: join(fixturePath, "public", "task.md"),
-      publicStarterPath: join(fixturePath, "public", "starter"),
-      outputPath: output,
-      materializerKind: "react-vite",
-    });
-    // A role that would fall back to a fixed port still receives the injected
-    // base URL in its environment; the contract ensures the value is present.
-    const results = await calibrate({
-      workspacePath: output,
-      roles: [
-        { id: "check-injection", command: [process.execPath, "-e", "process.exit(process.env.LORELUM_CALIBRATION_BASE_URL ? 0 : 1)"], expect: { kind: "pass" } },
-      ],
-    });
-    expect(results[0].passed).toBe(true);
   } finally {
     await rm(output, { force: true, recursive: true });
   }

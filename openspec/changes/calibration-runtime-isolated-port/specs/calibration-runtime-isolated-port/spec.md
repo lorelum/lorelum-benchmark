@@ -1,12 +1,12 @@
 ## ADDED Requirements
 
 ### Requirement: 每次调用独占的 calibration runtime 端口
-Kernel-backed private calibration runtime SHALL allocate an exclusive local
-TCP port (or equivalent private base URL) for each calibration role invocation.
-Allocation MUST atomically bind a listening socket and read its assigned port
-so there is no discover-then-bind TOCTOU window. A held port MUST NOT be reused
-within one runtime. Allocation failure, invalid values, or out-of-range ports
-MUST fail closed before any role runs.
+Kernel-backed private calibration runtime SHALL give each calibration role
+invocation an exclusive local TCP port (or equivalent private base URL). The
+private driver MUST atomically bind its local HTTP server on `127.0.0.1` with
+`port: 0`, attach Vite as middleware, and read the assigned port only after the
+server is listening, so there is no discover-then-bind TOCTOU window. Binding,
+address-read, or readiness failure MUST fail the role closed.
 
 #### Scenario: 并行两个 candidate 无端口争用
 - **WHEN** two calibration invocations run concurrently
@@ -15,18 +15,16 @@ MUST fail closed before any role runs.
   execution
 
 #### Scenario: 端口分配失败
-- **WHEN** port allocation cannot bind an exclusive port or receives an invalid
-  value
-- **THEN** the runtime MUST fail closed before invoking the role and emit only
-  a private diagnostic
+- **WHEN** the private driver cannot bind, read, or validate its Vite service address
+- **THEN** the role MUST fail closed and emit only a private diagnostic
 
 ### Requirement: 端口/base URL 注入契约
-The kernel SHALL inject the private base URL (and port where needed) into the
-calibration role's private runtime environment through a single contract.
-Playwright and Vite MUST consume the same private value: Playwright uses an
-external `baseURL` and disables its fixed `webServer`, while Vite binds the dev
-server to the held port. A consumer that does not observe the injected value or
-that falls back to a fixed port MUST cause the role to fail closed.
+The private calibration driver SHALL derive the private base URL from the
+already-listening Vite server and inject that exact value into Playwright's
+private runtime environment. Playwright MUST use the external `baseURL` and
+disable its fixed `webServer`; Vite is the source of the same value. A consumer
+that does not observe the value or falls back to a fixed port MUST cause the
+role to fail closed.
 
 #### Scenario: Playwright 与 Vite 消费同一值
 - **WHEN** a calibration role runs against a staged fixture
@@ -39,20 +37,16 @@ that falls back to a fixed port MUST cause the role to fail closed.
 - **THEN** the role MUST fail closed and produce no valid calibration result
 
 ### Requirement: 失败、超时与释放语义
-The calibration runtime SHALL treat service-not-ready, timeout, allocation
-failure, and double-release of a held port as a role failure with a private
-diagnostic. Released ports MUST be verified free. No partial calibration
-result SHALL be treated as valid.
+The calibration runtime SHALL treat service-not-ready, timeout, Vite bind or
+address-read failure, and failure to close the owned server as a role failure
+with a private diagnostic. No partial calibration result SHALL be treated as
+valid.
 
 #### Scenario: 服务未就绪或超时
-- **WHEN** the dev server does not become ready within the timeout or the port
-  cannot be released cleanly
+- **WHEN** the dev server does not become ready within the timeout or cannot be
+  closed cleanly
 - **THEN** the role MUST fail closed with a private diagnostic and no valid
   conclusion is recorded
-
-#### Scenario: 重复释放
-- **WHEN** a held port is released twice or an unheld port is released
-- **THEN** the runtime MUST fail closed
 
 ### Requirement: 端口信息保持私有
 The port/base URL MUST remain inside the private calibration runtime. It MUST

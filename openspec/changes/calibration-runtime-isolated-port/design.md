@@ -27,9 +27,9 @@ and it must not rewrite existing immutable registry bases or calibration sets.
 
 - Provide an exclusive, auditable per-invocation port or private base URL for
   each kernel-driven calibration role invocation, with no TOCTOU gap between
-  discovery and bind.
-- Inject the value into Playwright and Vite through a single private runtime
-  contract so every consumer validates the same private runtime.
+  the private driver's bind and its use.
+- Have the private driver derive Playwright's base URL from the Vite server it
+  atomically starts, so both consumers use the same private runtime.
 - Fail closed with private diagnostics on allocation failure, invalid values,
   service-not-ready, timeout, and double-release.
 - Keep the port/base URL inside the private calibration runtime; it must not
@@ -60,31 +60,31 @@ PR #108（overlay resolver、private staging 与 `calibration_sets_hash`）已�
 
 ### Port ownership and allocation（端口所有权与分配，防 TOCTOU）
 
-由 kernel `calibrate` 路径为每个 calibration role invocation 原子绑定一个监听套接字
-（listening socket）并读取其分配的临时端口，持有该套接字直到 role 完成。绑定与读取在同
-一步完成，不存在"先探测空闲端口再重新绑定"的 TOCTOU 窗口。同运行时不复用已持有端口；
-分配失败、非法值或越界端口均在调用任何 role 之前 fail closed。
+kernel `calibrate` 启动每个 private calibration role；role 内的 private driver 创建本地
+HTTP server 并以 `127.0.0.1`、`port: 0` 原子绑定，再通过禁用 HMR 的 Vite middleware API
+将 Vite 挂载到该已监听服务并读取实际端口。服务自身是该端口的唯一所有者，没有"先探测空闲
+端口再重新绑定"的 TOCTOU 窗口，也不存在把 kernel 预占 socket 交给 Vite CLI 的不可能交接。
+绑定、地址读取、就绪检查或关闭失败均使 role fail closed。
 
 ### Injection contract（注入契约）
 
-kernel 向 calibration role 的私有 runtime 环境注入私有 base URL
-（`http://127.0.0.1:<port>`）。Playwright 使用来自环境变量的外部 `baseURL` 并禁用固定
-`webServer`（不启动固定端口服务）；Vite dev server 绑定到同一持有端口。两个消费者从同一
-注入值派生各自的配置。消费者未观测到注入值、或回退到固定 `4173` 端口时，role fail
-closed 且不产生有效校准结论。
+private driver 在 Vite 监听后构造私有 `http://127.0.0.1:<actual-port>` base URL，并仅在
+启动 Playwright 时通过 `PLAYWRIGHT_BASE_URL` 注入。Vite 是该值的来源，Playwright 使用
+同一值并禁用固定 `webServer`。Vite 未返回有效本地地址、服务未就绪、或 Playwright 缺失
+该值/回退固定 `4173` 时，role fail closed 且不产生有效校准结论。
 
 ### Failure, timeout and release semantics（失败、超时与释放语义）
 
-服务未就绪、超时、分配失败、重复释放已持有端口或释放未持有端口均使 role fail closed
-并保留私有诊断；释放的端口经验证为空闲；不产生部分有效的校准结论。私有诊断只在
-calibration 进程内输出，不进入公开产物。
+服务未就绪、超时、原子绑定/地址读取失败或 Vite 关闭失败均使 role fail closed 并保留
+私有诊断；不产生部分有效的校准结论。私有诊断只在 calibration 进程内输出，不进入公开产物。
 
 ### Migration strategy（迁移策略）
 
 创建新的 immutable registry base 版本（`app-shell/v2`）承载端口感知的
 `playwright.config.ts`/`vite.config.ts`；现有 base/source 版本（`app-shell/v1`）保持
 不变。两个 #97 candidate 新增 `quality-probe/v2` calibration set，旧 `quality-probe/v1`
-不被改写；为新 set 重建并复核 snapshot 身份，旧 set 源码与身份从提交历史保持可复现。
+不被改写。`v2` 仅替换 base，并有意引用已冻结的 `v1` overlay 内容；该复用不改变 `v1`
+identity。为新 set 重建并复核 snapshot 身份，旧 set 源码与身份从提交历史保持可复现。
 
 ### Concurrent integration test（并发 integration test）
 
@@ -93,10 +93,12 @@ calibration 进程内输出，不进入公开产物。
 
 ## Risks / Trade-offs
 
-- [A discover-then-bind gap causes TOCTOU races] -> Bind the listening socket
-  first and read the assigned port; never probe a free port then rebind.
-- [Playwright and Vite consume different values] -> One private runtime contract
-  feeds both; tests assert both observe the same base URL/port.
+- [A discover-then-bind gap causes TOCTOU races] -> Let the private driver's
+  HTTP server bind port `0`, attach Vite as middleware, and read the address
+  only after it is listening; never reserve a port in one process and rebind it
+  in another.
+- [Playwright and Vite consume different values] -> The private driver reads
+  Vite's actual address and passes that exact value only to Playwright.
 - [Port leaks across concurrent invocations] -> Per-invocation ownership with
   verified release; held ports are never reused within one runtime.
 - [Port information leaks into public artifacts] -> Port stays in the private
@@ -111,7 +113,7 @@ calibration 进程内输出，不进入公开产物。
    PR.
 2. Record the confirmed allocation, injection, failure, migration, and #108
    dependency decisions in this design and `tasks.md`.
-3. Implement the port allocator, injection contract, and fail-closed tests
+3. Implement the service-owned port binding, injection contract, and fail-closed tests
    before changing any candidate source.
 4. Add the port-aware base version and `quality-probe/v2` sets for the two #97
    candidates; regenerate and verify snapshots without changing public

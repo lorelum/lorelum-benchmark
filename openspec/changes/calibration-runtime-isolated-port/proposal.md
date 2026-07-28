@@ -8,8 +8,8 @@ Playwright calibration 时同时绑定固定 `127.0.0.1:4173`，其中一个进�
 ## What Changes
 
 - 为 kernel 驱动的 private calibration runtime 提供每次调用独占的本地端口或等价私有
-  base URL，由受控 runtime 分配并注入到 Playwright/Vite fixture，消除共享固定端口的
-  跨 candidate 争用。
+  base URL：private driver 以 `port: 0` 原子启动本地 HTTP 服务、将 Vite 挂载为 middleware，
+  读取实际地址后注入到 Playwright，消除共享固定端口的跨 candidate 争用。
 - 令并行 calibration 与串行执行得到相同的语义和质量 probe 结论；端口分配失败、无效
   配置或消费者不一致时 fail closed 并保留私有诊断。
 - 保持端口信息在私有 calibration runtime 内：不得进入 agent workspace、public prompt、
