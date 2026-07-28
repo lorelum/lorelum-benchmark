@@ -37,8 +37,10 @@ Issue #107 要求在不重写冻结/退休 v1 snapshot 或正式 record 的前�
 
 v2 的 canonical 身份采用确定性的 Merkle 式树根摘要：叶节点为 ``<relative-path>\0<sha256(bytes)>``，
 按路径字典序排序后逐层组合为树根 SHA-256。已提交主存储仅为树根摘要，不持久化完整逐文件清单或 proof。
-验证失败时在内存中重新展开树，定位受影响路径与失配类型，不在 snapshot 中持久化 proof 片段。这给出
-跨平台、遍历顺序无关的稳定身份，体积最小且仍可诊断。
+验证失败时在内存中重新展开当前树，输出受管路径与其当前 hash 作为诊断（``tree-leaf <path>=<hash>``），
+供维护者与已提交源码对比定位受影响路径与失配类型；不在 snapshot 中持久化 proof 片段或逐文件基线。
+纯树根方案不持久化逐文件基线，因此无法自动逐文件 diff，但按需展开的路径-hash 清单满足受控定位需求。
+这给出跨平台、遍历顺序无关的稳定身份，体积最小且仍可诊断。
 
 ### D2：路径、字节、文件类型与排除规则（已确认）
 
@@ -71,8 +73,8 @@ PR #108（#106 calibration fixture overlay）已合并到 ``origin/main``。v2 �
 ### D6：source、profile input 与 private payload 边界（已确认）
 
 v2 复用 v1 的 resolved 绑定字段（core 版本/hash、profile、materializer_kind、input hash、
-materialized output hash、profile input hash、calibration sets hash）。失配诊断仅输出受影响
-受管路径与失配类型（如 ``路径: hash 不匹配``），绝不输出 Practice 文本、``private/practices/``
+materialized output hash、profile input hash、calibration sets hash）。失配诊断在内存中重新展开当前树，
+输出受管路径与其当前 hash（``tree-leaf <path>=<hash>``），不输出 Practice 文本、``private/practices/``
 路径或私有 evaluator/oracle 内容。
 
 ## Risks / Trade-offs

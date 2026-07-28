@@ -302,7 +302,10 @@ for (const target of selectedTargets) {
       await assertNoSymlinks(target.path);
       const expectedTreeRoot = await canonicalTreeRoot(files);
       if (parsed.snapshot_id !== expectedTreeRoot) {
-        failures.push(`Snapshot mismatch: ${relativePath(snapshotPath)}/snapshot_id`);
+        failures.push(`Snapshot mismatch: ${relativePath(snapshotPath)}/snapshot_id (expected ${parsed.snapshot_id}, recomputed ${expectedTreeRoot})`);
+        for (const [path, hash] of Object.entries(files).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)) {
+          failures.push(`  tree-leaf ${relativePath(target.path)}/${path}=${hash}`);
+        }
       }
     } catch (error) {
       failures.push(error instanceof Error ? error.message : String(error));

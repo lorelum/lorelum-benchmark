@@ -186,12 +186,14 @@ test("v2 fails when content changes, files are added, deleted, or renamed", asyn
     const contentChanged = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
     expect(contentChanged.exitCode).toBe(1);
     expect(contentChanged.output).toContain("snapshot_id");
+    expect(contentChanged.output).toContain("tree-leaf");
 
     await writeFile(join(candidate, "public", "starter", ".env.example"), "PORT=3000\n");
     await writeFile(join(candidate, "public", "starter", "new-file.ts"), "export const x = 1;\n");
     const added = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
     expect(added.exitCode).toBe(1);
-    expect(added.exitCode).toBe(1);
+    expect(added.output).toContain("snapshot_id");
+    expect(added.output).toContain("new-file.ts");
 
     await rm(join(candidate, "public", "starter", "new-file.ts"), { force: true });
     const addedResolved = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
@@ -200,12 +202,14 @@ test("v2 fails when content changes, files are added, deleted, or renamed", asyn
     await rm(join(candidate, "private", "oracle.yaml"), { force: true });
     const deleted = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
     expect(deleted.exitCode).toBe(1);
-    expect(deleted.exitCode).toBe(1);
+    expect(deleted.output).toContain("snapshot_id");
 
     await writeFile(join(candidate, "private", "oracle.yaml"), "id: example-candidate-v1\n");
     await writeFile(join(candidate, "private", "renamed-oracle.yaml"), "id: example-candidate-v1\n");
     const renamed = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
     expect(renamed.exitCode).toBe(1);
+    expect(renamed.output).toContain("snapshot_id");
+    expect(renamed.output).toContain("renamed-oracle.yaml");
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
