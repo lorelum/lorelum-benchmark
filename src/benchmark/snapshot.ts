@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { hash, materialize, registerMaterializer } from "./kernel/core/v1/core";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
 import { materializeReactVite, reactViteKind } from "./kernel/materializers";
+import { resolveInjectionCalibration } from "./kernel/profiles/injection-calibration/v1/runtime";
 import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256File, workspaceRoot } from "./fs";
 import { discoverTasks, type TaskLocation } from "./task-discovery";
 
@@ -28,6 +29,7 @@ type ResolvedSnapshot = {
   materializer_kind: string;
   input_hash: string;
   materialized_output_hash: string;
+  profile_input_hash?: string;
 };
 
 type KernelResolution = {
@@ -75,12 +77,13 @@ async function listSnapshotFiles(path: string, relative = ""): Promise<string[]>
   return files;
 }
 
-async function snapshotFiles(target: SnapshotTarget): Promise<Record<string, string>> {
+async function snapshotFiles(target: SnapshotTarget, profile?: string): Promise<Record<string, string>> {
   const files = await listSnapshotFiles(target.path);
   const included = files.filter((file) => {
     if (file === "private/snapshot.json") return false;
     const segments = file.split("/");
     if (isGeneratedOutput(segments)) return false;
+    if (profile === "injection-calibration/v1" && file.startsWith("private/practices/")) return false;
     // 证据索引在候选输入执行后才写入，不得使该输入对应的快照失效。
     return target.kind !== "incubator-candidate" || !file.startsWith("private/evidence-index/");
   }).sort();
@@ -152,6 +155,9 @@ async function computeResolvedSnapshot(target: SnapshotTarget, resolution: Kerne
       materializerKind: declaration.materializer_kind,
       workspacePath: outputPath,
     });
+    const profileInputHash = declaration.profile === "injection-calibration/v1"
+      ? (await resolveInjectionCalibration(target.path)).profile_input_hash
+      : undefined;
     return {
       core_version: resolved.coreVersion,
       core_hash: resolved.coreHash,
@@ -159,6 +165,7 @@ async function computeResolvedSnapshot(target: SnapshotTarget, resolution: Kerne
       materializer_kind: resolved.materializerKind,
       input_hash: resolved.inputHash,
       materialized_output_hash: resolved.materializedOutputHash,
+      ...(profileInputHash ? { profile_input_hash: profileInputHash } : {}),
     };
   } finally {
     await rm(outputPath, { force: true, recursive: true });
@@ -188,8 +195,8 @@ for (const target of selectedTargets) {
   let files: Record<string, string>;
   let resolved: ResolvedSnapshot | undefined;
   try {
-    files = await snapshotFiles(target);
     const declaration = await readKernelDeclaration(target);
+    files = await snapshotFiles(target, declaration?.declaration.profile);
     resolved = declaration ? await computeResolvedSnapshot(target, declaration) : undefined;
   } catch (error) {
     failures.push(error instanceof Error ? error.message : String(error));
@@ -216,10 +223,11 @@ for (const target of selectedTargets) {
     continue;
   }
 
-  if (expected.version !== 1 || expected.algorithm !== "sha256" || expected.snapshot_id !== document.snapshot_id) {
+  if (expected.version !== 1 || expected.algorithm !== "sha256") {
     failures.push(`Unsupported snapshot format: ${relativePath(snapshotPath)}`);
     continue;
   }
+  if (expected.snapshot_id !== document.snapshot_id) failures.push(`Snapshot mismatch: ${relativePath(snapshotPath)}/snapshot_id`);
 
   const expectedFiles = expected.files ?? {};
   const allFiles = new Set([...Object.keys(expectedFiles), ...Object.keys(files)]);
@@ -227,7 +235,7 @@ for (const target of selectedTargets) {
     if (expectedFiles[file] !== files[file]) failures.push(`Snapshot mismatch: ${relativePath(target.path)}/${file}`);
   }
   if (resolved && expected.resolved) {
-    for (const key of ["core_version", "core_hash", "profile", "materializer_kind", "input_hash", "materialized_output_hash"] as const) {
+    for (const key of ["core_version", "core_hash", "profile", "materializer_kind", "input_hash", "materialized_output_hash", "profile_input_hash"] as const) {
       if (expected.resolved[key] !== resolved[key]) failures.push(`Resolved snapshot mismatch: ${relativePath(snapshotPath)}/${key}`);
     }
   } else if (resolved && !expected.resolved) {
