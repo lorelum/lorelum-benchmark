@@ -112,7 +112,7 @@ export type Materializer = {
 };
 
 /** Generated-output directory names excluded from snapshots and repo starters. */
-export const GENERATED_OUTPUT_DIRS = ["node_modules", "dist", "test-results", "playwright-report", ".vite", ".materialized", ".run-workspaces", "logs"] as const;
+export const GENERATED_OUTPUT_DIRS = ["node_modules", "dist", "test-results", "playwright-report", ".vite", ".materialized", ".practice-runtime", ".run-workspaces", "logs"] as const;
 
 /** Returns true if a relative path segment list enters a generated-output dir. */
 export function isGeneratedOutput(segments: string[]): boolean {

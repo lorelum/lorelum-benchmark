@@ -1,0 +1,15 @@
+delivery_template: practice-card/v1
+length_metric: utf8-rendered-characters
+cards:
+  - id: neutral.command-boundary
+    version: v1
+    path: oracle.command-boundary.v1.md
+    rendered_characters: 120
+  - id: neutral.avatar-fallback
+    version: v1
+    path: irrelevant.avatar-fallback.v1.md
+    rendered_characters: 110
+comparison:
+  maximum_relative_difference: 0.10
+  actual_relative_difference: 0.083333
+  independently_reviewed: true

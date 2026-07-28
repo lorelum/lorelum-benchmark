@@ -1,0 +1,24 @@
+conditions:
+  - id: baseline
+    status: declared
+    practice: none
+  - id: oracle-practice
+    status: declared
+    practice:
+      path: private/practices/oracle.command-boundary.v1.md
+      injection_channel: condition-scoped-private-runtime
+      sha256: "01070f9c26aca534fbcca15dc02e407a667a067f2e88f7376b7b06425af3c204"
+  - id: irrelevant-practice
+    status: declared
+    practice:
+      path: private/practices/irrelevant.avatar-fallback.v1.md
+      injection_channel: condition-scoped-private-runtime
+      sha256: "bfb4dba1a09a4f027b995ce73552dc0e5a5af039afa86b56b87d2f541a1165b1"
+  - id: lorelum-retrieval
+    status: unavailable
+    practice: unavailable
+decision_rule:
+  metric: joint-pass-count
+  oracle_relation: strictly-greater-than-each-control
+  controls: [baseline, irrelevant-practice]
+  otherwise: diagnostic-only

@@ -106,13 +106,27 @@ real Practice is semantically relevant or effective.
 5. Let #89 consume the merged profile contract in its own PR only after its
    independent candidate planning gate passes.
 
-## Open Questions
+## Planning Confirmation
 
-- Which equal-length metric and tolerance are authoritative for the first
-  consumer: rendered characters, tokenizer count, or another declared metric?
-- What exact private execution API receives the payload, and which trace fields
-  are sufficient for audit without exposing card text or private paths?
-- Is `decision_rule` limited to strict comparison of jointly passing attempts,
-  and which conditions are required before it can be reported?
-- Which starter commit and immutable public source will the first #89 consumer
-  pin after this profile contract merges?
+- #89 remains the first consumer and owns two React + Vite + TypeScript +
+  Playwright candidates: the profile-update command/API boundary and the
+  project-directory query/resource-state boundary. Its public behavior,
+  expected baseline defects, private semantic gate, report-only quality probe,
+  relevant Practice, and equal-length irrelevant control are recorded in
+  Issue #89.
+- The first consumer uses `utf8-rendered-characters`, a maximum relative
+  difference of `0.10`, and independent review. The profile validates declared
+  arithmetic but does not hard-code that threshold for every future consumer.
+- The profile resolves a selected card to an in-memory private payload. Its
+  redacted trace records condition ID, channel, Practice ID/version/SHA-256,
+  and profile-input hash; it never records card text or private/workspace paths.
+- The only accepted decision rule is the count of attempts where semantic and
+  quality checks jointly pass. Oracle-practice must be strictly greater than
+  baseline and irrelevant-practice; every other outcome is diagnostic only.
+- #100 has no concrete #89 source to pin. It ships a neutral fixture first;
+  after #100 merges, #89 must commit its source without generated output and
+  pin that commit before any execution. `6fc4c94` is not eligible because it
+  contains no candidate source.
+- #100 does not execute the #89 model protocol. #89 retains the confirmed
+  Pi 0.80.10, DeepSeek v4 Pro, no additional system prompt, shared tools,
+  ten-minute budget, two repetitions, and no blind review boundary.
