@@ -1,5 +1,11 @@
-import { readdir } from "node:fs/promises";
-import { joinPath, listDirectories, pathExists, relativePath, sha256File, workspaceRoot } from "./fs";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { hash, materialize, registerMaterializer } from "./kernel/core/v1/core";
+import { isGeneratedOutput } from "./kernel/core/v1/types";
+import { materializeReactVite, reactViteKind } from "./kernel/materializers";
+import { resolveInjectionCalibration } from "./kernel/profiles/injection-calibration/v1/runtime";
+import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256File, workspaceRoot } from "./fs";
 import { discoverTasks, type TaskLocation } from "./task-discovery";
 
 type Snapshot = {
@@ -7,6 +13,28 @@ type Snapshot = {
   algorithm: "sha256";
   snapshot_id: string;
   files: Record<string, string>;
+  resolved?: ResolvedSnapshot;
+};
+
+type KernelDeclaration = {
+  core: "v1";
+  profile: string;
+  materializer_kind: string;
+};
+
+type ResolvedSnapshot = {
+  core_version: string;
+  core_hash: string;
+  profile: string;
+  materializer_kind: string;
+  input_hash: string;
+  materialized_output_hash: string;
+  profile_input_hash?: string;
+};
+
+type KernelResolution = {
+  declaration: KernelDeclaration;
+  declarationPath: string;
 };
 
 type CandidateLocation = {
@@ -24,6 +52,8 @@ const writeMode = argumentsList.includes("--write");
 const incubatorMode = argumentsList.includes("--incubator");
 const [group, reference] = argumentsList.filter((argument) => !argument.startsWith("--"));
 const failures: string[] = [];
+
+registerMaterializer({ kind: reactViteKind, materialize: materializeReactVite });
 
 async function discoverCandidates(): Promise<CandidateLocation[]> {
   const candidates: CandidateLocation[] = [];
@@ -47,12 +77,13 @@ async function listSnapshotFiles(path: string, relative = ""): Promise<string[]>
   return files;
 }
 
-async function snapshotFiles(target: SnapshotTarget): Promise<Record<string, string>> {
+async function snapshotFiles(target: SnapshotTarget, profile?: string): Promise<Record<string, string>> {
   const files = await listSnapshotFiles(target.path);
   const included = files.filter((file) => {
     if (file === "private/snapshot.json") return false;
     const segments = file.split("/");
-    if (target.kind === "incubator-candidate" && ["node_modules", "dist", "test-results", "playwright-report"].some((directory) => segments.includes(directory))) return false;
+    if (isGeneratedOutput(segments)) return false;
+    if (profile === "injection-calibration/v1" && file.startsWith("private/practices/")) return false;
     // 证据索引在候选输入执行后才写入，不得使该输入对应的快照失效。
     return target.kind !== "incubator-candidate" || !file.startsWith("private/evidence-index/");
   }).sort();
@@ -63,6 +94,82 @@ async function snapshotId(files: Record<string, string>): Promise<string> {
   const content = new TextEncoder().encode(JSON.stringify(files));
   const digest = await crypto.subtle.digest("SHA-256", content);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function declarationPath(target: SnapshotTarget): string {
+  return target.kind === "incubator-candidate"
+    ? joinPath(target.path, "private", "candidate.yaml")
+    : joinPath(target.path, "public", "task.yaml");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function readKernelDeclaration(target: SnapshotTarget): Promise<KernelResolution | null> {
+  const manifestPath = declarationPath(target);
+  const file = Bun.file(manifestPath);
+  if (!(await file.exists())) return null;
+  let doc: Record<string, unknown>;
+  try {
+    const parsed = Bun.YAML.parse(await file.text());
+    if (!isRecord(parsed)) throw new Error("declaration must be a YAML object");
+    doc = parsed;
+  } catch (error) {
+    throw new Error(`Invalid declaration ${relativePath(manifestPath)}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!("kernel" in doc)) return null;
+  if (!isRecord(doc.kernel)) throw new Error(`Invalid kernel declaration in ${relativePath(manifestPath)}`);
+  const kernel = doc.kernel;
+  if (kernel.core !== "v1") throw new Error(`Unsupported kernel core in ${relativePath(manifestPath)}: ${String(kernel.core)}`);
+  if (kernel.profile !== "injection-calibration/v1" && kernel.profile !== "treatment-comparison/v1") throw new Error(`Unsupported kernel profile in ${relativePath(manifestPath)}: ${String(kernel.profile)}`);
+  if (kernel.materializer_kind !== reactViteKind) throw new Error(`Unsupported materializer_kind in ${relativePath(manifestPath)}: ${String(kernel.materializer_kind)}`);
+  return {
+    declaration: { core: "v1", profile: kernel.profile, materializer_kind: kernel.materializer_kind },
+    declarationPath: manifestPath,
+  };
+}
+
+async function computeResolvedSnapshot(target: SnapshotTarget, resolution: KernelResolution): Promise<ResolvedSnapshot> {
+  const { declaration, declarationPath: kernelDeclarationPath } = resolution;
+  const publicTaskPath = joinPath(target.path, "public", "task.md");
+  const publicStarterPath = joinPath(target.path, "public", "starter");
+  const outputPath = await mkdtemp(join(tmpdir(), "lorelum-resolved-workspace-"));
+  try {
+    await materialize({
+      candidatePath: target.path,
+      publicTaskPath,
+      publicStarterPath,
+      outputPath,
+      materializerKind: declaration.materializer_kind,
+    });
+    const coreHash = await sha256Directory(join(import.meta.dir, "kernel", "core", "v1"));
+    const resolved = await hash({
+      candidatePath: target.path,
+      declarationPath: kernelDeclarationPath,
+      publicTaskPath,
+      publicStarterPath,
+      coreVersion: declaration.core,
+      coreHash,
+      profile: declaration.profile,
+      materializerKind: declaration.materializer_kind,
+      workspacePath: outputPath,
+    });
+    const profileInputHash = declaration.profile === "injection-calibration/v1"
+      ? (await resolveInjectionCalibration(target.path)).profile_input_hash
+      : undefined;
+    return {
+      core_version: resolved.coreVersion,
+      core_hash: resolved.coreHash,
+      profile: resolved.profile,
+      materializer_kind: resolved.materializerKind,
+      input_hash: resolved.inputHash,
+      materialized_output_hash: resolved.materializedOutputHash,
+      ...(profileInputHash ? { profile_input_hash: profileInputHash } : {}),
+    };
+  } finally {
+    await rm(outputPath, { force: true, recursive: true });
+  }
 }
 
 const allTasks: SnapshotTarget[] = (await discoverTasks()).map((task: TaskLocation) => ({
@@ -85,8 +192,17 @@ if ((group || reference) && selectedTargets.length === 0) {
 
 for (const target of selectedTargets) {
   const snapshotPath = joinPath(target.path, "private", "snapshot.json");
-  const files = await snapshotFiles(target);
-  const document: Snapshot = { version: 1, algorithm: "sha256", snapshot_id: await snapshotId(files), files };
+  let files: Record<string, string>;
+  let resolved: ResolvedSnapshot | undefined;
+  try {
+    const declaration = await readKernelDeclaration(target);
+    files = await snapshotFiles(target, declaration?.declaration.profile);
+    resolved = declaration ? await computeResolvedSnapshot(target, declaration) : undefined;
+  } catch (error) {
+    failures.push(error instanceof Error ? error.message : String(error));
+    continue;
+  }
+  const document: Snapshot = { version: 1, algorithm: "sha256", snapshot_id: await snapshotId(files), files, ...(resolved ? { resolved } : {}) };
 
   if (writeMode) {
     await Bun.write(snapshotPath, `${JSON.stringify(document, null, 2)}\n`);
@@ -107,19 +223,29 @@ for (const target of selectedTargets) {
     continue;
   }
 
-  if (expected.version !== 1 || expected.algorithm !== "sha256" || expected.snapshot_id !== document.snapshot_id) {
+  if (expected.version !== 1 || expected.algorithm !== "sha256") {
     failures.push(`Unsupported snapshot format: ${relativePath(snapshotPath)}`);
     continue;
   }
+  if (expected.snapshot_id !== document.snapshot_id) failures.push(`Snapshot mismatch: ${relativePath(snapshotPath)}/snapshot_id`);
 
   const expectedFiles = expected.files ?? {};
   const allFiles = new Set([...Object.keys(expectedFiles), ...Object.keys(files)]);
   for (const file of [...allFiles].sort()) {
     if (expectedFiles[file] !== files[file]) failures.push(`Snapshot mismatch: ${relativePath(target.path)}/${file}`);
   }
+  if (resolved && expected.resolved) {
+    for (const key of ["core_version", "core_hash", "profile", "materializer_kind", "input_hash", "materialized_output_hash", "profile_input_hash"] as const) {
+      if (expected.resolved[key] !== resolved[key]) failures.push(`Resolved snapshot mismatch: ${relativePath(snapshotPath)}/${key}`);
+    }
+  } else if (resolved && !expected.resolved) {
+    failures.push(`Missing resolved snapshot: ${relativePath(snapshotPath)}`);
+  } else if (!resolved && expected.resolved) {
+    failures.push(`Unexpected resolved snapshot: ${relativePath(snapshotPath)}`);
+  }
 }
 
-if (!writeMode && failures.length > 0) {
+if (failures.length > 0) {
   console.error("Snapshot verification failed:");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
