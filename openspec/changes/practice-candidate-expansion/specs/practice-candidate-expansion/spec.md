@@ -13,11 +13,14 @@ MUST：在创建任何 #89 candidate 的 public、private、starter、evaluator�
 - **则** 维护者只能提交 OpenSpec 规划材料，不得创建 candidate fixture 或调用模型
 
 ### Requirement: 每个扩展 candidate 保持隔离且可校准
-MUST：每个获批的 candidate 必须位于独立的 `incubator/practice-injection/<candidate-id>/`，并具有
+MUST：每个获批的 candidate 必须位于独立的 `incubator/practice-injection/<candidate-id>/`，并声明
+`kernel.core: v1`、`kernel.profile: injection-calibration/v1` 与 `kernel.materializer_kind: react-vite`，并具有
 仅含任务与 starter 的 public 材料、私有相关/无关 Practice、私有语义验收、仅报告的质量 probe、
 reference/职责等价/anti-pattern calibration 和已验证 snapshot。其 conditions 必须声明
 `baseline`（无 Practice）、`oracle-practice`（相关 Practice）和 `irrelevant-practice`（按已声明
-固定计量方式等长的无关 Practice）；三条件必须固定相同的 public snapshot、模型、系统提示、工具
+固定计量方式等长的无关 Practice）。conditions 和 Practice metadata 必须通过 profile v1 校验，
+并以 resolved `profile_input_hash` 绑定私有输入；Practice 文本和私有 Practice 路径不得进入完整
+snapshot manifest、workspace、public trace 或汇总。三条件必须固定相同的 public snapshot、模型、系统提示、工具
 策略、预算、重复次数和干净工作区策略，唯一差异是注入内容。Practice 与质量 probe 不得把
 reference 路径、命名或 helper 作为达标条件。
 

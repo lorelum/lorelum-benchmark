@@ -7,6 +7,26 @@
 本 change 的首个提交只建立可审查的 OpenSpec。candidate 的技术栈、主题、可观察任务行为、
 baseline 缺陷和质量 probe 若未确认，不得由实现者自行假设。
 
+边界声明：本 change 消费 #100 定义的 `injection-calibration/v1` profile，不定义 profile
+契约本身；candidate 的 kernel 声明依赖 #100 合并。
+
+## Kernel/Profile Integration
+
+#101 与 #102 已分别固定 track-agnostic kernel 和 `injection-calibration/v1`
+runtime。#89 的两个 candidate 是该 profile 的首个真实消费者，必须在 candidate
+declaration 中声明 `core: v1`、`profile: injection-calibration/v1` 和
+`materializer_kind: react-vite`。
+
+每个 `private/conditions.yaml` 必须使用 profile v1 的四个条件、真实 SHA-256 和
+结构化 strict joint-pass decision rule；`private/practices/metadata.yaml` 必须列出所选
+卡片的 ID、version、path 与 `practice-card/v1:utf8-rendered-characters` 实测长度。profile
+会从卡片内容重新计量，拒绝过期 metadata。resolved snapshot 的 `profile_input_hash` 是
+Practice、metadata 和规则的唯一公开可引用身份；Practice 文本和 `private/practices/` 路径
+不得进入 snapshot files、workspace、日志或汇总。
+
+source pin 采用两步：先提交不含生成物的 candidate source seed，再在 declaration/snapshot
+提交中记录该 seed commit。不得使用不含 candidate 文件的 OpenSpec commit 作为 source pin。
+
 ## Goals / Non-Goals
 
 ### Goals
@@ -47,12 +67,16 @@ OpenSpec strict validation 与初始 PR 创建后、任何 candidate 文件创�
 - `public/` 只包含任务说明和 starter；题面只描述用户可观察行为和已声明公共接口。
 - `private/` 包含 candidate 声明、条件清单、相关/无关 Practice、私有 evaluator、校准样例、
   oracle 和 snapshot；这些材料不能复制到 agent workspace 或公开日志。
+- `private/candidate.yaml` 必须声明 kernel/profile/materializer；`conditions.yaml` 和
+  `practices/metadata.yaml` 必须能被 `injection-calibration/v1` resolver 校验。baseline 解析
+  不得取得任一 Practice 文本；执行阶段只可按选定 condition 取得内存 payload。
 - `private/conditions` 必须声明 `baseline`（不注入 Practice）、`oracle-practice`（只注入相关
   Practice）和 `irrelevant-practice`（只注入等长无关 Practice）。三条件必须使用同一 public
   snapshot、模型、系统提示、工具策略、预算、重复次数和干净工作区策略；除声明的注入内容外不得
   改变执行输入。
 - 质量 probe 只报告与 Practice 映射的职责信号，不将内部路径、helper 或命名作为通过条件。
-- snapshot 覆盖候选输入；candidate 源、Practice、probe 或 calibration 变更后必须重新生成。
+- snapshot 覆盖候选输入；其 resolved profile-input hash 绑定 Practice 输入。candidate 源、
+  Practice、metadata、probe 或 calibration 变更后必须重新生成。
 
 ## Validation Plan
 
@@ -65,10 +89,13 @@ OpenSpec strict validation 与初始 PR 创建后、任何 candidate 文件创�
 4. 已登记 anti-pattern 通过公开语义但失败质量 probe，证明 probe 能拒绝已知绕过。
 5. public/private 边界审计与 candidate snapshot 验证。
 6. `bun run validate` 通过。
+7. profile resolver 校验通过，且完整 snapshot manifest 不含 `private/practices/` 路径。
 
-后续本地实跑由 #90 承接。#94 当前的实现只覆盖登录页 candidate 的 `run-local.ts`；因此 #90
-必须在首次 candidate 执行前复用或抽取同等的 Pi/模型可达 preflight，并验证失败时不会进入任一
-candidate 的执行循环。仅曾运行登录页 preflight 不足以满足多 candidate 执行门禁。
+后续本地实跑由 #90 承接。#90 必须以 profile-aware adapter 先验证 candidate snapshot 和
+`profile_input_hash`，再对每个 condition 调用 condition-specific payload resolver；不得复用
+#75 的非-kernel `run-local.ts` 作为 profile runner 回放。#94 当前的实现只覆盖登录页 candidate
+的 preflight；#90 必须在首次 candidate 执行前复用或抽取同等语义，并验证失败时不会进入任一
+candidate 的执行循环。
 
 ## Risks / Trade-offs
 
