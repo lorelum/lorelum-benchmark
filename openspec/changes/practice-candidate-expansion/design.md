@@ -67,6 +67,9 @@ OpenSpec strict validation 与初始 PR 创建后、任何 candidate 文件创�
 - `public/` 只包含任务说明和 starter；题面只描述用户可观察行为和已声明公共接口。
 - `private/` 包含 candidate 声明、条件清单、相关/无关 Practice、私有 evaluator、校准样例、
   oracle 和 snapshot；这些材料不能复制到 agent workspace 或公开日志。
+- `calibration_roles` 必须登记覆盖 public starter、reference、职责等价实现和 anti-pattern 的可复现
+  私有校准驱动。kernel 只在校准进程中把 `{{candidate_path}}` 替换为已解析的候选源码路径；该路径
+  不得进入 materialized workspace、agent prompt、trace 或 snapshot 的公开文件清单。
 - `private/candidate.yaml` 必须声明 kernel/profile/materializer；`conditions.yaml` 和
   `practices/metadata.yaml` 必须能被 `injection-calibration/v1` resolver 校验。baseline 解析
   不得取得任一 Practice 文本；执行阶段只可按选定 condition 取得内存 payload。
@@ -87,9 +90,11 @@ OpenSpec strict validation 与初始 PR 创建后、任何 candidate 文件创�
 3. public starter 通过公开语义但失败质量 probe，证明无 Practice 的初始输入可与 quality signal
    区分。
 4. 已登记 anti-pattern 通过公开语义但失败质量 probe，证明 probe 能拒绝已知绕过。
-5. public/private 边界审计与 candidate snapshot 验证。
-6. `bun run validate` 通过。
-7. profile resolver 校验通过，且完整 snapshot manifest 不含 `private/practices/` 路径。
+5. 每个 evaluator 在语义通过、quality probe 失败时仍以零退出码报告；JSON 同时保留两个独立状态。
+6. 通过声明的 kernel calibration role 重放上述四类结果，并在驱动中安装每个 fixture 的锁定依赖。
+7. public/private 边界审计与 candidate snapshot 验证。
+8. `bun run validate` 通过。
+9. profile resolver 校验通过，且完整 snapshot manifest 不含 `private/practices/` 路径。
 
 后续本地实跑由 #90 承接。#90 必须以 profile-aware adapter 先验证 candidate snapshot 和
 `profile_input_hash`，再对每个 condition 调用 condition-specific payload resolver；不得复用

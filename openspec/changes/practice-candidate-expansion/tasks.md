@@ -17,13 +17,15 @@
   声明，以及 profile v1 私有 conditions、相关/无关 Practice metadata、语义验收和质量 probe；
   conditions 固定三条件和共享执行输入，质量 probe 仅测职责边界。
 - [x] 1.3 为每个 candidate 创建 reference、职责等价、public starter 和 anti-pattern calibration，
-  并记录预期结果：starter 与 anti-pattern 在语义通过时失败质量 probe。
+  并通过声明的 private calibration driver 重放四类结果；starter 与 anti-pattern 在语义通过时
+  失败质量 probe，且 evaluator 仍以零退出码报告语义完成。
 - [x] 1.4 生成 candidate snapshots，确认 resolved profile-input hash 已固定，完整 manifest 不含
   `private/practices/`、生成输出或 public/private 泄露。
 
 ## 2. 验证与交接
 
-- [x] 2.1 在不调用模型的情况下运行每个 candidate 的 calibration、snapshot 验证和泄露审计。
+- [x] 2.1 在不调用模型的情况下通过 kernel 的已声明 calibration role 运行每个 candidate 的
+  calibration、snapshot 验证和泄露审计。
 - [x] 2.2 运行 `bun run validate` 与 strict OpenSpec validation，并在 PR 保留验证证据和未执行原因。
 - [x] 2.3 将已校准 candidate、source commit、snapshot ID、profile-input hash 与 #94 preflight
   语义交接给 #90；#90 必须使用 profile-aware adapter，并验证失败时不进入任一 candidate 执行

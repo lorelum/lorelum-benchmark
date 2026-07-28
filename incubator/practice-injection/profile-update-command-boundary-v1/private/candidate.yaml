@@ -11,8 +11,8 @@ source:
   public_root: public/starter/app
   immutable_by: private/snapshot.json
 calibration_roles:
-  - id: public-starter-semantic
-    command: [bun, run, --cwd, public/starter/app, test]
+  - id: calibration-matrix
+    command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
     expect: { kind: pass }
 runtime:
   package_manager: bun

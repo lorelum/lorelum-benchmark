@@ -6,4 +6,4 @@ const run = async (command: string[], cwd: string) => await Bun.spawn(command, {
 const semantic = await run(["bun", "run", "test"], appRoot);
 const quality = await run([process.execPath, "run", join(evaluatorRoot, "verify-resource-state.ts"), appRoot, appRoot], process.cwd());
 console.log(JSON.stringify({ semantic: semantic === 0 ? "pass" : "fail", practice_probe: quality === 0 ? "pass" : "fail" }));
-process.exit(semantic === 0 && quality === 0 ? 0 : 1);
+process.exit(semantic === 0 ? 0 : 1);

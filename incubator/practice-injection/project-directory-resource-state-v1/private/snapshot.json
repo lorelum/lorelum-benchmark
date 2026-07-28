@@ -1,9 +1,9 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "c005e507388554f88fc75af7af0f7f88f702ec882434c029adeb0855768d2962",
+  "snapshot_id": "aa94322bbe25cb4d3e527d6b04a53c18520bc301752993e245c055a992eab3e2",
   "files": {
-    "private/calibration.md": "8a03b6d05873d9c6d78bdf105dec1767d6ab2f11382f0b71866df1796e99ee3c",
+    "private/calibration.md": "c3a1569c902ffa11f8d6bb4bbcd5cd9c13c230e57dcf6226dc530cf7911337bd",
     "private/calibration/fixtures/anti-pattern/.gitignore": "463b5f9362420aaa6bbf70c200b7cef361af47f34e60e6767851406f3091a39a",
     "private/calibration/fixtures/anti-pattern/bun.lock": "2dfa57b1b70757d1d1322871a11031f373463e333d52089590645ff860104335",
     "private/calibration/fixtures/anti-pattern/index.html": "86aa7abb0c31e2a1e0d2ac206c21a056a1fede7b69187e137db003b6a6191b44",
@@ -49,9 +49,11 @@
     "private/calibration/reference/tsconfig.json": "770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808",
     "private/calibration/reference/tsconfig.node.json": "99cbcda8723034e3c3c4b4e7688fa4ab607d78aab45cf754d19e5f269c826af2",
     "private/calibration/reference/vite.config.ts": "eca485c281977125366d4800553256e419f364984e615f75a2d2bae54f7857fd",
-    "private/candidate.yaml": "a7a481a522a4dd0befc4bf1fae25602ec11a5890730a09707ffd6c918e30928c",
+    "private/calibration/run.ts": "4b557f92469ad909565421b6394a9078878c4a17fa59be91a4568622a521bd00",
+    "private/candidate.yaml": "7627bc57caaf90ee5396ae6370a05be4a53a47f1863631bbc7fab0daf983de90",
     "private/conditions.yaml": "fef146682e38e1c4d69614365ff1fe0a19c99274013e066f16cc6c22148bf16f",
-    "private/evaluator/evaluate.ts": "1d993ed2cd065f45a7aa2071bc23a4f9f79aae456643edc661815153db1b2ca1",
+    "private/evaluator/evaluate.test.ts": "833f06e6069d4e77d5d8c1f1d2fa0898fbff8384fd19e7564b59bd7cb75e7f50",
+    "private/evaluator/evaluate.ts": "546767b41aa29c4435af695430fb76d84bb8f0a72e8fb4798b9f5b6d1f995220",
     "private/evaluator/verify-resource-state.test.ts": "813a5c8deda2d32ddd4ce4560405d014b2bf34e00cbee4ba4c525188529cbf17",
     "private/evaluator/verify-resource-state.ts": "bff2a7f9003a5d854d0f07d6c280e60876790d7662501fd62964b4200e7b7c4d",
     "private/execution/tool-policy.yaml": "bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6",
@@ -77,7 +79,7 @@
     "core_hash": "9735bb48cf917ba577c4921fb159945b6724570d6b3785da7bf05d16e4071dcd",
     "profile": "injection-calibration/v1",
     "materializer_kind": "react-vite",
-    "input_hash": "4e402e1111aa0f6c4b4f238d5afeb251267edd3655b4e36eb7273b88253d413c",
+    "input_hash": "2541da37fe90a854a504932b68472dfb16566824164b45fe5e9f72d195686011",
     "materialized_output_hash": "0194a6dd2aa0d1ecc37a8e39e0c97760e8506dc61ff83f018db09b2d71667248",
     "profile_input_hash": "372baf21ef491399ef071d1b7af1e76f909701b50789bff81d5bf478a768eac1"
   }

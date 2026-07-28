@@ -1,9 +1,9 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "cfc0a403b196095d198d729c5c7abaac7b670008c15adb324cf012adb24e940b",
+  "snapshot_id": "d12b258a1e715ba6d46ed8bdee8b7f4d0f999ca0cb73d4d2ca87041f17493b23",
   "files": {
-    "private/calibration.md": "34e87a30a3c5a918091ef9b4905dc585ae2dbe43fed582aaafda4957dce1da7e",
+    "private/calibration.md": "ae9a7e502d2470142495c6c8a796b2d8376c625a42665e0d0e415060f988fe45",
     "private/calibration/fixtures/anti-pattern/.gitignore": "463b5f9362420aaa6bbf70c200b7cef361af47f34e60e6767851406f3091a39a",
     "private/calibration/fixtures/anti-pattern/bun.lock": "2dfa57b1b70757d1d1322871a11031f373463e333d52089590645ff860104335",
     "private/calibration/fixtures/anti-pattern/index.html": "86aa7abb0c31e2a1e0d2ac206c21a056a1fede7b69187e137db003b6a6191b44",
@@ -49,9 +49,11 @@
     "private/calibration/reference/tsconfig.json": "770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808",
     "private/calibration/reference/tsconfig.node.json": "99cbcda8723034e3c3c4b4e7688fa4ab607d78aab45cf754d19e5f269c826af2",
     "private/calibration/reference/vite.config.ts": "eca485c281977125366d4800553256e419f364984e615f75a2d2bae54f7857fd",
-    "private/candidate.yaml": "492d79992aa1a02a1513e4eee661fcc3782d10dc789ee3c81490df5e10508816",
+    "private/calibration/run.ts": "8854473227f62e4c602f3fdb1a75f7ed464449c02b3b90398f29dc13e4f5f7be",
+    "private/candidate.yaml": "4dcb78f1b173bb0f6fda31dca213922e7ae1a706674f6fe5c83098aeba5df381",
     "private/conditions.yaml": "b0a70fa5276313083e54423c72a90cf213787129ebeb717c59f4337f7c82b179",
-    "private/evaluator/evaluate.ts": "b495f286471f3948fe9499301a42eaafbc84dcab6c3576945e306dcb4404168a",
+    "private/evaluator/evaluate.test.ts": "2b256a5d14495f131c0ad1138b58f3b277fe9d76a9df46456c92410d112709fe",
+    "private/evaluator/evaluate.ts": "c1db430020ef1fb087ae4b77addf54c6dbdf3d867db36cdfd2c6c9357c893cfa",
     "private/evaluator/verify-command-boundary.test.ts": "109293c479bb317dd91526fa05fa6d01960b25085050a6c56b5e7354a29ca3c1",
     "private/evaluator/verify-command-boundary.ts": "65835b73c76b9b4cd4a2fef31121facfa731111a5177fcda92cddb74191bf7af",
     "private/execution/tool-policy.yaml": "bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6",
@@ -77,7 +79,7 @@
     "core_hash": "9735bb48cf917ba577c4921fb159945b6724570d6b3785da7bf05d16e4071dcd",
     "profile": "injection-calibration/v1",
     "materializer_kind": "react-vite",
-    "input_hash": "f3917fd2e28743b8e511162bf09a383ffa6c76f5321d401e0825ea36df01a9c0",
+    "input_hash": "7cce78f8f60208d8fa78466a1f675d5b507c8591a111adbf030401d3e6b4d24b",
     "materialized_output_hash": "c22d0de720a02e588b2523ab42772851771a66eb4deab87b6b89f5098cd5d59a",
     "profile_input_hash": "df59962c3578582efde097b797b2b7a033f250ef43091d2cbffd9e06be298e7b"
   }
