@@ -1,5 +1,9 @@
-import { readdir } from "node:fs/promises";
-import { joinPath, listDirectories, pathExists, relativePath, sha256File, workspaceRoot } from "./fs";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { hash, materialize, registerMaterializer } from "./kernel/core/v1/core";
+import { materializeReactVite, reactViteKind } from "./kernel/materializers";
+import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256File, workspaceRoot } from "./fs";
 import { discoverTasks, type TaskLocation } from "./task-discovery";
 
 type Snapshot = {
@@ -7,6 +11,22 @@ type Snapshot = {
   algorithm: "sha256";
   snapshot_id: string;
   files: Record<string, string>;
+  resolved?: ResolvedSnapshot;
+};
+
+type KernelDeclaration = {
+  core: "v1";
+  profile: string;
+  materializer_kind: string;
+};
+
+type ResolvedSnapshot = {
+  core_version: string;
+  core_hash: string;
+  profile: string;
+  materializer_kind: string;
+  input_hash: string;
+  materialized_output_hash: string;
 };
 
 type CandidateLocation = {
@@ -24,6 +44,8 @@ const writeMode = argumentsList.includes("--write");
 const incubatorMode = argumentsList.includes("--incubator");
 const [group, reference] = argumentsList.filter((argument) => !argument.startsWith("--"));
 const failures: string[] = [];
+
+registerMaterializer({ kind: reactViteKind, materialize: materializeReactVite });
 
 async function discoverCandidates(): Promise<CandidateLocation[]> {
   const candidates: CandidateLocation[] = [];
@@ -65,6 +87,57 @@ async function snapshotId(files: Record<string, string>): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+async function readKernelDeclaration(candidatePath: string): Promise<KernelDeclaration | null> {
+  const manifestPath = joinPath(candidatePath, "private", "candidate.yaml");
+  const file = Bun.file(manifestPath);
+  if (!(await file.exists())) return null;
+  try {
+    const doc = Bun.YAML.parse(await file.text()) as Record<string, unknown>;
+    const kernel = doc.kernel;
+    if (!kernel || typeof kernel !== "object") return null;
+    const k = kernel as Record<string, unknown>;
+    if (k.core !== "v1" || typeof k.profile !== "string" || typeof k.materializer_kind !== "string") return null;
+    return { core: "v1", profile: k.profile, materializer_kind: k.materializer_kind };
+  } catch {
+    return null;
+  }
+}
+
+async function computeResolvedSnapshot(target: SnapshotTarget, declaration: KernelDeclaration): Promise<ResolvedSnapshot> {
+  const publicStarterPath = joinPath(target.path, "public", "starter");
+  const declarationPath = joinPath(target.path, "private", "candidate.yaml");
+  const outputPath = await mkdtemp(join(tmpdir(), "lorelum-resolved-workspace-"));
+  try {
+    await materialize({
+      candidatePath: target.path,
+      publicStarterPath,
+      outputPath,
+      materializerKind: declaration.materializer_kind,
+    });
+    const coreHash = await sha256Directory(join(import.meta.dir, "kernel", "core", "v1"));
+    const resolved = await hash({
+      candidatePath: target.path,
+      declarationPath,
+      publicStarterPath,
+      coreVersion: declaration.core,
+      coreHash,
+      profile: declaration.profile,
+      materializerKind: declaration.materializer_kind,
+      workspacePath: outputPath,
+    });
+    return {
+      core_version: resolved.coreVersion,
+      core_hash: resolved.coreHash,
+      profile: resolved.profile,
+      materializer_kind: resolved.materializerKind,
+      input_hash: resolved.inputHash,
+      materialized_output_hash: resolved.materializedOutputHash,
+    };
+  } finally {
+    await rm(outputPath, { force: true, recursive: true });
+  }
+}
+
 const allTasks: SnapshotTarget[] = (await discoverTasks()).map((task: TaskLocation) => ({
   kind: "suite-task",
   group: task.suite,
@@ -86,7 +159,9 @@ if ((group || reference) && selectedTargets.length === 0) {
 for (const target of selectedTargets) {
   const snapshotPath = joinPath(target.path, "private", "snapshot.json");
   const files = await snapshotFiles(target);
-  const document: Snapshot = { version: 1, algorithm: "sha256", snapshot_id: await snapshotId(files), files };
+  const declaration = target.kind === "incubator-candidate" ? await readKernelDeclaration(target.path) : null;
+  const resolved = declaration ? await computeResolvedSnapshot(target, declaration) : undefined;
+  const document: Snapshot = { version: 1, algorithm: "sha256", snapshot_id: await snapshotId(files), files, ...(resolved ? { resolved } : {}) };
 
   if (writeMode) {
     await Bun.write(snapshotPath, `${JSON.stringify(document, null, 2)}\n`);
@@ -116,6 +191,15 @@ for (const target of selectedTargets) {
   const allFiles = new Set([...Object.keys(expectedFiles), ...Object.keys(files)]);
   for (const file of [...allFiles].sort()) {
     if (expectedFiles[file] !== files[file]) failures.push(`Snapshot mismatch: ${relativePath(target.path)}/${file}`);
+  }
+  if (resolved && expected.resolved) {
+    for (const key of ["core_version", "core_hash", "profile", "materializer_kind", "input_hash", "materialized_output_hash"] as const) {
+      if (expected.resolved[key] !== resolved[key]) failures.push(`Resolved snapshot mismatch: ${relativePath(snapshotPath)}/${key}`);
+    }
+  } else if (resolved && !expected.resolved) {
+    failures.push(`Missing resolved snapshot: ${relativePath(snapshotPath)}`);
+  } else if (!resolved && expected.resolved) {
+    failures.push(`Unexpected resolved snapshot: ${relativePath(snapshotPath)}`);
   }
 }
 

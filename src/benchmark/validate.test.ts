@@ -241,3 +241,17 @@ test("rejects pilot experiments with fewer than two repetitions", async () => {
     await rm(workspace, { force: true, recursive: true });
   }
 });
+
+test("rejects generated output committed in a starter", async () => {
+  const workspace = await fixture();
+  try {
+    const generatedFile = join(workspace, "suites", "fixture", "tasks", "example", "v1", "public", "starter", "dist", "index.js");
+    await mkdir(join(workspace, "suites", "fixture", "tasks", "example", "v1", "public", "starter", "dist"), { recursive: true });
+    await write(generatedFile, "export {};\n");
+    const result = await validate(workspace);
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("Generated output is not allowed in starter: suites/fixture/tasks/example/v1/public/starter/dist/index.js");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});

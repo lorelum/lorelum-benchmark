@@ -1,6 +1,7 @@
 import Ajv2020 from "ajv/dist/2020";
 import type { ErrorObject, ValidateFunction } from "ajv";
 import { isAbsolute, relative, resolve } from "node:path";
+import { isGeneratedOutput } from "./kernel/core/v1/types";
 import { directoryExists, joinPath, listDirectories, listFiles, pathExists, relativePath, sha256File, workspaceRoot } from "./fs";
 
 const failures: string[] = [];
@@ -262,6 +263,14 @@ async function findForbiddenPublicFiles(path: string): Promise<void> {
   }
 }
 
+async function findGeneratedStarterOutput(path: string): Promise<void> {
+  for (const file of await listFiles(path)) {
+    if (isGeneratedOutput(file.replaceAll("\\", "/").split("/"))) {
+      failures.push(`Generated output is not allowed in starter: ${relativePath(joinPath(path, file)).replaceAll("\\", "/")}`);
+    }
+  }
+}
+
 async function validateVersionedManifests(path: string, manifestName: string, schema: string, label: string): Promise<void> {
   for (const id of await listDirectories(path)) {
     const idPath = joinPath(path, id);
@@ -332,6 +341,7 @@ for (const suite of await listDirectories(suitesPath)) {
         discovered.set(expectedId, { document: taskDocument, manifestPath: `tasks/${taskSlug}/${revision}` });
       }
       await findForbiddenPublicFiles(publicPath);
+      await findGeneratedStarterOutput(joinPath(publicPath, "starter"));
     }
   }
 
@@ -378,6 +388,13 @@ for (const suite of await listDirectories(suitesPath)) {
         }
       }
     }
+  }
+}
+
+for (const track of await listDirectories(joinPath(workspaceRoot, "incubator"))) {
+  const candidatesPath = joinPath(workspaceRoot, "incubator", track);
+  for (const candidate of await listDirectories(candidatesPath)) {
+    await findGeneratedStarterOutput(joinPath(candidatesPath, candidate, "public", "starter"));
   }
 }
 
