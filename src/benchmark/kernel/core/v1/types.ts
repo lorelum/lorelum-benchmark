@@ -80,6 +80,8 @@ export type IsolateFn = (input: IsolateInput) => Promise<IsolationAudit>;
 export type IsolateInput = {
   workspacePath: string;
   privatePaths: string[];
+  /** Immutable public source roots used to prove calibration-file equivalence. */
+  publicSourcePaths?: string[];
 };
 
 /** The hash contract: compute resolved hashes for a candidate input. */
