@@ -1,5 +1,8 @@
 import { join, resolve } from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { calibrate, getMaterializer, hash, isolate, materialize, registerMaterializer } from "./core/v1/core";
+import { hashCalibrationFixtureSource, resolveCalibrationSets, stageCalibrationSets } from "./core/v1/calibration-fixtures";
 import { materializeReactVite, reactViteKind } from "./materializers";
 import { sha256Directory, workspaceRoot } from "../fs";
 import type { CalibrationRole, KernelDeclaration } from "./core/v1/types";
@@ -13,11 +16,21 @@ const outputPathIndex = argumentsList.indexOf("--output");
 const outputPath = outputPathIndex >= 0 && argumentsList[outputPathIndex + 1] ? resolve(argumentsList[outputPathIndex + 1]) : undefined;
 
 function usage(): never {
-  console.error("Usage: kernel <materialize|isolate|hash|calibrate> <candidate-path> --output <empty-workspace-path>");
+  console.error("Usage: kernel <materialize|isolate|hash|calibrate> <candidate-path> --output <empty-workspace-path>\n       kernel fixture-hash <source-directory>");
   process.exit(1);
 }
 
-if (!subcommand || !candidatePath || !outputPath) usage();
+if (!subcommand || !candidatePath || (subcommand !== "fixture-hash" && !outputPath)) usage();
+
+if (subcommand === "fixture-hash") {
+  try {
+    console.log(await hashCalibrationFixtureSource(candidatePath));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+  process.exit(0);
+}
 
 async function readKernelDeclaration(candidatePath: string): Promise<KernelDeclaration | null> {
   const manifestPath = join(candidatePath, "private", "candidate.yaml");
@@ -71,17 +84,30 @@ try {
 
   switch (subcommand) {
     case "materialize": {
+      const calibrationSets = await resolveCalibrationSets(candidatePath);
       const result = await materialize({ candidatePath, publicTaskPath, publicStarterPath, outputPath, materializerKind: declaration.materializer_kind });
-      console.log(JSON.stringify(result, null, 2));
+      console.log(JSON.stringify({ ...result, ...(calibrationSets ? { calibrationSetsHash: calibrationSets.calibrationSetsHash } : {}) }, null, 2));
       break;
     }
     case "isolate": {
-      const result = await isolate({ workspacePath: outputPath, privatePaths: [join(candidatePath, "private")], publicSourcePaths: [join(candidatePath, "public")] });
-      console.log(JSON.stringify(result, null, 2));
+      const calibrationSets = await resolveCalibrationSets(candidatePath);
+      const stagingPath = calibrationSets ? await mkdtemp(join(tmpdir(), "lorelum-calibration-isolation-")) : null;
+      try {
+        if (calibrationSets && stagingPath) await stageCalibrationSets(calibrationSets, stagingPath);
+        const result = await isolate({
+          workspacePath: outputPath,
+          privatePaths: [join(candidatePath, "private"), ...(stagingPath ? [join(stagingPath, "private")] : [])],
+          publicSourcePaths: [join(candidatePath, "public")],
+        });
+        console.log(JSON.stringify({ ...result, ...(calibrationSets ? { calibrationSetsHash: calibrationSets.calibrationSetsHash } : {}) }, null, 2));
+      } finally {
+        if (stagingPath) await rm(stagingPath, { force: true, recursive: true });
+      }
       break;
     }
     case "hash": {
       const coreHash = await sha256Directory(join(workspaceRoot, "src", "benchmark", "kernel", "core", "v1"));
+      const calibrationSets = await resolveCalibrationSets(candidatePath);
       const result = await hash({
         candidatePath,
         declarationPath: join(candidatePath, "private", "candidate.yaml"),
@@ -92,16 +118,28 @@ try {
         profile: declaration.profile,
         materializerKind: declaration.materializer_kind,
         workspacePath: outputPath,
+        ...(calibrationSets ? { calibrationSetsHash: calibrationSets.calibrationSetsHash } : {}),
       });
       console.log(JSON.stringify(result, null, 2));
       break;
     }
     case "calibrate": {
       const roles = await readCalibrationRoles(candidatePath);
-      const results = await calibrate({ workspacePath: outputPath, roles });
-      console.log(JSON.stringify(results, null, 2));
-      const allPassed = results.every((r) => r.passed);
-      if (!allPassed) process.exit(1);
+      const calibrationSets = await resolveCalibrationSets(candidatePath);
+      const stagingPath = calibrationSets ? await mkdtemp(join(tmpdir(), "lorelum-calibration-runtime-")) : null;
+      try {
+        const staged = calibrationSets && stagingPath ? await stageCalibrationSets(calibrationSets, stagingPath) : null;
+        const results = await calibrate({
+          workspacePath: outputPath,
+          roles,
+          ...(staged ? { environment: { LORELUM_CALIBRATION_SETS_MANIFEST: staged.manifestPath } } : {}),
+        });
+        console.log(JSON.stringify(results, null, 2));
+        const allPassed = results.every((r) => r.passed);
+        if (!allPassed) process.exit(1);
+      } finally {
+        if (stagingPath) await rm(stagingPath, { force: true, recursive: true });
+      }
       break;
     }
     default:

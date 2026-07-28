@@ -7,16 +7,16 @@ checkout 体积、审阅负担和 snapshot 输入仍随 fixture 数量增加。�
 
 ## What Changes
 
-- 为 calibration fixture 引入仅解析仓库内、版本固定目录的 base + overlay 声明和确定性
-  合成树解析。
+- 为 calibration fixture 引入全局版本化 registry 与 candidate-local、versioned calibration
+  set 的 base + overlay 声明和确定性合成树解析。
 - 将 base 内容、overlay 声明和合成树身份共同纳入校准输入身份及 snapshot v1 的 resolved
   信息；base 或 override 改动必须使校验失败。
 - 令 materializer、isolation、calibration evaluator 和 snapshot 消费同一个解析器，并在
   缺失、digest 不匹配、非法路径、冲突、循环或消费者结果不一致时 fail closed。
 - 保持 private calibration 与 Practice 的隔离；不将 Practice 文本或 `private/practices/`
   路径引入 agent workspace、公开 prompt、trace、普通 snapshot files 或生成物。
-- 首版范围、声明删除/冲突语义、身份载体及 #97 迁移安排在严格校验后的规划澄清中确认，
-  确认结果将回写 Issue #106、design.md 和 tasks.md 后才开始实现。
+- 首版支持兼容 profile/materializer 的新 candidate 复用 registry base；同一 candidate 的
+  新 Practice 以新 set/version 扩展，旧 set 保持不可改写。
 
 ## Capabilities
 

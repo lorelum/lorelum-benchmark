@@ -44,43 +44,53 @@ fixture-tree result to all four consumers. Each consumer MUST consume this
 result rather than reimplementing directory copy, digest, ordering or deletion
 logic. This eliminates divergent interpretations of one declaration.
 
-The contract will accept only regular files beneath a declared repository-local
-root. It will reject absolute paths, traversal, generated-output directories,
-symlinks, base absence, digest mismatch, cycles, duplicate/ambiguous ownership
-and any unsupported operation. The exact declaration layout and deletion syntax
-remain gated by the open questions below.
+The registry is global, versioned and excluded from candidate discovery under
+`incubator/calibration-bases/`. A registry version has `base.yaml` that pins
+the compatible kernel profile, materializer and `source` directory. A candidate
+declares `private/calibration/sets.yaml` through `private/candidate.yaml` and
+may define any number of named `id` + `version` calibration sets. Each set has
+named trees: a root pins `base.ref` + `sha256`, while child trees use `extends`
+and a candidate-local overlay `path` + `sha256`.
+
+Overlays add files or replace the same relative file. Deletion is unsupported.
+The resolver accepts only regular files beneath the declared roots and rejects
+absolute paths, traversal, generated-output directories, Practice paths,
+symlinks, missing/incompatible bases, digest mismatch, cycles, duplicate set
+keys and unsupported declarations.
 
 ### Immutable identity and snapshot v1
 
-The resolved snapshot will carry an explicit composite-fixture identity derived
-from a canonical, sorted manifest of declaration bytes, base identity, override
-identity and resulting file hashes. Snapshot verification will re-resolve the
-tree and compare that identity, so either a base or override change invalidates
-the frozen input. This extends only `resolved` fields; it does not alter or
-replace snapshot v1's ordinary `files` contract and does not implement #107's
-snapshot v2 work.
+Each fixture has a canonical sorted tree hash. A set hash includes the canonical
+tree declarations and fixture hashes; `calibration_sets_hash` aggregates all
+declared set hashes in stable order. Snapshot v1 records this aggregate in
+`resolved.calibration_sets_hash` and re-resolves it during verification. A base,
+overlay, declaration or composed-tree change therefore invalidates the input.
+This extends only `resolved` fields; it does not alter or replace snapshot v1's
+ordinary `files` contract and does not implement #107's snapshot v2 work.
 
 ### Privacy and execution boundary
 
 Composed calibration trees stay private and are available only to calibration
-processes. Materializing the candidate's agent-facing workspace continues to
-copy public task/starter input only. Isolation will audit the resolved private
-fixture tree with the same public equivalence rules it applies today, while
-rejecting Practice text, `private/practices/` paths and private-only content in
-the workspace or public artifacts.
+processes. The kernel stages them in a fresh temporary private directory and
+passes its manifest to declared calibration roles through a private runtime
+environment value. Materializing the candidate's agent-facing workspace
+continues to copy public task/starter input only. Isolation audits both candidate
+private inputs and the staged tree with the existing public-equivalence rules.
+Practice text, `private/practices/` paths and private-only content are rejected
+from the workspace and public artifacts.
 
 ## Risks / Trade-offs
 
-- [A shared base can silently rewrite past calibration inputs] -> Require a
-  repository-local digest pin and include the composite identity in resolved
-  snapshot verification.
+- [A shared base can silently rewrite past calibration inputs] -> Registry
+  versions are immutable; candidates pin both a versioned ref and its digest,
+  and snapshots include the composite identity.
 - [Several consumers can resolve a declaration differently] -> Export one
   resolver and test equal composed manifests/hashes across each consumer.
-- [Overlay syntax can hide a deletion or ownership ambiguity] -> Choose and
-  document explicit, fail-closed conflict and deletion semantics before coding.
+- [Overlay syntax can hide a deletion or ownership ambiguity] -> Only one
+  overlay layer per tree is permitted; it can add or replace and cannot delete.
 - [Migration of #97 can alter its already established evidence] -> Keep the
-  first scope in incubator and only migrate after the owner confirms how an
-  unmerged/merged dependency is handled; do not alter source pin or conclusions.
+  migration in incubator; #97 is the merged baseline and its source pin,
+  Practice, task wording, thresholds and conclusions remain unchanged.
 - [Private calibration becomes agent-visible] -> Materialize only public trees,
   test leakage paths and exclude Practice material from snapshot ordinary files.
 
@@ -88,29 +98,21 @@ the workspace or public artifacts.
 
 1. Complete strict OpenSpec validation and create this change's OpenSpec-only
    PR.
-2. Obtain and record the five planning confirmations below in Issue #106,
-   this design and `tasks.md`.
+2. Record the confirmed global registry, versioned-set, snapshot, migration and
+   shared-consumer decisions in Issue #106, this design and `tasks.md`.
 3. Implement the versioned resolver, its shared consumer adapters and focused
    tests before changing any candidate source.
-4. Subject to the approved migration scope, convert only selected incubator
-   calibration fixture copies to a committed base plus committed overlays;
-   regenerate and verify their snapshot identities without changing their
-   public behavior, Practice, source pin or quality gates.
+4. Convert the two #97 incubator candidates to a shared base plus committed
+   `quality-probe/v1` overlays; regenerate and verify their snapshot identities
+   without changing public behavior, Practice, source pin or quality gates.
 5. Keep the complete committed base and overlays as reproducible source; a
    rollback restores full fixture copies in a new commit rather than deleting
    historical evidence.
 
-## Open Questions
+## Confirmed Evolution Model
 
-Implementation is blocked until the requester confirms all of the following:
-
-1. Is v1 limited to calibration fixtures within one candidate, or may it share
-   bases across candidates that use the same kernel/materializer?
-2. What exact base/override declaration format is approved, including conflict
-   precedence and whether deletions are supported and explicit?
-3. How must the composite tree's immutable identity bind to snapshot v1: which
-   resolved fields are authoritative in addition to the ordinary file list?
-4. Is migration limited to incubator, and how must this change depend on or
-   coexist with #97 while it is unmerged?
-5. Which driver/materializer/isolation/evaluator entry points must consume the
-   shared composed tree, and which output is the cross-consumer equality oracle?
+New candidates reuse registry bases through a compatible pinned ref and digest.
+When a candidate receives another Practice or calibration model, it adds a new
+named, versioned calibration set rather than rewriting an existing set. The
+aggregate resolved hash changes for the current candidate snapshot while the
+old set source and identity remain reproducible from its committed history.

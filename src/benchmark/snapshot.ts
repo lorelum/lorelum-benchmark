@@ -2,6 +2,7 @@ import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hash, materialize, registerMaterializer } from "./kernel/core/v1/core";
+import { resolveCalibrationSets } from "./kernel/core/v1/calibration-fixtures";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
 import { materializeReactVite, reactViteKind } from "./kernel/materializers";
 import { resolveInjectionCalibration } from "./kernel/profiles/injection-calibration/v1/runtime";
@@ -30,6 +31,7 @@ type ResolvedSnapshot = {
   input_hash: string;
   materialized_output_hash: string;
   profile_input_hash?: string;
+  calibration_sets_hash?: string;
 };
 
 type KernelResolution = {
@@ -58,6 +60,7 @@ registerMaterializer({ kind: reactViteKind, materialize: materializeReactVite })
 async function discoverCandidates(): Promise<CandidateLocation[]> {
   const candidates: CandidateLocation[] = [];
   for (const track of await listDirectories(joinPath(workspaceRoot, "incubator"))) {
+    if (track === "calibration-bases") continue;
     const candidatesPath = joinPath(workspaceRoot, "incubator", track);
     for (const candidate of await listDirectories(candidatesPath)) {
       candidates.push({ track, reference: candidate, path: joinPath(candidatesPath, candidate) });
@@ -136,6 +139,7 @@ async function computeResolvedSnapshot(target: SnapshotTarget, resolution: Kerne
   const publicStarterPath = joinPath(target.path, "public", "starter");
   const outputPath = await mkdtemp(join(tmpdir(), "lorelum-resolved-workspace-"));
   try {
+    const calibrationSets = await resolveCalibrationSets(target.path);
     await materialize({
       candidatePath: target.path,
       publicTaskPath,
@@ -154,6 +158,7 @@ async function computeResolvedSnapshot(target: SnapshotTarget, resolution: Kerne
       profile: declaration.profile,
       materializerKind: declaration.materializer_kind,
       workspacePath: outputPath,
+      ...(calibrationSets ? { calibrationSetsHash: calibrationSets.calibrationSetsHash } : {}),
     });
     const profileInputHash = declaration.profile === "injection-calibration/v1"
       ? (await resolveInjectionCalibration(target.path)).profile_input_hash
@@ -166,6 +171,7 @@ async function computeResolvedSnapshot(target: SnapshotTarget, resolution: Kerne
       input_hash: resolved.inputHash,
       materialized_output_hash: resolved.materializedOutputHash,
       ...(profileInputHash ? { profile_input_hash: profileInputHash } : {}),
+      ...(resolved.calibrationSetsHash ? { calibration_sets_hash: resolved.calibrationSetsHash } : {}),
     };
   } finally {
     await rm(outputPath, { force: true, recursive: true });
@@ -235,7 +241,7 @@ for (const target of selectedTargets) {
     if (expectedFiles[file] !== files[file]) failures.push(`Snapshot mismatch: ${relativePath(target.path)}/${file}`);
   }
   if (resolved && expected.resolved) {
-    for (const key of ["core_version", "core_hash", "profile", "materializer_kind", "input_hash", "materialized_output_hash", "profile_input_hash"] as const) {
+    for (const key of ["core_version", "core_hash", "profile", "materializer_kind", "input_hash", "materialized_output_hash", "profile_input_hash", "calibration_sets_hash"] as const) {
       if (expected.resolved[key] !== resolved[key]) failures.push(`Resolved snapshot mismatch: ${relativePath(snapshotPath)}/${key}`);
     }
   } else if (resolved && !expected.resolved) {

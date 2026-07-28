@@ -19,11 +19,28 @@ paths, generated-output paths, symbolic links, ambiguous conflicts and cycles.
 - **THEN** resolution MUST fail before materialization, isolation, calibration
   or snapshot can consume any partial tree
 
+### Requirement: 全局 registry 与版本化 calibration set
+Compatible kernel-backed candidates MUST reference a committed base below `incubator/calibration-bases/` whose `base.yaml` pins its profile, materializer and source directory. A candidate MUST declare named `id` + `version` calibration sets through `private/candidate.yaml` and `private/calibration/sets.yaml`. Existing sets and registry versions MUST NOT be rewritten; a new Practice or calibration model MUST add a new set/version.
+
+#### Scenario: 新 candidate 复用 base
+- **WHEN** a new candidate declares a digest-matching registry base with the
+  same kernel profile and materializer
+- **THEN** it can use the base with candidate-local overlays without copying its
+  shared source tree
+
+#### Scenario: 同一 candidate 增加 Practice
+- **WHEN** a candidate adds a calibration model for another Practice
+- **THEN** it adds a distinct named set/version and preserves existing set
+  source and identity
+
 ### Requirement: 合成树身份绑定 snapshot v1
 For every candidate that declares a calibration fixture overlay, snapshot v1 MUST record a resolved composite-fixture identity computed from the canonical
 declaration, pinned base and final composed file hashes. Snapshot verification
 MUST re-resolve the same tree and fail when the base, override or composition
 result changes.
+
+The resolved identity MUST be named `calibration_sets_hash` and aggregate every
+declared calibration set in canonical order.
 
 #### Scenario: 基座在快照后被改动
 - **WHEN** a committed base file is modified after a candidate snapshot is
