@@ -1,12 +1,12 @@
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { hash, materialize, registerMaterializer } from "./kernel/core/v1/core";
 import { resolveCalibrationSets } from "./kernel/core/v1/calibration-fixtures";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
 import { materializeReactVite, reactViteKind } from "./kernel/materializers";
 import { resolveInjectionCalibration } from "./kernel/profiles/injection-calibration/v1/runtime";
-import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256File, workspaceRoot } from "./fs";
+import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256File, sha256Text, workspaceRoot } from "./fs";
 import { discoverTasks, type TaskLocation } from "./task-discovery";
 
 type Snapshot = {
@@ -14,6 +14,13 @@ type Snapshot = {
   algorithm: "sha256";
   snapshot_id: string;
   files: Record<string, string>;
+  resolved?: ResolvedSnapshot;
+};
+
+type SnapshotV2 = {
+  version: 2;
+  algorithm: "sha256-merkle";
+  snapshot_id: string;
   resolved?: ResolvedSnapshot;
 };
 
@@ -51,6 +58,7 @@ type SnapshotTarget =
 
 const argumentsList = Bun.argv.slice(2);
 const writeMode = argumentsList.includes("--write");
+const v2Mode = argumentsList.includes("--v2");
 const incubatorMode = argumentsList.includes("--incubator");
 const [group, reference] = argumentsList.filter((argument) => !argument.startsWith("--"));
 const failures: string[] = [];
@@ -97,6 +105,50 @@ async function snapshotId(files: Record<string, string>): Promise<string> {
   const content = new TextEncoder().encode(JSON.stringify(files));
   const digest = await crypto.subtle.digest("SHA-256", content);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+
+function assertCanonicalPath(file: string, label: string): void {
+  const normalized = file.replaceAll("\\", "/");
+  if (isAbsolute(normalized)) throw new Error(`${label} must be relative: ${file}`);
+  const segments = normalized.split("/");
+  for (const segment of segments) {
+    if (segment === "" || segment === "." || segment === "..") throw new Error(`${label} must be normalized: ${file}`);
+  }
+}
+
+async function assertNoSymlinks(targetPath: string, relative = ""): Promise<void> {
+  const entries = await readdir(targetPath, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryRelative = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isSymbolicLink()) throw new Error(`symbolic link is not allowed: ${entryRelative}`);
+    const entryPath = joinPath(targetPath, entry.name);
+    if (entry.isDirectory()) {
+      await assertNoSymlinks(entryPath, entryRelative);
+    }
+  }
+}
+
+async function canonicalTreeRoot(files: Record<string, string>): Promise<string> {
+  const sorted = Object.keys(files).sort();
+  if (sorted.length === 0) return sha256Text("");
+  const leaves = await Promise.all(sorted.map(async (path) => {
+    assertCanonicalPath(path, "canonical tree path");
+    return `${path}\0${files[path]}`;
+  }));
+  const layer = await Promise.all(leaves.map((leaf) => sha256Text(leaf)));
+  return combineTreeLayer(layer);
+}
+
+async function combineTreeLayer(layer: string[]): Promise<string> {
+  if (layer.length === 1) return layer[0];
+  const next: string[] = [];
+  for (let index = 0; index < layer.length; index += 2) {
+    const left = layer[index];
+    const right = index + 1 < layer.length ? layer[index + 1] : left;
+    next.push(await sha256Text(`${left}\0${right}`));
+  }
+  return combineTreeLayer(next);
 }
 
 function declarationPath(target: SnapshotTarget): string {
@@ -200,14 +252,26 @@ for (const target of selectedTargets) {
   const snapshotPath = joinPath(target.path, "private", "snapshot.json");
   let files: Record<string, string>;
   let resolved: ResolvedSnapshot | undefined;
+  let treeRoot: string | undefined;
   try {
     const declaration = await readKernelDeclaration(target);
     files = await snapshotFiles(target, declaration?.declaration.profile);
     resolved = declaration ? await computeResolvedSnapshot(target, declaration) : undefined;
+    if (v2Mode && writeMode) {
+      await assertNoSymlinks(target.path);
+      treeRoot = await canonicalTreeRoot(files);
+    }
   } catch (error) {
     failures.push(error instanceof Error ? error.message : String(error));
     continue;
   }
+  if (v2Mode && writeMode) {
+    const document: SnapshotV2 = { version: 2, algorithm: "sha256-merkle", snapshot_id: treeRoot!, ...(resolved ? { resolved } : {}) };
+    await Bun.write(snapshotPath, `${JSON.stringify(document, null, 2)}\n`);
+    console.log(`Wrote ${relativePath(snapshotPath)}`);
+    continue;
+  }
+
   const document: Snapshot = { version: 1, algorithm: "sha256", snapshot_id: await snapshotId(files), files, ...(resolved ? { resolved } : {}) };
 
   if (writeMode) {
@@ -221,18 +285,49 @@ for (const target of selectedTargets) {
     continue;
   }
 
-  let expected: Snapshot;
+  let parsed: Record<string, unknown>;
   try {
-    expected = JSON.parse(await Bun.file(snapshotPath).text()) as Snapshot;
+    parsed = JSON.parse(await Bun.file(snapshotPath).text()) as Record<string, unknown>;
   } catch (error) {
     failures.push(`Invalid snapshot ${relativePath(snapshotPath)}: ${error instanceof Error ? error.message : String(error)}`);
     continue;
   }
 
-  if (expected.version !== 1 || expected.algorithm !== "sha256") {
+  if (parsed.version === 2) {
+    if (parsed.algorithm !== "sha256-merkle" || typeof parsed.snapshot_id !== "string") {
+      failures.push(`Unsupported snapshot format: ${relativePath(snapshotPath)}`);
+      continue;
+    }
+    try {
+      await assertNoSymlinks(target.path);
+      const expectedTreeRoot = await canonicalTreeRoot(files);
+      if (parsed.snapshot_id !== expectedTreeRoot) {
+        failures.push(`Snapshot mismatch: ${relativePath(snapshotPath)}/snapshot_id (expected ${parsed.snapshot_id}, recomputed ${expectedTreeRoot})`);
+        for (const [path, hash] of Object.entries(files).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)) {
+          failures.push(`  tree-leaf ${relativePath(target.path)}/${path}=${hash}`);
+        }
+      }
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+    const expectedResolved = isRecord(parsed.resolved) ? parsed.resolved as ResolvedSnapshot : undefined;
+    if (resolved && expectedResolved) {
+      for (const key of ["core_version", "core_hash", "profile", "materializer_kind", "input_hash", "materialized_output_hash", "profile_input_hash", "calibration_sets_hash"] as const) {
+        if (expectedResolved[key] !== resolved[key]) failures.push(`Resolved snapshot mismatch: ${relativePath(snapshotPath)}/${key}`);
+      }
+    } else if (resolved && !expectedResolved) {
+      failures.push(`Missing resolved snapshot: ${relativePath(snapshotPath)}`);
+    } else if (!resolved && expectedResolved) {
+      failures.push(`Unexpected resolved snapshot: ${relativePath(snapshotPath)}`);
+    }
+    continue;
+  }
+
+  if (parsed.version !== 1 || parsed.algorithm !== "sha256") {
     failures.push(`Unsupported snapshot format: ${relativePath(snapshotPath)}`);
     continue;
   }
+  const expected = parsed as Snapshot;
   if (expected.snapshot_id !== document.snapshot_id) failures.push(`Snapshot mismatch: ${relativePath(snapshotPath)}/snapshot_id`);
 
   const expectedFiles = expected.files ?? {};

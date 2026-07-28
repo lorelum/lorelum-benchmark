@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -146,4 +146,178 @@ test("keeps the legacy #75 candidate on its non-kernel snapshot path", async () 
   const result = await runSnapshot(root, "--incubator", "practice-injection", "login-page-layered-api-v1");
   expect(result.exitCode).toBe(0);
   expect(result.output).toContain("Snapshots are intact.");
+});
+test("v2 writes a canonical tree root without a files manifest and verifies across clean checkouts", async () => {
+  const workspace1 = await createCandidateWorkspace();
+  const workspace2 = await createCandidateWorkspace();
+  const candidate1 = join(workspace1, "incubator", "candidates", "example-candidate");
+  const candidate2 = join(workspace2, "incubator", "candidates", "example-candidate");
+  try {
+    const write1 = await runSnapshot(workspace1, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    expect(write1.exitCode, write1.output).toBe(0);
+    const manifest = JSON.parse(await Bun.file(join(candidate1, "private", "snapshot.json")).text());
+    expect(manifest.version).toBe(2);
+    expect(manifest.algorithm).toBe("sha256-merkle");
+    expect(manifest.snapshot_id).toMatch(/^[a-f0-9]{64}$/);
+    expect(manifest.files).toBeUndefined();
+    expect(manifest.resolved).toBeUndefined();
+
+    const write2 = await runSnapshot(workspace2, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    expect(write2.exitCode, write2.output).toBe(0);
+    const manifest2 = JSON.parse(await Bun.file(join(candidate2, "private", "snapshot.json")).text());
+    expect(manifest2.snapshot_id).toBe(manifest.snapshot_id);
+
+    const verify = await runSnapshot(workspace1, "--incubator", "candidates", "example-candidate");
+    expect(verify.exitCode, verify.output).toBe(0);
+    expect(verify.output).toContain("Snapshots are intact.");
+  } finally {
+    await rm(workspace1, { force: true, recursive: true });
+    await rm(workspace2, { force: true, recursive: true });
+  }
+});
+
+test("v2 fails when content changes, files are added, deleted, or renamed", async () => {
+  const workspace = await createCandidateWorkspace();
+  const candidate = join(workspace, "incubator", "candidates", "example-candidate");
+  try {
+    await runSnapshot(workspace, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+
+    await writeFile(join(candidate, "public", "starter", ".env.example"), "PORT=4000\n");
+    const contentChanged = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(contentChanged.exitCode).toBe(1);
+    expect(contentChanged.output).toContain("snapshot_id");
+    expect(contentChanged.output).toContain("tree-leaf");
+
+    await writeFile(join(candidate, "public", "starter", ".env.example"), "PORT=3000\n");
+    await writeFile(join(candidate, "public", "starter", "new-file.ts"), "export const x = 1;\n");
+    const added = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(added.exitCode).toBe(1);
+    expect(added.output).toContain("snapshot_id");
+    expect(added.output).toContain("new-file.ts");
+
+    await rm(join(candidate, "public", "starter", "new-file.ts"), { force: true });
+    const addedResolved = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(addedResolved.exitCode).toBe(0);
+
+    await rm(join(candidate, "private", "oracle.yaml"), { force: true });
+    const deleted = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(deleted.exitCode).toBe(1);
+    expect(deleted.output).toContain("snapshot_id");
+
+    await writeFile(join(candidate, "private", "oracle.yaml"), "id: example-candidate-v1\n");
+    await writeFile(join(candidate, "private", "renamed-oracle.yaml"), "id: example-candidate-v1\n");
+    const renamed = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(renamed.exitCode).toBe(1);
+    expect(renamed.output).toContain("snapshot_id");
+    expect(renamed.output).toContain("renamed-oracle.yaml");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("v2 rejects symbolic links and excludes generated output", async () => {
+  const workspace = await createCandidateWorkspace();
+  const candidate = join(workspace, "incubator", "candidates", "example-candidate");
+  try {
+    const verify = await runSnapshot(workspace, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    expect(verify.exitCode, verify.output).toBe(0);
+    const manifest = JSON.parse(await Bun.file(join(candidate, "private", "snapshot.json")).text());
+    expect(JSON.stringify(manifest)).not.toContain("node_modules");
+    expect(JSON.stringify(manifest)).not.toContain("dist/index.html");
+    expect(JSON.stringify(manifest)).not.toContain(".materialized");
+    expect(JSON.stringify(manifest)).not.toContain(".vite");
+    expect(JSON.stringify(manifest)).not.toContain("logs/run.log");
+    expect(JSON.stringify(manifest)).not.toContain(".practice-runtime");
+
+    const linkPath = join(candidate, "public", "starter", "linked.ts");
+    try {
+      await symlink(join(candidate, "public", "starter", ".env.example"), linkPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EPERM") return;
+      throw error;
+    }
+    const linkResult = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(linkResult.exitCode).toBe(1);
+    expect(linkResult.output).toContain("symbolic link is not allowed");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("v2 coexists with v1 and does not touch v1 snapshots", async () => {
+  const workspace = await createCandidateWorkspace();
+  const candidate = join(workspace, "incubator", "candidates", "example-candidate");
+  try {
+    const v1Write = await runSnapshot(workspace, "--write", "--incubator", "candidates", "example-candidate");
+    expect(v1Write.exitCode, v1Write.output).toBe(0);
+    const v1Manifest = JSON.parse(await Bun.file(join(candidate, "private", "snapshot.json")).text());
+    expect(v1Manifest.version).toBe(1);
+    expect(v1Manifest.files).toBeObject();
+
+    const v1Verify = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(v1Verify.exitCode, v1Verify.output).toBe(0);
+    expect(v1Verify.output).toContain("Snapshots are intact.");
+
+    const v2Write = await runSnapshot(workspace, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    expect(v2Write.exitCode, v2Write.output).toBe(0);
+    const v2Manifest = JSON.parse(await Bun.file(join(candidate, "private", "snapshot.json")).text());
+    expect(v2Manifest.version).toBe(2);
+    expect(v2Manifest.files).toBeUndefined();
+
+    const v2Verify = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(v2Verify.exitCode, v2Verify.output).toBe(0);
+    expect(v2Verify.output).toContain("Snapshots are intact.");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("v2 rejects malformed snapshot schema", async () => {
+  const workspace = await createCandidateWorkspace();
+  const candidate = join(workspace, "incubator", "candidates", "example-candidate");
+  try {
+    await mkdir(join(candidate, "private"), { recursive: true });
+    await writeFile(join(candidate, "private", "snapshot.json"), JSON.stringify({ version: 2, algorithm: "unknown", snapshot_id: "abc" }));
+    const result = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("Unsupported snapshot format");
+
+    await writeFile(join(candidate, "private", "snapshot.json"), JSON.stringify({ version: 3, algorithm: "sha256", snapshot_id: "abc" }));
+    const result2 = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(result2.exitCode).toBe(1);
+    expect(result2.output).toContain("Unsupported snapshot format");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("v2 excludes Practice text and private/practices paths for injection-calibration profile", async () => {
+  const workspace = await createInjectionCandidateWorkspace();
+  const candidate = join(workspace, "incubator", "candidates", "injection-candidate");
+  try {
+    const writeResult = await runSnapshot(workspace, "--write", "--v2", "--incubator", "candidates", "injection-candidate");
+    expect(writeResult.exitCode, writeResult.output).toBe(0);
+    const manifest = JSON.parse(await Bun.file(join(candidate, "private", "snapshot.json")).text());
+    expect(manifest.version).toBe(2);
+    expect(manifest.resolved.profile_input_hash).toMatch(/^[a-f0-9]{64}$/);
+    const serialized = JSON.stringify(manifest);
+    expect(serialized).not.toContain("private oracle Practice text");
+    expect(serialized).not.toContain("private irrelevant Practice text");
+    expect(serialized).not.toContain("private/practices");
+
+    const verify = await runSnapshot(workspace, "--incubator", "candidates", "injection-candidate");
+    expect(verify.exitCode, verify.output).toBe(0);
+
+    const metadataPath = join(candidate, "private", "practices", "metadata.yaml");
+    const metadataText = await Bun.file(metadataPath).text();
+    await writeFile(metadataPath, metadataText.replace(/maximum_relative_difference: ([0-9.]+)/, (_, value) => `maximum_relative_difference: ${Number(value) + 0.01}`));
+    const failResult = await runSnapshot(workspace, "--incubator", "candidates", "injection-candidate");
+    expect(failResult.exitCode).toBe(1);
+    expect(failResult.output).toContain("Resolved snapshot mismatch");
+    expect(failResult.output).toContain("profile_input_hash");
+    expect(failResult.output).not.toContain("private oracle Practice text");
+    expect(failResult.output).not.toContain("private/practices");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
 });
