@@ -77,12 +77,13 @@ async function listSnapshotFiles(path: string, relative = ""): Promise<string[]>
   return files;
 }
 
-async function snapshotFiles(target: SnapshotTarget): Promise<Record<string, string>> {
+async function snapshotFiles(target: SnapshotTarget, profile?: string): Promise<Record<string, string>> {
   const files = await listSnapshotFiles(target.path);
   const included = files.filter((file) => {
     if (file === "private/snapshot.json") return false;
     const segments = file.split("/");
     if (isGeneratedOutput(segments)) return false;
+    if (profile === "injection-calibration/v1" && file.startsWith("private/practices/")) return false;
     // 证据索引在候选输入执行后才写入，不得使该输入对应的快照失效。
     return target.kind !== "incubator-candidate" || !file.startsWith("private/evidence-index/");
   }).sort();
@@ -194,8 +195,8 @@ for (const target of selectedTargets) {
   let files: Record<string, string>;
   let resolved: ResolvedSnapshot | undefined;
   try {
-    files = await snapshotFiles(target);
     const declaration = await readKernelDeclaration(target);
+    files = await snapshotFiles(target, declaration?.declaration.profile);
     resolved = declaration ? await computeResolvedSnapshot(target, declaration) : undefined;
   } catch (error) {
     failures.push(error instanceof Error ? error.message : String(error));

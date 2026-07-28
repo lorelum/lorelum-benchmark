@@ -52,15 +52,21 @@ async function createInjectionCandidateWorkspace(): Promise<string> {
   ].join("\n"));
   const oraclePath = join(practices, "oracle.md");
   const irrelevantPath = join(practices, "irrelevant.md");
-  await Bun.write(oraclePath, "private oracle Practice text\n");
-  await Bun.write(irrelevantPath, "private irrelevant Practice text\n");
+  const oracleText = "private oracle Practice text\n";
+  const irrelevantText = "private irrelevant Practice text\n";
+  await Bun.write(oraclePath, oracleText);
+  await Bun.write(irrelevantPath, irrelevantText);
   const oracleHash = await sha256(oraclePath);
   const irrelevantHash = await sha256(irrelevantPath);
+  const oracleCharacters = [...oracleText].length;
+  const irrelevantCharacters = [...irrelevantText].length;
+  const relativeDifference = Math.abs(oracleCharacters - irrelevantCharacters) / oracleCharacters;
+  const maximumRelativeDifference = relativeDifference + 0.01;
   await Bun.write(join(practices, "metadata.yaml"), [
-    "delivery_template: practice-card/v1", "length_metric: utf8-rendered-characters", "cards:",
-    "  - id: test.oracle", "    version: v1", "    path: oracle.md", "    rendered_characters: 100",
-    "  - id: test.irrelevant", "    version: v1", "    path: irrelevant.md", "    rendered_characters: 95",
-    "comparison:", "  maximum_relative_difference: 0.10", "  actual_relative_difference: 0.05", "  independently_reviewed: true", ""
+    "delivery_template: practice-card/v1", "length_metric: practice-card/v1:utf8-rendered-characters", "cards:",
+    "  - id: test.oracle", "    version: v1", "    path: oracle.md", `    rendered_characters: ${oracleCharacters}`,
+    "  - id: test.irrelevant", "    version: v1", "    path: irrelevant.md", `    rendered_characters: ${irrelevantCharacters}`,
+    "comparison:", `  maximum_relative_difference: ${maximumRelativeDifference}`, `  actual_relative_difference: ${relativeDifference}`, "  independently_reviewed: true", ""
   ].join("\n"));
   await Bun.write(join(candidate, "private", "conditions.yaml"), [
     "conditions:", "  - id: baseline", "    status: declared", "    practice: none",
@@ -113,14 +119,20 @@ test("binds validated Practice inputs to the resolved snapshot without exposing 
   const workspace = await createInjectionCandidateWorkspace();
   const candidate = join(workspace, "incubator", "candidates", "injection-candidate");
   try {
-    expect((await runSnapshot(workspace, "--write", "--incubator", "candidates", "injection-candidate")).exitCode).toBe(0);
-    const manifest = JSON.parse(await Bun.file(join(candidate, "private", "snapshot.json")).text()) as { resolved: Record<string, string> };
+    const writeResult = await runSnapshot(workspace, "--write", "--incubator", "candidates", "injection-candidate");
+    expect(writeResult.exitCode, writeResult.output).toBe(0);
+    const manifest = JSON.parse(await Bun.file(join(candidate, "private", "snapshot.json")).text()) as { files: Record<string, string>; resolved: Record<string, string> };
     expect(manifest.resolved.profile_input_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(manifest.files["private/practices/oracle.md"]).toBeUndefined();
+    expect(manifest.files["private/practices/irrelevant.md"]).toBeUndefined();
+    expect(manifest.files["private/practices/metadata.yaml"]).toBeUndefined();
+    expect(JSON.stringify(manifest)).not.toContain("private/practices");
     const resolvedText = JSON.stringify(manifest.resolved);
     expect(resolvedText).not.toContain("private oracle Practice text");
     expect(resolvedText).not.toContain("private/practices");
 
-    await Bun.write(join(candidate, "private", "practices", "metadata.yaml"), (await Bun.file(join(candidate, "private", "practices", "metadata.yaml")).text()).replace("maximum_relative_difference: 0.10", "maximum_relative_difference: 0.06"));
+    const metadataPath = join(candidate, "private", "practices", "metadata.yaml");
+    await Bun.write(metadataPath, (await Bun.file(metadataPath).text()).replace(/maximum_relative_difference: ([0-9.]+)/, (_, value) => `maximum_relative_difference: ${Number(value) + 0.01}`));
     const result = await runSnapshot(workspace, "--incubator", "candidates", "injection-candidate");
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("Resolved snapshot mismatch");

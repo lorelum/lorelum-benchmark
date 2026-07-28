@@ -114,7 +114,7 @@ real Practice is semantically relevant or effective.
   expected baseline defects, private semantic gate, report-only quality probe,
   relevant Practice, and equal-length irrelevant control are recorded in
   Issue #89.
-- The first consumer uses `utf8-rendered-characters`, a maximum relative
+- The first consumer uses `practice-card/v1:utf8-rendered-characters`, a maximum relative
   difference of `0.10`, and independent review. The profile validates declared
   arithmetic but does not hard-code that threshold for every future consumer.
 - The profile resolves a selected card to an in-memory private payload. Its

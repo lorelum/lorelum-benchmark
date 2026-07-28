@@ -63,7 +63,7 @@ export type PracticeCardMetadata = {
 
 export type PracticeMetadata = {
   delivery_template: "practice-card/v1";
-  length_metric: "utf8-rendered-characters";
+  length_metric: "practice-card/v1:utf8-rendered-characters";
   cards: PracticeCardMetadata[];
   comparison: {
     maximum_relative_difference: number;
@@ -82,17 +82,22 @@ export type ResolvedPractice = {
   id: string;
   version: string;
   sha256: string;
-  text: string;
 };
 
-export type PracticePayload = {
+export type ResolvedCondition = {
   condition_id: InjectionConditionId;
   channel: InjectionChannel;
   practice?: ResolvedPractice;
 };
 
+export type PracticePayload = {
+  condition_id: InjectionConditionId;
+  channel: InjectionChannel;
+  practice?: ResolvedPractice & { text: string };
+};
+
 export type ResolvedInjectionCalibration = {
-  conditions: Record<InjectionConditionId, PracticePayload>;
+  conditions: Record<InjectionConditionId, ResolvedCondition>;
   calibration: IrrelevantPracticeCalibration;
   decision_rule: DecisionRule;
   profile_input_hash: string;

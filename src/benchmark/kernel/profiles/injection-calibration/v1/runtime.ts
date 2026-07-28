@@ -1,12 +1,22 @@
 import { lstat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { sha256File, sha256Text } from "../../../../fs";
+import { sha256Text } from "../../../../fs";
 import type { DecisionRule, InjectionCalibrationProfile, InjectionConditionId, IrrelevantPracticeCalibration, PracticeCardMetadata, PracticeMetadata, PracticePayload, PracticeReference, RedactedInjectionTrace, ResolvedInjectionCalibration, ResolvedPractice } from "./types";
 
 const declaredConditionIds = ["baseline", "oracle-practice", "irrelevant-practice"] as const;
 const allConditionIds = [...declaredConditionIds, "lorelum-retrieval"] as const;
+export const practiceCardLengthMetric = "practice-card/v1:utf8-rendered-characters" as const;
 
 type UnknownRecord = Record<string, unknown>;
+type VerifiedPractice = {
+  card: ResolvedPractice;
+  path: string;
+  renderedCharacters: number;
+};
+type PrivateResolvedProfile = {
+  profile: ResolvedInjectionCalibration;
+  practices: Partial<Record<InjectionConditionId, VerifiedPractice>>;
+};
 
 function fail(message: string): never {
   throw new Error(`Invalid injection-calibration/v1 profile: ${message}`);
@@ -103,7 +113,7 @@ function parseProfile(value: UnknownRecord): InjectionCalibrationProfile {
 
 function parseMetadata(value: UnknownRecord): PracticeMetadata {
   if (value.delivery_template !== "practice-card/v1") fail("metadata.delivery_template must be practice-card/v1");
-  if (value.length_metric !== "utf8-rendered-characters") fail("metadata.length_metric must be utf8-rendered-characters");
+  if (value.length_metric !== practiceCardLengthMetric) fail(`metadata.length_metric must be ${practiceCardLengthMetric}`);
   if (!Array.isArray(value.cards) || value.cards.length < 2) fail("metadata.cards must declare the selected Practice cards");
   const cards = value.cards.map((card) => {
     if (!isRecord(card)) fail("metadata card must be an object");
@@ -124,7 +134,7 @@ function parseMetadata(value: UnknownRecord): PracticeMetadata {
   if (maximum < 0 || maximum > 1 || actual < 0 || actual > 1 || value.comparison.independently_reviewed !== true) fail("metadata.comparison is invalid");
   return {
     delivery_template: "practice-card/v1",
-    length_metric: "utf8-rendered-characters",
+    length_metric: practiceCardLengthMetric,
     cards,
     comparison: { maximum_relative_difference: maximum, actual_relative_difference: actual, independently_reviewed: true },
   };
@@ -134,9 +144,7 @@ function metadataCard(metadata: PracticeMetadata, reference: PracticeReference, 
   const prefix = "private/practices/";
   if (!reference.path.startsWith(prefix)) fail("Practice path must start with private/practices/");
   const declaredPath = reference.path.slice(prefix.length);
-  if (declaredPath.length === 0 || declaredPath.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) {
-    fail("Practice path must be normalized");
-  }
+  if (declaredPath.length === 0 || declaredPath.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) fail("Practice path must be normalized");
   const practicePath = pathInside(practiceRoot, declaredPath, "Practice path");
   const relativePath = relative(practiceRoot, practicePath).replaceAll("\\", "/");
   const matched = metadata.cards.filter((card) => card.path === relativePath);
@@ -144,72 +152,101 @@ function metadataCard(metadata: PracticeMetadata, reference: PracticeReference, 
   return matched[0];
 }
 
-function validateLengthCalibration(metadata: PracticeMetadata, oracle: PracticeCardMetadata, irrelevant: PracticeCardMetadata): IrrelevantPracticeCalibration {
-  const actual = Math.abs(oracle.rendered_characters - irrelevant.rendered_characters) / oracle.rendered_characters;
+function sha256(bytes: ArrayBuffer): Promise<string> {
+  return crypto.subtle.digest("SHA-256", bytes).then((digest) => [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join(""));
+}
+
+export function measurePracticeCardV1(bytes: ArrayBuffer): number {
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    fail("Practice card must be valid UTF-8");
+  }
+  return [...text].length;
+}
+
+async function inspectPractice(candidatePath: string, practiceRoot: string, reference: PracticeReference, metadata: PracticeCardMetadata): Promise<VerifiedPractice> {
+  const path = pathInside(candidatePath, reference.path, "Practice path");
+  if (relative(practiceRoot, path).startsWith("..")) fail("Practice path must be inside private/practices");
+  const stat = await lstat(path).catch(() => undefined);
+  if (!stat || !stat.isFile() || stat.isSymbolicLink()) fail(`Practice card is not a regular file: ${metadata.id}/${metadata.version}`);
+  const bytes = await Bun.file(path).arrayBuffer();
+  const actualHash = await sha256(bytes);
+  if (actualHash !== reference.sha256) fail(`Practice hash does not match: ${metadata.id}/${metadata.version}`);
+  const renderedCharacters = measurePracticeCardV1(bytes);
+  if (renderedCharacters !== metadata.rendered_characters) fail(`metadata rendered_characters disagrees with Practice card: ${metadata.id}/${metadata.version}`);
+  return { card: { id: metadata.id, version: metadata.version, sha256: actualHash }, path, renderedCharacters };
+}
+
+function validateLengthCalibration(metadata: PracticeMetadata, oracle: VerifiedPractice, irrelevant: VerifiedPractice): IrrelevantPracticeCalibration {
+  const actual = Math.abs(oracle.renderedCharacters - irrelevant.renderedCharacters) / oracle.renderedCharacters;
   if (Math.abs(actual - metadata.comparison.actual_relative_difference) > 0.000001) fail("metadata comparison actual_relative_difference disagrees with card lengths");
   if (actual > metadata.comparison.maximum_relative_difference) fail("irrelevant Practice exceeds its declared maximum relative difference");
   return {
     length_metric: metadata.length_metric,
-    oracle_characters: oracle.rendered_characters,
-    irrelevant_characters: irrelevant.rendered_characters,
+    oracle_characters: oracle.renderedCharacters,
+    irrelevant_characters: irrelevant.renderedCharacters,
     maximum_relative_difference: metadata.comparison.maximum_relative_difference,
     actual_relative_difference: metadata.comparison.actual_relative_difference,
     independently_reviewed: metadata.comparison.independently_reviewed,
   };
 }
 
-async function resolvePractice(candidatePath: string, practiceRoot: string, reference: PracticeReference, card: PracticeCardMetadata): Promise<ResolvedPractice> {
-  const path = pathInside(candidatePath, reference.path, "Practice path");
-  if (relative(practiceRoot, path).startsWith("..")) fail("Practice path must be inside private/practices");
-  const stat = await lstat(path).catch(() => undefined);
-  if (!stat || !stat.isFile() || stat.isSymbolicLink()) fail(`Practice card is not a regular file: ${card.id}/${card.version}`);
-  const actualHash = await sha256File(path);
-  if (actualHash !== reference.sha256) fail(`Practice hash does not match: ${card.id}/${card.version}`);
-  return { id: card.id, version: card.version, sha256: actualHash, text: await Bun.file(path).text() };
-}
-
-export async function resolveInjectionCalibration(candidatePath: string): Promise<ResolvedInjectionCalibration> {
+async function inspectInjectionCalibration(candidatePath: string): Promise<PrivateResolvedProfile> {
   const resolvedCandidate = resolve(candidatePath);
   const privateRoot = resolve(resolvedCandidate, "private");
   const practiceRoot = resolve(privateRoot, "practices");
-  const profile = parseProfile(await readYaml(join(privateRoot, "conditions.yaml"), "private/conditions.yaml"));
+  const declaration = parseProfile(await readYaml(join(privateRoot, "conditions.yaml"), "private/conditions.yaml"));
   const metadata = parseMetadata(await readYaml(join(practiceRoot, "metadata.yaml"), "private/practices/metadata.yaml"));
-  const oracleReference = profile.conditions.find((condition) => condition.id === "oracle-practice")!.practice as PracticeReference;
-  const irrelevantReference = profile.conditions.find((condition) => condition.id === "irrelevant-practice")!.practice as PracticeReference;
-  const oracleCard = metadataCard(metadata, oracleReference, practiceRoot);
-  const irrelevantCard = metadataCard(metadata, irrelevantReference, practiceRoot);
-  if (oracleCard.path === irrelevantCard.path) fail("oracle-practice and irrelevant-practice must reference different cards");
+  const oracleReference = declaration.conditions.find((condition) => condition.id === "oracle-practice")!.practice as PracticeReference;
+  const irrelevantReference = declaration.conditions.find((condition) => condition.id === "irrelevant-practice")!.practice as PracticeReference;
+  const oracleMetadata = metadataCard(metadata, oracleReference, practiceRoot);
+  const irrelevantMetadata = metadataCard(metadata, irrelevantReference, practiceRoot);
+  if (oracleMetadata.path === irrelevantMetadata.path) fail("oracle-practice and irrelevant-practice must reference different cards");
   const [oracle, irrelevant] = await Promise.all([
-    resolvePractice(resolvedCandidate, practiceRoot, oracleReference, oracleCard),
-    resolvePractice(resolvedCandidate, practiceRoot, irrelevantReference, irrelevantCard),
+    inspectPractice(resolvedCandidate, practiceRoot, oracleReference, oracleMetadata),
+    inspectPractice(resolvedCandidate, practiceRoot, irrelevantReference, irrelevantMetadata),
   ]);
-  const calibration = validateLengthCalibration(metadata, oracleCard, irrelevantCard);
+  const calibration = validateLengthCalibration(metadata, oracle, irrelevant);
   const profileInput = {
     conditions: [
       { id: "baseline", status: "declared", channel: "none" },
-      { id: "oracle-practice", status: "declared", channel: oracleReference.injection_channel, id_ref: oracle.id, version: oracle.version, sha256: oracle.sha256 },
-      { id: "irrelevant-practice", status: "declared", channel: irrelevantReference.injection_channel, id_ref: irrelevant.id, version: irrelevant.version, sha256: irrelevant.sha256 },
+      { id: "oracle-practice", status: "declared", channel: oracleReference.injection_channel, practice_id: oracle.card.id, practice_version: oracle.card.version, practice_sha256: oracle.card.sha256 },
+      { id: "irrelevant-practice", status: "declared", channel: irrelevantReference.injection_channel, practice_id: irrelevant.card.id, practice_version: irrelevant.card.version, practice_sha256: irrelevant.card.sha256 },
       { id: "lorelum-retrieval", status: "unavailable", channel: "none" },
     ],
     calibration,
-    decision_rule: profile.decision_rule,
+    decision_rule: declaration.decision_rule,
   };
   const profileInputHash = await sha256Text(JSON.stringify(profileInput));
   return {
-    conditions: {
-      baseline: { condition_id: "baseline", channel: "none" },
-      "oracle-practice": { condition_id: "oracle-practice", channel: "condition-scoped-private-runtime", practice: oracle },
-      "irrelevant-practice": { condition_id: "irrelevant-practice", channel: "condition-scoped-private-runtime", practice: irrelevant },
-      "lorelum-retrieval": { condition_id: "lorelum-retrieval", channel: "none" },
+    profile: {
+      conditions: {
+        baseline: { condition_id: "baseline", channel: "none" },
+        "oracle-practice": { condition_id: "oracle-practice", channel: "condition-scoped-private-runtime", practice: oracle.card },
+        "irrelevant-practice": { condition_id: "irrelevant-practice", channel: "condition-scoped-private-runtime", practice: irrelevant.card },
+        "lorelum-retrieval": { condition_id: "lorelum-retrieval", channel: "none" },
+      },
+      calibration,
+      decision_rule: declaration.decision_rule,
+      profile_input_hash: profileInputHash,
     },
-    calibration,
-    decision_rule: profile.decision_rule,
-    profile_input_hash: profileInputHash,
+    practices: { "oracle-practice": oracle, "irrelevant-practice": irrelevant },
   };
 }
 
-export function practicePayload(profile: ResolvedInjectionCalibration, conditionId: InjectionConditionId): PracticePayload {
-  return profile.conditions[conditionId];
+export async function resolveInjectionCalibration(candidatePath: string): Promise<ResolvedInjectionCalibration> {
+  return (await inspectInjectionCalibration(candidatePath)).profile;
+}
+
+export async function resolvePracticePayload(candidatePath: string, profile: ResolvedInjectionCalibration, conditionId: InjectionConditionId): Promise<PracticePayload> {
+  const inspected = await inspectInjectionCalibration(candidatePath);
+  if (inspected.profile.profile_input_hash !== profile.profile_input_hash) fail("profile input changed after resolution");
+  const condition = inspected.profile.conditions[conditionId];
+  const practice = inspected.practices[conditionId];
+  if (!practice) return condition;
+  return { ...condition, practice: { ...practice.card, text: await Bun.file(practice.path).text() } };
 }
 
 export function redactedInjectionTrace(profile: ResolvedInjectionCalibration, payload: PracticePayload): RedactedInjectionTrace {
