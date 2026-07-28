@@ -31,6 +31,8 @@ async function readKernelDeclaration(candidatePath: string): Promise<KernelDecla
   return { core: "v1", profile: k.profile, materializer_kind: k.materializer_kind };
 }
 
+const calibrationCandidatePathToken = "{{candidate_path}}";
+
 async function readCalibrationRoles(candidatePath: string): Promise<CalibrationRole[]> {
   const manifestPath = join(candidatePath, "private", "candidate.yaml");
   const file = Bun.file(manifestPath);
@@ -41,7 +43,11 @@ async function readCalibrationRoles(candidatePath: string): Promise<CalibrationR
     if (!Array.isArray(role.command) || !role.command.every((part) => typeof part === "string")) {
       throw new Error(`Calibration role command must be a string array: ${String(role.id)}`);
     }
-    return { id: String(role.id), command: role.command, expect: parseExpectation(role.expect) };
+    return {
+      id: String(role.id),
+      command: role.command.map((part) => part.replaceAll(calibrationCandidatePathToken, candidatePath)),
+      expect: parseExpectation(role.expect),
+    };
   });
 }
 
