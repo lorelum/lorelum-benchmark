@@ -13,6 +13,7 @@ test("加载资料并保存显示名", async ({ page }) => {
 test("校验显示名、显示冲突且保存期间只发起一次请求", async ({ page }) => {
   await page.goto("/");
   const name = page.getByLabel("显示名");
+  await expect(name).toHaveValue("Ari");
   await name.fill("");
   await page.getByRole("button", { name: "保存" }).click();
   await expect(page.getByRole("alert")).toHaveText("显示名不能为空");
