@@ -49,49 +49,47 @@ and it must not rewrite existing immutable registry bases or calibration sets.
 
 ## Decisions
 
-> 待规划澄清确认后填充。以下为初版候选设计，需经需求方确认后写回 Issue #109、
-> 本 design 与 `tasks.md`，再开始实现。
+以下为规划澄清阶段确认的结论，已固定为本 change 的设计约束。
 
-### Port ownership and allocation
+### #108 依赖策略
 
-The kernel calibration runtime (the `calibrate` path) owns port allocation per
-invocation. Allocation binds an ephemeral TCP port atomically (open a listening
-socket, read its assigned port, and hold the socket until the calibration role
-releases it) so there is no discover-then-bind TOCTOU window. The allocator
-rejects explicit invalid or out-of-range values and never reuses a held port
-within one runtime. Allocation failure fails closed before any role runs.
+PR #108（overlay resolver、private staging 与 `calibration_sets_hash`）已合并进
+`origin/main`（commit `51e2681`）。本 change 直接基于最新 `origin/main` 实现，不复制
+或重建 overlay 机制。materializer、isolate、driver、evaluator 与 snapshot 继续沿用 #106
+的共享合成 fixture resolver 与身份边界，不分叉。
 
-### Injection contract
+### Port ownership and allocation（端口所有权与分配，防 TOCTOU）
 
-The kernel injects the private base URL (and, where needed, the port) into the
-calibration role's private runtime environment. Playwright and Vite both read
-the same private contract value: Playwright uses an external `baseURL` and
-disables its `webServer` (no fixed port), while Vite binds the dev server to the
-held port. Consumers that do not observe the injected value, or that fall back
-to a fixed port, cause the role to fail closed.
+由 kernel `calibrate` 路径为每个 calibration role invocation 原子绑定一个监听套接字
+（listening socket）并读取其分配的临时端口，持有该套接字直到 role 完成。绑定与读取在同
+一步完成，不存在"先探测空闲端口再重新绑定"的 TOCTOU 窗口。同运行时不复用已持有端口；
+分配失败、非法值或越界端口均在调用任何 role 之前 fail closed。
 
-### Failure and timeout semantics
+### Injection contract（注入契约）
 
-Allocation failure, an invalid value, a service that does not become ready, or
-a timeout all fail the role with a private diagnostic. Released ports are
-verified free; double-release or release of an unheld port fails closed. No
-partial calibration result is treated as valid.
+kernel 向 calibration role 的私有 runtime 环境注入私有 base URL
+（`http://127.0.0.1:<port>`）。Playwright 使用来自环境变量的外部 `baseURL` 并禁用固定
+`webServer`（不启动固定端口服务）；Vite dev server 绑定到同一持有端口。两个消费者从同一
+注入值派生各自的配置。消费者未观测到注入值、或回退到固定 `4173` 端口时，role fail
+closed 且不产生有效校准结论。
 
-### Migration strategy
+### Failure, timeout and release semantics（失败、超时与释放语义）
 
-A new immutable registry base version carries the port-aware fixture
-configuration; existing base/source versions remain unchanged. The two #97
-candidates add a `quality-probe/v2` calibration set rather than rewriting
-`quality-probe/v1`. Snapshots are regenerated for the new set identity; the old
-set source and identity remain reproducible.
+服务未就绪、超时、分配失败、重复释放已持有端口或释放未持有端口均使 role fail closed
+并保留私有诊断；释放的端口经验证为空闲；不产生部分有效的校准结论。私有诊断只在
+calibration 进程内输出，不进入公开产物。
 
-### #108 dependency
+### Migration strategy（迁移策略）
 
-#106/PR #108 (the overlay resolver, private staging, and `calibration_sets_hash`)
-is a prerequisite. If #108 is unmerged at implementation time, the dependency
-strategy is confirmed in planning clarification (wait for merge, base on its
-branch, or another traceable approach); #109 must not copy or rebuild the
-overlay mechanism.
+创建新的 immutable registry base 版本（`app-shell/v2`）承载端口感知的
+`playwright.config.ts`/`vite.config.ts`；现有 base/source 版本（`app-shell/v1`）保持
+不变。两个 #97 candidate 新增 `quality-probe/v2` calibration set，旧 `quality-probe/v1`
+不被改写；为新 set 重建并复核 snapshot 身份，旧 set 源码与身份从提交历史保持可复现。
+
+### Concurrent integration test（并发 integration test）
+
+至少两个 candidate/fixture 同时运行，验证无 `EADDRINUSE`、无跨 invocation 串扰、并行
+结果与串行基线一致。snapshot 更新为新 set 身份；旧 set 身份不被改写。
 
 ## Risks / Trade-offs
 
@@ -112,14 +110,14 @@ overlay mechanism.
 1. Complete strict OpenSpec validation and create this change's OpenSpec-only
    PR.
 2. Record the confirmed allocation, injection, failure, migration, and #108
-   dependency decisions in Issue #109, this design and `tasks.md`.
+   dependency decisions in this design and `tasks.md`.
 3. Implement the port allocator, injection contract, and fail-closed tests
    before changing any candidate source.
 4. Add the port-aware base version and `quality-probe/v2` sets for the two #97
    candidates; regenerate and verify snapshots without changing public
    behavior, Practice, source pin, or quality gates.
 5. Add a concurrent integration test asserting no `EADDRINUSE`, stable results,
-  and serial-baseline equivalence.
+   and serial-baseline equivalence.
 
 ## Confirmed Evolution Model
 
