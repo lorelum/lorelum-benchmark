@@ -90,6 +90,59 @@ test("isolate rejects private path leakage into materialized workspace", async (
   }
 });
 
+test("isolate permits public-equivalent calibration files and rejects private-only content", async () => {
+  const candidate = await makeTempWorkspace();
+  const workspace = await makeTempWorkspace();
+  try {
+    const publicRoot = join(candidate, "public");
+    const privateRoot = join(candidate, "private");
+    await mkdir(join(publicRoot, "starter", "src"), { recursive: true });
+    await mkdir(join(privateRoot, "calibration", "reference", "src"), { recursive: true });
+    await mkdir(join(privateRoot, "practices"), { recursive: true });
+    await mkdir(join(privateRoot, "evaluator"), { recursive: true });
+    await mkdir(join(workspace, "starter", "src"), { recursive: true });
+    await writeFile(join(publicRoot, "starter", "src", "shared.ts"), "export const shared = true;\n");
+    await writeFile(join(privateRoot, "calibration", "reference", "src", "shared.ts"), "export const shared = true;\n");
+    await writeFile(join(workspace, "starter", "src", "shared.ts"), "export const shared = true;\n");
+
+    const withoutPublicSource = await isolate({ workspacePath: workspace, privatePaths: [privateRoot] });
+    expect(withoutPublicSource.passed).toBe(false);
+    expect(withoutPublicSource.leaked.map(norm)).toContain("starter/src/shared.ts");
+
+    await expect(isolate({ workspacePath: workspace, privatePaths: [privateRoot], publicSourcePaths: [workspace] })).rejects.toThrow("must be independent");
+
+    const cleanAudit = await isolate({ workspacePath: workspace, privatePaths: [privateRoot], publicSourcePaths: [publicRoot] });
+    expect(cleanAudit.passed).toBe(true);
+
+    await writeFile(join(privateRoot, "oracle.yaml"), "export const shared = true;\n");
+    const mixedHashAudit = await isolate({ workspacePath: workspace, privatePaths: [privateRoot], publicSourcePaths: [publicRoot] });
+    expect(mixedHashAudit.passed).toBe(false);
+    expect(mixedHashAudit.leaked.map(norm)).toContain("starter/src/shared.ts");
+
+    await writeFile(join(privateRoot, "conditions.yaml"), "condition-secret\n");
+    await writeFile(join(privateRoot, "oracle.yaml"), "oracle-secret\n");
+    await writeFile(join(privateRoot, "practices", "card.md"), "practice-secret\n");
+    await writeFile(join(privateRoot, "evaluator", "check.ts"), "evaluator-secret\n");
+    await writeFile(join(privateRoot, "calibration", "reference", "private-only.ts"), "calibration-secret\n");
+    await mkdir(join(workspace, "copied"), { recursive: true });
+    const leakedFiles = [
+      ["conditions-copy.ts", "condition-secret\n"],
+      ["oracle-copy.ts", "oracle-secret\n"],
+      ["practice-copy.ts", "practice-secret\n"],
+      ["evaluator-copy.ts", "evaluator-secret\n"],
+      ["calibration-copy.ts", "calibration-secret\n"],
+    ];
+    for (const [file, content] of leakedFiles) await writeFile(join(workspace, "copied", file), content);
+
+    const leakedAudit = await isolate({ workspacePath: workspace, privatePaths: [privateRoot], publicSourcePaths: [publicRoot] });
+    expect(leakedAudit.passed).toBe(false);
+    expect(leakedAudit.leaked.map(norm)).toEqual(leakedFiles.map(([file]) => `copied/${file}`).sort());
+  } finally {
+    await rm(candidate, { force: true, recursive: true });
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
 test("hash produces stable resolved hashes that change on source change", async () => {
   const output = await makeTempWorkspace();
   try {

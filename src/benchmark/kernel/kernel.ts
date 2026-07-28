@@ -70,7 +70,7 @@ try {
       break;
     }
     case "isolate": {
-      const result = await isolate({ workspacePath: outputPath, privatePaths: [join(candidatePath, "private")] });
+      const result = await isolate({ workspacePath: outputPath, privatePaths: [join(candidatePath, "private")], publicSourcePaths: [join(candidatePath, "public")] });
       console.log(JSON.stringify(result, null, 2));
       break;
     }

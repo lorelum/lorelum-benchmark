@@ -20,10 +20,10 @@ as evidence of public equivalence.
 
 ### Requirement: Isolation remains fail-closed for private boundary indicators
 The isolation audit MUST continue to report workspace files with a `private`
-path segment or a basename found anywhere in the supplied private paths,
-regardless of calibration equivalence. Every private file outside
-`private/calibration/` MUST continue to participate in content-hash leakage
-detection.
+path segment or a basename found in supplied private material outside
+`private/calibration/`, regardless of calibration equivalence. Every private
+file outside `private/calibration/` MUST continue to participate in content-hash
+leakage detection.
 
 #### Scenario: Private oracle is copied to the workspace
 - **WHEN** an oracle, evaluator, conditions file, or Practice card from a

@@ -28,8 +28,8 @@ export async function materialize(input: MaterializeInput): Promise<Materializat
 
 export async function isolate(input: IsolateInput): Promise<IsolationAudit> {
   const workspacePath = resolve(input.workspacePath);
-  const privateFiles = new Map<string, string>();
-  const privateNames = new Set<string>();
+  const privateHashes = new Map<string, boolean>();
+  const sensitivePrivateNames = new Set<string>();
   for (const privatePath of input.privatePaths) {
     const resolvedPrivatePath = resolve(privatePath);
     if (!isAbsolute(privatePath) || resolvedPrivatePath === workspacePath || resolvedPrivatePath.startsWith(`${workspacePath}${"/"}`) || resolvedPrivatePath.startsWith(`${workspacePath}${"\\"}`)) {
@@ -41,29 +41,71 @@ export async function isolate(input: IsolateInput): Promise<IsolationAudit> {
     if (stat.isDirectory()) {
       for (const file of await listFiles(resolvedPrivatePath)) {
         const sourcePath = join(resolvedPrivatePath, file);
-        privateNames.add(basename(file));
-        privateFiles.set(file.replaceAll("\\", "/"), await sha256File(sourcePath));
+        const isCalibration = isPrivateCalibrationFile(sourcePath);
+        if (!isCalibration) sensitivePrivateNames.add(basename(file));
+        addPrivateHash(privateHashes, await sha256File(sourcePath), isCalibration);
       }
     } else {
-      privateNames.add(basename(resolvedPrivatePath));
-      privateFiles.set(basename(resolvedPrivatePath), await sha256File(resolvedPrivatePath));
+      const isCalibration = isPrivateCalibrationFile(resolvedPrivatePath);
+      if (!isCalibration) sensitivePrivateNames.add(basename(resolvedPrivatePath));
+      addPrivateHash(privateHashes, await sha256File(resolvedPrivatePath), isCalibration);
     }
   }
+
+  const publicHashes = await collectPublicHashes(input.publicSourcePaths ?? [], workspacePath);
+  const protectedPrivateHashes = new Set(
+    [...privateHashes].filter(([hash, calibrationOnly]) => !calibrationOnly || !publicHashes.has(hash)).map(([hash]) => hash),
+  );
 
   const leaked = new Set<string>();
   const workspaceFiles = await listFiles(input.workspacePath);
   for (const file of workspaceFiles) {
     const normalized = file.replaceAll("\\", "/");
-    if (normalized.split("/").includes("private") || privateNames.has(basename(normalized))) {
+    if (normalized.split("/").includes("private") || sensitivePrivateNames.has(basename(normalized))) {
       leaked.add(file);
       continue;
     }
     const workspaceHash = await sha256File(join(input.workspacePath, file));
-    if ([...privateFiles.values()].includes(workspaceHash)) {
+    if (protectedPrivateHashes.has(workspaceHash)) {
       leaked.add(file);
     }
   }
   return { leaked: [...leaked].sort(), passed: leaked.size === 0 };
+}
+
+function addPrivateHash(privateHashes: Map<string, boolean>, hash: string, isCalibration: boolean): void {
+  privateHashes.set(hash, (privateHashes.get(hash) ?? true) && isCalibration);
+}
+
+async function collectPublicHashes(publicSourcePaths: string[], workspacePath: string): Promise<Set<string>> {
+  const hashes = new Set<string>();
+  for (const publicSourcePath of publicSourcePaths) {
+    if (!isAbsolute(publicSourcePath)) throw new Error(`Public source path must be absolute: ${publicSourcePath}`);
+    const resolvedPublicPath = resolve(publicSourcePath);
+    if (pathsOverlap(workspacePath, resolvedPublicPath)) throw new Error(`Public source path must be independent from the materialized workspace: ${publicSourcePath}`);
+    const stat = await lstat(resolvedPublicPath).catch(() => null);
+    if (!stat?.isDirectory() || stat.isSymbolicLink()) throw new Error(`Public source path must be a directory: ${publicSourcePath}`);
+    for (const file of await listFiles(resolvedPublicPath)) {
+      const sourcePath = join(resolvedPublicPath, file);
+      if ((await lstat(sourcePath)).isSymbolicLink()) throw new Error(`Public source file cannot be a symbolic link: ${sourcePath}`);
+      hashes.add(await sha256File(sourcePath));
+    }
+  }
+  return hashes;
+}
+
+function isPrivateCalibrationFile(path: string): boolean {
+  const segments = resolve(path).replaceAll("\\", "/").toLowerCase().split("/");
+  return segments.some((segment, index) => segment === "private" && segments[index + 1] === "calibration");
+}
+
+function pathsOverlap(first: string, second: string): boolean {
+  return isPathWithin(first, second) || isPathWithin(second, first);
+}
+
+function isPathWithin(root: string, candidate: string): boolean {
+  const pathRelative = relative(resolve(root), resolve(candidate));
+  return pathRelative === "" || (!pathRelative.startsWith(`..${"/"}`) && !pathRelative.startsWith(`..${"\\"}`) && pathRelative !== ".." && !isAbsolute(pathRelative));
 }
 
 export async function hash(input: HashInput): Promise<ResolvedHashes> {

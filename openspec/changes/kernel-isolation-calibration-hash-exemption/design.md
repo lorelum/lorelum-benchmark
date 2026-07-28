@@ -12,6 +12,11 @@ segments, sensitive filenames, and files whose content exists only in private
 material. This change resolves #104 and is independent of #89 candidate
 definition, snapshots, Practice injection, and execution.
 
+The requestor confirmed on 2026-07-28 that the scope is isolation-audit-only:
+Practice, task behavior, baseline treatment, candidate source, semantic and
+quality acceptance, starter, model, prompt, budget, and blind-review boundaries
+remain unchanged.
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -53,10 +58,10 @@ Alternatives considered:
 
 ### Preserve fail-closed checks before the hash exemption
 
-Path segments named `private` and any basename appearing in the complete private
-tree remain immediate leakage findings. The exemption applies only to the
-content-hash comparison after those checks, so a copied `oracle.yaml` cannot be
-made safe merely by duplicating it in calibration.
+Path segments named `private` and basenames from private material outside
+`private/calibration/` remain immediate leakage findings. The exemption applies
+only to the content-hash comparison after those checks, so a copied
+`oracle.yaml` cannot be made safe merely by duplicating it in calibration.
 
 ### Make omitted public roots fail closed
 
@@ -89,5 +94,5 @@ targeted private-file audits and avoids silently weakening existing callers.
 
 ## Open Questions
 
-None. Issue #104 fixes the boundary without changing Practice, task behavior,
-or model execution parameters.
+None. The planning confirmation fixes the boundary without changing Practice,
+task behavior, or model execution parameters.
