@@ -31,3 +31,35 @@ sets:
       reference: reference-tree
       equivalent: equivalent-tree
       anti-pattern: anti-pattern-tree
+
+  - id: quality-probe
+    version: v2
+    trees:
+      shared-react-vite:
+        base:
+          ref: incubator/calibration-bases/injection-calibration/v1/react-vite/app-shell/v2/source
+          sha256: 708117356f32ebca9377e5a5bb0101e81619f00b72b8cf9e0cf05ad7862ab300
+      candidate-foundation:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/candidate
+          sha256: 9cfb8a1092b7acbcc3901232d3ab66feee3bdb4546774a2b60609eabdab7e438
+      reference-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/reference
+          sha256: 67e7fb4476b9c977b36801f183e37a3354897692048e20f1b0df29e49cc9bef5
+      equivalent-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/equivalent
+          sha256: d0b38a96adc8f79c0be8e05758eafc9bc7b4117d862ac3f2b65413070f94cd50
+      anti-pattern-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/anti-pattern
+          sha256: 6b849093dcb7fcf9f04013e70556e0012a60dba3d76df32e3ca514bd6c0c958d
+    fixtures:
+      reference: reference-tree
+      equivalent: equivalent-tree
+      anti-pattern: anti-pattern-tree

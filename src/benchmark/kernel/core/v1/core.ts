@@ -128,8 +128,7 @@ export async function hash(input: HashInput): Promise<ResolvedHashes> {
 export async function calibrate(input: CalibrateInput): Promise<CalibrateResult[]> {
   const results: CalibrateResult[] = [];
   for (const role of input.roles) {
-    const result = await runRole(input.workspacePath, role, input.environment);
-    results.push(result);
+    results.push(await runRole(input.workspacePath, role, input.environment));
   }
   return results;
 }

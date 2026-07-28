@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { calibrate, copySourceExcludingGenerated, hash, isolate, materialize, registerMaterializer } from "./core/v1/core";
 import { materializeReactVite, reactViteKind } from "./materializers";
 import { sha256Directory, listFiles } from "../fs";
@@ -303,4 +303,67 @@ test("frozen task immutability: core hash is deterministic for unchanged source"
   const h1 = await sha256Directory(coreDir);
   const h2 = await sha256Directory(coreDir);
   expect(h1).toBe(h2);
+});
+
+
+test("concurrent calibrate invocations start distinct Vite servers without EADDRINUSE", async () => {
+  const output = await makeTempWorkspace();
+  try {
+    await materialize({
+      candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
+      publicStarterPath: join(fixturePath, "public", "starter"),
+      outputPath: output,
+      materializerKind: "react-vite",
+    });
+    const appPath = resolve(import.meta.dir, "..", "..", "..", "incubator", "practice-injection", "profile-update-command-boundary-v1", "public", "starter", "app");
+    const fileA = join(output, "port-a.txt");
+    const fileB = join(output, "port-b.txt");
+    const viteModulePath = join(appPath, "node_modules", "vite", "dist", "node", "index.js");
+    const roleScript = (file: string) => `
+      const { writeFileSync } = require("node:fs");
+      const { pathToFileURL } = require("node:url");
+      const { createServer: createHttpServer } = require("node:http");
+      const vite = await import(pathToFileURL(${JSON.stringify(viteModulePath)}).href);
+      const httpServer = createHttpServer();
+      const server = await vite.createServer({ root: ${JSON.stringify(appPath)}, server: { host: "127.0.0.1", hmr: false, middlewareMode: { server: httpServer } } });
+      httpServer.on("request", server.middlewares);
+      try {
+        await new Promise((resolve, reject) => { httpServer.once("error", reject); httpServer.listen(0, "127.0.0.1", resolve); });
+        const address = httpServer.address();
+        if (!address || typeof address === "string") throw new Error("Vite did not expose a TCP port");
+        const baseUrl = "http://127.0.0.1:" + address.port;
+        const response = await fetch(baseUrl, { signal: AbortSignal.timeout(10_000) });
+        if (!response.ok) throw new Error("Vite readiness check failed: " + response.status);
+        writeFileSync(${JSON.stringify(file)}, baseUrl);
+      } finally {
+        await server.close();
+        if (httpServer.listening) await new Promise((resolve, reject) => httpServer.close((error) => error ? reject(error) : resolve()));
+      }
+    `;
+    const runOne = (file: string) =>
+      calibrate({
+        workspacePath: output,
+        roles: [
+          {
+            id: "vite-port-zero",
+            command: [process.execPath, "-e", roleScript(file)],
+            expect: { kind: "pass" },
+          },
+        ],
+      });
+    const [resA, resB] = await Promise.all([runOne(fileA), runOne(fileB)]);
+    if (!resA[0].passed || !resB[0].passed) {
+      throw new Error(`Vite calibration role failed: ${resA[0].output ?? ""}${resB[0].output ?? ""}`);
+    }
+    expect(resA[0].passed).toBe(true);
+    expect(resB[0].passed).toBe(true);
+    const urlA = await Bun.file(fileA).text();
+    const urlB = await Bun.file(fileB).text();
+    expect(urlA).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    expect(urlB).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    expect(urlA).not.toBe(urlB);
+  } finally {
+    await rm(output, { force: true, recursive: true });
+  }
 });
