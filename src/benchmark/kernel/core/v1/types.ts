@@ -68,6 +68,7 @@ export type MaterializeFn = (input: MaterializeInput) => Promise<Materialization
 
 export type MaterializeInput = {
   candidatePath: string;
+  publicTaskPath: string;
   publicStarterPath: string;
   outputPath: string;
   materializerKind: MaterializerKind;
@@ -87,6 +88,7 @@ export type HashFn = (input: HashInput) => Promise<ResolvedHashes>;
 export type HashInput = {
   candidatePath: string;
   declarationPath: string;
+  publicTaskPath: string;
   publicStarterPath: string;
   coreVersion: string;
   coreHash: string;
@@ -110,7 +112,7 @@ export type Materializer = {
 };
 
 /** Generated-output directory names excluded from snapshots and repo starters. */
-export const GENERATED_OUTPUT_DIRS = ["node_modules", "dist", "test-results", "playwright-report", ".vite"] as const;
+export const GENERATED_OUTPUT_DIRS = ["node_modules", "dist", "test-results", "playwright-report", ".vite", ".materialized", ".run-workspaces", "logs"] as const;
 
 /** Returns true if a relative path segment list enters a generated-output dir. */
 export function isGeneratedOutput(segments: string[]): boolean {

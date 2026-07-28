@@ -51,7 +51,9 @@ materializing or snapshotting.
 3. Declare calibration roles as command argument arrays and expected outcomes.
    The commands remain candidate-owned; the core only invokes them and compares
    exit status with the declaration.
-4. Materialize, audit, hash, and calibrate the candidate:
+4. Materialize to a fresh or empty directory outside the candidate root, then
+   audit, hash, and calibrate it. The kernel never clears a caller-provided
+   directory:
 
 ```text
 bun run src/benchmark/kernel/kernel.ts materialize <candidate> --output <workspace>

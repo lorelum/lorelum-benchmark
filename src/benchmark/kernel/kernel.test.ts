@@ -21,6 +21,7 @@ test("materialize copies starter source excluding generated output", async () =>
   try {
     const result = await materialize({
       candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
       publicStarterPath: join(fixturePath, "public", "starter"),
       outputPath: output,
       materializerKind: "react-vite",
@@ -28,8 +29,9 @@ test("materialize copies starter source excluding generated output", async () =>
     expect(result.workspacePath).toBe(output);
     expect(result.installCommand).toBe("bun install");
     const files = (await listFiles(join(output, "public"))).map(norm);
-    expect(files).toContain("package.json");
-    expect(files).toContain("src/index.ts");
+    expect(files).toContain("task.md");
+    expect(files).toContain("starter/package.json");
+    expect(files).toContain("starter/src/index.ts");
     expect(files.every((f) => !f.includes("node_modules"))).toBe(true);
     expect(files.every((f) => !f.includes("dist"))).toBe(true);
   } finally {
@@ -37,11 +39,38 @@ test("materialize copies starter source excluding generated output", async () =>
   }
 });
 
+test("materialize refuses nonempty destinations and candidate-owned destinations", async () => {
+  const output = await makeTempWorkspace();
+  try {
+    const sentinel = join(output, "keep.txt");
+    await writeFile(sentinel, "must survive");
+    const input = {
+      candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
+      publicStarterPath: join(fixturePath, "public", "starter"),
+      materializerKind: "react-vite",
+    } as const;
+    await expect(materialize({ ...input, outputPath: output })).rejects.toThrow("must be empty");
+    expect(await Bun.file(sentinel).text()).toBe("must survive");
+    await expect(materialize({ ...input, outputPath: fixturePath })).rejects.toThrow("must not be written inside the candidate source");
+  } finally {
+    await rm(output, { force: true, recursive: true });
+  }
+});
+
+test("kernel CLI requires an explicit output workspace", async () => {
+  const kernel = join(import.meta.dir, "kernel.ts");
+  const child = Bun.spawn([process.execPath, "run", kernel, "materialize", fixturePath], { stdout: "pipe", stderr: "pipe" });
+  expect(await child.exited).toBe(1);
+  expect(await new Response(child.stderr).text()).toContain("--output <empty-workspace-path>");
+});
+
 test("isolate rejects private path leakage into materialized workspace", async () => {
   const output = await makeTempWorkspace();
   try {
     await materialize({
       candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
       publicStarterPath: join(fixturePath, "public", "starter"),
       outputPath: output,
       materializerKind: "react-vite",
@@ -67,6 +96,7 @@ test("hash produces stable resolved hashes that change on source change", async 
     await materialize({
       candidatePath: fixturePath,
       declarationPath: join(fixturePath, "private", "candidate.yaml"),
+      publicTaskPath: join(fixturePath, "public", "task.md"),
       publicStarterPath: join(fixturePath, "public", "starter"),
       outputPath: output,
       materializerKind: "react-vite",
@@ -75,6 +105,7 @@ test("hash produces stable resolved hashes that change on source change", async 
     const h1 = await hash({
       candidatePath: fixturePath,
       declarationPath: join(fixturePath, "private", "candidate.yaml"),
+      publicTaskPath: join(fixturePath, "public", "task.md"),
       publicStarterPath: join(fixturePath, "public", "starter"),
       coreVersion: "v1",
       coreHash,
@@ -85,6 +116,7 @@ test("hash produces stable resolved hashes that change on source change", async 
     const h2 = await hash({
       candidatePath: fixturePath,
       declarationPath: join(fixturePath, "private", "candidate.yaml"),
+      publicTaskPath: join(fixturePath, "public", "task.md"),
       publicStarterPath: join(fixturePath, "public", "starter"),
       coreVersion: "v1",
       coreHash,
@@ -95,10 +127,11 @@ test("hash produces stable resolved hashes that change on source change", async 
     expect(h1.inputHash).toBe(h2.inputHash);
     expect(h1.materializedOutputHash).toBe(h2.materializedOutputHash);
 
-    await writeFile(join(output, "public", "src", "index.ts"), "export const meaning = 43;\n");
+    await writeFile(join(output, "public", "starter", "src", "index.ts"), "export const meaning = 43;\n");
     const h3 = await hash({
       candidatePath: fixturePath,
       declarationPath: join(fixturePath, "private", "candidate.yaml"),
+      publicTaskPath: join(fixturePath, "public", "task.md"),
       publicStarterPath: join(fixturePath, "public", "starter"),
       coreVersion: "v1",
       coreHash,
@@ -118,6 +151,7 @@ test("calibrate runs declared roles and compares to expectations", async () => {
   try {
     await materialize({
       candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
       publicStarterPath: join(fixturePath, "public", "starter"),
       outputPath: output,
       materializerKind: "react-vite",
@@ -143,6 +177,7 @@ test("calibrate does not interpret domain meaning of roles", async () => {
   try {
     await materialize({
       candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
       publicStarterPath: join(fixturePath, "public", "starter"),
       outputPath: output,
       materializerKind: "react-vite",
@@ -192,6 +227,7 @@ test("isolate rejects a relative private path to prevent path traversal", async 
   try {
     await materialize({
       candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
       publicStarterPath: join(fixturePath, "public", "starter"),
       outputPath: output,
       materializerKind: "react-vite",

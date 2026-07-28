@@ -10,14 +10,14 @@ const argumentsList = Bun.argv.slice(2);
 const subcommand = argumentsList[0];
 const candidatePath = argumentsList[1] ? resolve(argumentsList[1]) : undefined;
 const outputPathIndex = argumentsList.indexOf("--output");
-const outputPath = outputPathIndex >= 0 ? argumentsList[outputPathIndex + 1] : join(candidatePath, ".materialized");
+const outputPath = outputPathIndex >= 0 && argumentsList[outputPathIndex + 1] ? resolve(argumentsList[outputPathIndex + 1]) : undefined;
 
 function usage(): never {
-  console.error("Usage: kernel <materialize|isolate|hash|calibrate> <candidate-path> [--output <path>]");
+  console.error("Usage: kernel <materialize|isolate|hash|calibrate> <candidate-path> --output <empty-workspace-path>");
   process.exit(1);
 }
 
-if (!subcommand || !candidatePath) usage();
+if (!subcommand || !candidatePath || !outputPath) usage();
 
 async function readKernelDeclaration(candidatePath: string): Promise<KernelDeclaration | null> {
   const manifestPath = join(candidatePath, "private", "candidate.yaml");
@@ -61,10 +61,11 @@ try {
   }
 
   const publicStarterPath = join(candidatePath, "public", "starter");
+  const publicTaskPath = join(candidatePath, "public", "task.md");
 
   switch (subcommand) {
     case "materialize": {
-      const result = await materialize({ candidatePath, publicStarterPath, outputPath, materializerKind: declaration.materializer_kind });
+      const result = await materialize({ candidatePath, publicTaskPath, publicStarterPath, outputPath, materializerKind: declaration.materializer_kind });
       console.log(JSON.stringify(result, null, 2));
       break;
     }
@@ -78,6 +79,7 @@ try {
       const result = await hash({
         candidatePath,
         declarationPath: join(candidatePath, "private", "candidate.yaml"),
+        publicTaskPath,
         publicStarterPath,
         coreVersion: declaration.core,
         coreHash,

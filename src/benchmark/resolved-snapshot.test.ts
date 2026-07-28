@@ -37,6 +37,23 @@ async function createKernelCandidate(workspace: string): Promise<string> {
   return candidate;
 }
 
+async function createKernelTask(workspace: string): Promise<string> {
+  const task = join(workspace, "suites", "kernel-suite", "tasks", "kernel-task", "v1");
+  await mkdir(join(task, "public", "starter", "src"), { recursive: true });
+  await mkdir(join(task, "private"), { recursive: true });
+  await writeFile(join(task, "public", "task.md"), "# Kernel task\n");
+  await writeFile(join(task, "public", "starter", "package.json"), "{}");
+  await writeFile(join(task, "public", "starter", "src", "index.ts"), "export const task = true;\n");
+  await writeFile(join(task, "public", "task.yaml"), [
+    "id: kernel-task-v1",
+    "kernel:",
+    "  core: v1",
+    "  profile: treatment-comparison/v1",
+    "  materializer_kind: react-vite",
+  ].join("\n") + "\n");
+  return task;
+}
+
 test("kernel-backed candidate snapshot includes resolved fields", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "lorelum-resolved-"));
   try {
@@ -55,9 +72,60 @@ test("kernel-backed candidate snapshot includes resolved fields", async () => {
     expect(manifest.files["public/starter/node_modules/pkg/index.js"]).toBeUndefined();
     expect(manifest.files["public/starter/package.json"]).toBeString();
 
+    const materialized = await mkdtemp(join(tmpdir(), "lorelum-materialized-"));
+    try {
+      const kernel = join(repoRoot, "src", "benchmark", "kernel", "kernel.ts");
+      const materializeResult = await Bun.spawn([process.execPath, "run", kernel, "materialize", candidate, "--output", materialized], { stdout: "pipe", stderr: "pipe" }).exited;
+      expect(materializeResult).toBe(0);
+      expect(await Bun.file(join(materialized, "public", "task.md")).text()).toBe("# Kernel test\n");
+      expect(await Bun.file(join(materialized, "public", "starter", "src", "index.ts")).exists()).toBe(true);
+    } finally {
+      await rm(materialized, { force: true, recursive: true });
+    }
+
     const verifyResult = await runSnapshot(workspace, "--incubator", "practice-injection", "kernel-test-candidate-v1");
     expect(verifyResult.exitCode).toBe(0);
     expect(verifyResult.output).toContain("Snapshots are intact.");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("kernel-backed suite task receives a resolved snapshot", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-resolved-task-"));
+  try {
+    const task = await createKernelTask(workspace);
+    const writeResult = await runSnapshot(workspace, "--write", "kernel-suite", "kernel-task/v1");
+    expect(writeResult.exitCode).toBe(0);
+    const manifest = JSON.parse(await Bun.file(join(task, "private", "snapshot.json")).text());
+    expect(manifest.resolved.profile).toBe("treatment-comparison/v1");
+    expect(manifest.resolved.materialized_output_hash).toBeString();
+    const verifyResult = await runSnapshot(workspace, "kernel-suite", "kernel-task/v1");
+    expect(verifyResult.exitCode).toBe(0);
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("malformed or unknown kernel declarations fail snapshot generation", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-invalid-kernel-"));
+  try {
+    const candidate = await createKernelCandidate(workspace);
+    const declaration = join(candidate, "private", "candidate.yaml");
+    await writeFile(declaration, "kernel:\n  core: v2\n  profile: unknown/v1\n  materializer_kind: unknown\n");
+    const coreResult = await runSnapshot(workspace, "--write", "--incubator", "practice-injection", "kernel-test-candidate-v1");
+    expect(coreResult.exitCode).toBe(1);
+    expect(coreResult.output).toContain("Unsupported kernel core");
+
+    await writeFile(declaration, "kernel:\n  core: v1\n  profile: unknown/v1\n  materializer_kind: react-vite\n");
+    const profileResult = await runSnapshot(workspace, "--write", "--incubator", "practice-injection", "kernel-test-candidate-v1");
+    expect(profileResult.exitCode).toBe(1);
+    expect(profileResult.output).toContain("Unsupported kernel profile");
+
+    await writeFile(declaration, "kernel: invalid\n");
+    const malformedResult = await runSnapshot(workspace, "--write", "--incubator", "practice-injection", "kernel-test-candidate-v1");
+    expect(malformedResult.exitCode).toBe(1);
+    expect(malformedResult.output).toContain("Invalid kernel declaration");
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }

@@ -1,3 +1,4 @@
+import { cp, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { copySourceExcludingGenerated } from "../../../core/v1/core";
 import type { MaterializeFn } from "../../../core/v1/types";
@@ -11,7 +12,9 @@ import type { MaterializeFn } from "../../../core/v1/types";
  */
 export const materialize: MaterializeFn = async (input) => {
   const publicPath = join(input.outputPath, "public");
-  await copySourceExcludingGenerated(input.publicStarterPath, publicPath);
+  await mkdir(publicPath);
+  await cp(input.publicTaskPath, join(publicPath, "task.md"));
+  await copySourceExcludingGenerated(input.publicStarterPath, join(publicPath, "starter"));
   return {
     workspacePath: input.outputPath,
     publicPath,

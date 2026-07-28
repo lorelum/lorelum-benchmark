@@ -1,4 +1,4 @@
-import { cp, lstat, mkdir, readdir, rm } from "node:fs/promises";
+import { cp, lstat, mkdir, readdir } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { isGeneratedOutput, type CalibrateInput, type CalibrateResult, type CalibrationRole, type HashInput, type IsolateInput, type IsolationAudit, type MaterializeInput, type MaterializationResult, type Materializer, type ResolvedHashes } from "./types";
 import { listFiles, sha256File, sha256Text } from "../../../fs";
@@ -16,11 +16,14 @@ export function getMaterializer(kind: string): Materializer {
 }
 
 export async function materialize(input: MaterializeInput): Promise<MaterializationResult> {
-  assertPathWithin(join(input.candidatePath, "public"), input.publicStarterPath, "public starter");
-  assertPathOutside(join(input.candidatePath, "public"), input.outputPath, "materialized workspace");
-  assertPathOutside(join(input.candidatePath, "private"), input.outputPath, "materialized workspace");
+  const candidatePath = resolve(input.candidatePath);
+  const outputPath = resolve(input.outputPath);
+  assertPathWithin(join(candidatePath, "public"), input.publicTaskPath, "public task");
+  assertPathWithin(join(candidatePath, "public"), input.publicStarterPath, "public starter");
+  assertPathOutside(candidatePath, outputPath, "materialized workspace");
+  await ensureFreshDirectory(outputPath, "materialized workspace");
   const materializer = getMaterializer(input.materializerKind);
-  return materializer.materialize(input);
+  return materializer.materialize({ ...input, candidatePath, outputPath });
 }
 
 export async function isolate(input: IsolateInput): Promise<IsolationAudit> {
@@ -65,8 +68,9 @@ export async function isolate(input: IsolateInput): Promise<IsolationAudit> {
 
 export async function hash(input: HashInput): Promise<ResolvedHashes> {
   assertPathWithin(input.candidatePath, input.declarationPath, "kernel declaration");
+  assertPathWithin(join(input.candidatePath, "public"), input.publicTaskPath, "public task");
   assertPathWithin(join(input.candidatePath, "public"), input.publicStarterPath, "public starter");
-  const inputHash = await hashDirectoryAndDeclaration(input.publicStarterPath, input.declarationPath);
+  const inputHash = await hashPublicInputAndDeclaration(input.publicTaskPath, input.publicStarterPath, input.declarationPath);
   const materializedOutputHash = await sha256DirectoryExcludingGenerated(join(input.workspacePath, "public"));
   return {
     coreVersion: input.coreVersion,
@@ -109,7 +113,7 @@ function matchesExpectation(exitCode: number, expect: CalibrationRole["expect"])
 }
 
 export async function copySourceExcludingGenerated(src: string, dst: string): Promise<void> {
-  await rm(dst, { force: true, recursive: true });
+  await ensureFreshDirectory(dst, "copy destination");
   await copyDirFiltered(src, dst);
 }
 
@@ -128,10 +132,11 @@ async function copyDirFiltered(src: string, dst: string): Promise<void> {
   }
 }
 
-async function hashDirectoryAndDeclaration(starterPath: string, declarationPath: string): Promise<string> {
+async function hashPublicInputAndDeclaration(taskPath: string, starterPath: string, declarationPath: string): Promise<string> {
   const starterHash = await sha256DirectoryExcludingGenerated(starterPath);
+  const taskHash = await sha256File(taskPath);
   const declarationHash = await sha256File(declarationPath);
-  return sha256Text(`starter\0${starterHash}\ncandidate.yaml\0${declarationHash}`);
+  return sha256Text(`task.md\0${taskHash}\nstarter\0${starterHash}\ndeclaration\0${declarationHash}`);
 }
 
 export async function sha256DirectoryExcludingGenerated(path: string): Promise<string> {
@@ -155,4 +160,14 @@ function assertPathOutside(root: string, candidate: string, label: string): void
   if (pathRelative === "" || (!pathRelative.startsWith(`..${"/"}`) && !pathRelative.startsWith(`..${"\\"}`) && pathRelative !== ".." && !isAbsolute(pathRelative))) {
     throw new Error(`${label} must not be written inside the candidate source: ${candidate}`);
   }
+}
+
+async function ensureFreshDirectory(path: string, label: string): Promise<void> {
+  const stat = await lstat(path).catch(() => null);
+  if (!stat) {
+    await mkdir(path, { recursive: true });
+    return;
+  }
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`${label} must be a new or empty directory: ${path}`);
+  if ((await readdir(path)).length > 0) throw new Error(`${label} must be empty: ${path}`);
 }
