@@ -1,10 +1,10 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "bdfdebbff844afd8c1b54854a508e65fcf3613a15c78325856a3d2033b5b4b49",
+  "snapshot_id": "4049d7f9d91b3402dc580dc7d55ae14c3cea09c8505b5e699cafbb29553e94f4",
   "files": {
     "private/calibration.md": "95a98d164201206360decc6f9f21e00f7537186c321d77065aaab50076ee0f32",
-    "private/calibration/run.ts": "9dd775c0250e09546e22a1b4a77de60509272dbae462a03e4d982647b7ddbe48",
+    "private/calibration/run.ts": "7306ba3b6a2ea0fd58cd0940daff2a7598f0a90b25b04aa5a2ae47bece6c45a0",
     "private/calibration/sets.yaml": "3da52ab4ee9928f74546ee92b1bd3417072f61d23c8f1f655fc29311450720fa",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/LoginPage.tsx": "ad635009135f85f164099eee892270401621f5923fa030b0c7f2ec0cf2dc4708",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/directoryClient.ts": "421d00233f0b6f20e2aafd2701615f139361130a8c2af9cb34d5ebc9c29724d3",
@@ -19,7 +19,7 @@
     "private/conditions.yaml": "fef146682e38e1c4d69614365ff1fe0a19c99274013e066f16cc6c22148bf16f",
     "private/evaluator/evaluate.test.ts": "833f06e6069d4e77d5d8c1f1d2fa0898fbff8384fd19e7564b59bd7cb75e7f50",
     "private/evaluator/evaluate.ts": "546767b41aa29c4435af695430fb76d84bb8f0a72e8fb4798b9f5b6d1f995220",
-    "private/evaluator/verify-resource-state.test.ts": "84b496d20084ecb8653da1b92ae23bd0a1361946436146269c1832052f1716e9",
+    "private/evaluator/verify-resource-state.test.ts": "43ae21bc2d27022b80255d9f092e28bc4e6679487006fc0d44c551dbc2f3b2a5",
     "private/evaluator/verify-resource-state.ts": "bff2a7f9003a5d854d0f07d6c280e60876790d7662501fd62964b4200e7b7c4d",
     "private/execution/tool-policy.yaml": "bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6",
     "private/oracle.yaml": "487c3f64c26768017467fcd0c8d2f76341fc9c0d6b5e5575d7ad66bc4a75ed21",

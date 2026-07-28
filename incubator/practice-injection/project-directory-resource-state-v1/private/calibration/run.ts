@@ -11,8 +11,9 @@ const candidateRoot = resolve(import.meta.dirname, "..", "..");
 const probePath = join(candidateRoot, "private", "evaluator", "verify-resource-state.ts");
 const stagedManifestPath = process.env.LORELUM_CALIBRATION_SETS_MANIFEST;
 if (!stagedManifestPath) throw new Error("Calibration fixtures must be staged by the kernel");
-const stagedPublicStarter = process.env.LORELUM_CALIBRATION_PUBLIC_STARTER;
-if (!stagedPublicStarter) throw new Error("Calibration public starter must be staged by the kernel");
+const stagedPublicStarterRoot = process.env.LORELUM_CALIBRATION_PUBLIC_STARTER;
+if (!stagedPublicStarterRoot) throw new Error("Calibration public starter must be staged by the kernel");
+const stagedPublicStarter = join(stagedPublicStarterRoot, "app");
 const staged = JSON.parse(await Bun.file(stagedManifestPath).text()) as {
   sets: Record<string, { fixtures: Record<string, { path: string; tree_hash: string }> }>;
 };

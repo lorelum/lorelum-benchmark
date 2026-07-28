@@ -23,14 +23,15 @@ test("calibrates explicit resource states", async () => {
   if (!resolved) throw new Error("Missing resolved calibration sets");
   const staging = await mkdtemp(join(tmpdir(), "lorelum-resource-calibration-"));
   try {
-    const staged = await resolver.stageCalibrationSets(resolved, staging, { publicStarterPath: join(root, "public", "starter", "app") });
+    const staged = await resolver.stageCalibrationSets(resolved, staging, { publicStarterPath: join(root, "public", "starter") });
     if (!staged.publicStarterPath) throw new Error("Missing staged public starter");
-    await installParser(staged.publicStarterPath);
+    const stagedPublicStarter = join(staged.publicStarterPath, "app");
+    await installParser(stagedPublicStarter);
     const fixtureRoot = join(staging, "private", "calibration", "sets", "quality-probe", "v1");
-    expect(await run(staged.publicStarterPath, staged.publicStarterPath)).toBe(1);
-    expect(await run(join(fixtureRoot, "anti-pattern"), staged.publicStarterPath)).toBe(1);
-    expect(await run(join(fixtureRoot, "reference"), staged.publicStarterPath)).toBe(0);
-    expect(await run(join(fixtureRoot, "equivalent"), staged.publicStarterPath)).toBe(0);
+    expect(await run(stagedPublicStarter, stagedPublicStarter)).toBe(1);
+    expect(await run(join(fixtureRoot, "anti-pattern"), stagedPublicStarter)).toBe(1);
+    expect(await run(join(fixtureRoot, "reference"), stagedPublicStarter)).toBe(0);
+    expect(await run(join(fixtureRoot, "equivalent"), stagedPublicStarter)).toBe(0);
   } finally {
     await rm(staging, { force: true, recursive: true });
   }
