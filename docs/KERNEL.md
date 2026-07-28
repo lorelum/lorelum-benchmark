@@ -60,7 +60,32 @@ bun run src/benchmark/kernel/kernel.ts materialize <candidate> --output <workspa
 bun run src/benchmark/kernel/kernel.ts isolate <candidate> --output <workspace>
 bun run src/benchmark/kernel/kernel.ts hash <candidate> --output <workspace>
 bun run src/benchmark/kernel/kernel.ts calibrate <candidate> --output <workspace>
+bun run src/benchmark/kernel/kernel.ts fixture-hash <source-directory>
 ```
+
+### Versioned calibration fixture overlays
+
+`injection-calibration/v1` candidates may declare `calibration_sets.manifest` in
+`private/candidate.yaml`. The manifest is always
+`private/calibration/sets.yaml`; it contains named `id` + `version` sets. A set
+uses named trees: a root tree pins a registry `base.ref` and `sha256`, while
+child trees use `extends` plus an overlay `path` and `sha256`. An overlay adds
+files or explicitly replaces the same relative file; deletion is unsupported.
+
+Registry bases live under `incubator/calibration-bases/` and contain a
+version-local `base.yaml` that fixes `profile`, `materializer_kind`, and
+`source: source`. A base version is immutable. Use `fixture-hash` for the
+canonical source-directory digest after reviewing a new base or overlay.
+
+The kernel rejects missing or incompatible bases, digest mismatches, escapes,
+symbolic links, generated paths, ambiguous declarations, and inheritance cycles.
+It resolves every declared set into a stable manifest and tree hash. Snapshot
+v1 records the aggregate as `resolved.calibration_sets_hash`. Materialize and
+isolate validate the same declaration; calibration roles receive only a
+temporary private staged-tree manifest and a generated-output-free copy of the
+public starter through the kernel. Calibration dependencies are installed only
+in that private staging directory; agent-facing workspaces and candidate source
+trees continue to contain public material only.
 
 5. Generate and commit the candidate snapshot only after review. A snapshot
    binds the core hash, declaration, public starter input, and materialized

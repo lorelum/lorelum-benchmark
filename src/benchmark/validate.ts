@@ -392,6 +392,7 @@ for (const suite of await listDirectories(suitesPath)) {
 }
 
 for (const track of await listDirectories(joinPath(workspaceRoot, "incubator"))) {
+  if (track === "calibration-bases") continue;
   const candidatesPath = joinPath(workspaceRoot, "incubator", track);
   for (const candidate of await listDirectories(candidatesPath)) {
     await findGeneratedStarterOutput(joinPath(candidatesPath, candidate, "public", "starter"));

@@ -1,0 +1,3 @@
+profile: injection-calibration/v1
+materializer_kind: react-vite
+source: source

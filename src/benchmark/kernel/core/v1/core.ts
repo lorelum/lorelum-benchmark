@@ -121,28 +121,30 @@ export async function hash(input: HashInput): Promise<ResolvedHashes> {
     materializerKind: input.materializerKind,
     inputHash,
     materializedOutputHash,
+    ...(input.calibrationSetsHash ? { calibrationSetsHash: input.calibrationSetsHash } : {}),
   };
 }
 
 export async function calibrate(input: CalibrateInput): Promise<CalibrateResult[]> {
   const results: CalibrateResult[] = [];
   for (const role of input.roles) {
-    const result = await runRole(input.workspacePath, role);
+    const result = await runRole(input.workspacePath, role, input.environment);
     results.push(result);
   }
   return results;
 }
 
-async function runRole(workspacePath: string, role: CalibrationRole): Promise<CalibrateResult> {
+async function runRole(workspacePath: string, role: CalibrationRole, environment?: Record<string, string>): Promise<CalibrateResult> {
   if (role.command.length === 0) throw new Error(`Calibration role has no command: ${role.id}`);
-  const child = Bun.spawn(role.command, { cwd: workspacePath, stdout: "pipe", stderr: "pipe" });
+  const command = role.command[0] === "bun" ? [process.execPath, ...role.command.slice(1)] : role.command;
+  const child = Bun.spawn(command, { cwd: workspacePath, stdout: "pipe", stderr: "pipe", env: { ...process.env, ...environment } });
   const exitCode = await child.exited;
-  await new Response(child.stdout).text();
-  await new Response(child.stderr).text();
+  const output = `${await new Response(child.stdout).text()}${await new Response(child.stderr).text()}`;
   return {
     role: role.id,
     exitCode,
     passed: matchesExpectation(exitCode, role.expect),
+    ...(exitCode === 0 ? {} : { output }),
   };
 }
 

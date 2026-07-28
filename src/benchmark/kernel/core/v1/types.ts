@@ -37,6 +37,8 @@ export type CalibrationResult = {
   role: string;
   exitCode: number;
   passed: boolean;
+  /** Private calibration diagnostics, emitted only by the calibration command. */
+  output?: string;
 };
 
 /** Result of materializing a candidate workspace. */
@@ -61,6 +63,8 @@ export type ResolvedHashes = {
   materializerKind: string;
   inputHash: string;
   materializedOutputHash: string;
+  /** Aggregate identity of versioned private calibration sets, when declared. */
+  calibrationSetsHash?: string;
 };
 
 /** The materialize contract: produce a runnable workspace from declared source. */
@@ -97,6 +101,7 @@ export type HashInput = {
   profile: string;
   materializerKind: MaterializerKind;
   workspacePath: string;
+  calibrationSetsHash?: string;
 };
 
 /** The calibrate contract: run declared roles and compare to expectations. */
@@ -105,6 +110,8 @@ export type CalibrateFn = (input: CalibrateInput) => Promise<CalibrationResult[]
 export type CalibrateInput = {
   workspacePath: string;
   roles: CalibrationRole[];
+  /** Private runtime values supplied by the kernel, never materialized for agents. */
+  environment?: Record<string, string>;
 };
 
 /** Registered materializer implementing the materialize contract for a kind. */
