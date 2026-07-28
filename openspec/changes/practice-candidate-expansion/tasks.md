@@ -24,7 +24,7 @@
 ## 2. 验证与交接
 
 - [x] 2.1 在不调用模型的情况下运行每个 candidate 的 calibration、snapshot 验证和泄露审计。
-- [ ] 2.2 运行 `bun run validate` 与 strict OpenSpec validation，并在 PR 保留验证证据和未执行原因。
-- [ ] 2.3 将已校准 candidate、source commit、snapshot ID、profile-input hash 与 #94 preflight
+- [x] 2.2 运行 `bun run validate` 与 strict OpenSpec validation，并在 PR 保留验证证据和未执行原因。
+- [x] 2.3 将已校准 candidate、source commit、snapshot ID、profile-input hash 与 #94 preflight
   语义交接给 #90；#90 必须使用 profile-aware adapter，并验证失败时不进入任一 candidate 执行
   循环。不创建 scratch 结果、record 或正式 suite revision。
