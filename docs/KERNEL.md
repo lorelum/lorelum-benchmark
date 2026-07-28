@@ -82,8 +82,10 @@ symbolic links, generated paths, ambiguous declarations, and inheritance cycles.
 It resolves every declared set into a stable manifest and tree hash. Snapshot
 v1 records the aggregate as `resolved.calibration_sets_hash`. Materialize and
 isolate validate the same declaration; calibration roles receive only a
-temporary private staged-tree manifest through the kernel, while agent-facing
-workspaces continue to contain public material only.
+temporary private staged-tree manifest and a generated-output-free copy of the
+public starter through the kernel. Calibration dependencies are installed only
+in that private staging directory; agent-facing workspaces and candidate source
+trees continue to contain public material only.
 
 5. Generate and commit the candidate snapshot only after review. A snapshot
    binds the core hash, declaration, public starter input, and materialized

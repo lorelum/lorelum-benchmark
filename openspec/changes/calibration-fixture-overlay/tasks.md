@@ -38,3 +38,5 @@
 - [x] 3.3 执行 public/private 泄露审计、focused tests、`bun run validate` 和 strict OpenSpec
   validation；`bun run validate` 已执行但被预先存在的忽略 `node_modules`/`dist` 阻断，未清理
   用户生成物；在 PR 记录结果以及未执行的 Pi、模型、retrieval、盲评与正式 record。
+- [x] 3.4 修复 review 发现的 clean-checkout 依赖：将 public starter 与 TypeScript parser 安装
+  到 kernel 私有 staging，验证 driver/evaluator 不再写入 candidate source tree。

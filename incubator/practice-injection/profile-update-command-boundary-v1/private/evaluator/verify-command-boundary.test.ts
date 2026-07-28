@@ -6,11 +6,15 @@ import { pathToFileURL } from "node:url";
 
 const root = resolve(import.meta.dirname, "..", "..");
 const probe = join(root, "private/evaluator/verify-command-boundary.ts");
-const parserRoot = join(root, "public/starter/app");
 
-async function run(appPath: string): Promise<number> {
+async function run(appPath: string, parserRoot: string): Promise<number> {
   const child = Bun.spawn([process.execPath, "run", probe, appPath, parserRoot], { stdout: "pipe", stderr: "pipe" });
   return await child.exited;
+}
+
+async function installParser(appPath: string): Promise<void> {
+  const child = Bun.spawn([process.execPath, "install", "--frozen-lockfile"], { cwd: appPath, stdout: "pipe", stderr: "pipe" });
+  expect(await child.exited).toBe(0);
 }
 
 test("calibrates profile command responsibilities", async () => {
@@ -20,12 +24,14 @@ test("calibrates profile command responsibilities", async () => {
   if (!resolved) throw new Error("Missing resolved calibration sets");
   const staging = await mkdtemp(join(tmpdir(), "lorelum-command-calibration-"));
   try {
-    await resolver.stageCalibrationSets(resolved, staging);
+    const staged = await resolver.stageCalibrationSets(resolved, staging, { publicStarterPath: join(root, "public", "starter", "app") });
+    if (!staged.publicStarterPath) throw new Error("Missing staged public starter");
+    await installParser(staged.publicStarterPath);
     const fixtureRoot = join(staging, "private", "calibration", "sets", "quality-probe", "v1");
-    expect(await run(parserRoot)).toBe(1);
-    expect(await run(join(fixtureRoot, "anti-pattern"))).toBe(1);
-    expect(await run(join(fixtureRoot, "reference"))).toBe(0);
-    expect(await run(join(fixtureRoot, "equivalent"))).toBe(0);
+    expect(await run(staged.publicStarterPath, staged.publicStarterPath)).toBe(1);
+    expect(await run(join(fixtureRoot, "anti-pattern"), staged.publicStarterPath)).toBe(1);
+    expect(await run(join(fixtureRoot, "reference"), staged.publicStarterPath)).toBe(0);
+    expect(await run(join(fixtureRoot, "equivalent"), staged.publicStarterPath)).toBe(0);
   } finally {
     await rm(staging, { force: true, recursive: true });
   }

@@ -128,11 +128,18 @@ try {
       const calibrationSets = await resolveCalibrationSets(candidatePath);
       const stagingPath = calibrationSets ? await mkdtemp(join(tmpdir(), "lorelum-calibration-runtime-")) : null;
       try {
-        const staged = calibrationSets && stagingPath ? await stageCalibrationSets(calibrationSets, stagingPath) : null;
+        const staged = calibrationSets && stagingPath
+          ? await stageCalibrationSets(calibrationSets, stagingPath, { publicStarterPath })
+          : null;
         const results = await calibrate({
           workspacePath: outputPath,
           roles,
-          ...(staged ? { environment: { LORELUM_CALIBRATION_SETS_MANIFEST: staged.manifestPath } } : {}),
+          ...(staged ? {
+            environment: {
+              LORELUM_CALIBRATION_SETS_MANIFEST: staged.manifestPath,
+              ...(staged.publicStarterPath ? { LORELUM_CALIBRATION_PUBLIC_STARTER: staged.publicStarterPath } : {}),
+            },
+          } : {}),
         });
         console.log(JSON.stringify(results, null, 2));
         const allPassed = results.every((r) => r.passed);

@@ -1,10 +1,10 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "f1b500a8a30442ca436525d39a25ea60700c6f988676fcb2974aa51929e97bdb",
+  "snapshot_id": "4149488674764bf35d621806a2d5d3dc8a2aa122c7733a8a529c85ad7a65a321",
   "files": {
     "private/calibration.md": "8188faf848abeb5d9309046c6589832c38b291ae70332534a778cc0364b188b9",
-    "private/calibration/run.ts": "c45a1ca0b4def119e7da4d8a83003a8de0ffc7cacee7ababeaa29420132f4d4b",
+    "private/calibration/run.ts": "21d46584380c9f5bb30f349831182199f0c21cb6c5935529a089d83e7c84ab4a",
     "private/calibration/sets.yaml": "6c328c4701085bbb1143c9f58c5c5b3bf7f8cdb30182615cb4fa38e198edfbc6",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/LoginPage.tsx": "43c4b50bfd6d8f5ac5a0043b4c6016d588ba7265847d25b1f40ade0d83912af1",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/profileClient.ts": "d75afe66343cfca18daa52985a0239e2c1c3ade8c990dee9d856a52f7fee9edd",
@@ -19,7 +19,7 @@
     "private/conditions.yaml": "b0a70fa5276313083e54423c72a90cf213787129ebeb717c59f4337f7c82b179",
     "private/evaluator/evaluate.test.ts": "2b256a5d14495f131c0ad1138b58f3b277fe9d76a9df46456c92410d112709fe",
     "private/evaluator/evaluate.ts": "c1db430020ef1fb087ae4b77addf54c6dbdf3d867db36cdfd2c6c9357c893cfa",
-    "private/evaluator/verify-command-boundary.test.ts": "5380861f82bb3b8be887487ec283b95402d60940101956a3a61a5558e1a7f928",
+    "private/evaluator/verify-command-boundary.test.ts": "6cd3f430e9f65fd9e385905dbadbd09f2ed5b5912c33cec764f019b6d3626197",
     "private/evaluator/verify-command-boundary.ts": "65835b73c76b9b4cd4a2fef31121facfa731111a5177fcda92cddb74191bf7af",
     "private/execution/tool-policy.yaml": "bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6",
     "private/oracle.yaml": "59bfe865a9550e20f37ef79833e3912fbfc888c78467e8614542bab041ce0a44",
@@ -41,7 +41,7 @@
   },
   "resolved": {
     "core_version": "v1",
-    "core_hash": "c905fbb51fafe589de8540cf1b187eec84c76c9c8506324cbe8d90f9e8b644b6",
+    "core_hash": "3828d2a4ebf08ab8b8d70dcb0a38c5d4abd56a51022efccf82e731aeb815f847",
     "profile": "injection-calibration/v1",
     "materializer_kind": "react-vite",
     "input_hash": "d5c5883ee1eb012df34fe8eac67ccab3478d956e9930c37a8375307d9e091cbd",

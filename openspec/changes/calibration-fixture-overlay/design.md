@@ -73,7 +73,9 @@ ordinary `files` contract and does not implement #107's snapshot v2 work.
 Composed calibration trees stay private and are available only to calibration
 processes. The kernel stages them in a fresh temporary private directory and
 passes its manifest to declared calibration roles through a private runtime
-environment value. Materializing the candidate's agent-facing workspace
+environment value. The kernel also stages a generated-output-free copy of the
+public starter there, so calibration dependencies and parser runtime never write
+to the candidate source checkout. Materializing the candidate's agent-facing workspace
 continues to copy public task/starter input only. Isolation audits both candidate
 private inputs and the staged tree with the existing public-equivalence rules.
 Practice text, `private/practices/` paths and private-only content are rejected

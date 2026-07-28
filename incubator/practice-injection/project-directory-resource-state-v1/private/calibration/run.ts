@@ -11,6 +11,8 @@ const candidateRoot = resolve(import.meta.dirname, "..", "..");
 const probePath = join(candidateRoot, "private", "evaluator", "verify-resource-state.ts");
 const stagedManifestPath = process.env.LORELUM_CALIBRATION_SETS_MANIFEST;
 if (!stagedManifestPath) throw new Error("Calibration fixtures must be staged by the kernel");
+const stagedPublicStarter = process.env.LORELUM_CALIBRATION_PUBLIC_STARTER;
+if (!stagedPublicStarter) throw new Error("Calibration public starter must be staged by the kernel");
 const staged = JSON.parse(await Bun.file(stagedManifestPath).text()) as {
   sets: Record<string, { fixtures: Record<string, { path: string; tree_hash: string }> }>;
 };
@@ -22,7 +24,7 @@ function stagedFixture(id: string): string {
   return fixture.path;
 }
 const cases: CalibrationCase[] = [
-  { id: "public-starter", path: "public/starter/app", expectedProbe: "fail" },
+  { id: "public-starter", path: stagedPublicStarter, expectedProbe: "fail" },
   { id: "reference", path: stagedFixture("reference"), expectedProbe: "pass" },
   { id: "equivalent", path: stagedFixture("equivalent"), expectedProbe: "pass" },
   { id: "anti-pattern", path: stagedFixture("anti-pattern"), expectedProbe: "fail" },
@@ -42,7 +44,7 @@ async function ensureDependencies(appPath: string): Promise<void> {
 
 const results: Array<{ id: string; semantic: "pass" | "fail"; practice_probe: "pass" | "fail"; expected_practice_probe: "pass" | "fail" }> = [];
 for (const calibration of cases) {
-  const appPath = calibration.id === "public-starter" ? join(candidateRoot, calibration.path) : calibration.path;
+  const appPath = calibration.path;
   await ensureDependencies(appPath);
   const semantic = await run(["bun", "run", "test"], appPath) === 0 ? "pass" : "fail";
   const probe = await run([process.execPath, "run", probePath, appPath, appPath], candidateRoot) === 0 ? "pass" : "fail";

@@ -25,6 +25,9 @@ async function makeWorkspace(): Promise<FixtureWorkspace> {
   await writeFile(join(base, "..", "base.yaml"), "profile: injection-calibration/v1\nmaterializer_kind: react-vite\nsource: source\n");
   await writeFile(join(overlay, "src", "entry.ts"), "export const source = 'overlay';\n");
   await writeFile(join(overlay, "src", "only-overlay.ts"), "export const onlyOverlay = true;\n");
+  await mkdir(join(candidate, "public", "starter", "node_modules", "generated"), { recursive: true });
+  await writeFile(join(candidate, "public", "starter", "package.json"), "{\"name\":\"public-starter\"}\n");
+  await writeFile(join(candidate, "public", "starter", "node_modules", "generated", "index.js"), "generated\n");
   await writeFile(join(candidate, "private", "candidate.yaml"), "kernel:\n  profile: injection-calibration/v1\n  materializer_kind: react-vite\ncalibration_sets:\n  manifest: private/calibration/sets.yaml\n");
   return { root, candidate, base, overlay };
 }
@@ -70,9 +73,12 @@ test("resolves deterministic base plus replacement overlay and stages a private 
     expect(await Bun.file(fixture.files["src/entry.ts"].sourcePath).text()).toContain("overlay");
     expect(Object.keys(fixture.files)).toEqual(["package.json", "src/entry.ts", "src/only-overlay.ts"]);
 
-    const staged = await stageCalibrationSets(first!, staging);
+    const staged = await stageCalibrationSets(first!, staging, { publicStarterPath: join(workspace.candidate, "public", "starter") });
     expect(await Bun.file(staged.manifestPath).json()).toMatchObject({ calibration_sets_hash: first!.calibrationSetsHash });
     expect(await Bun.file(join(staging, "private", "calibration", "sets", "quality-probe", "v1", "fixture", "src", "entry.ts")).text()).toContain("overlay");
+    expect(staged.publicStarterPath).toBe(join(staging, "private", "calibration", "public-starter"));
+    expect(await Bun.file(join(staged.publicStarterPath!, "package.json")).exists()).toBe(true);
+    expect(await Bun.file(join(staged.publicStarterPath!, "node_modules", "generated", "index.js")).exists()).toBe(false);
     expect((await listFiles(join(staging, "private"))).every((path) => !path.includes("practices"))).toBe(true);
   } finally {
     await rm(workspace.root, { force: true, recursive: true });

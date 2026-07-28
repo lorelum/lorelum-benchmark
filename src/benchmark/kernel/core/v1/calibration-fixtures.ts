@@ -59,6 +59,7 @@ export type ResolvedCalibrationSets = {
 export type StagedCalibrationSets = {
   rootPath: string;
   manifestPath: string;
+  publicStarterPath?: string;
 };
 
 const calibrationManifestPath = "private/calibration/sets.yaml";
@@ -325,7 +326,11 @@ export async function resolveCalibrationSets(candidatePath: string, options: { r
   return { calibrationSetsHash, sets: resolvedSets };
 }
 
-export async function stageCalibrationSets(resolved: ResolvedCalibrationSets, outputPath: string): Promise<StagedCalibrationSets> {
+export async function stageCalibrationSets(
+  resolved: ResolvedCalibrationSets,
+  outputPath: string,
+  options: { publicStarterPath?: string } = {},
+): Promise<StagedCalibrationSets> {
   const rootPath = resolve(outputPath);
   const stagePrivatePath = join(rootPath, "private", "calibration", "sets");
   await mkdir(stagePrivatePath, { recursive: true });
@@ -343,7 +348,23 @@ export async function stageCalibrationSets(resolved: ResolvedCalibrationSets, ou
     }
     manifest[setKey] = { fixtures };
   }
+  let stagedPublicStarterPath: string | undefined;
+  let publicStarter: { path: string; tree_hash: string } | undefined;
+  if (options.publicStarterPath) {
+    const source = await directoryHash(resolve(options.publicStarterPath));
+    stagedPublicStarterPath = join(rootPath, "private", "calibration", "public-starter");
+    for (const [relativeFile, file] of Object.entries(source.files)) {
+      const destination = pathInside(stagedPublicStarterPath, relativeFile, "staged public starter file");
+      await mkdir(dirname(destination), { recursive: true });
+      await cp(file.sourcePath, destination);
+    }
+    publicStarter = { path: stagedPublicStarterPath, tree_hash: source.hash };
+  }
   const manifestPath = join(rootPath, "private", "calibration", "sets-manifest.json");
-  await Bun.write(manifestPath, `${JSON.stringify({ calibration_sets_hash: resolved.calibrationSetsHash, sets: manifest }, null, 2)}\n`);
-  return { rootPath, manifestPath };
+  await Bun.write(manifestPath, `${JSON.stringify({
+    calibration_sets_hash: resolved.calibrationSetsHash,
+    ...(publicStarter ? { public_starter: publicStarter } : {}),
+    sets: manifest,
+  }, null, 2)}\n`);
+  return { rootPath, manifestPath, ...(stagedPublicStarterPath ? { publicStarterPath: stagedPublicStarterPath } : {}) };
 }
