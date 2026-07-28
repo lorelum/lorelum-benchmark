@@ -1,0 +1,6 @@
+delivery_template: practice-card/v1
+length_metric: practice-card/v1:utf8-rendered-characters
+cards:
+  - { id: react.command-domain-boundary, version: v1, path: react.command-domain-boundary.v1.md, rendered_characters: 498 }
+  - { id: react.modal-focus-management, version: v1, path: react.modal-focus-management.v1.md, rendered_characters: 511 }
+comparison: { maximum_relative_difference: 0.10, actual_relative_difference: 0.0261044176706827, independently_reviewed: true }

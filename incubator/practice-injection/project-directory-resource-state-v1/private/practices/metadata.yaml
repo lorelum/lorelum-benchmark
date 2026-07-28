@@ -1,0 +1,6 @@
+delivery_template: practice-card/v1
+length_metric: practice-card/v1:utf8-rendered-characters
+cards:
+  - { id: react.query-resource-state, version: v1, path: react.query-resource-state.v1.md, rendered_characters: 494 }
+  - { id: react.avatar-fallback-rendering, version: v1, path: react.avatar-fallback-rendering.v1.md, rendered_characters: 470 }
+comparison: { maximum_relative_difference: 0.10, actual_relative_difference: 0.048582995951417, independently_reviewed: true }
