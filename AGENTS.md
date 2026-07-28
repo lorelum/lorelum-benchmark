@@ -51,3 +51,12 @@
   benchmark 代码时运行 `bun run validate`，并在 PR 中保留验证证据和未执行原因。
 - OpenSpec 的 strict validation、public/private 泄露审计及生命周期门禁未通过前，不得执行
   模型调用、创建正式 record，或将 candidate 升级为 suite revision。
+
+## PR 正文格式
+
+- 创建或更新多行 PR 正文时，必须传递真实的多行 Markdown body；不得把字面量 `\n` 当作换行
+  传给 GitHub CLI 或 API。
+- 在 PowerShell 中，先用 here-string 赋值给变量，再将该变量作为 API 的 `body` 字段传递；不要
+  通过会添加编码标记的标准输入管道传递 JSON 正文。
+- 每次创建或更新 PR 正文后，必须读取远端 `body` 并确认其中存在实际换行、没有字面量 `\n`，
+  再报告 PR 已完成。
