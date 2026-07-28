@@ -41,12 +41,12 @@ export async function isolate(input: IsolateInput): Promise<IsolationAudit> {
     if (stat.isDirectory()) {
       for (const file of await listFiles(resolvedPrivatePath)) {
         const sourcePath = join(resolvedPrivatePath, file);
-        const isCalibration = isPrivateCalibrationFile(sourcePath);
+        const isCalibration = isPrivateCalibrationFile(resolvedPrivatePath, sourcePath);
         if (!isCalibration) sensitivePrivateNames.add(basename(file));
         addPrivateHash(privateHashes, await sha256File(sourcePath), isCalibration);
       }
     } else {
-      const isCalibration = isPrivateCalibrationFile(resolvedPrivatePath);
+      const isCalibration = isPrivateCalibrationFile(resolvedPrivatePath, resolvedPrivatePath);
       if (!isCalibration) sensitivePrivateNames.add(basename(resolvedPrivatePath));
       addPrivateHash(privateHashes, await sha256File(resolvedPrivatePath), isCalibration);
     }
@@ -94,9 +94,9 @@ async function collectPublicHashes(publicSourcePaths: string[], workspacePath: s
   return hashes;
 }
 
-function isPrivateCalibrationFile(path: string): boolean {
-  const segments = resolve(path).replaceAll("\\", "/").toLowerCase().split("/");
-  return segments.some((segment, index) => segment === "private" && segments[index + 1] === "calibration");
+function isPrivateCalibrationFile(privateRoot: string, path: string): boolean {
+  const segments = relative(resolve(privateRoot), resolve(path)).replaceAll("\\", "/").split("/");
+  return segments[0] === "calibration";
 }
 
 function pathsOverlap(first: string, second: string): boolean {

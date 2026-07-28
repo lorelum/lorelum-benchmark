@@ -114,6 +114,13 @@ test("isolate permits public-equivalent calibration files and rejects private-on
     const cleanAudit = await isolate({ workspacePath: workspace, privatePaths: [privateRoot], publicSourcePaths: [publicRoot] });
     expect(cleanAudit.passed).toBe(true);
 
+    await mkdir(join(privateRoot, "evaluator", "private", "calibration"), { recursive: true });
+    await writeFile(join(privateRoot, "evaluator", "private", "calibration", "secret.ts"), "export const shared = true;\n");
+    const nestedCalibrationAudit = await isolate({ workspacePath: workspace, privatePaths: [privateRoot], publicSourcePaths: [publicRoot] });
+    expect(nestedCalibrationAudit.passed).toBe(false);
+    expect(nestedCalibrationAudit.leaked.map(norm)).toContain("starter/src/shared.ts");
+    await rm(join(privateRoot, "evaluator", "private"), { force: true, recursive: true });
+
     await writeFile(join(privateRoot, "oracle.yaml"), "export const shared = true;\n");
     const mixedHashAudit = await isolate({ workspacePath: workspace, privatePaths: [privateRoot], publicSourcePaths: [publicRoot] });
     expect(mixedHashAudit.passed).toBe(false);
