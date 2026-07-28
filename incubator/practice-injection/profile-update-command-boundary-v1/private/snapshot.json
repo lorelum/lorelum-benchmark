@@ -1,11 +1,11 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "c719c36fab67827fa5e9b02cfba985ecb84e3bc3d04f66e810e771b739d494f0",
+  "snapshot_id": "d1ed63477ae9f5e77ea85dcaaf817400d89bc7a10c7cde36f33f4bd7e75e83e4",
   "files": {
     "private/calibration.md": "8188faf848abeb5d9309046c6589832c38b291ae70332534a778cc0364b188b9",
-    "private/calibration/run.ts": "f248e7c62970595962d03bf01abad728abb889b7d31c9e341d9259096f47216e",
-    "private/calibration/sets.yaml": "6c328c4701085bbb1143c9f58c5c5b3bf7f8cdb30182615cb4fa38e198edfbc6",
+    "private/calibration/run.ts": "42d11dc2dab3785421696172564d1be8350fa9bef18a3b28417213ce588416ad",
+    "private/calibration/sets.yaml": "20f793bdd7dbe903c643924836cf6914b47641f4dd2a0d55274b860cd8dc6f18",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/LoginPage.tsx": "43c4b50bfd6d8f5ac5a0043b4c6016d588ba7265847d25b1f40ade0d83912af1",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/profileClient.ts": "d75afe66343cfca18daa52985a0239e2c1c3ade8c990dee9d856a52f7fee9edd",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/package.json": "faf549adb0e12424f344027bdd1357915d13ce010542fbd1a47f42d5f819cede",
@@ -41,12 +41,12 @@
   },
   "resolved": {
     "core_version": "v1",
-    "core_hash": "3828d2a4ebf08ab8b8d70dcb0a38c5d4abd56a51022efccf82e731aeb815f847",
+    "core_hash": "4e291b974431dbc9580e5b5473c644f3dc51e4ea843f72f294fc0874f03b9974",
     "profile": "injection-calibration/v1",
     "materializer_kind": "react-vite",
     "input_hash": "d5c5883ee1eb012df34fe8eac67ccab3478d956e9930c37a8375307d9e091cbd",
     "materialized_output_hash": "c22d0de720a02e588b2523ab42772851771a66eb4deab87b6b89f5098cd5d59a",
     "profile_input_hash": "df59962c3578582efde097b797b2b7a033f250ef43091d2cbffd9e06be298e7b",
-    "calibration_sets_hash": "9eaf2252996810cae2a800bcb6628263f3020d97fdd5a2a0c0d90975b55d1e3e"
+    "calibration_sets_hash": "26b6ec065150cb7d8d57e5e7f4e0453f91f9b0ab9ced60598851e7912ab77cc0"
   }
 }

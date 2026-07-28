@@ -1,6 +1,7 @@
 import { cp, lstat, mkdir, readdir } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { isGeneratedOutput, type CalibrateInput, type CalibrateResult, type CalibrationRole, type HashInput, type IsolateInput, type IsolationAudit, type MaterializeInput, type MaterializationResult, type Materializer, type ResolvedHashes } from "./types";
+import { CalibrationPortAllocator } from "./calibration-runtime";
 import { listFiles, sha256File, sha256Text } from "../../../fs";
 
 const materializers = new Map<string, Materializer>();
@@ -127,9 +128,24 @@ export async function hash(input: HashInput): Promise<ResolvedHashes> {
 
 export async function calibrate(input: CalibrateInput): Promise<CalibrateResult[]> {
   const results: CalibrateResult[] = [];
-  for (const role of input.roles) {
-    const result = await runRole(input.workspacePath, role, input.environment);
-    results.push(result);
+  const allocator = new CalibrationPortAllocator();
+  try {
+    for (const role of input.roles) {
+      const held = await allocator.allocate();
+      const environment = {
+        ...input.environment,
+        LORELUM_CALIBRATION_BASE_URL: held.baseUrl,
+      };
+      let result: CalibrateResult;
+      try {
+        result = await runRole(input.workspacePath, role, environment);
+      } finally {
+        await allocator.release(held);
+      }
+      results.push(result);
+    }
+  } finally {
+    await allocator.releaseAll();
   }
   return results;
 }

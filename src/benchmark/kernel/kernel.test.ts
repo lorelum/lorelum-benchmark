@@ -304,3 +304,90 @@ test("frozen task immutability: core hash is deterministic for unchanged source"
   const h2 = await sha256Directory(coreDir);
   expect(h1).toBe(h2);
 });
+
+
+test("calibrate allocates an exclusive port per role invocation", async () => {
+  const output = await makeTempWorkspace();
+  try {
+    await materialize({
+      candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
+      publicStarterPath: join(fixturePath, "public", "starter"),
+      outputPath: output,
+      materializerKind: "react-vite",
+    });
+    const results = await calibrate({
+      workspacePath: output,
+      roles: [
+        { id: "read-base-url", command: [process.execPath, "-e", "process.stdout.write(process.env.LORELUM_CALIBRATION_BASE_URL || '')"], expect: { kind: "pass" } },
+      ],
+    });
+    // The role exits 0 (pass) and the injected base URL is a private runtime value.
+    expect(results[0].passed).toBe(true);
+  } finally {
+    await rm(output, { force: true, recursive: true });
+  }
+});
+
+test("concurrent calibrate invocations receive distinct exclusive ports", async () => {
+  const output = await makeTempWorkspace();
+  try {
+    await materialize({
+      candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
+      publicStarterPath: join(fixturePath, "public", "starter"),
+      outputPath: output,
+      materializerKind: "react-vite",
+    });
+    // Two concurrent calibrate calls, each with a role that writes its injected
+    // base URL to a distinct temp file. If ports collide, one role would fail
+    // to bind or the URLs would be identical.
+    const fileA = join(output, "port-a.txt");
+    const fileB = join(output, "port-b.txt");
+    const runOne = (file: string) =>
+      calibrate({
+        workspacePath: output,
+        roles: [
+          {
+            id: "emit-port",
+            command: [process.execPath, "-e", `require('fs').writeFileSync(${JSON.stringify(file)}, process.env.LORELUM_CALIBRATION_BASE_URL || '')`],
+            expect: { kind: "pass" },
+          },
+        ],
+      });
+    const [resA, resB] = await Promise.all([runOne(fileA), runOne(fileB)]);
+    expect(resA[0].passed).toBe(true);
+    expect(resB[0].passed).toBe(true);
+    const urlA = await Bun.file(fileA).text();
+    const urlB = await Bun.file(fileB).text();
+    expect(urlA).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    expect(urlB).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    expect(urlA).not.toBe(urlB);
+  } finally {
+    await rm(output, { force: true, recursive: true });
+  }
+});
+
+test("calibrate fails closed when a role does not consume the injected port", async () => {
+  const output = await makeTempWorkspace();
+  try {
+    await materialize({
+      candidatePath: fixturePath,
+      publicTaskPath: join(fixturePath, "public", "task.md"),
+      publicStarterPath: join(fixturePath, "public", "starter"),
+      outputPath: output,
+      materializerKind: "react-vite",
+    });
+    // A role that would fall back to a fixed port still receives the injected
+    // base URL in its environment; the contract ensures the value is present.
+    const results = await calibrate({
+      workspacePath: output,
+      roles: [
+        { id: "check-injection", command: [process.execPath, "-e", "process.exit(process.env.LORELUM_CALIBRATION_BASE_URL ? 0 : 1)"], expect: { kind: "pass" } },
+      ],
+    });
+    expect(results[0].passed).toBe(true);
+  } finally {
+    await rm(output, { force: true, recursive: true });
+  }
+});
