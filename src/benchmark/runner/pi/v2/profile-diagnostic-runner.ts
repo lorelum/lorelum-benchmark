@@ -21,18 +21,27 @@ export type CandidateManifest = {
   source: { source_commit: string };
 };
 type Snapshot = { snapshot_id: string; resolved?: { profile_input_hash?: string } };
+const semanticResults = new Set(["pass", "fail", "not-run"]);
+const practiceObservations = new Set(["observed", "not-observed", "indeterminate", "not-run"]);
+export type PracticeObservation = "observed" | "not-observed" | "indeterminate" | "not-run";
+export type ProfileDiagnosticEvaluatorResult = {
+  semantic: "pass" | "fail" | "not-run";
+  practice_observation: PracticeObservation;
+  observation_reason?: string;
+};
 
 export type DiagnosticEntry = {
   candidate: string;
   condition: string;
   repeat: number;
-  status: "evaluated" | "execution-failed" | "evaluation-failed" | "not-executable";
+  evaluation_status: "evaluated" | "execution-failed" | "invalid-output" | "not-executable";
   trace: ReturnType<typeof redactedInjectionTrace>;
   source_commit: string;
   snapshot_id: string;
   profile_input_hash: string;
   semantic?: string;
-  practice_probe?: string;
+  practice_observation?: PracticeObservation;
+  observation_reason?: string;
   joint_pass?: boolean;
   error?: string;
 };
@@ -109,12 +118,16 @@ export async function workspaceFiles(workspace: string): Promise<string[]> {
   return entries.map((entry) => entry.split(sep).join("/")).sort();
 }
 
-export function evaluatorResult(stdout: string): { semantic: string; practice_probe: string } | undefined {
+export function evaluatorResult(stdout: string): ProfileDiagnosticEvaluatorResult | undefined {
   for (const line of stdout.trim().split(/\r?\n/).reverse()) {
     try {
-      const value = JSON.parse(line) as { semantic?: unknown; practice_probe?: unknown };
-      if (typeof value.semantic === "string" && typeof value.practice_probe === "string") {
-        return { semantic: value.semantic, practice_probe: value.practice_probe };
+      const value = JSON.parse(line) as { semantic?: unknown; practice_observation?: unknown; observation_reason?: unknown };
+      if (
+        typeof value.semantic === "string" && semanticResults.has(value.semantic) &&
+        typeof value.practice_observation === "string" && practiceObservations.has(value.practice_observation) &&
+        (value.observation_reason === undefined || typeof value.observation_reason === "string")
+      ) {
+        return value as ProfileDiagnosticEvaluatorResult;
       }
     } catch {
       // evaluator stdout may contain diagnostic text before the result line
@@ -172,7 +185,7 @@ async function runAttempt(
     candidate: candidateId,
     condition: conditionId,
     repeat,
-    status: "execution-failed",
+    evaluation_status: "execution-failed",
     trace,
     source_commit: manifest.source.source_commit,
     snapshot_id: snapshotId,
@@ -193,22 +206,22 @@ async function runAttempt(
 
   const result = evaluatorResult(evaluation.stdout);
   if (!result) {
-    entry.status = "evaluation-failed";
+    entry.evaluation_status = "invalid-output";
     entry.error = "Evaluator did not emit a structured result";
     return entry;
   }
 
-  entry.status = result.semantic === "pass" && result.practice_probe === "pass" ? "evaluated" : "evaluation-failed";
+  entry.evaluation_status = "evaluated";
   entry.semantic = result.semantic;
-  entry.practice_probe = result.practice_probe;
-  entry.joint_pass = result.semantic === "pass" && result.practice_probe === "pass";
-  if (entry.status === "evaluation-failed") entry.error = `semantic=${result.semantic}, practice_probe=${result.practice_probe}`;
+  entry.practice_observation = result.practice_observation;
+  entry.observation_reason = result.observation_reason;
+  entry.joint_pass = result.semantic === "pass" && result.practice_observation === "observed";
   return entry;
 }
 
 export async function writeSummary(path: string, entries: DiagnosticEntry[], interrupted: boolean): Promise<void> {
   await Bun.write(joinPath(path, "summary.json"), `${JSON.stringify({
-    schema_version: "profile-diagnostic-summary/v1",
+    schema_version: "profile-diagnostic-summary/v2",
     generated_at: new Date().toISOString(),
     entries,
     interrupted,
@@ -289,7 +302,7 @@ for (const candidatePath of options.candidatePaths) {
       candidate: relativePath(candidatePath),
       condition: "none",
       repeat: 0,
-      status: "not-executable",
+      evaluation_status: "not-executable",
       trace: { condition_id: "baseline", channel: "none", profile_input_hash: "unknown" },
       source_commit: "unknown",
       snapshot_id: "unknown",
@@ -307,7 +320,7 @@ for (const candidatePath of options.candidatePaths) {
       candidate: manifest.id,
       condition: "none",
       repeat: 0,
-      status: "not-executable",
+      evaluation_status: "not-executable",
       trace: { condition_id: "baseline", channel: "none", profile_input_hash: profileInputHash },
       source_commit: manifest.source.source_commit,
       snapshot_id: snapshotId,
@@ -334,7 +347,7 @@ for (const candidatePath of options.candidatePaths) {
           candidate: manifest.id,
           condition: conditionId,
           repeat,
-          status: "execution-failed",
+          evaluation_status: "execution-failed",
           trace: { condition_id: conditionId, channel: "none", profile_input_hash: profileInputHash },
           source_commit: manifest.source.source_commit,
           snapshot_id: snapshotId,
@@ -349,5 +362,5 @@ for (const candidatePath of options.candidatePaths) {
 
 await writeSummary(options.outputPath, entries, interrupted);
 console.log(JSON.stringify({ output: relativePath(options.outputPath), entries: entries.length, interrupted }, null, 2));
-process.exit(interrupted || entries.some((entry) => entry.status !== "evaluated") ? 1 : 0);
+process.exit(interrupted || entries.some((entry) => entry.evaluation_status !== "evaluated") ? 1 : 0);
 }

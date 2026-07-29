@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loadCatalog, type Catalog } from "./stores/catalog";
+import { loadCatalog, type Catalog } from "./services/catalogQuery";
 
 export function LoginPage() {
   const [query, setQuery] = useState("");

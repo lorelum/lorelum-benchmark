@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { hydrateMember, persistMemberName } from "./flows/memberProfile";
+import { hydrateMember, persistMemberName } from "./services/profileCommand";
 
 export function LoginPage() {
   const [displayName, setDisplayName] = useState("");

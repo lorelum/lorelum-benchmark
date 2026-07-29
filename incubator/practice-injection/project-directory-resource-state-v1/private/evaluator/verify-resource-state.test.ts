@@ -7,8 +7,14 @@ import { pathToFileURL } from "node:url";
 const root = resolve(import.meta.dirname, "..", "..");
 const probe = join(root, "private/evaluator/verify-resource-state.ts");
 
-async function run(path: string, parserRoot: string): Promise<number> {
-  return await Bun.spawn([process.execPath, "run", probe, path, parserRoot], { stdout: "pipe", stderr: "pipe" }).exited;
+async function run(path: string, parserRoot: string): Promise<{ exitCode: number; observation: string; reason?: string }> {
+  const child = Bun.spawn([process.execPath, "run", probe, path, parserRoot], { stdout: "pipe", stderr: "pipe" });
+  const [exitCode, stdout] = await Promise.all([child.exited, new Response(child.stdout).text()]);
+  const result = stdout.trim().split(/\r?\n/).reverse().map((line) => {
+    try { return JSON.parse(line) as { practice_observation?: unknown; observation_reason?: unknown }; } catch { return undefined; }
+  }).find((value) => value !== undefined);
+  if (typeof result?.practice_observation !== "string") throw new Error("Probe did not emit a Practice observation");
+  return { exitCode, observation: result.practice_observation, ...(typeof result.observation_reason === "string" ? { reason: result.observation_reason } : {}) };
 }
 
 async function installParser(appPath: string): Promise<void> {
@@ -28,10 +34,14 @@ test("calibrates explicit resource states", async () => {
     const stagedPublicStarter = join(staged.publicStarterPath, "app");
     await installParser(stagedPublicStarter);
     const fixtureRoot = join(staging, "private", "calibration", "sets", "quality-probe", "v1");
-    expect(await run(stagedPublicStarter, stagedPublicStarter)).toBe(1);
-    expect(await run(join(fixtureRoot, "anti-pattern"), stagedPublicStarter)).toBe(1);
-    expect(await run(join(fixtureRoot, "reference"), stagedPublicStarter)).toBe(0);
-    expect(await run(join(fixtureRoot, "equivalent"), stagedPublicStarter)).toBe(0);
+    await expect(run(stagedPublicStarter, stagedPublicStarter)).resolves.toMatchObject({ exitCode: 1, observation: "not-observed" });
+    await expect(run(join(fixtureRoot, "anti-pattern"), stagedPublicStarter)).resolves.toMatchObject({ exitCode: 1, observation: "not-observed" });
+    await expect(run(join(fixtureRoot, "reference"), stagedPublicStarter)).resolves.toMatchObject({ exitCode: 0, observation: "observed" });
+    await expect(run(join(fixtureRoot, "equivalent"), stagedPublicStarter)).resolves.toMatchObject({ exitCode: 0, observation: "observed" });
+    await Bun.write(join(stagedPublicStarter, "src", "LoginPage.tsx"), 'import { missing } from "./missing"; missing(); export function LoginPage() { return null; }\n');
+    await expect(run(stagedPublicStarter, stagedPublicStarter)).resolves.toEqual({ exitCode: 2, observation: "indeterminate", reason: "unresolved-relative-import" });
+    await rm(join(stagedPublicStarter, "src", "LoginPage.tsx"));
+    await expect(run(stagedPublicStarter, stagedPublicStarter)).resolves.toEqual({ exitCode: 2, observation: "indeterminate", reason: "missing-component-source" });
   } finally {
     await rm(staging, { force: true, recursive: true });
   }

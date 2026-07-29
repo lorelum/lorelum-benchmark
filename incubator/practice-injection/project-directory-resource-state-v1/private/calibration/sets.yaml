@@ -21,7 +21,7 @@ sets:
         extends: candidate-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v1/overlays/equivalent
-          sha256: fb62ecbd3ba269caebb00868e3286691fdf0be97f9292b6f798af2cbb68dbfdc
+          sha256: b8f0c3b55f0b65384c04035f3e152cf6a89a246aa57aed2d1123b5fe18e8ebcc
       anti-pattern-tree:
         extends: candidate-foundation
         overlay:
@@ -53,7 +53,7 @@ sets:
         extends: candidate-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v1/overlays/equivalent
-          sha256: fb62ecbd3ba269caebb00868e3286691fdf0be97f9292b6f798af2cbb68dbfdc
+          sha256: b8f0c3b55f0b65384c04035f3e152cf6a89a246aa57aed2d1123b5fe18e8ebcc
       anti-pattern-tree:
         extends: candidate-foundation
         overlay:
