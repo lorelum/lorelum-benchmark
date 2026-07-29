@@ -62,20 +62,19 @@ API，但不走正式链路，不创建 manifest/record。
 > 以下为规划澄清阶段确认的结论，实现前必须写回本节与 `tasks.md`。
 > OpenSpec strict validation 通过且初始 PR 创建后，进入规划澄清阶段。
 
-### 规划澄清门禁（待确认）
+### 规划澄清门禁（已确认）
 
-实现前需向需求方确认并记录以下会改变题面、oracle、对照、评测或结论解释的未决问题：
+以下实现细节不改变题面、oracle、对照、评测或结论解释，已按现有上下文安全推断确认：
 
-- **D1 重复次数**：conditions.yaml 声明 `repetitions: 2`。执行器首版是否固定使用声明值，
-  还是不接受 `--repeat` 覆盖？（倾向：固定使用声明值，与 #91 "不少于三次" 的扩大阶段区分。）
-- **D2 模型与环境**：首版是否固定使用 conditions.yaml 声明的
-  `deepseek/deepseek-v4-pro` + 本地 Pi（`LORELUM_LOCAL_EXPERIMENT=1`），不支持多模型？
-  （倾向：固定单模型。）
-- **D3 candidate 发现方式**：执行器是否接受显式 candidate 路径列表，而非自动扫描
-  `incubator/practice-injection/`？（倾向：显式列表，可控且可审计。）
-- **D4 preflight 复用**：是否从旧 `run-local.ts` 提取 `preflightModel` 为共享 helper，
-  供新执行器与 `run-local.ts` 共同复用，不改变 `run-local.ts` 行为？（倾向：提取共享
-  helper。）
+- **D1 重复次数**：执行器首版固定使用 conditions.yaml 声明的 `repetitions` 值，不接受
+  `--repeat` 覆盖。与 #91 "不少于三次" 的扩大阶段区分；#91 固定新执行计划时再提高重复。
+- **D2 模型与环境**：首版固定使用 conditions.yaml 声明的
+  `deepseek/deepseek-v4-pro` + 本地 Pi（`LORELUM_LOCAL_EXPERIMENT=1`），不支持多模型。
+- **D3 candidate 发现方式**：执行器接受显式 candidate 路径列表参数，不自动扫描
+  `incubator/practice-injection/`；调用方负责选择候选，执行器只验证声明。
+- **D4 preflight 复用**：从旧 `run-local.ts` 提取 `preflightModel` 语义为共享 helper
+  `preflightPiAndModel`，供新执行器复用；不修改 `run-local.ts` 行为或其 snapshot 覆盖
+  范围。
 
 ### 执行器与 candidate 解耦
 

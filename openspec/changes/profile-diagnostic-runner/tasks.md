@@ -1,12 +1,12 @@
 ## 0. 规划澄清门禁
 
-- [ ] 0.1 确认 D1 重复次数：执行器首版固定使用 conditions.yaml 声明的 `repetitions` 值，
+- [x] 0.1 确认 D1 重复次数：执行器首版固定使用 conditions.yaml 声明的 `repetitions` 值，
   不接受 `--repeat` 覆盖；与 #91 "不少于三次" 的扩大阶段区分。结论写回 design 与本清单。
-- [ ] 0.2 确认 D2 模型与环境：首版固定使用 conditions.yaml 声明的
+- [x] 0.2 确认 D2 模型与环境：首版固定使用 conditions.yaml 声明的
   `deepseek/deepseek-v4-pro` + 本地 Pi（`LORELUM_LOCAL_EXPERIMENT=1`），不支持多模型。
-- [ ] 0.3 确认 D3 candidate 发现方式：执行器接受显式 candidate 路径列表，不自动扫描
+- [x] 0.3 确认 D3 candidate 发现方式：执行器接受显式 candidate 路径列表，不自动扫描
   `incubator/practice-injection/`。
-- [ ] 0.4 确认 D4 preflight 复用：从旧 `run-local.ts` 提取 `preflightModel` 为共享
+- [x] 0.4 确认 D4 preflight 复用：从旧 `run-local.ts` 提取 `preflightModel` 为共享
   helper `preflightPiAndModel`，供新执行器与 `run-local.ts` 共同复用，不改变
   `run-local.ts` 行为或其 snapshot 覆盖范围。
 
