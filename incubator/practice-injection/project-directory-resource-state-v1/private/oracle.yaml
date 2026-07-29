@@ -1,4 +1,4 @@
 id: project-directory-resource-state-v1
 semantic_oracle: { command: bun run test, assertions: [加载项目, 搜索, 空结果, 失败, 重试恢复] }
-practice_probe: { command: bun run private/evaluator/verify-resource-state.ts public/starter/app, signal_only: true, responsibilities: [组件外查询边界负责 transport, DTO 转换, 显式资源状态] }
-baseline_expected_result: { semantic: pass, practice_probe: fail }
+practice_observation: { command: bun run private/evaluator/verify-resource-state.ts public/starter/app, signal_only: true, responsibilities: [组件外查询边界负责 transport, DTO 转换, 显式资源状态] }
+baseline_expected_result: { semantic: pass, practice_observation: not-observed }

@@ -113,8 +113,23 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 ### 质量信号（仅报告，不影响任务完成）
 
 - 所有 Practice 相关质量信号，包括 #75 的 API 分层探针。
-- 质量信号失败在语义通过时，仅记为"未观察到对应 Practice 相关质量"，**不得**描述为功能失败。
+- 质量信号未观察到时，即使语义通过也仅记为"未观察到对应 Practice 相关质量"，**不得**描述为功能失败或评测失败。
 - 质量信号必须映射到 Practice 的建议或 anti-pattern，并接受职责等价实现。
+
+### Practice 观测结果契约
+
+所有当前与未来 Practice-injection candidate 的 evaluator 和结果汇总必须独立保存以下维度；新增或修改 candidate 时，必须在关联 issue 与 OpenSpec 说明如何满足该契约。已冻结 candidate 只能通过新 revision 或独立 change 迁移，绝不回写历史输入或记录。
+
+| 维度 | 允许状态 | 说明 |
+| --- | --- | --- |
+| 语义结果 | `pass` / `fail` / `not-run` | 仅语义 `pass` 表示任务完成 |
+| Practice 观测 | `observed` / `not-observed` / `indeterminate` / `not-run` | 仅报告 Practice 相关职责证据 |
+| evaluator/execution health | `evaluated` / `invalid-output` / `execution-failed` / `not-executable` | 表示管线是否产生可用结果，不能从前两项推导 |
+
+- `semantic=pass` 且 `practice_observation=not-observed` 必须表述为任务完成、未观察到对应 Practice 证据；它仍是一次健康的 `evaluated` 结果。
+- `not-observed` 只能由已校准且适用于 candidate 的反模式或缺失职责证据产生。
+- probe 遇到解析失败、未支持代码形态、依赖缺失或无法可靠分类时，必须报告 `indeterminate` 及稳定审计原因，不能把它伪装成 `not-observed`。
+- `joint_pass` 仅可派生为语义 `pass` 与 Practice `observed` 同时成立；它不是任务完成、evaluator health 或加权总分。
 
 ### 禁止的行为
 
@@ -139,11 +154,12 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 
 ### 三类固定样例
 
-| 样例 | 预期结果 | 目的 |
+| 样例 | 预期语义 | 预期 Practice 观测 | 目的 |
 | --- | --- | --- |
-| reference | 通过 | 证明 probe 接受满足职责的实现 |
-| 职责等价实现（不同命名/目录/领域结果形式） | 通过 | 证明 probe 不把实现偏好当失败 |
-| anti-pattern 或已知绕过 | 失败 | 证明 probe 能拒绝注册的反模式 |
+| public starter | 通过 | `not-observed` | 证明 baseline 不会被误写为语义失败 |
+| reference | 通过 | `observed` | 证明 probe 接受满足职责的实现 |
+| 职责等价实现（不同命名/目录/领域结果形式） | 通过 | `observed` | 证明 probe 不把实现偏好当失败 |
+| anti-pattern 或已知绕过 | 通过 | `not-observed` | 证明 probe 能拒绝注册的反模式 |
 
 若无法为某项断言构造职责等价通过样例，维护者必须把该断言**降为报告性证据**，或将其**提升为公开合同**并解释原因；不得直接作为质量失败条件。
 
@@ -169,23 +185,25 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 
 ### 模板
 
-| 条件 | 注入内容 | 运行次数 | 语义通过 | 质量信号通过 | 两者同时通过 |
-| --- | --- | --- | --- | --- | --- |
-| 无 Practice 基线 | 无 | 2 | 2/2 | 0/2 | 0/2 |
-| 相关 Oracle Practice | React API 分层设计 | 2 | 2/2 | 2/2 | 2/2 |
-| 无关 Practice 对照 | React 身份列表呈现 | 2 | 2/2 | 0/2 | 0/2 |
+| 条件 | 注入内容 | 运行次数 | 语义通过 | Practice 已观察 | Practice 未观察 | Practice 不确定 | 两者同时通过 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 无 Practice 基线 | 无 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
+| 相关 Oracle Practice | React API 分层设计 | 2 | 2/2 | 2/2 | 0/2 | 0/2 | 2/2 |
+| 无关 Practice 对照 | React 身份列表呈现 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
 
 ### 每个 `x/y` 的含义
 
 - **分子 x**：该条件下通过该维度的运行次数。
 - **分母 y**：该条件总运行次数。
 - **语义通过**：该次运行通过全部公开语义测试（登录成功显示欢迎、失败显示通用错误、提交期间禁用并防重复提交）。
-- **质量信号通过**：该次运行通过 Practice 相关质量探针（API 分层职责边界检查）。
+- **Practice 已观察**：该次运行的私有 probe 在其声明能力范围内观察到对应职责。
+- **Practice 未观察**：该次运行有已校准的负面证据；它不表示任务失败。
+- **Practice 不确定**：probe 不能可靠分类，必须保留审计原因；它不表示 Agent 未遵循 Practice。
 - **两者同时通过**：该次运行同时满足语义与质量信号--这是判断 Practice 是否带来方向性改善的依据。
 
 ### 报告要求
 
-- 分别呈现语义通过、质量信号通过、两者同时通过三栏，不合并。
+- 分别呈现语义通过、Practice 已观察、Practice 未观察、Practice 不确定、evaluator/execution health 与两者同时通过，不合并为总分。
 - 结论只能描述已执行的 candidate、Practice、模型与条件。
 - 若预先声明的相关 Practice 在"两者同时通过"次数上严格领先 baseline 与无关对照，可称其为**该 candidate 的方向性信号**，但必须同时声明未验证的 retrieval、模型、任务或正式 record 边界。
 

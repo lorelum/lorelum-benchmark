@@ -101,9 +101,24 @@ test("verifySnapshotIdentity rejects a missing profile_input_hash", async () => 
   }
 });
 
-test("evaluatorResult parses semantic and practice_probe from evaluator output", () => {
-  const result = evaluatorResult('{"semantic":"pass","practice_probe":"fail"}');
-  expect(result).toEqual({ semantic: "pass", practice_probe: "fail" });
+test("evaluatorResult parses independent semantic and Practice observation results", () => {
+  const result = evaluatorResult('{"semantic":"pass","practice_observation":"not-observed"}');
+  expect(result).toEqual({ semantic: "pass", practice_observation: "not-observed" });
+});
+
+test("evaluatorResult preserves an indeterminate observation reason", () => {
+  const result = evaluatorResult('{"semantic":"pass","practice_observation":"indeterminate","observation_reason":"unresolved-import"}');
+  expect(result).toEqual({ semantic: "pass", practice_observation: "indeterminate", observation_reason: "unresolved-import" });
+});
+
+test("evaluatorResult accepts a valid semantic failure without an evaluator failure", () => {
+  const result = evaluatorResult('{"semantic":"fail","practice_observation":"not-run"}');
+  expect(result).toEqual({ semantic: "fail", practice_observation: "not-run" });
+});
+
+test("evaluatorResult rejects incomplete or unsupported observation output", () => {
+  expect(evaluatorResult('{"semantic":"pass","practice_probe":"fail"}')).toBeUndefined();
+  expect(evaluatorResult('{"semantic":"pass","practice_observation":"unknown"}')).toBeUndefined();
 });
 
 test("evaluatorResult returns undefined when no structured result is present", () => {

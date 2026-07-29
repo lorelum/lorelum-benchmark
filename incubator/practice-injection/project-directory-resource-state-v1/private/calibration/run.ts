@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 type CalibrationCase = {
   id: string;
   path: string;
-  expectedProbe: "pass" | "fail";
+  expectedObservation: "observed" | "not-observed";
 };
 
 const candidateRoot = resolve(import.meta.dirname, "..", "..");
@@ -27,10 +27,10 @@ function stagedFixture(id: string): string {
   return fixture.path;
 }
 const cases: CalibrationCase[] = [
-  { id: "public-starter", path: stagedPublicStarter, expectedProbe: "fail" },
-  { id: "reference", path: stagedFixture("reference"), expectedProbe: "pass" },
-  { id: "equivalent", path: stagedFixture("equivalent"), expectedProbe: "pass" },
-  { id: "anti-pattern", path: stagedFixture("anti-pattern"), expectedProbe: "fail" },
+  { id: "public-starter", path: stagedPublicStarter, expectedObservation: "not-observed" },
+  { id: "reference", path: stagedFixture("reference"), expectedObservation: "observed" },
+  { id: "equivalent", path: stagedFixture("equivalent"), expectedObservation: "observed" },
+  { id: "anti-pattern", path: stagedFixture("anti-pattern"), expectedObservation: "not-observed" },
 ];
 
 async function run(command: string[], cwd: string, env?: Record<string, string>): Promise<number> {
@@ -87,19 +87,33 @@ async function startDevServer(appPath: string): Promise<{ baseUrl: string; kill:
   }
 }
 
-const results: Array<{ id: string; semantic: "pass" | "fail"; practice_probe: "pass" | "fail"; expected_practice_probe: "pass" | "fail" }> = [];
+async function observe(appPath: string): Promise<"observed" | "not-observed" | "indeterminate"> {
+  const child = Bun.spawn([process.execPath, "run", probePath, appPath, appPath], { cwd: candidateRoot, stdout: "pipe", stderr: "pipe" });
+  const [stdout] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+  for (const line of stdout.trim().split(/\r?\n/).reverse()) {
+    try {
+      const result = JSON.parse(line) as { practice_observation?: unknown };
+      if (result.practice_observation === "observed" || result.practice_observation === "not-observed" || result.practice_observation === "indeterminate") return result.practice_observation;
+    } catch {
+      // The probe may print diagnostics before its final result.
+    }
+  }
+  return "indeterminate";
+}
+
+const results: Array<{ id: string; semantic: "pass" | "fail"; practice_observation: "observed" | "not-observed" | "indeterminate"; expected_practice_observation: "observed" | "not-observed" }> = [];
 for (const calibration of cases) {
   const appPath = calibration.path;
   await ensureDependencies(appPath);
   const server = await startDevServer(appPath);
   try {
     const semantic = await run(["bun", "run", "test"], appPath, { PLAYWRIGHT_BASE_URL: server.baseUrl }) === 0 ? "pass" : "fail";
-    const probe = await run([process.execPath, "run", probePath, appPath, appPath], candidateRoot) === 0 ? "pass" : "fail";
-    results.push({ id: calibration.id, semantic, practice_probe: probe, expected_practice_probe: calibration.expectedProbe });
+    const practiceObservation = await observe(appPath);
+    results.push({ id: calibration.id, semantic, practice_observation: practiceObservation, expected_practice_observation: calibration.expectedObservation });
   } finally {
     await server.kill();
   }
 }
 
 console.log(JSON.stringify({ calibration: results }));
-process.exit(results.every((result) => result.semantic === "pass" && result.practice_probe === result.expected_practice_probe) ? 0 : 1);
+process.exit(results.every((result) => result.semantic === "pass" && result.practice_observation === result.expected_practice_observation) ? 0 : 1);

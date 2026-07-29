@@ -2,8 +2,8 @@ id: profile-update-command-boundary-v1
 semantic_oracle:
   command: bun run test
   assertions: [资料加载, 显示名校验, 保存中禁用, 保存成功, 名称冲突反馈]
-practice_probe:
+practice_observation:
   command: bun run private/evaluator/verify-command-boundary.ts public/starter/app
   signal_only: true
   responsibilities: [组件外命令边界负责 transport, DTO 转换, 冲突到领域结果翻译]
-baseline_expected_result: { semantic: pass, practice_probe: fail }
+baseline_expected_result: { semantic: pass, practice_observation: not-observed }

@@ -1,5 +1,7 @@
-import { fetchProjects } from "../services/http";
+import { fetchProjects } from "./http";
+
 export type Catalog = { state: "ready"; items: Array<{ key: string; label: string }> } | { state: "empty" } | { state: "failed" } | { state: "loading" };
+
 export async function loadCatalog(term: string): Promise<Catalog> {
   const reply = await fetchProjects(term);
   if (reply.status !== 200) return { state: "failed" };

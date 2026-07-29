@@ -139,13 +139,36 @@ can classify them under the new contract without a model call.
 Rollback is a revert of the unfrozen candidate and diagnostic-runner changes.
 No formal record or frozen revision is mutated by this change.
 
+## Planning Confirmation
+
+The requirements owner confirmed the following after the OpenSpec-only PR:
+
+- The two trial candidates retain their current public observable behaviors:
+  account-profile load/validation/save/conflict feedback and project-directory
+  load/search/empty/failure/retry recovery.
+- The currently declared relevant and irrelevant private treatments, conditions,
+  decision rule, semantic checks, starter inputs, and clean-workspace execution
+  inputs remain unchanged. Private Practice text and private paths are not
+  reproduced in issue, trace, or public input.
+- Both baselines remain semantically functional but intentionally lack the
+  respective measured responsibility. That is discrimination evidence only,
+  never a semantic failure.
+- Semantic checks remain the hard completion signal. The revised private probe
+  remains signal-only and is calibrated with private reference, equivalent, and
+  registered anti-pattern inputs.
+- Only the two unfrozen candidates change and receive regenerated snapshots.
+  Frozen candidates adopt this contract through a new revision or independent
+  change.
+- Existing declared agent/model/prompt/tool/budget/repetition inputs and the
+  no-blind-review boundary remain fixed. This change makes no model call,
+  formal record, or candidate promotion; it only replays existing #90 local
+  workspaces through the evaluator when possible.
+
+The redacted confirmation is recorded in #114. Future Practice-injection
+candidates must record equivalent boundaries in their own issue and OpenSpec.
+
 ## Open Questions
 
-- Planning confirmation is pending after the initial PR. The response must
-  explicitly confirm the two candidates' observable behavior, Practice
-  behavior, baseline discrimination, relevant/irrelevant controls, private
-  semantic and quality checks, starter/snapshot identity, and model/prompt/
-  budget/blind-review boundaries.
 - The exact public-facing name of the new profile diagnostic summary schema
   will be selected during implementation; its version must prevent consumers
   from mistaking it for the old binary schema.

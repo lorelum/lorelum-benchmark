@@ -1,4 +1,4 @@
-import { getProfile, saveProfile } from "../services/http";
+import { getProfile, saveProfile } from "./http";
 
 export async function hydrateMember(): Promise<{ label: string }> {
   const reply = await getProfile();
