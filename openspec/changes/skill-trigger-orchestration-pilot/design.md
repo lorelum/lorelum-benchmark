@@ -16,7 +16,7 @@
 
 ### mock 返回结构
 
-三字段：范围约束、命中 Practice（引用与原话，可审计来源）、行为约束（非指令，如异步副作用不得在组件卸载后继续影响状态，agent 自行决定实现方式）。
+三字段：范围约束、命中 Practice 的可审计引用（仅 id/version/SHA-256，不含原文）、行为约束（非指令，如异步副作用不得在组件卸载后继续影响状态，agent 自行决定实现方式）。Practice 卡原文保留在 private/，不进 mock 返回结构或模型输入。
 
 ### 对照组
 
@@ -60,3 +60,13 @@ trace 记录三层事件：discovered_and_loaded、query_occurred、constraint_a
 ### 内核与 calibration 复用
 
 candidate.yaml 声明 `kernel: { core: v1, profile: skill-trigger-orchestration/v1, materializer_kind: react-vite }`。starter 复用 `incubator/calibration-bases/injection-calibration/v1/react-vite/app-shell` 共享 base + overlay（与 practice-injection 新 candidate 一致），calibration 用 base + overlay 合成树，通过 sets.yaml 声明 reference/equivalent/anti-pattern fixtures。
+
+### calibration fixtures 语义
+
+calibration sets 声明三个 fixture，各自测探针的不同判据：
+
+- reference：带 cleanup 的正确实现，MUST 通过 AST 探针。证明探针能接受正确实现。
+- equivalent：命名/布局不同但职责等价的正确实现（如用 AbortController 而非 mounted 标志），MUST 通过探针。证明探针不把单一写法当唯一答案。
+- anti-pattern：看似处理了实则没处理的绕过实现--例如在卸载后仍 setState 但加了个空的 cleanup 函数，或把请求挪到组件外但仍未取消。MUST 被探针拒绝。证明探针不漏判伪装正确的写法。
+
+anti-pattern 与 naive starter 的区别：naive starter 是 baseline 预期产出（压根不写 cleanup，探针直接判失败）；anti-pattern 是 calibration 用的已知绕过实现（写了但无效，测探针的判别力）。两者不重复。

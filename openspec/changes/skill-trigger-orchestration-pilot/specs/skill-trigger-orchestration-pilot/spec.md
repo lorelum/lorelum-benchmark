@@ -10,18 +10,18 @@
 
 #### Scenario: mock Practice 注入
 - **WHEN** 条件为 lorelum-retrieval 或 irrelevant-practice
-- **THEN** Practice 通过 condition-scoped private runtime 通道注入，其版本与 SHA-256 记录在 trace 中，正文不进 public 工作区
+- **THEN** 约束通过 mock-retrieval-prompt-injection 通道注入 prompt 文本，其 Practice id/version/SHA-256 记录在 trace 中，Practice 正文与 private 路径不进 public 工作区或模型输入
 
 ### Requirement: mock 查询返回三字段结构
 
-系统 MUST 让 mock 查询返回结构化结果而非自然语言建议，包含范围约束、命中 Practice（引用与原话）、行为约束（非指令）。行为约束 MUST 是不得/必须式限制，MUST NOT 是具体实现指令。
+系统 MUST 让 mock 查询返回结构化结果而非自然语言建议，包含范围约束、命中 Practice 的可审计引用（仅 id/version/SHA-256，不含原文）、行为约束（非指令）。行为约束 MUST 是不得/必须式限制，MUST NOT 是具体实现指令。Practice 卡原文 MUST NOT 进入 mock 返回结构、prompt 或模型输入；agent 仅凭行为约束文本自行决定实现方式。
 
-#### Scenario: 返回行为约束
+#### Scenario: 返回行为约束而非原文
 - **WHEN** lorelum-retrieval 条件触发查询
-- **THEN** 返回包含异步副作用不得在组件卸载后继续影响状态式约束，由 agent 自行决定实现方式
+- **THEN** 返回包含异步副作用不得在组件卸载后继续影响状态式约束，由 agent 自行决定实现方式；返回结构不含 Practice 卡原文
 
-#### Scenario: 命中 Practice 可审计
-- **THEN** 返回结构包含选中 Practice 的 id 与内容哈希，证明约束来自检索而非模型参数记忆
+#### Scenario: 命中 Practice 可审计但不泄露原文
+- **THEN** 返回结构仅包含选中 Practice 的 id/version/SHA-256，证明约束来自检索而非模型参数记忆；Practice 正文保留在 private/，不进模型输入
 
 ### Requirement: 三条件对照不设天花板
 
