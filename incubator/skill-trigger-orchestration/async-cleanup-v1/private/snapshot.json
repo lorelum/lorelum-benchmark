@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "d9c9745dd3e2c5a006f112a89729b5e70944ddb798cc54a64c50804987217fd7",
+  "files": {
+    "private/README.md": "75b4d84ef12b21f824986c6e94af050743158da978d39dbced1d3319535c26d8",
+    "private/candidate.yaml": "890ad082dfed4fda21f790b798e701f6e8b35eb631faad41e4f39df48b62ecd7",
+    "private/conditions.yaml": "79836ed9378bcc465299499e2ef6785b383f295c1571456352c361acecd8b24c",
+    "private/evaluator/evaluate.ts": "bdf9821b5a5049b2d45db0b293dbe0d9d68d9c3c027b80719cfcdba563a09384",
+    "private/evaluator/verify-cleanup.ts": "e7d6bcbfd29aacf151bd8516085560a537bff152011c596e0fe303bb2e4d6dad",
+    "private/execution/tool-policy.yaml": "3c8ad6d2df673e319019301918680b9d417801b4b554a5475c3bb5b0388ba2ab",
+    "private/oracle.yaml": "d6ddec13f3527a8e803f5b057bf3f7895552dbc2f07a1f9d84cac666b0c72a9b",
+    "private/practices/irrelevant.form-validation.v1.md": "2c5c090ec5966e81b1d4e326839b5c5e0928887c7eddfb48cc20082da29451e9",
+    "private/practices/metadata.yaml": "2bf8eec796c676b313ac06a819b48d9873019f7241968fabb192bb65ca05a69f",
+    "private/practices/oracle.async-lifecycle.v1.md": "b5b6bf75ef6abfd801cd056904724a586ae4b61ed11dbb43f0c5f84e27d2a746",
+    "public/starter/app/.gitignore": "463b5f9362420aaa6bbf70c200b7cef361af47f34e60e6767851406f3091a39a",
+    "public/starter/app/index.html": "512b50bf0f6362bf9044c35c9e4d0b1426faab0dd64dd6c6c60bd87214a80a1e",
+    "public/starter/app/package.json": "96fa6bad9cbcca6c1a9adba5c23c554a2f9240a15151f6947f7a8da5d21b05aa",
+    "public/starter/app/playwright.config.ts": "a2578cba0cfeecf802469c452ab9fae390e55cde7f52f3b5d2b0e57d0d591920",
+    "public/starter/app/src/Dashboard.tsx": "1562712e395386a0499dcc569f4312fb43007751d48534fb21dc424cc0d24926",
+    "public/starter/app/src/main.tsx": "6126eadaf4d21e20902c32125e57a190079e0ef90beceaa6f8e5bf929161bf63",
+    "public/starter/app/src/services/projects.ts": "6021fc35e7896e344509787df13e3e2263b0ff21cc6bd3c3c370e9585da728fc",
+    "public/starter/app/src/styles.css": "621c14c628041c9ac3b31495165a15c41cfb967ab8a7ff6020f52437817c5e2a",
+    "public/starter/app/tests/dashboard.spec.ts": "1c67d8d6b05e74fab618fbca988b1a77238ab5fe8393daf0a2c42a40555d9601",
+    "public/starter/app/tsconfig.app.json": "4ef236d842458096cef4304e4e048b1e048c55c8731ac4001ce58a8601fe109e",
+    "public/starter/app/tsconfig.json": "770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808",
+    "public/starter/app/tsconfig.node.json": "99cbcda8723034e3c3c4b4e7688fa4ab607d78aab45cf754d19e5f269c826af2",
+    "public/starter/app/vite.config.ts": "eca485c281977125366d4800553256e419f364984e615f75a2d2bae54f7857fd",
+    "public/task.md": "241bbec7cd7630a9e92ee98790c8884d714a0e1fd00bb11195bf891bde505f8c"
+  },
+  "resolved": {
+    "core_version": "v1",
+    "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
+    "profile": "skill-trigger-orchestration/v1",
+    "materializer_kind": "react-vite",
+    "input_hash": "db9db9e8d00a5b9c719f10eaf8511404e21d8c762bfcbcbd049301ecba6749ed",
+    "materialized_output_hash": "2b4570294d2b82b34447c59fbf2f3aea68b9ed962e32ce19db1c1167a1452110",
+    "profile_input_hash": "3e06e310efd702026d07aa2d06ee28c22adf5733f0207d85bd44149c0fecb448"
+  }
+}

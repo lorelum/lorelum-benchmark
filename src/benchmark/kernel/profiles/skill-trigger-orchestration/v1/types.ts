@@ -55,6 +55,26 @@ export type SkillTriggerProfile = {
   decision_rule: DecisionRule;
 };
 
+/** Metadata entry for a single Practice card. */
+export type PracticeCardMetadata = {
+  id: string;
+  version: string;
+  path: string;
+  rendered_characters: number;
+};
+
+/** Private/practices/metadata.yaml: declares card metadata and length comparison. */
+export type PracticeMetadata = {
+  delivery_template: "practice-card/v1";
+  length_metric: "practice-card/v1:utf8-rendered-characters";
+  cards: PracticeCardMetadata[];
+  comparison: {
+    maximum_relative_difference: number;
+    actual_relative_difference: number;
+    independently_reviewed: true;
+  };
+};
+
 export type ResolvedPractice = {
   id: string;
   version: string;

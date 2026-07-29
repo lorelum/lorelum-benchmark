@@ -1,7 +1,7 @@
 import { lstat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { sha256Text } from "../../../../fs";
-import type { DecisionRule, MockRetrievalResult, PracticeReference, RedactedSkillTriggerTrace, ResolvedSkillTrigger, SkillTriggerChannel, SkillTriggerCondition, SkillTriggerConditionId, SkillTriggerPayload, SkillTriggerProfile, TraceEvent } from "./types";
+import type { DecisionRule, MockRetrievalResult, PracticeCardMetadata, PracticeMetadata, PracticeReference, RedactedSkillTriggerTrace, ResolvedSkillTrigger, SkillTriggerChannel, SkillTriggerCondition, SkillTriggerConditionId, SkillTriggerPayload, SkillTriggerProfile, TraceEvent } from "./types";
 
 const allConditionIds = ["baseline", "lorelum-retrieval", "irrelevant-practice"] as const;
 export const practiceCardLengthMetric = "practice-card/v1:utf8-rendered-characters" as const;
@@ -20,6 +20,11 @@ function isRecord(value: unknown): value is UnknownRecord {
 
 function stringField(value: UnknownRecord, field: string): string {
   if (typeof value[field] !== "string" || value[field].length === 0) fail(`${field} must be a non-empty string`);
+  return value[field];
+}
+
+function numberField(value: UnknownRecord, field: string): number {
+  if (typeof value[field] !== "number" || !Number.isFinite(value[field])) fail(`${field} must be a finite number`);
   return value[field];
 }
 
@@ -95,22 +100,78 @@ function parseProfile(value: UnknownRecord): SkillTriggerProfile {
   return { conditions: parsed, decision_rule: decision as DecisionRule };
 }
 
-async function inspectPractice(candidatePath: string, practiceRoot: string, reference: PracticeReference, label: string): Promise<VerifiedPractice> {
+function parseMetadata(value: UnknownRecord): PracticeMetadata {
+  if (value.delivery_template !== "practice-card/v1") fail("metadata.delivery_template must be practice-card/v1");
+  if (value.length_metric !== practiceCardLengthMetric) fail(`metadata.length_metric must be ${practiceCardLengthMetric}`);
+  if (!Array.isArray(value.cards) || value.cards.length < 2) fail("metadata.cards must declare the selected Practice cards");
+  const cards = value.cards.map((card) => {
+    if (!isRecord(card)) fail("metadata card must be an object");
+    const id = stringField(card, "id");
+    const version = stringField(card, "version");
+    const path = stringField(card, "path");
+    const renderedCharacters = numberField(card, "rendered_characters");
+    if (!Number.isInteger(renderedCharacters) || renderedCharacters <= 0) fail(`metadata card rendered_characters must be positive: ${id}`);
+    return { id, version, path, rendered_characters: renderedCharacters };
+  });
+  const cardKeys = new Set<string>();
+  for (const card of cards) {
+    if (!cardKeys.add(`${card.id}\0${card.version}`)) fail(`metadata card is duplicated: ${card.id}/${card.version}`);
+  }
+  if (!isRecord(value.comparison)) fail("metadata.comparison must be an object");
+  const maximum = numberField(value.comparison, "maximum_relative_difference");
+  const actual = numberField(value.comparison, "actual_relative_difference");
+  if (maximum < 0 || maximum > 1 || actual < 0 || actual > 1 || value.comparison.independently_reviewed !== true) fail("metadata.comparison is invalid");
+  return {
+    delivery_template: "practice-card/v1",
+    length_metric: practiceCardLengthMetric,
+    cards,
+    comparison: { maximum_relative_difference: maximum, actual_relative_difference: actual, independently_reviewed: true },
+  };
+}
+
+function metadataCard(metadata: PracticeMetadata, reference: PracticeReference, practiceRoot: string): PracticeCardMetadata {
   const prefix = "private/practices/";
-  if (!reference.path.startsWith(prefix)) fail(`${label}.practice.path must start with ${prefix}`);
+  if (!reference.path.startsWith(prefix)) fail(`${reference.path} must start with ${prefix}`);
   const declaredPath = reference.path.slice(prefix.length);
-  if (declaredPath.length === 0 || declaredPath.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) fail(`${label}.practice.path must be normalized`);
+  if (declaredPath.length === 0 || declaredPath.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) fail(`${reference.path} must be normalized`);
+  const practicePath = pathInside(practiceRoot, declaredPath, "Practice path");
+  const relativePath = relative(practiceRoot, practicePath).replaceAll("\\", "/");
+  const matched = metadata.cards.filter((card) => card.path === relativePath);
+  if (matched.length !== 1) fail(`metadata must contain one card for ${relativePath}`);
+  return matched[0];
+}
+
+function sha256ArrayBuffer(bytes: ArrayBuffer): Promise<string> {
+  return crypto.subtle.digest("SHA-256", bytes).then((digest) => [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join(""));
+}
+
+export function measurePracticeCardV1(bytes: ArrayBuffer): number {
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    fail("Practice card must be valid UTF-8");
+  }
+  return [...text].length;
+}
+
+function validateLengthComparison(metadata: PracticeMetadata, lorelum: VerifiedPractice, irrelevant: VerifiedPractice): void {
+  const actual = Math.abs(lorelum.renderedCharacters - irrelevant.renderedCharacters) / lorelum.renderedCharacters;
+  if (Math.abs(actual - metadata.comparison.actual_relative_difference) > 0.000001) fail("metadata comparison actual_relative_difference disagrees with card lengths");
+  if (actual > metadata.comparison.maximum_relative_difference) fail("irrelevant Practice exceeds its declared maximum relative difference");
+}
+
+async function inspectPractice(candidatePath: string, practiceRoot: string, reference: PracticeReference, metadata: PracticeCardMetadata, label: string): Promise<VerifiedPractice> {
   const path = pathInside(candidatePath, reference.path, `${label}.practice.path`);
   if (relative(practiceRoot, path).startsWith("..")) fail(`${label}.practice.path must be inside private/practices`);
   const stat = await lstat(path).catch(() => undefined);
-  if (!stat || !stat.isFile() || stat.isSymbolicLink()) fail(`${label}.practice.path is not a regular file: ${reference.path}`);
-  const text = await Bun.file(path).text();
-  const sha256 = await sha256Text(text);
-  if (sha256 !== reference.sha256) fail(`${label}.practice.sha256 does not match`);
-  const idMatch = text.match(/^<!--\s*id:\s*(\S+)\s*-->\s*$/m);
-  const versionMatch = text.match(/^<!--\s*version:\s*(\S+)\s*-->\s*$/m);
-  if (!idMatch || !versionMatch) fail(`${label} Practice card must declare id and version in HTML comments`);
-  return { card: { id: idMatch[1], version: versionMatch[1], sha256 }, path, renderedCharacters: text.length };
+  if (!stat || !stat.isFile() || stat.isSymbolicLink()) fail(`${label}.practice.path is not a regular file: ${metadata.id}/${metadata.version}`);
+  const bytes = await Bun.file(path).arrayBuffer();
+  const sha256 = await sha256ArrayBuffer(bytes);
+  if (sha256 !== reference.sha256) fail(`${label}.practice.sha256 does not match: ${metadata.id}/${metadata.version}`);
+  const renderedCharacters = measurePracticeCardV1(bytes);
+  if (renderedCharacters !== metadata.rendered_characters) fail(`metadata rendered_characters disagrees with Practice card: ${metadata.id}/${metadata.version}`);
+  return { card: { id: metadata.id, version: metadata.version, sha256 }, path, renderedCharacters };
 }
 
 async function inspectSkillTrigger(candidatePath: string): Promise<PrivateResolvedProfile> {
@@ -118,15 +179,28 @@ async function inspectSkillTrigger(candidatePath: string): Promise<PrivateResolv
   const privateRoot = resolve(resolvedCandidate, "private");
   const practiceRoot = resolve(privateRoot, "practices");
   const declaration = parseProfile(await readYaml(join(privateRoot, "conditions.yaml"), "private/conditions.yaml"));
+  const metadata = parseMetadata(await readYaml(join(practiceRoot, "metadata.yaml"), "private/practices/metadata.yaml"));
   const lorelumReference = declaration.conditions.find((c) => c.id === "lorelum-retrieval")!.practice as PracticeReference;
   const irrelevantReference = declaration.conditions.find((c) => c.id === "irrelevant-practice")!.practice as PracticeReference;
+  const lorelumMetadata = metadataCard(metadata, lorelumReference, practiceRoot);
+  const irrelevantMetadata = metadataCard(metadata, irrelevantReference, practiceRoot);
+  if (lorelumMetadata.path === irrelevantMetadata.path) fail("lorelum-retrieval and irrelevant-practice must reference different cards");
   const [lorelum, irrelevant] = await Promise.all([
-    inspectPractice(resolvedCandidate, practiceRoot, lorelumReference, "lorelum-retrieval"),
-    inspectPractice(resolvedCandidate, practiceRoot, irrelevantReference, "irrelevant-practice"),
+    inspectPractice(resolvedCandidate, practiceRoot, lorelumReference, lorelumMetadata, "lorelum-retrieval"),
+    inspectPractice(resolvedCandidate, practiceRoot, irrelevantReference, irrelevantMetadata, "irrelevant-practice"),
   ]);
-  if (lorelum.card.id === irrelevant.card.id) fail("lorelum-retrieval and irrelevant-practice must reference different cards");
+  validateLengthComparison(metadata, lorelum, irrelevant);
+  const lengthComparison = {
+    length_metric: metadata.length_metric,
+    lorelum_characters: lorelum.renderedCharacters,
+    irrelevant_characters: irrelevant.renderedCharacters,
+    maximum_relative_difference: metadata.comparison.maximum_relative_difference,
+    actual_relative_difference: metadata.comparison.actual_relative_difference,
+    independently_reviewed: metadata.comparison.independently_reviewed,
+  };
   const profileInput = {
     conditions: declaration.conditions.map((c) => c.id === "baseline" ? { id: c.id, status: c.status, channel: c.channel } : { id: c.id, status: c.status, channel: c.channel, practice_id: (c.practice as PracticeReference).sha256 }),
+    length_comparison: lengthComparison,
     decision_rule: declaration.decision_rule,
   };
   const profileInputHash = await sha256Text(JSON.stringify(profileInput));
