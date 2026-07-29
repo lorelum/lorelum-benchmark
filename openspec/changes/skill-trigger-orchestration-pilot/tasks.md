@@ -10,7 +10,7 @@
 - [ ] `incubator/skill-trigger-orchestration/async-cleanup-v1/` 目录，含 public 与 private。
 - [ ] candidate.yaml：kernel 声明（core v1 / profile skill-trigger-orchestration/v1 / materializer react-vite）、calibration_sets、calibration_roles。
 - [ ] public/task.md：只描述可观察行为，不提示异步清理或 Practice。
-- [ ] public/starter/app/：复用共享 react-vite base + overlay，naive starter 的 useEffect 不带 cleanup。
+- [ ] public/starter/app/：完整自带的 naive starter（Vite + React 19 + TS），useEffect 发请求不带 cleanup；不通过 overlay 表达该缺陷，避免改 overlay 即改 baseline 预期。calibration 的 base + overlay 仅用于 reference/equivalent/anti-pattern fixtures。
 - [ ] private/snapshot.json。
 
 ## 3. mock 查询与 Practice 卡

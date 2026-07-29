@@ -29,7 +29,7 @@ Issue #96 需要一条独立轨道，验证 coding agent 在工程任务中会�
 
 - 关联 issue：#96。
 - 工作区：`incubator/skill-trigger-orchestration/`，候选阶段，不进 `suites/`。
-- 复用 practice-injection 的执行治理模式与现有 Pi v2 runner、tool-policy 机制。
+- 参考 practice-injection 的执行治理模式，但新建 skill-trigger-orchestration/v1 profile 契约（conditions/channel/trace 与 injection-calibration 不同）；复用现有 Pi v2 runner 与 tool-policy 机制。
 - 不依赖真实 Lorelum CLI/检索引擎。
 - 不创建 `results/records/`、不升级 suite revision、不变更活跃 runner/treatment/schema/environment。
 - 私有材料不得进入 agent 工作区或模型输入。

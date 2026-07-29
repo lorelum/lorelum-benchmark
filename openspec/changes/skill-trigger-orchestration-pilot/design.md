@@ -59,7 +59,7 @@ trace 记录三层事件：discovered_and_loaded、query_occurred、constraint_a
 
 ### 内核与 calibration 复用
 
-candidate.yaml 声明 `kernel: { core: v1, profile: skill-trigger-orchestration/v1, materializer_kind: react-vite }`。starter 复用 `incubator/calibration-bases/injection-calibration/v1/react-vite/app-shell` 共享 base + overlay（与 practice-injection 新 candidate 一致），calibration 用 base + overlay 合成树，通过 sets.yaml 声明 reference/equivalent/anti-pattern fixtures。
+candidate.yaml 声明 `kernel: { core: v1, profile: skill-trigger-orchestration/v1, materializer_kind: react-vite }`。calibration fixtures 复用 react-vite app-shell 共享 base + overlay 合成树（与 practice-injection 同源 base），通过 sets.yaml 声明 reference/equivalent/anti-pattern fixtures；base 路径归属为 `incubator/calibration-bases/skill-trigger-orchestration/v1/react-vite/app-shell`，若与 injection-calibration 共享同一物理 base 则在 sets.yaml 中显式声明跨 profile 共享并绑定 digest。naive starter 本身完整自带在 public/starter/app，不参与 overlay 合成。
 
 ### calibration fixtures 语义
 
