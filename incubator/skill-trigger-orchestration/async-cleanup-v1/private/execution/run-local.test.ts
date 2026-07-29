@@ -33,7 +33,7 @@ test("copies only the starter app source into each agent workspace", async () =>
   const output = "scratch/skill-trigger-local/test-workspace-boundary";
   const { wrapper, cleanup } = await createFakePi(true);
   try {
-    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
     const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: Array<{ initial_workspace_files: string[]; condition: string }> };
     expect(summary.entries).toHaveLength(3);
@@ -52,7 +52,7 @@ test("trace records three redacted events for retrieval conditions and none for 
   const output = "scratch/skill-trigger-local/test-trace-events";
   const { wrapper, cleanup } = await createFakePi(true);
   try {
-    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
     const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: Array<{ condition: string; trace: { channel: string; events: Array<{ event: string }> } }> };
     const byCondition = new Map(summary.entries.map((e) => [e.condition, e]));
@@ -77,7 +77,7 @@ test("preflight fails when the model endpoint is unreachable and does not create
   const output = "scratch/skill-trigger-local/test-preflight-fail";
   const { wrapper, cleanup } = await createFakePi(false);
   try {
-    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("model unreachable");
     expect(await Bun.file(join(repositoryRoot, output, "summary.json")).exists()).toBeFalse();
@@ -91,7 +91,7 @@ test("preflight succeeds and enters the run loop, producing a summary", async ()
   const output = "scratch/skill-trigger-local/test-preflight-success";
   const { wrapper, cleanup } = await createFakePi(true);
   try {
-    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
     const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: unknown[] };
     expect(summary.entries).toHaveLength(3);
@@ -105,7 +105,7 @@ test("preflight failure message does not leak the API key", async () => {
   const output = "scratch/skill-trigger-local/test-preflight-leak";
   const { wrapper, cleanup } = await createFakePi(false, "error: invalid api key sk-1234567890abcdef");
   try {
-    const result = await execute(["--output", output, "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("model unreachable");
     expect(result.stderr).not.toContain("sk-1234567890abcdef");

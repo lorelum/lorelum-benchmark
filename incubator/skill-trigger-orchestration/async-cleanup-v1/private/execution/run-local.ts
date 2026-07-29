@@ -14,7 +14,7 @@ type Conditions = {
   };
   conditions: Condition[];
 };
-type Options = { dryRun: boolean; repeat?: number; outputPath: string };
+type Options = { dryRun: boolean; skipInstall: boolean; repeat?: number; outputPath: string };
 type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number };
 
 const candidateRoot = resolve(import.meta.dir, "../..");
@@ -45,10 +45,12 @@ function parseOptions(): Options {
   let outputPath = requireScratchPath(`scratch/skill-trigger-local/${timestamp()}`);
   let repeat: number | undefined;
   let dryRun = false;
+  let skipInstall = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
     if (argument === "--dry-run") { dryRun = true; continue; }
+    if (argument === "--skip-install") { skipInstall = true; continue; }
     if (argument === "--repeat") {
       const value = Number(args[++index]);
       if (!Number.isInteger(value) || value < 1) fail("--repeat must be a positive integer");
@@ -61,7 +63,7 @@ function parseOptions(): Options {
     }
     fail(`Unknown option: ${argument}`);
   }
-  return { dryRun, repeat, outputPath };
+  return { dryRun, skipInstall, repeat, outputPath };
 }
 
 async function run(command: string[], cwd: string, timeoutMs?: number): Promise<CommandResult> {
@@ -198,7 +200,7 @@ function classifyPreflightFailure(result: CommandResult): string {
 }
 
 async function preflightModel(command: string, modelId: string): Promise<void> {
-  const result = await run([command, "--print", "--no-session", "--model", modelId, "ok"], repositoryRoot, preflightTimeoutMs);
+  const result = await run([command, "--print", "--no-session", "--model", modelId, "--thinking", "off", "ok"], repositoryRoot, preflightTimeoutMs);
   if (result.code !== 0) fail(classifyPreflightFailure(result));
 }
 
@@ -267,7 +269,8 @@ async function runAttempt(
   condition: Condition,
   attempt: number,
   conditions: Conditions,
-  command: string
+  command: string,
+  skipInstall: boolean
 ): Promise<Record<string, unknown>> {
   const attemptPath = resolve(outputPath, condition.id, `attempt-${attempt}`);
   const workspace = resolve(attemptPath, "workspace");
@@ -281,6 +284,7 @@ async function runAttempt(
     "--no-skills", "--no-prompt-templates",
     "--tools", "read,bash,edit,write,grep,find,ls",
     "--model", conditions.shared_execution.model.id,
+    "--thinking", "off",
     "@task.md", "Complete the coding task. Work only inside app/."
   ];
 
@@ -301,6 +305,11 @@ async function runAttempt(
   let evaluation: { semantic: string; practiceProbe: string; dualPass: boolean } | undefined;
   let evaluator: CommandResult | undefined;
   if (pi.code === 0 && !pi.timedOut) {
+    if (!skipInstall) {
+      const install = await run([process.execPath, "install"], resolve(workspace, "app"), 120_000);
+    await Bun.write(resolve(attemptPath, "install.stdout.log"), install.stdout);
+      await Bun.write(resolve(attemptPath, "install.stderr.log"), install.stderr);
+    }
     evaluator = await run([process.execPath, "run", resolve(candidateRoot, "private/evaluator/evaluate.ts"), resolve(workspace, "app")], candidateRoot);
     await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluator.stdout);
     await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluator.stderr);
@@ -376,7 +385,7 @@ await preflightModel(command, conditions.shared_execution.model.id);
 const entries: Record<string, unknown>[] = [];
 for (const condition of runnable) {
   for (let attempt = 1; attempt <= repeat; attempt += 1) {
-    const entry = await runAttempt(options.outputPath, condition, attempt, conditions, command);
+    const entry = await runAttempt(options.outputPath, condition, attempt, conditions, command, options.skipInstall);
     entries.push(entry);
     await writeJson(resolve(options.outputPath, "summary.json"), {
       schema_version: "skill-trigger-local-summary/v1",
