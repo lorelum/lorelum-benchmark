@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "1ad01caaf8056971d6fd395e4bc1f477748e9b3a83171fcfd33adfde57098732",
+  "snapshot_id": "9715cb7ac865220eb3f33b882ed30bd01a92271d409e778a2111fffbfaaf4ff6",
   "files": {
     "private/README.md": "75b4d84ef12b21f824986c6e94af050743158da978d39dbced1d3319535c26d8",
     "private/calibration/run.ts": "354ebee5d4112328f3f6e0f0aae19ed5f24f390f5e19cb8a52f055e26214f9f5",
@@ -23,6 +23,7 @@
     "private/practices/metadata.yaml": "2bf8eec796c676b313ac06a819b48d9873019f7241968fabb192bb65ca05a69f",
     "private/practices/oracle.async-lifecycle.v1.md": "b5b6bf75ef6abfd801cd056904724a586ae4b61ed11dbb43f0c5f84e27d2a746",
     "public/starter/app/.gitignore": "463b5f9362420aaa6bbf70c200b7cef361af47f34e60e6767851406f3091a39a",
+    "public/starter/app/bun.lock": "36504fc123d364e3ebf14875f91d9c4442b180dad95afbef6623cf92d09fc784",
     "public/starter/app/index.html": "512b50bf0f6362bf9044c35c9e4d0b1426faab0dd64dd6c6c60bd87214a80a1e",
     "public/starter/app/package.json": "96fa6bad9cbcca6c1a9adba5c23c554a2f9240a15151f6947f7a8da5d21b05aa",
     "public/starter/app/playwright.config.ts": "a2578cba0cfeecf802469c452ab9fae390e55cde7f52f3b5d2b0e57d0d591920",
@@ -42,8 +43,8 @@
     "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "skill-trigger-orchestration/v1",
     "materializer_kind": "react-vite",
-    "input_hash": "51d65a88c9c5b52cc7527b87713ea9c015795224476641672c449244c1223dfe",
-    "materialized_output_hash": "2b4570294d2b82b34447c59fbf2f3aea68b9ed962e32ce19db1c1167a1452110",
+    "input_hash": "9e9da6d82ed9d759f6132d8eeca82cd1a618107bbdc64a29fcb1d4c408a53b84",
+    "materialized_output_hash": "e12bc479d8df71939b370b1d0fb7c6b813c93e3fa50ad7e6022f026349da16e7",
     "profile_input_hash": "3e06e310efd702026d07aa2d06ee28c22adf5733f0207d85bd44149c0fecb448",
     "calibration_sets_hash": "0c353cb74ea9b56f3d6e81ddc8b4977e5e16d6328ae0198c121e379cd7a79257"
   }
