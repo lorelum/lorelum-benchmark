@@ -4,6 +4,12 @@ kernel:
   core: v1
   profile: skill-trigger-orchestration/v1
   materializer_kind: react-vite
+calibration_roles:
+  - id: cleanup-probe-matrix
+    command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
+    expect: { kind: pass }
+calibration_sets:
+  manifest: private/calibration/sets.yaml
 source:
   kind: repository-local-starter
   repository: lorelum/lorelum-benchmark

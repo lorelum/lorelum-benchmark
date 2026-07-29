@@ -1,13 +1,19 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "670927d29299778f033dc4d31a0398c5f7e8862b42fbd0e1d2015b7914c59648",
+  "snapshot_id": "1ad01caaf8056971d6fd395e4bc1f477748e9b3a83171fcfd33adfde57098732",
   "files": {
     "private/README.md": "75b4d84ef12b21f824986c6e94af050743158da978d39dbced1d3319535c26d8",
-    "private/candidate.yaml": "890ad082dfed4fda21f790b798e701f6e8b35eb631faad41e4f39df48b62ecd7",
+    "private/calibration/run.ts": "354ebee5d4112328f3f6e0f0aae19ed5f24f390f5e19cb8a52f055e26214f9f5",
+    "private/calibration/sets.yaml": "f0780e4ccd13e875ee935ce1b8aaf5cb11a7c2053939846ebd451f9d89b96fde",
+    "private/calibration/sets/cleanup-probe/v1/overlays/anti-pattern/src/Dashboard.tsx": "92c55a3ea0f45b4cc9011f4e1988596700ee2d28435434936e21f23960f2f6d2",
+    "private/calibration/sets/cleanup-probe/v1/overlays/equivalent/src/Dashboard.tsx": "e91ef16ef97e7bd49a72f15130f78b8095b7848c315f43d3d2bafa6e9cdde96a",
+    "private/calibration/sets/cleanup-probe/v1/overlays/reference/src/Dashboard.tsx": "74c38b3221f781e834ff697d33c6f27ce7b75e4400848597e6c862da93961a78",
+    "private/candidate.yaml": "4b3621f9a48177d203e7c88acabea356acdadda3f2ca66f2c73ff86df112b91c",
     "private/conditions.yaml": "eb51673fe3d3e1e87b2eb558a80e85b82c241802b58159c1c3a7dc170354901d",
     "private/evaluator/evaluate.ts": "bdf9821b5a5049b2d45db0b293dbe0d9d68d9c3c027b80719cfcdba563a09384",
-    "private/evaluator/verify-cleanup.ts": "e7d6bcbfd29aacf151bd8516085560a537bff152011c596e0fe303bb2e4d6dad",
+    "private/evaluator/verify-cleanup.test.ts": "4df7502a8b286a900a7054c009c9f1d67946673b5caba0abe477d6ea0f942f39",
+    "private/evaluator/verify-cleanup.ts": "eea488dcd68c67e54d64086f1585f54a170184bf36fdaf734e0b6d18bb618ff9",
     "private/execution/run-local.test.ts": "125305f7c35d58aeb90acb081ffcc1dfac9c63cb371293b4861daf2bacb60e73",
     "private/execution/run-local.ts": "39bac00c56f542366eca8f840d2c6f94a018de2ddf0749d162fccd5f054e8355",
     "private/execution/tool-policy.yaml": "3c8ad6d2df673e319019301918680b9d417801b4b554a5475c3bb5b0388ba2ab",
@@ -36,8 +42,9 @@
     "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "skill-trigger-orchestration/v1",
     "materializer_kind": "react-vite",
-    "input_hash": "db9db9e8d00a5b9c719f10eaf8511404e21d8c762bfcbcbd049301ecba6749ed",
+    "input_hash": "51d65a88c9c5b52cc7527b87713ea9c015795224476641672c449244c1223dfe",
     "materialized_output_hash": "2b4570294d2b82b34447c59fbf2f3aea68b9ed962e32ce19db1c1167a1452110",
-    "profile_input_hash": "3e06e310efd702026d07aa2d06ee28c22adf5733f0207d85bd44149c0fecb448"
+    "profile_input_hash": "3e06e310efd702026d07aa2d06ee28c22adf5733f0207d85bd44149c0fecb448",
+    "calibration_sets_hash": "0c353cb74ea9b56f3d6e81ddc8b4977e5e16d6328ae0198c121e379cd7a79257"
   }
 }

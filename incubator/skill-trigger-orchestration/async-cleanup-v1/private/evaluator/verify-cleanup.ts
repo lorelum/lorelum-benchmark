@@ -45,6 +45,25 @@ function hasAsyncSideEffect(body: any): boolean {
 }
 
 /** 判断 useEffect 调用的回调是否返回了一个函数（清理函数）。 */
+function hasEffectiveCleanup(cleanup: any): boolean {
+  const body = cleanup.body;
+  if (!body) return false;
+  if (!ts.isBlock(body)) {
+    return ts.isCallExpression(body) || ts.isBinaryExpression(body) || ts.isPrefixUnaryExpression(body);
+  }
+  let effective = false;
+  const visit = (node: any) => {
+    if (effective) return;
+    if (ts.isCallExpression(node) || ts.isBinaryExpression(node) || ts.isPrefixUnaryExpression(node)) {
+      effective = true;
+      return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(body);
+  return effective;
+}
+
 function returnsCleanup(callback: any): boolean {
   if (!callback) return false;
   const body = callback.body;
@@ -56,10 +75,8 @@ function returnsCleanup(callback: any): boolean {
       if (returnsFunction) return;
       if (ts.isReturnStatement(node) && node.expression) {
         if (ts.isArrowFunction(node.expression) || ts.isFunctionExpression(node.expression)) {
-          returnsFunction = true; return;
+          returnsFunction = hasEffectiveCleanup(node.expression); return;
         }
-        // 返回一个调用表达式也可能产生清理函数（如 AbortController.abort 绑定）
-        if (ts.isCallExpression(node.expression)) { returnsFunction = true; return; }
       }
       ts.forEachChild(node, visit);
     };
@@ -68,7 +85,7 @@ function returnsCleanup(callback: any): boolean {
   }
   // 箭头函数简写体：直接返回表达式
   if (ts.isArrowFunction(callback) && !ts.isBlock(body)) {
-    return ts.isArrowFunction(body) || ts.isFunctionExpression(body) || ts.isCallExpression(body);
+    return (ts.isArrowFunction(body) || ts.isFunctionExpression(body)) && hasEffectiveCleanup(body);
   }
   return false;
 }
