@@ -25,7 +25,7 @@
 - [x] private/evaluator/verify-cleanup.ts：AST 探针查 useEffect 回调是否返回 cleanup。
 - [x] private/evaluator/evaluate.ts：组合语义检查与 AST 探针。
 - [x] private/oracle.yaml：语义门 + 质量探针声明。
-- [x] calibration/sets.yaml + overlays：reference（带 cleanup，通过探针）、equivalent（等价正确写法，通过探针）、anti-pattern（伪装正确实则无效，如空 cleanup，被探针拒绝）。
+- [ ] calibration/sets.yaml + overlays：reference（带 cleanup，通过探针）、equivalent（等价正确写法，通过探针）、anti-pattern（伪装正确实则无效，如空 cleanup，被探针拒绝）。本地已验证探针判别力（naive 判 fail、fixed 判 pass），正式 calibration fixtures 待 pilot 后补。
 
 ## 5. 对照与执行治理
 
