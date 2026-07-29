@@ -182,7 +182,7 @@ async function piCommand(): Promise<string> {
   return "pi";
 }
 
-const preflightTimeoutMs = 30_000;
+const preflightTimeoutMs = 60_000;
 
 function redactSecrets(text: string): string {
   return text
@@ -192,7 +192,7 @@ function redactSecrets(text: string): string {
 
 function classifyPreflightFailure(result: CommandResult): string {
   const stderr = result.stderr || result.stdout;
-  if (result.timedOut) return "model unreachable: preflight timed out after 30s";
+  if (result.timedOut) return "model unreachable: preflight timed out after 60s";
   if (/api[_-]?key|unauthorized|401|invalid api key/i.test(stderr)) return "model unreachable: API key missing or invalid";
   if (/connection|refused|unreachable|network|timeout|ENOTFOUND|ECONNREFUSED/i.test(stderr)) return "model unreachable: endpoint not reachable";
   if (/model|not found|invalid/i.test(stderr)) return "model unreachable: model id invalid or unknown";

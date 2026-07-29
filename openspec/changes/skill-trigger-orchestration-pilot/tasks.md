@@ -35,13 +35,13 @@
 
 ## 6. pilot 验证
 
-- [ ] 跑 baseline pilot，确认 agent 确实写出不带 cleanup 的 useEffect。
-- [ ] 跑 lorelum-retrieval pilot，确认 mock 链路可触发、约束可注入、trace 三层事件齐全。
-- [ ] 跑 irrelevant-practice pilot，确认无关约束不致盲从通过。
+- [x] 跑 baseline pilot，确认 agent 确实写出不带 cleanup 的 useEffect。
+- [x] 跑 lorelum-retrieval pilot，确认 mock 链路可触发、约束可注入、trace 三层事件齐全。
+- [x] 跑 irrelevant-practice pilot，确认无关约束不致盲从通过。
 
 ## 7. 验收
 
-- [ ] `bun run validate` 与 `bun run test:contracts` 通过。
-- [ ] `npx openspec validate skill-trigger-orchestration-pilot --strict` 通过。
-- [ ] trace 记录三层事件。
-- [ ] lorelum-retrieval 过 evaluator 且 irrelevant-practice 不过。
+- [x] `bun run validate` 与 `bun run test:contracts` 通过。
+- [x] `npx openspec validate skill-trigger-orchestration-pilot --strict` 通过。
+- [x] trace 记录三层事件。
+- [x] lorelum-retrieval 过 evaluator 且 irrelevant-practice 不过。
