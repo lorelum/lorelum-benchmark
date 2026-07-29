@@ -40,14 +40,22 @@ Practice 观测 MUST 表示为 `observed`、`not-observed`、`indeterminate` 或
 
 ### Requirement: 候选结果以人可读原始维度呈现
 
-Practice-injection candidate 的结果 MUST 按条件单独列出注入内容、运行次数、语义通过次数、Practice `observed` 次数、Practice `not-observed` 次数、Practice `indeterminate` 次数、evaluator/execution health 和语义与 Practice 均通过次数。每个 `x/y` 值 MUST 解释分子、分母和通过含义。结论 MUST 限定在已执行的 candidate、Practice、模型与条件上，不得将小样本本地对照表述为 retrieval 有效性、正式 benchmark、产品效果或普遍模型能力。
+Practice-injection candidate 的结果 MUST 按条件单独列出注入内容、计划运行次数、`evaluated` 次数、每种非健康 evaluator/execution status 的次数、语义通过次数、Practice `observed` 次数、Practice `not-observed` 次数、Practice `indeterminate` 次数和语义与 Practice 均通过次数。每个 `x/y` 值 MUST 解释分子、分母和通过含义，且分母 MUST 保留计划运行次数；非健康运行不得静默从分母剔除、改记为 `not-observed` 或计作任何通过/观测分子。
+
+单次运行的任务完成结论 MUST 仅由语义 `pass` 决定；Practice 证据结论 MUST 仅由 `practice_observation` 决定；评测可用性结论 MUST 仅由 `evaluation_status=evaluated` 决定。`semantic=pass`、`practice_observation=not-observed` 与 `evaluation_status=evaluated` MUST 被表述为任务完成、未观察到 Practice 证据且评测正常完成，而不得表述为任务或评测失败。`indeterminate` MUST 被表述为 probe 无法可靠分类，不能作为 Agent 未遵循 Practice 的证据。
+
+结论 MUST 限定在已执行的 candidate、Practice、模型与条件上，不得将小样本本地对照表述为 retrieval 有效性、正式 benchmark、产品效果或普遍模型能力。只有在所有条件完成预先声明的重复次数、所有运行均为 `evaluated`、probe 校准通过、相关 Practice 的语义通过次数不低于 baseline 与无关对照、且其派生 joint-pass 次数严格领先二者时，报告 MAY 称其为该 candidate 在该执行条件下的方向性信号。否则报告 MUST 仅陈述原始诊断结果和缺失条件。
 
 `joint_pass` MUST 仅由语义 `pass` 与 Practice `observed` 派生；它不得替代任务完成或 evaluator health，也不得与其他维度合并为加权总分。
 
 #### Scenario: 本地三条件结果
 - **WHEN** 维护者在 PR、issue 或验证文档中报告三条件候选结果
-- **THEN** 报告 MUST 使用人可读字段解释每个条件的语义、每种 Practice 观测和 evaluator health 次数，并明确该结果是否只构成方向性信号
+- **THEN** 报告 MUST 使用人可读字段解释每个条件的计划次数、每种 evaluator health、语义、每种 Practice 观测和 joint-pass 次数，并明确该结果是否只构成方向性信号
 
 #### Scenario: 相关 Practice 严格领先
-- **WHEN** 预先声明的相关 Practice 条件在派生“语义与 Practice 均通过”原始次数上严格领先 baseline 和无关对照
-- **THEN** 报告 MAY 称其为该 candidate 的方向性信号，但 MUST 同时呈现语义、所有 Practice 观测、health 维度，并声明未验证的任务、模型、retrieval 或正式 record 边界
+- **WHEN** 所有条件完成预先声明的重复次数且全部为 `evaluated`，probe 校准通过，相关 Practice 条件的语义通过次数不低于 baseline 和无关对照，并在派生“语义与 Practice 均通过”原始次数上严格领先二者
+- **THEN** 报告 MAY 称其为该 candidate 在该执行条件下的方向性信号，但 MUST 同时呈现计划次数、语义、所有 Practice 观测、health 维度，并声明未验证的任务、模型、retrieval 或正式 record 边界
+
+#### Scenario: 比较条件不完整
+- **WHEN** 任一条件存在非健康评测、少于预先声明的重复次数或未通过 probe 校准
+- **THEN** 报告 MUST 保留全部原始计数和原因，但不得将条件差异表述为方向性信号

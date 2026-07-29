@@ -23,3 +23,4 @@
 - [x] 3.1 Perform evaluator-only replay against available #90 scratch workspaces; record observed or indeterminate outcomes without a model call or formal record.
 - [x] 3.2 Run public/private leakage audit, focused evaluator tests, `bun run test:pi:v2`, `bun run validate`, `openspec validate practice-observation-contract --strict`, and `git diff --check`.
 - [x] 3.3 Record command outcomes and any unavailable replay input in the PR, then check completed tasks immediately.
+- [x] 3.4 Document the per-run classification standard and the evidence threshold for a condition-level directional signal, including how non-healthy evaluations affect reporting and conclusions.

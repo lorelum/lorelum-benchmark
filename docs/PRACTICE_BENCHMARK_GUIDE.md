@@ -131,6 +131,21 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 - probe 遇到解析失败、未支持代码形态、依赖缺失或无法可靠分类时，必须报告 `indeterminate` 及稳定审计原因，不能把它伪装成 `not-observed`。
 - `joint_pass` 仅可派生为语义 `pass` 与 Practice `observed` 同时成立；它不是任务完成、evaluator health 或加权总分。
 
+### 单次运行的判定标准
+
+一次运行必须同时保留三个彼此独立的问题；任何报告、汇总或退出码都不得用其中一个问题的答案替代另一个。
+
+| 要回答的问题 | 唯一判定依据 | 可以得出的结论 | 不得得出的结论 |
+| --- | --- | --- | --- |
+| 评测是否产生可用结果？ | `evaluation_status` | 仅 `evaluated` 表示本次评测健康并产出可解释结果 | `semantic=fail`、`not-observed` 或 `indeterminate` 不等于评测失败 |
+| Agent 是否完成任务？ | `semantic` | 仅 `pass` 表示通过全部已声明的公开语义验收 | `observed` 不等于任务完成；`not-observed` 不等于任务失败 |
+| 是否观察到被测 Practice 的职责证据？ | `practice_observation` | 仅 `observed` 表示在 probe 已声明且已校准的能力范围内观察到该证据 | `not-observed` 仅表示已校准负面证据；`indeterminate` 不表示未遵循 Practice |
+| 是否同时满足功能与该质量信号？ | 派生 `joint_pass` | 仅当 `semantic=pass` 且 `practice_observation=observed` 时为真 | 它不是总分、任务完成状态或评测健康状态 |
+
+因此，`semantic=pass`、`practice_observation=not-observed`、`evaluation_status=evaluated` 的正确结论是：**任务完成，未观察到该 Practice 证据，评测正常完成**。它不是“不通过”，也不是“评测失败”。
+
+当 `practice_observation=indeterminate` 时，正确结论是“当前 probe 无法可靠分类”，并保留稳定审计原因；不得将该次运行计入 `not-observed`，也不得据此评价 Agent 是否遵循 Practice。当 `evaluation_status` 不是 `evaluated` 时，语义与 Practice 维度只能保留为 `not-run` 或已有原始值供审计，不能补推为任何通过或未通过结论。
+
 ### 禁止的行为
 
 - 把实现偏好（命名、目录、helper 拆分）伪装成任务失败或质量信号失败。
@@ -185,11 +200,11 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 
 ### 模板
 
-| 条件 | 注入内容 | 运行次数 | 语义通过 | Practice 已观察 | Practice 未观察 | Practice 不确定 | 两者同时通过 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 无 Practice 基线 | 无 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
-| 相关 Oracle Practice | React API 分层设计 | 2 | 2/2 | 2/2 | 0/2 | 0/2 | 2/2 |
-| 无关 Practice 对照 | React 身份列表呈现 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
+| 条件 | 注入内容 | 计划运行 | `evaluated` | 非健康评测 | 语义通过 | Practice 已观察 | Practice 未观察 | Practice 不确定 | 两者同时通过 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 无 Practice 基线 | 无 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
+| 相关 Oracle Practice | React API 分层设计 | 2 | 2/2 | 0/2 | 2/2 | 2/2 | 0/2 | 0/2 | 2/2 |
+| 无关 Practice 对照 | React 身份列表呈现 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
 
 ### 每个 `x/y` 的含义
 
@@ -200,12 +215,14 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 - **Practice 未观察**：该次运行有已校准的负面证据；它不表示任务失败。
 - **Practice 不确定**：probe 不能可靠分类，必须保留审计原因；它不表示 Agent 未遵循 Practice。
 - **两者同时通过**：该次运行同时满足语义与质量信号--这是判断 Practice 是否带来方向性改善的依据。
+- **`evaluated` / 非健康评测**：前者是产生有效结构化结果的次数；后者分别列出 `invalid-output`、`execution-failed` 与 `not-executable` 的次数和原因。所有 `x/y` 的分母保留计划运行次数；非健康评测不得静默从分母剔除、改记为 `not-observed`，或计作任何通过/观测分子。
 
 ### 报告要求
 
 - 分别呈现语义通过、Practice 已观察、Practice 未观察、Practice 不确定、evaluator/execution health 与两者同时通过，不合并为总分。
-- 结论只能描述已执行的 candidate、Practice、模型与条件。
-- 若预先声明的相关 Practice 在"两者同时通过"次数上严格领先 baseline 与无关对照，可称其为**该 candidate 的方向性信号**，但必须同时声明未验证的 retrieval、模型、任务或正式 record 边界。
+- 结论只能描述已执行的 candidate、Practice、模型与条件；每个条件都必须同时报告计划次数、`evaluated` 次数和全部非健康状态，不能选择性排除运行。
+- 只有当所有条件均完成预先声明的重复次数、全部运行均为 `evaluated`、probe 校准通过、且相关 Practice 的语义通过次数不低于 baseline 与无关对照并且其“两者同时通过”次数严格领先二者时，才可称为**该 candidate 在该执行条件下的方向性信号**。
+- 即使满足上述条件，结论也只能说明该条件下的原始结果差异；它不证明 retrieval 有效、Practice 的因果效果、正式 benchmark 结果、产品效果或普遍模型能力。任一条件出现非健康评测、未完成计划次数或未通过校准时，只能报告诊断结果，不得作条件比较结论。
 
 ---
 
