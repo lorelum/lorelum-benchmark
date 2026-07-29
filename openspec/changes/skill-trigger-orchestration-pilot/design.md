@@ -38,3 +38,25 @@ baseline 下 agent 写出不带 cleanup 的 useEffect。由 AST 探针稳定检�
 
 - 场景偏简单，agent 可能表现过好导致 baseline 失败模式不成立。candidate 先跑本地 pilot 确认 baseline 下 agent 确实会失败。
 - mock Practice 与 irrelevant Practice 用同一模板、近似字符数，控制文本长度混杂。
+
+### Profile 契约（skill-trigger-orchestration/v1）
+
+本轨道不复用 injection-calibration/v1 或 treatment-comparison/v1，新建 `skill-trigger-orchestration/v1` profile。理由：
+
+- injection-calibration/v1 的 `lorelum-retrieval` 是 `status: unavailable`（只测显式注入，真实检索不可用）；本轨道 `lorelum-retrieval` 是实验组，必须 `status: declared`，走 mock 查询。
+- injection-calibration/v1 的 Practice 通过 `condition-scoped-private-runtime` 通道由 runner 显式注入；本轨道的 Practice 不是显式注入，是 agent 触发 mock 查询后，把返回的三字段约束注入 prompt。需要新 channel：`mock-retrieval-prompt-injection`。
+- injection-calibration/v1 的 decision_rule 是"oracle 严格高于对照"；本轨道无 oracle，decision_rule 是"lorelum-retrieval 过且 irrelevant-practice 不过"。
+
+新 profile 的 conditions：
+
+- baseline：status declared，channel none，无 Skill 列表、无查询。
+- lorelum-retrieval：status declared，channel `mock-retrieval-prompt-injection`，agent 可见可发现 Skill 列表，触发后 mock 返回三字段约束并注入 prompt。
+- irrelevant-practice：status declared，channel `mock-retrieval-prompt-injection`，mock 返回一条无关 Practice 的约束。
+
+mock 查询返回结构进 profile 契约：`{ scope_constraint, matched_practice: { id, version, sha256 }, behavior_constraint }`，其中 behavior_constraint 为不得/必须式限制，非指令。
+
+trace 记录三层事件：discovered_and_loaded、query_occurred、constraint_adopted，均为 redacted（不含 Practice 正文，只含 id/version/sha256）。
+
+### 内核与 calibration 复用
+
+candidate.yaml 声明 `kernel: { core: v1, profile: skill-trigger-orchestration/v1, materializer_kind: react-vite }`。starter 复用 `incubator/calibration-bases/injection-calibration/v1/react-vite/app-shell` 共享 base + overlay（与 practice-injection 新 candidate 一致），calibration 用 base + overlay 合成树，通过 sets.yaml 声明 reference/equivalent/anti-pattern fixtures。
