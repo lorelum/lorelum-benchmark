@@ -1,0 +1,96 @@
+/**
+ * skill-trigger-orchestration/v1 profile contract - Skill trigger track.
+ *
+ * Verifies whether a coding agent proactively discovers and uses Lorelum:
+ * autonomous Skill discovery, active Practice query, constraint-bound
+ * implementation. Practice is NOT explicitly injected; the agent triggers a
+ * mock query whose three-field result is injected into the prompt layer.
+ *
+ * This is a pure type contract; the core does not parse or validate these
+ * fields.
+ */
+
+/** Condition identifiers for the Skill trigger control model. */
+export type SkillTriggerConditionId =
+  | "baseline"
+  | "lorelum-retrieval"
+  | "irrelevant-practice";
+
+/** Channel through which a mock-retrieval result reaches the agent. */
+export type SkillTriggerChannel = "mock-retrieval-prompt-injection" | "none";
+
+/** Reference to a Practice card, redacted (no original text). */
+export type PracticeReference = {
+  path: string;
+  sha256: string;
+};
+
+/** A declared condition in a skill-trigger-orchestration candidate. */
+export type SkillTriggerCondition = {
+  id: SkillTriggerConditionId;
+  status: "declared";
+  channel: SkillTriggerChannel;
+  practice: PracticeReference | "none";
+};
+
+/** Three-field mock query result. behavior_constraint is a non-directive
+ *  must/must-not; matched_practice carries only redacted metadata. */
+export type MockRetrievalResult = {
+  scope_constraint: string;
+  matched_practice: { id: string; version: string; sha256: string };
+  behavior_constraint: string;
+};
+
+/** Declarative decision rule: lorelum passes AND irrelevant fails. */
+export type DecisionRule = {
+  metric: "joint-pass-count";
+  relation: "lorelum-passes-and-irrelevant-fails";
+  controls: ["baseline", "irrelevant-practice"];
+  otherwise: "diagnostic-only";
+};
+
+/** The full skill-trigger-orchestration/v1 profile declaration. */
+export type SkillTriggerProfile = {
+  conditions: SkillTriggerCondition[];
+  decision_rule: DecisionRule;
+};
+
+export type ResolvedPractice = {
+  id: string;
+  version: string;
+  sha256: string;
+};
+
+export type ResolvedCondition = {
+  condition_id: SkillTriggerConditionId;
+  channel: SkillTriggerChannel;
+  practice?: ResolvedPractice;
+};
+
+/** Three-layer trace events (redacted; no Practice text or private paths). */
+export type TraceEvent =
+  | { event: "discovered_and_loaded"; skill_id: string; skill_version: string }
+  | { event: "query_occurred"; practice_id: string; practice_version: string; practice_sha256: string }
+  | { event: "constraint_adopted"; behavior_constraint_sha256: string };
+
+export type RedactedSkillTriggerTrace = {
+  condition_id: SkillTriggerConditionId;
+  channel: SkillTriggerChannel;
+  profile_input_hash: string;
+  events: TraceEvent[];
+  practice_id?: string;
+  practice_version?: string;
+  practice_sha256?: string;
+};
+
+export type ResolvedSkillTrigger = {
+  conditions: Record<SkillTriggerConditionId, ResolvedCondition>;
+  decision_rule: DecisionRule;
+  profile_input_hash: string;
+};
+
+export type SkillTriggerPayload = {
+  condition_id: SkillTriggerConditionId;
+  channel: SkillTriggerChannel;
+  mock_result?: MockRetrievalResult;
+};

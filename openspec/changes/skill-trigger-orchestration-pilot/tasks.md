@@ -1,9 +1,9 @@
 ## 1. Profile 契约（skill-trigger-orchestration/v1）
 
-- [ ] `src/benchmark/kernel/profiles/skill-trigger-orchestration/v1/types.ts`：定义 conditions（baseline/lorelum-retrieval/irrelevant-practice，lorelum-retrieval 为 declared）、channel（mock-retrieval-prompt-injection）、mock 返回三字段结构、trace 三层事件类型、decision_rule。
-- [ ] `src/benchmark/kernel/profiles/skill-trigger-orchestration/v1/runtime.ts`：解析 candidate 的 conditions.yaml、mock 查询声明、Practice 卡哈希；redacted trace。
-- [ ] `profiles/index.ts` 注册导出新 profile。
-- [ ] runtime 测试：覆盖 declared lorelum-retrieval、redacted trace、malformed 拒绝。
+- [x] `src/benchmark/kernel/profiles/skill-trigger-orchestration/v1/types.ts`：定义 conditions（baseline/lorelum-retrieval/irrelevant-practice，lorelum-retrieval 为 declared）、channel（mock-retrieval-prompt-injection）、mock 返回三字段结构、trace 三层事件类型、decision_rule。
+- [x] `src/benchmark/kernel/profiles/skill-trigger-orchestration/v1/runtime.ts`：解析 candidate 的 conditions.yaml、mock 查询声明、Practice 卡哈希；redacted trace。
+- [x] `profiles/index.ts` 注册导出新 profile。
+- [x] runtime 测试：覆盖 declared lorelum-retrieval、redacted trace、malformed 拒绝。
 
 ## 2. 候选工作区骨架
 
