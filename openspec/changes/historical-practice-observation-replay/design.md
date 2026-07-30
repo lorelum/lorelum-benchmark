@@ -126,7 +126,7 @@ are never mutated.
 
 The #90 v1 summaries declared twelve attempts (two candidates, three
 conditions, two repetitions). The final evaluator-only replay used evaluator
-provenance `a612790`, preserved all twelve planned denominator entries, and
+provenance `2b80fb9`, preserved all twelve planned denominator entries, and
 recorded no private paths or evaluator logs. Each candidate had three healthy
 `evaluated` entries and three entries that failed the historical workspace-tree
 integrity check; those six entries remain in the report with stable reasons and
