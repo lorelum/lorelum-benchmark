@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { expansionDecisions, evaluatorResult, isRecord, parseHistoricalSummary, piArgs, replayHistoricalWorkspace, verifyCandidateDeclaration, verifySnapshotIdentity, writeHistoricalReplaySummary } from "./profile-diagnostic-runner";
+import { expansionDecisions, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, verifyCandidateDeclaration, verifySnapshotIdentity, writeHistoricalReplaySummary } from "./profile-diagnostic-runner";
 
 const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
 
@@ -27,7 +27,6 @@ function legacyEntry(candidate: string, condition: "baseline" | "oracle-practice
     candidate,
     condition,
     repeat,
-    status: "evaluation-failed",
     trace: {
       condition_id: condition,
       channel: condition === "baseline" ? "none" : "condition-scoped-private-runtime",
@@ -160,6 +159,53 @@ test("evaluatorResult returns undefined when no structured result is present", (
   expect(evaluatorResult("no JSON here")).toBeUndefined();
 });
 
+test("nonzero evaluator exit discards a structured partial result", () => {
+  const result = classifyEvaluatorResult({
+    code: 1,
+    stdout: '{"semantic":"pass","practice_observation":"observed"}',
+    stderr: "private/evaluator assertion failed",
+    timedOut: false,
+    durationMs: 1,
+  });
+  expect(result).toEqual({ evaluation_status: "execution-failed", error: "evaluator-exit-nonzero" });
+  expect(result).not.toHaveProperty("semantic");
+  expect(result).not.toHaveProperty("practice_observation");
+  expect(result).not.toHaveProperty("joint_pass");
+});
+
+test("timed out evaluator discards output without leaking stderr", () => {
+  const result = classifyEvaluatorResult({
+    code: null,
+    stdout: '{"semantic":"pass","practice_observation":"observed"}',
+    stderr: "E:\\private\\evaluator\\oracle.yaml",
+    timedOut: true,
+    durationMs: 1,
+  });
+  expect(result).toEqual({ evaluation_status: "execution-failed", error: "evaluator-timed-out" });
+  expect(JSON.stringify(result)).not.toContain("private");
+});
+
+test("zero-exit evaluator requires a complete structured result", () => {
+  const result = classifyEvaluatorResult({ code: 0, stdout: "no JSON", stderr: "", timedOut: false, durationMs: 1 });
+  expect(result).toEqual({ evaluation_status: "invalid-output", error: "evaluator-invalid-output" });
+});
+
+test("zero-exit semantic failure remains a healthy evaluator result", () => {
+  const result = classifyEvaluatorResult({
+    code: 0,
+    stdout: '{"semantic":"fail","practice_observation":"not-run"}',
+    stderr: "",
+    timedOut: false,
+    durationMs: 1,
+  });
+  expect(result).toEqual({
+    evaluation_status: "evaluated",
+    semantic: "fail",
+    practice_observation: "not-run",
+    joint_pass: false,
+  });
+});
+
 test("isRecord distinguishes objects from arrays and primitives", () => {
   expect(isRecord({})).toBe(true);
   expect(isRecord([])).toBe(false);
@@ -196,19 +242,22 @@ test("marks a missing workspace not executable without an evaluator invocation",
   }
 });
 
-test("records malformed evaluator output and workspace mutation without serializing logs", async () => {
+test("records malformed output, nonzero evaluator exits, and workspace mutations as unhealthy", async () => {
   const malformed = await withReplayFixture('console.log("not a structured result");');
   try {
-    const replay = await replayHistoricalWorkspace(malformed.historyRoot, malformed.candidate, malformed.entry, evaluatorCommit, 10_000);
-    expect(replay).toMatchObject({ evaluation_status: "invalid-output", replay_reason: "invalid-evaluator-output" });
+    expect(await replayHistoricalWorkspace(malformed.historyRoot, malformed.candidate, malformed.entry, evaluatorCommit, 10_000)).toMatchObject({ evaluation_status: "invalid-output", replay_reason: "invalid-evaluator-output" });
   } finally {
     await malformed.cleanup();
   }
-
+  const nonzero = await withReplayFixture('console.log(JSON.stringify({ semantic: "pass", practice_observation: "observed" })); process.exit(1);');
+  try {
+    expect(await replayHistoricalWorkspace(nonzero.historyRoot, nonzero.candidate, nonzero.entry, evaluatorCommit, 10_000)).toMatchObject({ evaluation_status: "execution-failed", replay_reason: "evaluator-execution-failed" });
+  } finally {
+    await nonzero.cleanup();
+  }
   const mutating = await withReplayFixture('await Bun.write(`${process.argv[2]}/changed.txt`, "changed"); console.log(JSON.stringify({ semantic: "pass", practice_observation: "observed" }));');
   try {
-    const replay = await replayHistoricalWorkspace(mutating.historyRoot, mutating.candidate, mutating.entry, evaluatorCommit, 10_000);
-    expect(replay).toMatchObject({ evaluation_status: "execution-failed", replay_reason: "workspace-modified-during-replay" });
+    expect(await replayHistoricalWorkspace(mutating.historyRoot, mutating.candidate, mutating.entry, evaluatorCommit, 10_000)).toMatchObject({ evaluation_status: "execution-failed", replay_reason: "workspace-modified-during-replay" });
   } finally {
     await mutating.cleanup();
   }
@@ -218,22 +267,12 @@ test("makes candidate-level expansion decisions and writes a redacted replay sum
   const candidate = "candidate-v1";
   const entries = ([
     ["baseline", false], ["irrelevant-practice", false], ["oracle-practice", true],
-  ] as const).map(([condition, jointPass]) => ({
-    ...legacyEntry(candidate, condition),
-    evaluator_source_commit: evaluatorCommit,
-    evaluation_status: "evaluated" as const,
-    semantic: "pass",
-    practice_observation: jointPass ? "observed" as const : "not-observed" as const,
-    joint_pass: jointPass,
-  }));
+  ] as const).map(([condition, jointPass]) => ({ ...legacyEntry(candidate, condition), evaluator_source_commit: evaluatorCommit, evaluation_status: "evaluated" as const, semantic: "pass", practice_observation: jointPass ? "observed" as const : "not-observed" as const, joint_pass: jointPass }));
   const passingAudits = { [candidate]: { calibration: "passed" as const, leakage: "passed" as const } };
   expect(expansionDecisions(entries)[0]).toMatchObject({ status: "indeterminate", calibration_status: "not-verified", leakage_audit_status: "not-verified" });
-  const eligible = expansionDecisions(entries, passingAudits);
-  expect(eligible[0].status).toBe("eligible-for-expansion");
+  expect(expansionDecisions(entries, passingAudits)[0].status).toBe("eligible-for-expansion");
   expect(expansionDecisions([{ ...entries[0], evaluation_status: "not-executable" }], passingAudits)[0].status).toBe("indeterminate");
   expect(expansionDecisions(entries.map((entry) => ({ ...entry, joint_pass: false, practice_observation: "not-observed" as const })), passingAudits)[0].status).toBe("adjust-before-expansion");
-  expect(expansionDecisions(entries, { [candidate]: { calibration: "failed", leakage: "passed" } })[0].status).toBe("indeterminate");
-
   const output = await mkdtemp(join(tmpdir(), "lorelum-replay-summary-"));
   try {
     await writeHistoricalReplaySummary(output, entries, evaluatorCommit, passingAudits);

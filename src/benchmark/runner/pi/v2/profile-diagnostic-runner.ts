@@ -4,6 +4,7 @@ import { joinPath, relativePath, sha256Directory, workspaceRoot } from "../../..
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace, type PracticePayload, type ResolvedInjectionCalibration } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
 import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from "./preflight";
+import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
 
 const scratchRoot = resolve(workspaceRoot, "scratch");
 
@@ -43,6 +44,9 @@ export type DiagnosticEntry = {
   practice_observation?: PracticeObservation;
   observation_reason?: string;
   joint_pass?: boolean;
+  block?: number;
+  planned_position?: number;
+  actual_execution_position?: number;
   error?: string;
 };
 
@@ -59,7 +63,7 @@ type ReplayReason =
   | "evaluator-timed-out"
   | "invalid-evaluator-output";
 
-export type HistoricalReplayEntry = Omit<DiagnosticEntry, "error"> & {
+export type HistoricalReplayEntry = Omit<DiagnosticEntry, "error" | "block" | "planned_position" | "actual_execution_position"> & {
   evaluator_source_commit: string;
   replay_reason?: ReplayReason;
 };
@@ -184,15 +188,30 @@ export function evaluatorResult(stdout: string): ProfileDiagnosticEvaluatorResul
   return undefined;
 }
 
+export function classifyEvaluatorResult(evaluation: CommandResult): Pick<DiagnosticEntry, "evaluation_status" | "semantic" | "practice_observation" | "observation_reason" | "joint_pass" | "error"> {
+  if (evaluation.timedOut) return { evaluation_status: "execution-failed", error: "evaluator-timed-out" };
+  if (evaluation.code !== 0) return { evaluation_status: "execution-failed", error: "evaluator-exit-nonzero" };
+
+  const result = evaluatorResult(evaluation.stdout);
+  if (!result) return { evaluation_status: "invalid-output", error: "evaluator-invalid-output" };
+
+  return {
+    evaluation_status: "evaluated",
+    semantic: result.semantic,
+    practice_observation: result.practice_observation,
+    observation_reason: result.observation_reason,
+    joint_pass: result.semantic === "pass" && result.practice_observation === "observed",
+  };
+}
+
 const replayConditionIds = ["baseline", "oracle-practice", "irrelevant-practice"] as const;
 const hashPattern = /^[a-f0-9]{64}$/;
 const commitPattern = /^[a-f0-9]{7,64}$/;
 const identifierPattern = /^[A-Za-z0-9._-]+$/;
 const replayReasons = new Set<ReplayReason>([
   "candidate-validation-failed", "invalid-history-summary", "missing-history-summary", "missing-workspace",
-  "ambiguous-workspace",
-  "workspace-outside-history-root", "workspace-integrity-unavailable", "workspace-modified-during-replay",
-  "evaluator-execution-failed", "evaluator-timed-out", "invalid-evaluator-output",
+  "ambiguous-workspace", "workspace-outside-history-root", "workspace-integrity-unavailable",
+  "workspace-modified-during-replay", "evaluator-execution-failed", "evaluator-timed-out", "invalid-evaluator-output",
 ]);
 
 function isReplayCondition(value: unknown): value is (typeof replayConditionIds)[number] {
@@ -204,13 +223,9 @@ function safeIdentifier(value: unknown): value is string {
 }
 
 function safeTrace(value: unknown, condition: InjectionConditionId, profileInputHash: string): ReturnType<typeof redactedInjectionTrace> | undefined {
-  if (!isRecord(value) || value.condition_id !== condition || typeof value.channel !== "string" || value.profile_input_hash !== profileInputHash) return undefined;
+  if (!isRecord(value) || value.condition_id !== condition || value.profile_input_hash !== profileInputHash || typeof value.channel !== "string") return undefined;
   if (value.channel !== "none" && value.channel !== "condition-scoped-private-runtime") return undefined;
-  const trace: ReturnType<typeof redactedInjectionTrace> = {
-    condition_id: condition,
-    channel: value.channel,
-    profile_input_hash: profileInputHash,
-  };
+  const trace: ReturnType<typeof redactedInjectionTrace> = { condition_id: condition, channel: value.channel, profile_input_hash: profileInputHash };
   for (const field of ["practice_id", "practice_version", "practice_sha256"] as const) {
     if (value[field] === undefined) continue;
     if (field === "practice_sha256" ? !hashPattern.test(String(value[field])) : !safeIdentifier(value[field])) return undefined;
@@ -220,32 +235,17 @@ function safeTrace(value: unknown, condition: InjectionConditionId, profileInput
 }
 
 export function parseHistoricalSummary(value: unknown, candidateId: string): HistoricalSummaryEntry[] {
-  if (!isRecord(value) || value.schema_version !== "profile-diagnostic-summary/v1" || !Array.isArray(value.entries)) {
-    throw new Error("invalid-history-summary");
-  }
+  if (!isRecord(value) || value.schema_version !== "profile-diagnostic-summary/v1" || !Array.isArray(value.entries)) throw new Error("invalid-history-summary");
   const entries: HistoricalSummaryEntry[] = [];
   const keys = new Set<string>();
   for (const entry of value.entries) {
-    if (!isRecord(entry) || entry.candidate !== candidateId || !isReplayCondition(entry.condition) || !Number.isInteger(entry.repeat) || (entry.repeat as number) < 1) {
-      throw new Error("invalid-history-summary");
-    }
-    if (!commitPattern.test(String(entry.source_commit)) || !hashPattern.test(String(entry.snapshot_id)) || !hashPattern.test(String(entry.profile_input_hash))) {
-      throw new Error("invalid-history-summary");
-    }
+    if (!isRecord(entry) || entry.candidate !== candidateId || !isReplayCondition(entry.condition) || !Number.isInteger(entry.repeat) || (entry.repeat as number) < 1) throw new Error("invalid-history-summary");
+    if (!commitPattern.test(String(entry.source_commit)) || !hashPattern.test(String(entry.snapshot_id)) || !hashPattern.test(String(entry.profile_input_hash))) throw new Error("invalid-history-summary");
     const trace = safeTrace(entry.trace, entry.condition, entry.profile_input_hash as string);
-    if (!trace) throw new Error("invalid-history-summary");
     const key = `${entry.condition}\0${entry.repeat}`;
-    if (keys.has(key)) throw new Error("invalid-history-summary");
+    if (!trace || keys.has(key)) throw new Error("invalid-history-summary");
     keys.add(key);
-    entries.push({
-      candidate: candidateId,
-      condition: entry.condition,
-      repeat: entry.repeat as number,
-      trace,
-      source_commit: entry.source_commit as string,
-      snapshot_id: entry.snapshot_id as string,
-      profile_input_hash: entry.profile_input_hash as string,
-    });
+    entries.push({ candidate: candidateId, condition: entry.condition, repeat: entry.repeat as number, trace, source_commit: entry.source_commit as string, snapshot_id: entry.snapshot_id as string, profile_input_hash: entry.profile_input_hash as string });
   }
   return entries;
 }
@@ -259,22 +259,8 @@ function unknownTrace(condition: InjectionConditionId): ReturnType<typeof redact
   return { condition_id: condition, channel: "none", profile_input_hash: "unknown" };
 }
 
-function fallbackReplayEntries(
-  candidateId: string,
-  repetitions: number,
-  evaluatorSourceCommit: string,
-  reason: ReplayReason
-): HistoricalReplayEntry[] {
-  return expectedHistoricalEntries(candidateId, repetitions).map((entry) => ({
-    ...entry,
-    trace: unknownTrace(entry.condition),
-    source_commit: "unknown",
-    snapshot_id: "unknown",
-    profile_input_hash: "unknown",
-    evaluation_status: "not-executable",
-    evaluator_source_commit: evaluatorSourceCommit,
-    replay_reason: reason,
-  }));
+function fallbackReplayEntries(candidateId: string, repetitions: number, evaluatorSourceCommit: string, reason: ReplayReason): HistoricalReplayEntry[] {
+  return expectedHistoricalEntries(candidateId, repetitions).map((entry) => ({ ...entry, trace: unknownTrace(entry.condition), source_commit: "unknown", snapshot_id: "unknown", profile_input_hash: "unknown", evaluation_status: "not-executable", evaluator_source_commit: evaluatorSourceCommit, replay_reason: reason }));
 }
 
 function pathInside(root: string, path: string): boolean {
@@ -286,81 +272,54 @@ async function historicalWorkspace(historyRoot: string, entry: HistoricalSummary
   const root = await realpath(historyRoot);
   const candidateRoot = resolve(root, entry.candidate);
   if (!pathInside(root, candidateRoot)) throw new Error("workspace-outside-history-root");
-  // #90 wrote its v1 summary one level above the candidate-specific run root;
-  // later invocations may write attempts directly below that summary root.
   const locations = [
     resolve(candidateRoot, entry.condition, `attempt-${entry.repeat}`, "workspace", "app"),
     resolve(candidateRoot, entry.candidate, entry.condition, `attempt-${entry.repeat}`, "workspace", "app"),
   ];
-  const resolved = await Promise.all(locations.map((location) => realpath(location).catch(() => undefined)));
-  const found = [...new Set(resolved.filter((location): location is string => Boolean(location)))];
+  const found = [...new Set((await Promise.all(locations.map((location) => realpath(location).catch(() => undefined)))).filter((location): location is string => Boolean(location)))];
   if (found.length === 0) throw new Error("missing-workspace");
   if (found.length > 1) throw new Error("ambiguous-workspace");
-  const resolvedApp = found[0];
-  if (!pathInside(root, resolvedApp)) throw new Error("workspace-outside-history-root");
-  const stat = await lstat(resolvedApp);
+  if (!pathInside(root, found[0])) throw new Error("workspace-outside-history-root");
+  const stat = await lstat(found[0]);
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("missing-workspace");
-  return resolvedApp;
+  return found[0];
 }
 
 function replayEntry(entry: HistoricalSummaryEntry, evaluatorSourceCommit: string, status: HistoricalReplayEntry["evaluation_status"], reason?: ReplayReason): HistoricalReplayEntry {
   return { ...entry, evaluator_source_commit: evaluatorSourceCommit, evaluation_status: status, ...(reason ? { replay_reason: reason } : {}) };
 }
 
-export async function replayHistoricalWorkspace(
-  historyRoot: string,
-  candidatePath: string,
-  entry: HistoricalSummaryEntry,
-  evaluatorSourceCommit: string,
-  evaluatorTimeoutMs: number
-): Promise<HistoricalReplayEntry> {
+export async function replayHistoricalWorkspace(historyRoot: string, candidatePath: string, entry: HistoricalSummaryEntry, evaluatorSourceCommit: string, evaluatorTimeoutMs: number): Promise<HistoricalReplayEntry> {
   let app: string;
   let before: string;
   try {
     app = await historicalWorkspace(historyRoot, entry);
     before = await sha256Directory(app);
   } catch (error) {
-    const reason = error instanceof Error && replayReasons.has(error.message as ReplayReason)
-      ? error.message as ReplayReason
-      : "workspace-integrity-unavailable";
+    const reason = error instanceof Error && replayReasons.has(error.message as ReplayReason) ? error.message as ReplayReason : "workspace-integrity-unavailable";
     return replayEntry(entry, evaluatorSourceCommit, "not-executable", reason);
   }
-
-  const evaluation = await run(
-    [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), app],
-    candidatePath,
-    evaluatorTimeoutMs
-  );
-  let after: string;
+  let evaluation: CommandResult;
   try {
-    after = await sha256Directory(app);
+    evaluation = await run([process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), app], candidatePath, evaluatorTimeoutMs);
+  } catch {
+    return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "evaluator-execution-failed");
+  }
+  try {
+    if (before !== await sha256Directory(app)) return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "workspace-modified-during-replay");
   } catch {
     return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "workspace-integrity-unavailable");
   }
-  if (before !== after) return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "workspace-modified-during-replay");
-  if (evaluation.timedOut) return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "evaluator-timed-out");
-
-  const result = evaluatorResult(evaluation.stdout);
-  if (!result) {
-    return replayEntry(entry, evaluatorSourceCommit, evaluation.code === 0 ? "invalid-output" : "execution-failed", evaluation.code === 0 ? "invalid-evaluator-output" : "evaluator-execution-failed");
+  const classified = classifyEvaluatorResult(evaluation);
+  if (classified.evaluation_status !== "evaluated") {
+    const reason: ReplayReason = classified.error === "evaluator-timed-out" ? "evaluator-timed-out" : classified.error === "evaluator-invalid-output" ? "invalid-evaluator-output" : "evaluator-execution-failed";
+    return replayEntry(entry, evaluatorSourceCommit, classified.evaluation_status, reason);
   }
-  return {
-    ...replayEntry(entry, evaluatorSourceCommit, "evaluated"),
-    semantic: result.semantic,
-    practice_observation: result.practice_observation,
-    ...(result.observation_reason ? { observation_reason: result.observation_reason } : {}),
-    joint_pass: result.semantic === "pass" && result.practice_observation === "observed",
-  };
+  return { ...replayEntry(entry, evaluatorSourceCommit, "evaluated"), semantic: classified.semantic, practice_observation: classified.practice_observation, ...(classified.observation_reason ? { observation_reason: classified.observation_reason } : {}), joint_pass: classified.joint_pass };
 }
 
 function emptyConditionCounts(): ConditionReplayCounts {
-  return {
-    planned: 0,
-    evaluated: 0,
-    semantic: { pass: 0, fail: 0, "not-run": 0 },
-    practice_observation: { observed: 0, "not-observed": 0, indeterminate: 0, "not-run": 0 },
-    joint_pass: 0,
-  };
+  return { planned: 0, evaluated: 0, semantic: { pass: 0, fail: 0, "not-run": 0 }, practice_observation: { observed: 0, "not-observed": 0, indeterminate: 0, "not-run": 0 }, joint_pass: 0 };
 }
 
 export function expansionDecisions(entries: HistoricalReplayEntry[], audits: CandidateReplayAudits = {}): CandidateExpansionDecision[] {
@@ -377,25 +336,14 @@ export function expansionDecisions(entries: HistoricalReplayEntry[], audits: Can
       counts.planned += 1;
       if (entry.evaluation_status === "evaluated") counts.evaluated += 1;
       if (entry.semantic && entry.semantic in counts.semantic) counts.semantic[entry.semantic as keyof typeof counts.semantic] += 1;
-      if (entry.practice_observation && entry.practice_observation in counts.practice_observation) counts.practice_observation[entry.practice_observation] += 1;
+      if (entry.practice_observation) counts.practice_observation[entry.practice_observation] += 1;
       if (entry.joint_pass) counts.joint_pass += 1;
     }
-    const unhealthy = group.some((entry) => entry.evaluation_status !== "evaluated");
-    const observations = group.map((entry) => entry.practice_observation);
-    const indeterminate = observations.includes("indeterminate") || observations.includes("not-run");
-    const oracle = conditions["oracle-practice"].joint_pass;
-    const strictLead = oracle > conditions.baseline.joint_pass && oracle > conditions["irrelevant-practice"].joint_pass;
     const audit = audits[group[0].candidate] ?? { calibration: "not-verified" as const, leakage: "not-verified" as const };
-    return {
-      candidate: group[0].candidate,
-      profile_input_hash: group[0].profile_input_hash,
-      status: unhealthy || audit.calibration !== "passed" || audit.leakage !== "passed"
-        ? "indeterminate"
-        : indeterminate || !strictLead ? "adjust-before-expansion" : "eligible-for-expansion",
-      calibration_status: audit.calibration,
-      leakage_audit_status: audit.leakage,
-      conditions,
-    };
+    const unhealthy = group.some((entry) => entry.evaluation_status !== "evaluated");
+    const indeterminate = group.some((entry) => entry.practice_observation === "indeterminate" || entry.practice_observation === "not-run");
+    const strictLead = conditions["oracle-practice"].joint_pass > conditions.baseline.joint_pass && conditions["oracle-practice"].joint_pass > conditions["irrelevant-practice"].joint_pass;
+    return { candidate: group[0].candidate, profile_input_hash: group[0].profile_input_hash, status: unhealthy || audit.calibration !== "passed" || audit.leakage !== "passed" ? "indeterminate" : indeterminate || !strictLead ? "adjust-before-expansion" : "eligible-for-expansion", calibration_status: audit.calibration, leakage_audit_status: audit.leakage, conditions };
   }).sort((left, right) => left.candidate.localeCompare(right.candidate) || left.profile_input_hash.localeCompare(right.profile_input_hash));
 }
 
@@ -408,17 +356,8 @@ export async function evaluatorSourceCommit(): Promise<string> {
 
 export async function writeHistoricalReplaySummary(path: string, entries: HistoricalReplayEntry[], evaluatorCommit: string, audits: CandidateReplayAudits = {}): Promise<CandidateExpansionDecision[]> {
   const decisions = expansionDecisions(entries, audits);
-  const qualifiedCandidates = decisions.filter((decision) => decision.status === "eligible-for-expansion").map((decision) => ({ candidate: decision.candidate, profile_input_hash: decision.profile_input_hash }));
-  await Bun.write(joinPath(path, "summary.json"), `${JSON.stringify({
-    schema_version: "profile-diagnostic-summary/v2",
-    kind: "historical-evaluator-replay",
-    generated_at: new Date().toISOString(),
-    evaluator_source_commit: evaluatorCommit,
-    entries,
-    decisions,
-    qualified_candidates: qualifiedCandidates,
-    next_action: qualifiedCandidates.length > 0 ? "expand-qualified-candidates" : "pause-for-adjustment",
-  }, null, 2)}\n`);
+  const qualifiedCandidates = decisions.filter((decision) => decision.status === "eligible-for-expansion").map(({ candidate, profile_input_hash }) => ({ candidate, profile_input_hash }));
+  await Bun.write(joinPath(path, "summary.json"), `${JSON.stringify({ schema_version: "profile-diagnostic-summary/v2", kind: "historical-evaluator-replay", generated_at: new Date().toISOString(), evaluator_source_commit: evaluatorCommit, entries, decisions, qualified_candidates: qualifiedCandidates, next_action: qualifiedCandidates.length > 0 ? "expand-qualified-candidates" : "pause-for-adjustment" }, null, 2)}\n`);
   return decisions;
 }
 
@@ -432,46 +371,21 @@ function repetitionsFromConditions(conditions: Conditions): number {
   return repetitions;
 }
 
-async function historicalPlan(historyRoot: string, candidateId: string, repetitions: number): Promise<HistoricalSummaryEntry[]> {
-  const root = resolve(historyRoot);
-  const summaryPath = resolve(root, candidateId, "summary.json");
-  if (!pathInside(root, summaryPath)) throw new Error("invalid-history-summary");
-  const summaryFile = Bun.file(summaryPath);
-  if (!(await summaryFile.exists())) throw new Error("missing-history-summary");
-  let parsed: unknown;
+async function replayCandidateHistory(historyRoot: string, candidatePath: string, manifest: CandidateManifest, repetitions: number, evaluatorCommit: string): Promise<HistoricalReplayEntry[]> {
   try {
-    parsed = JSON.parse(await summaryFile.text());
-  } catch {
-    throw new Error("invalid-history-summary");
-  }
-  const entries = parseHistoricalSummary(parsed, candidateId);
-  const expected = expectedHistoricalEntries(candidateId, repetitions);
-  const actualKeys = new Set(entries.map((entry) => `${entry.condition}\0${entry.repeat}`));
-  if (entries.length !== expected.length || expected.some((entry) => !actualKeys.has(`${entry.condition}\0${entry.repeat}`))) {
-    throw new Error("invalid-history-summary");
-  }
-  return entries.sort((left, right) => left.condition.localeCompare(right.condition) || left.repeat - right.repeat);
-}
-
-async function replayCandidateHistory(
-  historyRoot: string,
-  candidatePath: string,
-  manifest: CandidateManifest,
-  repetitions: number,
-  evaluatorCommit: string
-): Promise<HistoricalReplayEntry[]> {
-  let entries: HistoricalSummaryEntry[];
-  try {
-    entries = await historicalPlan(historyRoot, manifest.id, repetitions);
+    const root = resolve(historyRoot);
+    const summaryPath = resolve(root, manifest.id, "summary.json");
+    if (!pathInside(root, summaryPath)) throw new Error("invalid-history-summary");
+    const summary = Bun.file(summaryPath);
+    if (!(await summary.exists())) throw new Error("missing-history-summary");
+    const entries = parseHistoricalSummary(JSON.parse(await summary.text()), manifest.id);
+    const expected = expectedHistoricalEntries(manifest.id, repetitions);
+    const actual = new Set(entries.map((entry) => `${entry.condition}\0${entry.repeat}`));
+    if (entries.length !== expected.length || expected.some((entry) => !actual.has(`${entry.condition}\0${entry.repeat}`))) throw new Error("invalid-history-summary");
+    return await Promise.all(entries.sort((left, right) => left.condition.localeCompare(right.condition) || left.repeat - right.repeat).map((entry) => replayHistoricalWorkspace(historyRoot, candidatePath, entry, evaluatorCommit, 10 * 60_000)));
   } catch (error) {
     return fallbackReplayEntries(manifest.id, repetitions, evaluatorCommit, replayReason(error, "invalid-history-summary"));
   }
-  const timeoutMs = 10 * 60_000;
-  const replayed: HistoricalReplayEntry[] = [];
-  for (const entry of entries) {
-    replayed.push(await replayHistoricalWorkspace(historyRoot, candidatePath, entry, evaluatorCommit, timeoutMs));
-  }
-  return replayed;
 }
 
 export function piArgs(modelId: string, payload: PracticePayload): string[] {
@@ -535,38 +449,44 @@ async function runAttempt(
     return entry;
   }
 
-  const evaluation = await run(
-    [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
-    candidatePath
-  );
-  await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluation.stdout);
-  await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluation.stderr);
-
-  const result = evaluatorResult(evaluation.stdout);
-  if (!result) {
-    entry.evaluation_status = "invalid-output";
-    entry.error = "Evaluator did not emit a structured result";
+  let evaluation: CommandResult;
+  try {
+    evaluation = await run(
+      [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
+      candidatePath,
+      shared.budget.max_duration_minutes * 60_000
+    );
+  } catch {
+    entry.error = "evaluator-launch-failed";
     return entry;
   }
-
-  entry.evaluation_status = "evaluated";
-  entry.semantic = result.semantic;
-  entry.practice_observation = result.practice_observation;
-  entry.observation_reason = result.observation_reason;
-  entry.joint_pass = result.semantic === "pass" && result.practice_observation === "observed";
+  await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluation.stdout);
+  await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluation.stderr);
+  Object.assign(entry, classifyEvaluatorResult(evaluation));
   return entry;
 }
 
-export async function writeSummary(path: string, entries: DiagnosticEntry[], interrupted: boolean): Promise<void> {
+export function redactedSchedule(schedule: ScheduledAttempt[]) {
+  return schedule.map(({ path: _path, candidate_path: _candidatePath, ...attempt }) => attempt);
+}
+
+export function diagnosticOutputPath(path: string): string {
+  return relative(workspaceRoot, path).replaceAll("\\", "/");
+}
+
+export async function writeSummary(path: string, plan: DiagnosticPlan, schedule: ScheduledAttempt[], entries: DiagnosticEntry[], interrupted: boolean): Promise<void> {
   await Bun.write(joinPath(path, "summary.json"), `${JSON.stringify({
-    schema_version: "profile-diagnostic-summary/v2",
+    schema_version: "profile-diagnostic-summary/v3",
     generated_at: new Date().toISOString(),
+    plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, schedule: redactedSchedule(schedule) },
     entries,
+    report: summarizePlan(plan, schedule, entries),
     interrupted,
   }, null, 2)}\n`);
 }
 
 type Options = {
+  planPath?: string;
   candidatePaths: string[];
   outputPath: string;
   dryRun: boolean;
@@ -577,15 +497,14 @@ type Options = {
 
 function parseAuditOption(value: string | undefined, label: string, audits: Record<string, AuditStatus>): void {
   const [candidate, status, extra] = value?.split("=") ?? [];
-  if (!candidate || !safeIdentifier(candidate) || !status || extra || !(["passed", "failed"] as string[]).includes(status)) {
-    fail(`${label} requires <candidate>=passed|failed`);
-  }
+  if (!candidate || !safeIdentifier(candidate) || !status || extra || !(["passed", "failed"] as string[]).includes(status)) fail(`${label} requires <candidate>=passed|failed`);
   if (audits[candidate] !== undefined) fail(`${label} may be specified once per candidate`);
   audits[candidate] = status as AuditStatus;
 }
 
 function parseOptions(): Options {
   const args = Bun.argv.slice(2);
+  let planPath: string | undefined;
   const candidatePaths: string[] = [];
   let outputPath = requireScratchPath(`scratch/profile-diagnostics/${timestamp()}`);
   let dryRun = false;
@@ -610,30 +529,35 @@ function parseOptions(): Options {
       parseAuditOption(args[++index], "--leakage-audit", leakageAudits);
       continue;
     }
+    if (arg === "--plan") {
+      const value = args[++index];
+      if (!value) fail("--plan requires a path");
+      planPath = resolve(workspaceRoot, value);
+      continue;
+    }
     if (arg === "--output") {
       const value = args[++index];
       if (!value) fail("--output requires a directory");
       outputPath = requireScratchPath(value);
       continue;
     }
+    if (arg.startsWith("--")) fail(`Unknown profile diagnostic option: ${arg}`);
     candidatePaths.push(resolve(workspaceRoot, arg));
   }
 
-  if (candidatePaths.length === 0) {
-    fail("Usage: bun run src/benchmark/runner/pi/v2/profile-diagnostic-runner.ts <candidate-path>... [--output <dir>] [--dry-run|--replay-history <history-dir> --calibration-audit <candidate>=passed|failed --leakage-audit <candidate>=passed|failed]");
-  }
+  if (planPath && replayHistory) fail("--plan cannot be combined with --replay-history");
   if (dryRun && replayHistory) fail("--dry-run cannot be combined with --replay-history");
-  return { candidatePaths, outputPath, dryRun, replayHistory, calibrationAudits, leakageAudits };
+  if (replayHistory && candidatePaths.length === 0) fail("Historical replay requires at least one candidate path");
+  if (!replayHistory && (!planPath || candidatePaths.length > 0)) fail("Usage: bun run src/benchmark/runner/pi/v2/profile-diagnostic-runner.ts --plan <plan.yaml> [--output <dir>] [--dry-run]");
+  return { planPath, candidatePaths, outputPath, dryRun, replayHistory, calibrationAudits, leakageAudits };
 }
 
 if (import.meta.path === process.argv[1]) {
 const options = parseOptions();
-const declaredConditions: InjectionConditionId[] = ["baseline", "oracle-practice", "irrelevant-practice"];
 let interrupted = false;
 process.on("SIGINT", () => { interrupted = true; });
 
 const entries: DiagnosticEntry[] = [];
-
 if (options.replayHistory) {
   await mkdir(options.outputPath, { recursive: true });
   const commit = await evaluatorSourceCommit();
@@ -642,41 +566,50 @@ if (options.replayHistory) {
   for (const candidatePath of options.candidatePaths) {
     const manifest = await verifyCandidateDeclaration(candidatePath);
     const conditions = await readYaml<Conditions>(resolve(candidatePath, "private/conditions.yaml"), "private/conditions.yaml");
-    const repetitions = repetitionsFromConditions(conditions);
     audits[manifest.id] = {
       calibration: options.calibrationAudits[manifest.id] ?? "not-verified",
       leakage: options.leakageAudits[manifest.id] ?? "not-verified",
     };
-    replayEntries.push(...await replayCandidateHistory(options.replayHistory, candidatePath, manifest, repetitions, commit));
+    replayEntries.push(...await replayCandidateHistory(options.replayHistory, candidatePath, manifest, repetitionsFromConditions(conditions), commit));
     await writeHistoricalReplaySummary(options.outputPath, replayEntries, commit, audits);
   }
   const decisions = await writeHistoricalReplaySummary(options.outputPath, replayEntries, commit, audits);
-  console.log(JSON.stringify({ output: relativePath(options.outputPath), entries: replayEntries.length, decisions }, null, 2));
+  console.log(JSON.stringify({ output: diagnosticOutputPath(options.outputPath), entries: replayEntries.length, decisions }, null, 2));
   process.exit(replayEntries.some((entry) => entry.evaluation_status !== "evaluated") ? 1 : 0);
 }
 
+if (!options.planPath) fail("A diagnostic plan is required outside historical replay mode");
+const plan = await readDiagnosticPlan(options.planPath);
+const schedule = buildSchedule(plan);
+
 if (options.dryRun) {
-  const plan = [];
-  for (const candidatePath of options.candidatePaths) {
+  for (const candidate of plan.candidates) {
+    const candidatePath = resolve(workspaceRoot, candidate.path);
     const manifest = await verifyCandidateDeclaration(candidatePath);
+    const identity = await verifySnapshotIdentity(candidatePath, manifest);
+    if (manifest.id !== candidate.id || manifest.source.source_commit !== candidate.source_commit || identity.snapshotId !== candidate.snapshot_id || identity.profileInputHash !== candidate.profile_input_hash) {
+      fail(`Diagnostic plan identity mismatch for ${candidate.id}`);
+    }
     const conditions = await readYaml<Conditions>(resolve(candidatePath, "private/conditions.yaml"), "private/conditions.yaml");
-    for (const conditionId of declaredConditions) {
-      for (let repeat = 1; repeat <= conditions.shared_execution.repetitions; repeat += 1) {
-        plan.push({ candidate: manifest.id, condition: conditionId, repeat });
-      }
+    for (const conditionId of diagnosticConditions) {
+      if (!conditions.conditions.some((condition) => condition.id === conditionId && condition.status === "declared")) fail(`Diagnostic plan condition is not declared: ${candidate.id}/${conditionId}`);
     }
   }
-  console.log(JSON.stringify({ schema_version: "profile-diagnostic-plan/v1", planned_runs: plan, output: relativePath(options.outputPath) }, null, 2));
+  console.log(JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions }, planned_runs: redactedSchedule(schedule), output: diagnosticOutputPath(options.outputPath) }, null, 2));
   process.exit(0);
 }
 
 if (Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("Profile diagnostics require LORELUM_LOCAL_EXPERIMENT=1");
 
-await mkdir(options.outputPath, { recursive: true });
 const command = await piCommand(workspaceRoot);
 
-for (const candidatePath of options.candidatePaths) {
+await mkdir(options.outputPath, { recursive: true });
+await Bun.write(joinPath(options.outputPath, "plan.json"), `${JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, schedule: redactedSchedule(schedule) }, null, 2)}\n`);
+
+let actualExecutionPosition = 0;
+for (const plannedCandidate of plan.candidates) {
   if (interrupted) break;
+  const candidatePath = resolve(workspaceRoot, plannedCandidate.path);
   let manifest: CandidateManifest;
   let snapshotId: string;
   let profileInputHash: string;
@@ -690,6 +623,8 @@ for (const candidatePath of options.candidatePaths) {
     profileInputHash = identity.profileInputHash;
     profile = await resolveInjectionCalibration(candidatePath);
     conditions = await readYaml<Conditions>(resolve(candidatePath, "private/conditions.yaml"), "private/conditions.yaml");
+    if (manifest.id !== plannedCandidate.id || manifest.source.source_commit !== plannedCandidate.source_commit || snapshotId !== plannedCandidate.snapshot_id || profileInputHash !== plannedCandidate.profile_input_hash) fail(`Diagnostic plan identity mismatch for ${plannedCandidate.id}`);
+    for (const conditionId of diagnosticConditions) if (!conditions.conditions.some((condition) => condition.id === conditionId && condition.status === "declared")) fail(`Diagnostic plan condition is not declared: ${plannedCandidate.id}/${conditionId}`);
   } catch (error) {
     entries.push({
       candidate: relativePath(candidatePath),
@@ -702,7 +637,7 @@ for (const candidatePath of options.candidatePaths) {
       profile_input_hash: "unknown",
       error: error instanceof Error ? error.message : String(error),
     });
-    await writeSummary(options.outputPath, entries, interrupted);
+    await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
     continue;
   }
 
@@ -720,40 +655,24 @@ for (const candidatePath of options.candidatePaths) {
       profile_input_hash: profileInputHash,
       error: error instanceof Error ? error.message : String(error),
     });
-    await writeSummary(options.outputPath, entries, interrupted);
+    await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
     continue;
   }
 
-  for (const conditionId of declaredConditions) {
+  for (const scheduledAttempt of schedule.filter((attempt) => attempt.id === manifest.id)) {
     if (interrupted) break;
-    for (let repeat = 1; repeat <= conditions.shared_execution.repetitions; repeat += 1) {
-      if (interrupted) break;
-      try {
-        const entry = await runAttempt(
-          options.outputPath, candidatePath, manifest.id, manifest,
-          snapshotId, profileInputHash, profile, conditionId, repeat,
-          conditions.shared_execution, command
-        );
-        entries.push(entry);
-      } catch (error) {
-        entries.push({
-          candidate: manifest.id,
-          condition: conditionId,
-          repeat,
-          evaluation_status: "execution-failed",
-          trace: { condition_id: conditionId, channel: "none", profile_input_hash: profileInputHash },
-          source_commit: manifest.source.source_commit,
-          snapshot_id: snapshotId,
-          profile_input_hash: profileInputHash,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-      await writeSummary(options.outputPath, entries, interrupted);
+    actualExecutionPosition += 1;
+    try {
+      const entry = await runAttempt(options.outputPath, candidatePath, manifest.id, manifest, snapshotId, profileInputHash, profile, scheduledAttempt.condition as InjectionConditionId, scheduledAttempt.block, conditions.shared_execution, command);
+      entries.push({ ...entry, block: scheduledAttempt.block, planned_position: scheduledAttempt.planned_position, actual_execution_position: actualExecutionPosition });
+    } catch (error) {
+      entries.push({ candidate: manifest.id, condition: scheduledAttempt.condition, repeat: scheduledAttempt.block, block: scheduledAttempt.block, planned_position: scheduledAttempt.planned_position, actual_execution_position: actualExecutionPosition, evaluation_status: "execution-failed", trace: { condition_id: scheduledAttempt.condition, channel: "none", profile_input_hash: profileInputHash }, source_commit: manifest.source.source_commit, snapshot_id: snapshotId, profile_input_hash: profileInputHash, error: error instanceof Error ? error.message : String(error) });
     }
+    await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
   }
 }
 
-await writeSummary(options.outputPath, entries, interrupted);
-console.log(JSON.stringify({ output: relativePath(options.outputPath), entries: entries.length, interrupted }, null, 2));
+await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
+console.log(JSON.stringify({ output: diagnosticOutputPath(options.outputPath), entries: entries.length, interrupted }, null, 2));
 process.exit(interrupted || entries.some((entry) => entry.evaluation_status !== "evaluated") ? 1 : 0);
 }

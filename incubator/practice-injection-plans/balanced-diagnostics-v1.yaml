@@ -1,0 +1,18 @@
+schema_version: profile-diagnostic-plan/v2
+id: balanced-diagnostics-v1
+schedule_seed: balanced-diagnostics-v1
+schedule_algorithm: cyclic-latin-square/v1
+repetitions: 3
+independent_candidate_threshold: 3
+conditions: [baseline, oracle-practice, irrelevant-practice]
+candidates:
+  - id: profile-update-command-boundary-v1
+    path: incubator/practice-injection/profile-update-command-boundary-v1
+    source_commit: 51d695ed5e29ea3b256ced2a1000bdc225bb6e3e
+    snapshot_id: 81245f746b9eb2222eeb48c1763e2090aafd8dddfe2fa44761675d478ada61d9
+    profile_input_hash: df59962c3578582efde097b797b2b7a033f250ef43091d2cbffd9e06be298e7b
+  - id: project-directory-resource-state-v1
+    path: incubator/practice-injection/project-directory-resource-state-v1
+    source_commit: 51d695ed5e29ea3b256ced2a1000bdc225bb6e3e
+    snapshot_id: adbdfaf3e3da1da058756e23f1115ebf4fcf76ea0a34533f8e25a1ae89fc6ffc
+    profile_input_hash: 372baf21ef491399ef071d1b7af1e76f909701b50789bff81d5bf478a768eac1
