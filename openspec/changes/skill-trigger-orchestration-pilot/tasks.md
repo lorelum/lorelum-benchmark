@@ -63,4 +63,4 @@
 - [x] 将公开题面和公开回归改为快速导航故障报告；私有 probe 分别覆盖卸载后 resolve 和 reject。 [写入范围：v2 public、private evaluator]
 - [x] 建立 v2 reference、等价实现与只保护成功分支/空 cleanup anti-pattern 校准，并验证判别力。 [写入范围：v2 private calibration]
 - [x] 在 v2 tool-policy 声明隔离 Git Bash 环境，runner 为每个 attempt 设置 private `PI_CODING_AGENT_DIR`，并以真实 Pi bash 调用验证其不经 WSL。 [写入范围：v2 private execution]
-- [ ] 运行 validate、contracts、v2 定向测试、strict OpenSpec、calibration 与泄露审计；全部通过后运行三条件各三次的 scratch 诊断。 [写入范围：scratch/ only]
+- [x] 运行 validate、contracts、v2 定向测试、strict OpenSpec、calibration 与泄露审计；全部通过后运行三条件各三次的 scratch 诊断。 [写入范围：scratch/ only]
