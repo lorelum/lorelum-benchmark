@@ -156,6 +156,15 @@ export async function clearRuntimeClosureStaging(candidateId?: string): Promise<
   await rm(closureStagingRoot, { force: true, recursive: true });
 }
 
+export async function verifyRuntimeClosureRoot(candidatePath: string, resolutionRoot: string): Promise<ResolvedRuntimeClosure> {
+  const declaration = await readDeclaration(candidatePath);
+  const typescriptPath = typescriptEntryPath(resolutionRoot);
+  if (!existsSync(typescriptPath)) fail("override resolution root does not contain the typescript parser");
+  const actualSha256 = await sha256File(typescriptPath);
+  if (actualSha256 !== declaration.integrity.typescript_sha256) fail("override resolution root typescript parser integrity mismatch");
+  return { declaration, resolution_root: resolutionRoot, typescript_path: typescriptPath };
+}
+
 export function runtimeClosureStagingRoot(): string {
   return closureStagingRoot;
 }

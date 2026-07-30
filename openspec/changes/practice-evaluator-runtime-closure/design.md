@@ -40,6 +40,12 @@ closure。closure 由版本、来源、锁定依赖清单和完整性标识组�
 candidate 根之上的 `node_modules`，不得接受仓库 root 或环境变量注入的解析路径，且不得把
 宿主全局 Bun/Node 安装当作 evaluator 依赖来源。运行器自身的固定 executable 可以启动
 closure；可执行文件不是解析器依赖的隐式来源。
+The runner MAY pass a pre-resolved closure root to the evaluator via a private
+runtime channel. When that channel is set, the evaluator MUST re-verify the
+typescript parser integrity against the candidate declaration before using it;
+it MUST NOT blindly trust an externally injected resolution path. Calibration
+scripts that resolve the closure internally pass the resolution root directly
+as a probe argument and do not use the override channel.
 
 ### Verification before execution
 

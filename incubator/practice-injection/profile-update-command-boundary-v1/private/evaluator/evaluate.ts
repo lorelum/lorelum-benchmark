@@ -7,11 +7,14 @@ const candidateRoot = resolve(evaluatorRoot, "..", "..");
 const run = async (command: string[], cwd: string) => await Bun.spawn(command, { cwd, stdout: "inherit", stderr: "inherit" }).exited;
 
 async function resolveParserRoot(): Promise<string> {
-  const override = Bun.env.LORELUM_EVALUATOR_RUNTIME_CLOSURE_ROOT;
-  if (override) return resolve(override);
   const candidateId = (Bun.YAML.parse(await Bun.file(join(candidateRoot, "private", "candidate.yaml")).text()) as { id: string }).id;
   const repositoryRoot = resolve(candidateRoot, "..", "..", "..");
   const module = await import(pathToFileURL(join(repositoryRoot, "src", "benchmark", "evaluator", "runtime-closure.ts")).href) as typeof import("../../../../../src/benchmark/evaluator/runtime-closure");
+  const override = Bun.env.LORELUM_EVALUATOR_RUNTIME_CLOSURE_ROOT;
+  if (override) {
+    const closure = await module.verifyRuntimeClosureRoot(candidateRoot, resolve(override));
+    return closure.resolution_root;
+  }
   const closure = await module.resolveRuntimeClosure(candidateRoot, candidateId);
   return closure.resolution_root;
 }

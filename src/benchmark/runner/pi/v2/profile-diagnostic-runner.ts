@@ -2,7 +2,7 @@ import { cp, lstat, mkdir, realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { joinPath, relativePath, sha256Directory, workspaceRoot } from "../../../fs";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace, type PracticePayload, type ResolvedInjectionCalibration } from "../../../kernel/profiles/injection-calibration/v1/runtime";
-import { resolveRuntimeClosureIfDeclared, clearRuntimeClosureStaging } from "../../../evaluator/runtime-closure";
+import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
 import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from "./preflight";
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";

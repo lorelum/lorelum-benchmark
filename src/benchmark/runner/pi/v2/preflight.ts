@@ -30,7 +30,7 @@ export async function piCommand(repositoryRoot: string): Promise<string> {
 
 async function run(command: string[], cwd: string, timeoutMs?: number, env?: Record<string, string>): Promise<CommandResult> {
   const started = performance.now();
-  const child = Bun.spawn(command, { cwd, env: env ?? Bun.env, stdout: "pipe", stderr: "pipe" });
+  const child = Bun.spawn(command, { cwd, env: env ? { ...Bun.env, ...env } : Bun.env, stdout: "pipe", stderr: "pipe" });
   let timedOut = false;
   const timeout = timeoutMs === undefined ? undefined : setTimeout(() => {
     timedOut = true;

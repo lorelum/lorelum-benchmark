@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 const repositoryRoot = resolve(import.meta.dirname, "..", "..", "..", "..", "..");
 const closureModule = await import(pathToFileURL(join(repositoryRoot, "src", "benchmark", "evaluator", "runtime-closure.ts")).href) as typeof import("../../../../../src/benchmark/evaluator/runtime-closure");
-const { parseRuntimeClosureDeclaration, resolveRuntimeClosure, resolveRuntimeClosureIfDeclared, clearRuntimeClosureStaging } = closureModule;
+const { parseRuntimeClosureDeclaration, resolveRuntimeClosure, resolveRuntimeClosureIfDeclared, verifyRuntimeClosureRoot, clearRuntimeClosureStaging } = closureModule;
 
 const candidateRoot = resolve(import.meta.dirname, "..", "..");
 
@@ -108,6 +108,28 @@ test("does not resolve from a repository ancestor node_modules", async () => {
     expect(tsFile.length).toBeGreaterThan(0);
     expect(closure.resolution_root).toContain(".practice-runtime");
     expect(closure.resolution_root).not.toBe(fixture.path);
+  } finally {
+    await fixture.cleanup();
+  }
+}, 30_000);
+
+
+test("verifyRuntimeClosureRoot accepts a pre-resolved root with matching integrity", async () => {
+  const fixture = await withCandidateCopy();
+  try {
+    const resolved = await resolveRuntimeClosure(fixture.path, "project-directory-resource-state-v1");
+    const verified = await verifyRuntimeClosureRoot(fixture.path, resolved.resolution_root);
+    expect(verified.typescript_path).toBe(resolved.typescript_path);
+  } finally {
+    await fixture.cleanup();
+  }
+}, 30_000);
+
+test("verifyRuntimeClosureRoot rejects an override root whose parser integrity does not match", async () => {
+  const fixture = await withCandidateCopy();
+  try {
+    const resolved = await resolveRuntimeClosure(fixture.path, "project-directory-resource-state-v1");
+    await expect(verifyRuntimeClosureRoot(fixture.path, fixture.path)).rejects.toThrow(/integrity|missing|parser/);
   } finally {
     await fixture.cleanup();
   }
