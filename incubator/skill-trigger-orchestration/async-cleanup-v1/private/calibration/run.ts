@@ -8,7 +8,7 @@ type CalibrationCase = {
 };
 
 const candidateRoot = resolve(import.meta.dirname, "..", "..");
-const probePath = join(candidateRoot, "private", "evaluator", "verify-cleanup.ts");
+const evaluatorPath = join(candidateRoot, "private", "evaluator", "evaluate.ts");
 const manifestPath = process.env.LORELUM_CALIBRATION_SETS_MANIFEST;
 const publicStarterRoot = process.env.LORELUM_CALIBRATION_PUBLIC_STARTER;
 
@@ -23,10 +23,6 @@ const fixtures = staged.sets["cleanup-probe/v1"]?.fixtures;
 if (!fixtures) throw new Error("Missing staged cleanup-probe/v1 fixtures");
 
 const parserRoot = join(publicStarterRoot, "app");
-if (!existsSync(join(parserRoot, "node_modules", "typescript", "lib", "typescript.js"))) {
-  const install = Bun.spawn([process.execPath, "install"], { cwd: parserRoot, stdout: "inherit", stderr: "inherit" });
-  if (await install.exited !== 0) throw new Error("Unable to install calibration parser dependencies");
-}
 
 const cases: CalibrationCase[] = [
   { id: "public-starter", path: parserRoot, expected: "fail" },
@@ -37,7 +33,11 @@ const cases: CalibrationCase[] = [
 
 const results: Array<{ id: string; practice_probe: "pass" | "fail"; expected: "pass" | "fail" }> = [];
 for (const calibration of cases) {
-  const child = Bun.spawn([process.execPath, "run", probePath, calibration.path, parserRoot], { stdout: "inherit", stderr: "inherit" });
+  if (!existsSync(join(calibration.path, "node_modules", "typescript", "lib", "typescript.js"))) {
+    const install = Bun.spawn([process.execPath, "install"], { cwd: calibration.path, stdout: "inherit", stderr: "inherit" });
+    if (await install.exited !== 0) throw new Error(`Unable to install calibration dependencies: ${calibration.id}`);
+  }
+  const child = Bun.spawn([process.execPath, "run", evaluatorPath, calibration.path], { cwd: candidateRoot, stdout: "inherit", stderr: "inherit" });
   const practiceProbe = await child.exited === 0 ? "pass" : "fail";
   results.push({ id: calibration.id, practice_probe: practiceProbe, expected: calibration.expected });
 }

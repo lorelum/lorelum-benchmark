@@ -22,9 +22,11 @@
 
 三个 condition，不设 oracle-practice 天花板：baseline（地板）、lorelum-retrieval（实验组）、irrelevant-practice（盲从检测）。不设天花板的原因：实验组是否达标由 evaluator 独立判定；irrelevant-practice 升级为听懂约束的唯一旁证。
 
-### 注入位置
+### 工具调用与观测边界
 
-放 prompt 层。harness 强约束会抹掉 agent 会不会听这个待验证变量。prompt 层文本注入保留该变量。
+runner 通过 Pi extension 提供可发现目录与受控 mock 工具，但不得预先把 Lorelum、查询结果或行为约束写入 system prompt。处理组 agent 必须自行完成 `skills_list`、`skills_load("lorelum")` 与 `lorelum_query({ query, public_refs })`；查询工具在加载前不可调用。mock 的三字段结果以工具返回进入模型上下文，行为约束仍处于 prompt 可见层，工具可用性、调用门禁与审计属于 harness 层。
+
+`public_refs` 必须指向本次运行中 agent 已通过 read 工具读取的公开输入；查询文本须包含与这些输入相关的任务锚点。runner 只记录真实工具调用与返回，不得事后补写发现、查询或采纳事件。
 
 ### baseline 预期缺陷
 
@@ -32,7 +34,7 @@ baseline 下 agent 写出不带 cleanup 的 useEffect。由 AST 探针稳定检�
 
 ### 度量
 
-主量看过程：trace 记录三层事件（发现并加载、查询已发生、采纳的约束），后续动作引用约束是听了的证据。辅量看结果：evaluator 通过。没有过程链、结果却碰巧对，不算。
+主量看过程：trace 记录公开输入读取、Skill 发现、Skill 加载、带任务锚点的查询及结构化返回。处理组只有同时具备完整真实事件链、语义通过与质量门通过，才可计为成功。辅量看结果：AST 结构门拒绝明显伪 cleanup，运行时门通过“延迟请求 -> 卸载 -> resolve”断言卸载后状态 setter 调用数为零。没有过程链、结果却碰巧对，不算。
 
 ### 风险与前置
 
@@ -44,18 +46,18 @@ baseline 下 agent 写出不带 cleanup 的 useEffect。由 AST 探针稳定检�
 本轨道不复用 injection-calibration/v1 或 treatment-comparison/v1，新建 `skill-trigger-orchestration/v1` profile。理由：
 
 - injection-calibration/v1 的 `lorelum-retrieval` 是 `status: unavailable`（只测显式注入，真实检索不可用）；本轨道 `lorelum-retrieval` 是实验组，必须 `status: declared`，走 mock 查询。
-- injection-calibration/v1 的 Practice 通过 `condition-scoped-private-runtime` 通道由 runner 显式注入；本轨道的 Practice 不是显式注入，是 agent 触发 mock 查询后，把返回的三字段约束注入 prompt。需要新 channel：`mock-retrieval-prompt-injection`。
+- injection-calibration/v1 的 Practice 通过 `condition-scoped-private-runtime` 通道由 runner 显式注入；本轨道的 Practice 不是显式注入，是 agent 触发 mock 工具查询后取得三字段结果。需要新 channel：`mock-retrieval-tool-call`。
 - injection-calibration/v1 的 decision_rule 是"oracle 严格高于对照"；本轨道无 oracle，decision_rule 是"lorelum-retrieval 过且 irrelevant-practice 不过"。
 
 新 profile 的 conditions：
 
 - baseline：status declared，channel none，无 Skill 列表、无查询。
-- lorelum-retrieval：status declared，channel `mock-retrieval-prompt-injection`，agent 可见可发现 Skill 列表，触发后 mock 返回三字段约束并注入 prompt。
-- irrelevant-practice：status declared，channel `mock-retrieval-prompt-injection`，mock 返回一条无关 Practice 的约束。
+- lorelum-retrieval：status declared，channel `mock-retrieval-tool-call`，agent 可发现并加载 Lorelum 后主动查询，mock 工具返回相关三字段约束。
+- irrelevant-practice：status declared，channel `mock-retrieval-tool-call`，工具与预算相同，但返回预声明的无关 Practice 约束，作为负对照而非检索质量断言。
 
 mock 查询返回结构进 profile 契约：`{ scope_constraint, matched_practice: { id, version, sha256 }, behavior_constraint }`，其中 behavior_constraint 为不得/必须式限制，非指令。
 
-trace 记录三层事件：discovered_and_loaded、query_occurred、constraint_adopted，均为 redacted（不含 Practice 正文，只含 id/version/sha256）。
+trace 记录 `public_input_read`、`skill_discovered`、`skill_loaded`、`practice_query_issued` 与 `practice_query_resolved`，均为 redacted（不含 Practice 正文或 private 路径）。
 
 ### 内核与 calibration 复用
 

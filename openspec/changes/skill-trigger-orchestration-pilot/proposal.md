@@ -10,7 +10,7 @@ Issue #96 需要一条独立轨道，验证 coding agent 在工程任务中会�
 - 第一个任务场景：异步副作用生命周期超出组件（useEffect 发请求，组件卸载后 setState）。技术栈 Vite + React 19 + TS（SPA），与 practice-injection 一致。
 - mock 返回三字段结构：范围约束、命中 Practice（可审计来源）、行为约束（非指令）。
 - 注入放 prompt 层，不放 harness，保留 agent 会不会听作为待验证变量。
-- 新建 `skill-trigger-orchestration/v1` kernel profile，不复用 injection-calibration/v1（其 lorelum-retrieval 为 unavailable、Practice 显式注入）；本轨道 lorelum-retrieval 为 declared 实验组，走 mock-retrieval-prompt-injection 通道。
+- 新建 `skill-trigger-orchestration/v1` kernel profile，不复用 injection-calibration/v1（其 lorelum-retrieval 为 unavailable、Practice 显式注入）；本轨道 lorelum-retrieval 为 declared 实验组，走 agent 真实调用的 mock-retrieval-tool-call 通道。
 - candidate 声明 kernel（core v1 / 新 profile / materializer react-vite），复用共享 react-vite calibration base + overlay 机制。
 - 三个 condition 对照：baseline（地板）、lorelum-retrieval（实验组，走完整链路）、irrelevant-practice（盲从检测）。不设 oracle-practice 天花板。
 - candidate 先跑本地 pilot 确认 baseline 下 agent 确实会失败，再正式用作对照。

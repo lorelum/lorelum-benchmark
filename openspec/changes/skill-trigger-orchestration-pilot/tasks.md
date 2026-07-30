@@ -1,6 +1,6 @@
 ## 1. Profile 契约（skill-trigger-orchestration/v1）
 
-- [x] `src/benchmark/kernel/profiles/skill-trigger-orchestration/v1/types.ts`：定义 conditions（baseline/lorelum-retrieval/irrelevant-practice，lorelum-retrieval 为 declared）、channel（mock-retrieval-prompt-injection）、mock 返回三字段结构、trace 三层事件类型、decision_rule。
+- [x] `src/benchmark/kernel/profiles/skill-trigger-orchestration/v1/types.ts`：定义 conditions（baseline/lorelum-retrieval/irrelevant-practice，lorelum-retrieval 为 declared）、channel（mock-retrieval-tool-call）、mock 返回三字段结构、真实工具事件类型、decision_rule。
 - [x] `src/benchmark/kernel/profiles/skill-trigger-orchestration/v1/runtime.ts`：解析 candidate 的 conditions.yaml、mock 查询声明、Practice 卡哈希；redacted trace。
 - [x] `profiles/index.ts` 注册导出新 profile。
 - [x] runtime 测试：覆盖 declared lorelum-retrieval、redacted trace、malformed 拒绝。
@@ -45,3 +45,10 @@
 - [x] `npx openspec validate skill-trigger-orchestration-pilot --strict` 通过。
 - [x] trace 记录三层事件。
 - [x] lorelum-retrieval 过 evaluator 且 irrelevant-practice 不过。
+
+## 8. 审查门禁修复
+
+- [x] 将 prompt 预注入替换为 agent 真实调用的 Skill 发现、加载与 mock 查询 extension，并记录只含公开锚点与哈希的 trace。
+- [x] 将 AST 探针定位为结构门，增加“延迟请求 -> 卸载 -> resolve”后状态 setter 不得调用的运行时质量门。
+- [x] 将 signal 收紧为处理组每次 dual pass 且两个对照每次质量门失败；缺少真实过程链一律不得计入。
+- [x] 重生成 snapshot、重跑 calibration 与 3 条件 x 2 次诊断；结果为 no-obvious-signal，处理组未形成真实查询链路。

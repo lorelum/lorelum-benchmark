@@ -21,13 +21,13 @@ conditions:
     practice: none
   - id: lorelum-retrieval
     status: declared
-    channel: mock-retrieval-prompt-injection
+    channel: mock-retrieval-tool-call
     practice:
       path: private/practices/oracle.async-lifecycle.v1.md
       sha256: b5b6bf75ef6abfd801cd056904724a586ae4b61ed11dbb43f0c5f84e27d2a746
   - id: irrelevant-practice
     status: declared
-    channel: mock-retrieval-prompt-injection
+    channel: mock-retrieval-tool-call
     practice:
       path: private/practices/irrelevant.form-validation.v1.md
       sha256: 2c5c090ec5966e81b1d4e326839b5c5e0928887c7eddfb48cc20082da29451e9

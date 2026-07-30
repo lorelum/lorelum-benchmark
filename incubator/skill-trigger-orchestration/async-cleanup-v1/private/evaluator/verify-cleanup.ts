@@ -44,7 +44,7 @@ function hasAsyncSideEffect(body: any): boolean {
   return found;
 }
 
-/** 判断 useEffect 调用的回调是否返回了一个函数（清理函数）。 */
+/** AST structure gate: reject absent or empty cleanup; runtime probe verifies actual state blocking. */
 function hasEffectiveCleanup(cleanup: any): boolean {
   const body = cleanup.body;
   if (!body) return false;

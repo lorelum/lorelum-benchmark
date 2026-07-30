@@ -17,7 +17,7 @@ export type SkillTriggerConditionId =
   | "irrelevant-practice";
 
 /** Channel through which a mock-retrieval result reaches the agent. */
-export type SkillTriggerChannel = "mock-retrieval-prompt-injection" | "none";
+export type SkillTriggerChannel = "mock-retrieval-tool-call" | "none";
 
 /** Reference to a Practice card, redacted (no original text). */
 export type PracticeReference = {
@@ -89,9 +89,11 @@ export type ResolvedCondition = {
 
 /** Three-layer trace events (redacted; no Practice text or private paths). */
 export type TraceEvent =
-  | { event: "discovered_and_loaded"; skill_id: string; skill_version: string }
-  | { event: "query_occurred"; practice_id: string; practice_version: string; practice_sha256: string }
-  | { event: "constraint_adopted"; behavior_constraint_sha256: string };
+  | { event: "public_input_read"; path: string; sha256: string; anchors: string[] }
+  | { event: "skill_discovered"; tool_call_id: string; skill_id: string; skill_version: string }
+  | { event: "skill_loaded"; tool_call_id: string; skill_id: string; skill_version: string }
+  | { event: "practice_query_issued"; query_id: string; query_sha256: string }
+  | { event: "practice_query_resolved"; query_id: string; practice_id: string; practice_version: string; practice_sha256: string; behavior_constraint_sha256: string };
 
 export type RedactedSkillTriggerTrace = {
   condition_id: SkillTriggerConditionId;

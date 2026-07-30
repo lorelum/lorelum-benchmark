@@ -16,6 +16,7 @@ type Conditions = {
 };
 type Options = { dryRun: boolean; skipInstall: boolean; repeat?: number; outputPath: string };
 type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number };
+type AuditEvent = Record<string, unknown> & { event: string };
 
 const candidateRoot = resolve(import.meta.dir, "../..");
 const repositoryRoot = resolve(candidateRoot, "../../..");
@@ -66,9 +67,9 @@ function parseOptions(): Options {
   return { dryRun, skipInstall, repeat, outputPath };
 }
 
-async function run(command: string[], cwd: string, timeoutMs?: number): Promise<CommandResult> {
+async function run(command: string[], cwd: string, timeoutMs?: number, env = Bun.env): Promise<CommandResult> {
   const started = performance.now();
-  const child = Bun.spawn(command, { cwd, env: Bun.env, stdout: "pipe", stderr: "pipe" });
+  const child = Bun.spawn(command, { cwd, env, stdout: "pipe", stderr: "pipe" });
   let timedOut = false;
   const timeout = timeoutMs === undefined ? undefined : setTimeout(() => { timedOut = true; child.kill(); }, timeoutMs);
   const [code, stdout, stderr] = await Promise.all([
@@ -82,11 +83,6 @@ async function run(command: string[], cwd: string, timeoutMs?: number): Promise<
 
 async function hashFile(path: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", await Bun.file(path).arrayBuffer());
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-async function hashText(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
@@ -105,7 +101,7 @@ async function loadConditions(): Promise<Conditions> {
       if (condition.practice !== "none") fail(`Condition ${condition.id} practice must be none`);
       continue;
     }
-    if (condition.channel !== "mock-retrieval-prompt-injection") {
+    if (condition.channel !== "mock-retrieval-tool-call") {
       fail(`Condition ${condition.id} uses an unsupported channel: ${condition.channel}`);
     }
     if (!condition.practice || typeof condition.practice !== "object") fail(`Condition ${condition.id} has no usable Practice`);
@@ -204,64 +200,23 @@ async function preflightModel(command: string, modelId: string): Promise<void> {
   if (result.code !== 0) fail(classifyPreflightFailure(result));
 }
 
-type MockResult = {
-  scope_constraint: string;
-  matched_practice: { id: string; version: string; sha256: string };
-  behavior_constraint: string;
-};
-
-type TraceEvent =
-  | { event: "discovered_and_loaded"; skill_id: string; skill_version: string }
-  | { event: "query_occurred"; practice_id: string; practice_version: string; practice_sha256: string }
-  | { event: "constraint_adopted"; behavior_constraint_sha256: string };
-
-/** 从 metadata.yaml 查找 Practice 卡的 id/version，从卡片正文提取行为约束。 */
-async function readPracticeCard(candidatePath: string, practicePath: string, reference: PracticeReference): Promise<{ id: string; version: string; sha256: string; behaviorConstraint: string }> {
-  const metadataPath = resolve(candidatePath, "private/practices/metadata.yaml");
-  const metadata = Bun.YAML.parse(await Bun.file(metadataPath).text()) as { cards: Array<{ id: string; version: string; path: string }> };
-  const relativePath = relative(resolve(candidatePath, "private/practices"), practicePath).replaceAll("\\", "/");
-  const card = metadata.cards.find((entry) => entry.path === relativePath);
-  if (!card) fail(`metadata.yaml must contain a card for ${relativePath}`);
-  const text = await Bun.file(practicePath).text();
-  const sha256 = await hashFile(practicePath);
-  // 行为约束取"## 建议"第一条作为非指令式限制的近似来源
-  const suggestMatch = text.match(/##\s*建议[\s\S]*?^\d+\.\s*(.+)$/m);
-  const behaviorConstraint = suggestMatch ? suggestMatch[1].trim() : "组件的异步副作用应在卸载后失效";
-  return { id: card.id, version: card.version, sha256, behaviorConstraint };
+async function readAudit(path: string): Promise<AuditEvent[]> {
+  const file = Bun.file(path);
+  if (!(await file.exists())) return [];
+  const events: AuditEvent[] = [];
+  for (const line of (await file.text()).split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const event = JSON.parse(line) as AuditEvent;
+    if (typeof event.event === "string") events.push(event);
+  }
+  return events;
 }
 
-/** 构造 mock 检索返回的三字段结构与三层 trace 事件。 */
-async function buildMockRetrieval(condition: Condition): Promise<{ mockResult: MockResult; events: TraceEvent[] }> {
-  if (condition.practice === "none" || typeof condition.practice !== "object") fail(`Condition ${condition.id} requires a Practice reference`);
-  const practicePath = resolve(candidateRoot, condition.practice.path);
-  const card = await readPracticeCard(candidateRoot, practicePath, condition.practice);
-  const scopeConstraint = condition.id === "lorelum-retrieval"
-    ? "该 useEffect 的异步副作用"
-    : "该表单的提交前校验";
-  const mockResult: MockResult = {
-    scope_constraint: scopeConstraint,
-    matched_practice: { id: card.id, version: card.version, sha256: card.sha256 },
-    behavior_constraint: card.behaviorConstraint,
-  };
-  const events: TraceEvent[] = [
-    { event: "discovered_and_loaded", skill_id: "lorelum", skill_version: "mock-v1" },
-    { event: "query_occurred", practice_id: card.id, practice_version: card.version, practice_sha256: card.sha256 },
-    { event: "constraint_adopted", behavior_constraint_sha256: await hashText(card.behaviorConstraint) },
-  ];
-  return { mockResult, events };
-}
-
-/** 构造注入 prompt 层的系统提示：模拟 Skill 发现 + 查询触发 + 三字段约束返回。 */
-function buildPromptInjection(condition: Condition, mockResult: MockResult): string {
-  if (condition.id === "baseline") return "";
-  const { scope_constraint, matched_practice, behavior_constraint } = mockResult;
-  return [
-    "Lorelum Skill 已加载并可用。",
-    `Lorelum 已对 ${scope_constraint} 完成检索，命中 Practice ${matched_practice.id}@${matched_practice.version}。`,
-    `范围约束：${scope_constraint}`,
-    `行为约束：${behavior_constraint}`,
-    "请按上述约束完成实现。约束为非指令式限制，具体实现方式由你决定。",
-  ].join("\n");
+function observedTrace(condition: Condition, events: AuditEvent[]): Record<string, unknown> {
+  const names = events.map((event) => event.event);
+  const required = ["public_input_read", "skill_discovered", "skill_loaded", "practice_query_issued", "practice_query_resolved"];
+  const complete = condition.id !== "baseline" && required.every((event) => names.includes(event));
+  return { condition_id: condition.id, channel: condition.id === "baseline" ? "none" : "mock-retrieval-tool-call", events, complete };
 }
 
 async function runAttempt(
@@ -282,23 +237,27 @@ async function runAttempt(
   const piArgs = [
     "--print", "--no-session", "--no-context-files", "--no-extensions",
     "--no-skills", "--no-prompt-templates",
-    "--tools", "read,bash,edit,write,grep,find,ls",
+    "--tools", "read,bash,edit,write,grep,find,ls,skills_list,skills_load,lorelum_query",
     "--model", conditions.shared_execution.model.id,
     "--thinking", "off",
     "@task.md", "Complete the coding task. Work only inside app/."
   ];
 
-  let mockResult: MockResult | undefined;
-  let events: TraceEvent[] = [];
+  const auditPath = resolve(attemptPath, "lorelum-audit.jsonl");
+  let piEnvironment = Bun.env;
   if (condition.id !== "baseline") {
-    const built = await buildMockRetrieval(condition);
-    mockResult = built.mockResult;
-    events = built.events;
-    const injection = buildPromptInjection(condition, mockResult);
-    if (injection) piArgs.push("--append-system-prompt", injection);
+    if (condition.practice === "none" || typeof condition.practice !== "object") fail(`Condition ${condition.id} requires a Practice reference`);
+    piArgs.push("--extension", resolve(candidateRoot, "private/execution/lorelum-extension.ts"));
+    piEnvironment = {
+      ...Bun.env,
+      LORELUM_MOCK_CONDITION: condition.id,
+      LORELUM_MOCK_PRACTICE_PATH: resolve(candidateRoot, condition.practice.path),
+      LORELUM_MOCK_PRACTICE_SHA256: condition.practice.sha256,
+      LORELUM_MOCK_AUDIT_PATH: auditPath,
+    };
   }
 
-  const pi = await run([command, ...piArgs], workspace, conditions.shared_execution.budget.max_duration_minutes * 60_000);
+  const pi = await run([command, ...piArgs], workspace, conditions.shared_execution.budget.max_duration_minutes * 60_000, piEnvironment);
   await Bun.write(resolve(attemptPath, "pi.stdout.log"), pi.stdout);
   await Bun.write(resolve(attemptPath, "pi.stderr.log"), pi.stderr);
 
@@ -319,14 +278,7 @@ async function runAttempt(
   const diffOutput = await generateUnifiedDiff(resolve(candidateRoot, "public/starter/app"), resolve(workspace, "app"));
   await Bun.write(resolve(attemptPath, "candidate.diff"), diffOutput);
 
-  const trace = mockResult ? {
-    condition_id: condition.id,
-    channel: "mock-retrieval-prompt-injection",
-    events,
-    practice_id: mockResult.matched_practice.id,
-    practice_version: mockResult.matched_practice.version,
-    practice_sha256: mockResult.matched_practice.sha256,
-  } : { condition_id: condition.id, channel: "none", events: [] as TraceEvent[] };
+  const trace = observedTrace(condition, await readAudit(auditPath));
 
   return {
     condition: condition.id,
@@ -344,19 +296,20 @@ async function runAttempt(
   };
 }
 
-function outcome(entries: Record<string, unknown>[]): "signal" | "no-obvious-signal" {
-  const totals = new Map<string, number>();
+function outcome(entries: Record<string, unknown>[], repetitions: number): "signal" | "no-obvious-signal" {
+  const byCondition = new Map<string, Record<string, unknown>[]>();
   for (const entry of entries) {
-    const condition = entry.condition;
-    if (typeof condition !== "string") continue;
-    totals.set(condition, (totals.get(condition) ?? 0) + (entry.dual_pass === true ? 1 : 0));
+    if (typeof entry.condition !== "string") continue;
+    byCondition.set(entry.condition, [...(byCondition.get(entry.condition) ?? []), entry]);
   }
-  const lorelum = totals.get("lorelum-retrieval") ?? 0;
-  const baseline = totals.get("baseline") ?? 0;
-  const irrelevant = totals.get("irrelevant-practice") ?? 0;
-  return lorelum > 0 && lorelum > irrelevant && lorelum >= baseline
-    ? "signal"
-    : "no-obvious-signal";
+  const every = (condition: string, predicate: (entry: Record<string, unknown>) => boolean) => {
+    const values = byCondition.get(condition) ?? [];
+    return values.length === repetitions && values.every(predicate);
+  };
+  const treatmentPasses = every("lorelum-retrieval", (entry) => entry.dual_pass === true && (entry.trace as { complete?: unknown } | undefined)?.complete === true);
+  const baselineFailsQuality = every("baseline", (entry) => entry.semantic === "pass" && entry.practice_probe === "fail");
+  const irrelevantFailsQuality = every("irrelevant-practice", (entry) => entry.semantic === "pass" && entry.practice_probe === "fail");
+  return treatmentPasses && baselineFailsQuality && irrelevantFailsQuality ? "signal" : "no-obvious-signal";
 }
 
 const options = parseOptions();
@@ -394,10 +347,10 @@ for (const condition of runnable) {
       model: conditions.shared_execution.model.id,
       planned_runs: planned.length,
       decision_rule: "lorelum-passes-and-irrelevant-fails",
-      outcome: outcome(entries),
+      outcome: outcome(entries, repeat),
       entries
     });
   }
 }
 
-console.log(JSON.stringify({ output: relativeToRepository(options.outputPath), outcome: outcome(entries), entries }, null, 2));
+console.log(JSON.stringify({ output: relativeToRepository(options.outputPath), outcome: outcome(entries, repeat), entries }, null, 2));

@@ -101,13 +101,13 @@ conditions:
     practice: none
   - id: lorelum-retrieval
     status: declared
-    channel: mock-retrieval-prompt-injection
+    channel: mock-retrieval-tool-call
     practice:
       path: private/practices/oracle.async-lifecycle.v1.md
       sha256: ${oracleSha}
   - id: irrelevant-practice
     status: declared
-    channel: mock-retrieval-prompt-injection
+    channel: mock-retrieval-tool-call
     practice:
       path: private/practices/irrelevant.form-validation.v1.md
       sha256: ${irrelevantSha}
@@ -137,7 +137,7 @@ test("resolves declared lorelum-retrieval with redacted practice reference", asy
   try {
     const profile = await resolveSkillTrigger(root);
     expect(profile.conditions.baseline.channel).toBe("none");
-    expect(profile.conditions["lorelum-retrieval"].channel).toBe("mock-retrieval-prompt-injection");
+    expect(profile.conditions["lorelum-retrieval"].channel).toBe("mock-retrieval-tool-call");
     expect(profile.conditions["lorelum-retrieval"].practice).toMatchObject({ id: "react.async-lifecycle", version: "v1" });
     expect(profile.conditions["irrelevant-practice"].practice).toMatchObject({ id: "react.form-validation", version: "v1" });
     expect(profile.decision_rule.relation).toBe("lorelum-passes-and-irrelevant-fails");
@@ -160,15 +160,17 @@ test("redacted trace carries three-layer events without practice text", async ()
     };
     const payload = await resolveSkillTriggerPayload(root, profile, "lorelum-retrieval", mockResult);
     const events = [
-      { event: "discovered_and_loaded", skill_id: "lorelum", skill_version: "mock-v1" },
-      { event: "query_occurred", practice_id: "react.async-lifecycle", practice_version: "v1", practice_sha256: mockResult.matched_practice.sha256 },
-      { event: "constraint_adopted", behavior_constraint_sha256: await sha256Bytes(mockResult.behavior_constraint) },
+      { event: "public_input_read", path: "app/src/Dashboard.tsx", sha256: "a".repeat(64), anchors: ["dashboard"] },
+      { event: "skill_discovered", tool_call_id: "discover-1", skill_id: "lorelum", skill_version: "mock-v2" },
+      { event: "skill_loaded", tool_call_id: "load-1", skill_id: "lorelum", skill_version: "mock-v2" },
+      { event: "practice_query_issued", query_id: "query-1", query_sha256: await sha256Bytes("Dashboard useEffect") },
+      { event: "practice_query_resolved", query_id: "query-1", practice_id: "react.async-lifecycle", practice_version: "v1", practice_sha256: mockResult.matched_practice.sha256, behavior_constraint_sha256: await sha256Bytes(mockResult.behavior_constraint) },
     ];
     const trace = redactedSkillTriggerTrace(profile, payload, events);
     expect(trace.condition_id).toBe("lorelum-retrieval");
-    expect(trace.channel).toBe("mock-retrieval-prompt-injection");
-    expect(trace.events).toHaveLength(3);
-    expect(trace.events[0].event).toBe("discovered_and_loaded");
+    expect(trace.channel).toBe("mock-retrieval-tool-call");
+    expect(trace.events).toHaveLength(5);
+    expect(trace.events[0].event).toBe("public_input_read");
     expect(trace.practice_id).toBe("react.async-lifecycle");
     const serialized = JSON.stringify(trace);
     expect(serialized).not.toContain("异步副作用不得在组件卸载后继续影响状态");
@@ -180,7 +182,7 @@ test("redacted trace carries three-layer events without practice text", async ()
 
 test("rejects oracle-practice ceiling", async () => {
   const root = await withCandidate(async (path) => {
-    await replace(join(path, "private/conditions.yaml"), "  - id: baseline", "  - id: oracle-practice\n    status: declared\n    channel: mock-retrieval-prompt-injection\n    practice:\n      path: private/practices/oracle.async-lifecycle.v1.md\n      sha256: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\n  - id: baseline");
+    await replace(join(path, "private/conditions.yaml"), "  - id: baseline", "  - id: oracle-practice\n    status: declared\n    channel: mock-retrieval-tool-call\n    practice:\n      path: private/practices/oracle.async-lifecycle.v1.md\n      sha256: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\n  - id: baseline");
   });
   try {
     await expect(resolveSkillTrigger(root)).rejects.toThrow("oracle-practice must not be declared");
@@ -202,7 +204,7 @@ test("rejects hash mismatch", async () => {
 
 test("rejects baseline with non-none channel", async () => {
   const root = await withCandidate(async (path) => {
-    await replace(join(path, "private/conditions.yaml"), "  - id: baseline\n    status: declared\n    channel: none", "  - id: baseline\n    status: declared\n    channel: mock-retrieval-prompt-injection");
+    await replace(join(path, "private/conditions.yaml"), "  - id: baseline\n    status: declared\n    channel: none", "  - id: baseline\n    status: declared\n    channel: mock-retrieval-tool-call");
   });
   try {
     await expect(resolveSkillTrigger(root)).rejects.toThrow("baseline.channel must be none");

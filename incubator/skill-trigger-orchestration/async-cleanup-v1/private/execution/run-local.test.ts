@@ -48,21 +48,22 @@ test("copies only the starter app source into each agent workspace", async () =>
   }
 });
 
-test("trace records three redacted events for retrieval conditions and none for baseline", async () => {
+test("runner never fabricates retrieval events when the agent did not call the extension", async () => {
   const output = "scratch/skill-trigger-local/test-trace-events";
   const { wrapper, cleanup } = await createFakePi(true);
   try {
     const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
-    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: Array<{ condition: string; trace: { channel: string; events: Array<{ event: string }> } }> };
+    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: Array<{ condition: string; trace: { channel: string; complete?: boolean; events: Array<{ event: string }> } }> };
     const byCondition = new Map(summary.entries.map((e) => [e.condition, e]));
     expect(byCondition.get("baseline")!.trace.channel).toBe("none");
     expect(byCondition.get("baseline")!.trace.events).toHaveLength(0);
     const lorelum = byCondition.get("lorelum-retrieval")!;
-    expect(lorelum.trace.channel).toBe("mock-retrieval-prompt-injection");
-    expect(lorelum.trace.events.map((e) => e.event)).toEqual(["discovered_and_loaded", "query_occurred", "constraint_adopted"]);
+    expect(lorelum.trace.channel).toBe("mock-retrieval-tool-call");
+    expect(lorelum.trace.events).toHaveLength(0);
+    expect(lorelum.trace.complete).toBeFalse();
     const irrelevant = byCondition.get("irrelevant-practice")!;
-    expect(irrelevant.trace.events).toHaveLength(3);
+    expect(irrelevant.trace.events).toHaveLength(0);
     // trace must not contain Practice card text
     const serialized = JSON.stringify(summary);
     expect(serialized).not.toContain("异步副作用在组件卸载后不再影响状态");

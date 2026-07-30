@@ -8,9 +8,9 @@
 - **WHEN** 执行器创建一次尝试
 - **THEN** 它仅复制 public/task.md 与 public/starter/ 到工作区，不复制 private 下任何文件
 
-#### Scenario: mock Practice 注入
+#### Scenario: mock Practice 工具返回
 - **WHEN** 条件为 lorelum-retrieval 或 irrelevant-practice
-- **THEN** 约束通过 mock-retrieval-prompt-injection 通道注入 prompt 文本，其 Practice id/version/SHA-256 记录在 trace 中，Practice 正文与 private 路径不进 public 工作区或模型输入
+- **THEN** agent 必须先发现并加载 Lorelum，再调用 mock-retrieval-tool-call；三字段结果作为该工具返回进入模型上下文，其 Practice id/version/SHA-256 记录在 trace 中，Practice 正文与 private 路径不进 public 工作区或模型输入
 
 ### Requirement: mock 查询返回三字段结构
 
@@ -38,17 +38,21 @@
 - **WHEN** lorelum-retrieval 过 evaluator 且 irrelevant-practice 不过
 - **THEN** 结果记为 agent 真正听懂约束
 
-### Requirement: AST 探针稳定检出 baseline 缺陷
+### Requirement: 异步生命周期质量门稳定检出 baseline 缺陷
 
-evaluator MUST 用静态 AST 探针检出 useEffect 回调未返回 cleanup 函数，MUST NOT 依赖运行时 warning。reference 实现（带 cleanup）MUST 通过探针，naive starter（不带 cleanup）MUST 失败。
+evaluator MUST 用静态 AST 结构门检出 useEffect 回调未返回 cleanup 函数，并用运行时测试验证“延迟请求 -> 卸载 -> resolve”后状态 setter 未被调用；MUST NOT 依赖 React warning。reference 实现（带有效 cleanup）MUST 通过两道质量门，naive starter（不带 cleanup）MUST 失败。
 
 #### Scenario: baseline 失败
 - **WHEN** 评估 naive starter
 - **THEN** AST 探针报告 useEffect 未返回 cleanup，语义可能通过但质量探针失败
 
+#### Scenario: 卸载后状态更新被阻断
+- **WHEN** 请求在组件卸载后才 resolve
+- **THEN** evaluator 记录到的组件状态 setter 调用数为零
+
 #### Scenario: reference 通过
 - **WHEN** 评估带 cleanup 的 reference
-- **THEN** AST 探针报告 cleanup 存在，质量探针通过
+- **THEN** AST 结构门与运行时质量门均通过
 
 ### Requirement: pilot 先确认 baseline 失败模式
 
@@ -69,29 +73,29 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 
 #### Scenario: lorelum-retrieval 为 declared 实验组
 - **WHEN** 解析 conditions
-- **THEN** lorelum-retrieval 的 status 为 declared，channel 为 mock-retrieval-prompt-injection，而非 unavailable
+- **THEN** lorelum-retrieval 的 status 为 declared，channel 为 mock-retrieval-tool-call，而非 unavailable
 
 #### Scenario: 不复用 injection-calibration
 - **THEN** profile 的 condition 集合与 channel 类型不包含 injection-calibration/v1 的 condition-scoped-private-runtime 显式注入语义
 
-### Requirement: mock-retrieval-prompt-injection 通道
+### Requirement: mock-retrieval-tool-call 通道
 
-系统 MUST 提供 `mock-retrieval-prompt-injection` 通道：agent 可见可发现 Skill 列表，触发查询后 mock 返回三字段约束并注入 prompt 层文本。Practice 正文 MUST NOT 进入 public 工作区；trace 只记录 redacted 信息（id/version/sha256）。
+系统 MUST 提供 `mock-retrieval-tool-call` 通道：agent 可调用 `skills_list`、`skills_load` 与加载后才可用的 `lorelum_query`。runner MUST NOT 预先注入 Lorelum 或查询结果；Practice 正文 MUST NOT 进入 public 工作区；trace 只记录 redacted 信息。
 
-#### Scenario: 约束注入 prompt
+#### Scenario: agent 主动查询
 - **WHEN** lorelum-retrieval 条件下 agent 触发查询
-- **THEN** mock 返回三字段结构注入 prompt 文本，agent 工作区不出现 private/practices 路径或 Practice 正文
+- **THEN** query 的 public_refs 对应本次已读取公开输入，query 含有任务锚点，mock 将三字段结构作为工具返回提供给 agent，工作区不出现 private/practices 路径或 Practice 正文
 
 #### Scenario: trace redacted
-- **THEN** trace 记录 discovered_and_loaded、query_occurred、constraint_adopted 三层事件，均不含 Practice 正文
+- **THEN** trace 记录公开输入、发现、加载、查询与返回事件，均不含 Practice 正文
 
 ### Requirement: trace 记录三层事件
 
-系统 MUST 在 trace 中记录三层事件：discovered_and_loaded（自主发现并加载 Skill）、query_occurred（查询已发生）、constraint_adopted（采纳的约束）。每层 MUST 包含足够审计的 redacted 元信息，MUST NOT 包含 Practice 正文或私有路径。
+系统 MUST 在 trace 中记录真实事件：public_input_read、skill_discovered、skill_loaded、practice_query_issued、practice_query_resolved。每层 MUST 包含足够审计的 redacted 元信息，MUST NOT 包含 Practice 正文或私有路径。缺少任一真实事件链不得计为处理组成功。
 
-#### Scenario: 三层事件齐全
+#### Scenario: 真实事件链齐全
 - **WHEN** lorelum-retrieval 条件完成一次尝试
-- **THEN** trace 包含三层事件，可据此判定过程链是否成立
+- **THEN** trace 包含公开输入、发现、加载、查询与返回事件，可据此判定过程链是否成立
 
 #### Scenario: 过程链缺失
 - **WHEN** trace 缺少任一层事件但结果通过

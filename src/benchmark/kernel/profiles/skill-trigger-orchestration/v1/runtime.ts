@@ -62,7 +62,7 @@ function parsePracticeReference(value: unknown, conditionId: string): PracticeRe
 
 function parseChannel(value: unknown, conditionId: string): SkillTriggerChannel {
   if (value === "none") return "none";
-  if (value === "mock-retrieval-prompt-injection") return "mock-retrieval-prompt-injection";
+  if (value === "mock-retrieval-tool-call") return "mock-retrieval-tool-call";
   fail(`${conditionId}.channel is unsupported: ${String(value)}`);
 }
 
@@ -89,7 +89,7 @@ function parseProfile(value: UnknownRecord): SkillTriggerProfile {
       if (condition.practice !== "none") fail("baseline.practice must be none");
       return { id, status: "declared" as const, channel: "none" as const, practice: "none" as const };
     }
-    if (channel !== "mock-retrieval-prompt-injection") fail(`${id}.channel must be mock-retrieval-prompt-injection`);
+    if (channel !== "mock-retrieval-tool-call") fail(`${id}.channel must be mock-retrieval-tool-call`);
     return { id, status: "declared" as const, channel, practice: parsePracticeReference(condition.practice, id) };
   });
 
@@ -208,8 +208,8 @@ async function inspectSkillTrigger(candidatePath: string): Promise<PrivateResolv
     profile: {
       conditions: {
         baseline: { condition_id: "baseline", channel: "none" },
-        "lorelum-retrieval": { condition_id: "lorelum-retrieval", channel: "mock-retrieval-prompt-injection", practice: lorelum.card },
-        "irrelevant-practice": { condition_id: "irrelevant-practice", channel: "mock-retrieval-prompt-injection", practice: irrelevant.card },
+        "lorelum-retrieval": { condition_id: "lorelum-retrieval", channel: "mock-retrieval-tool-call", practice: lorelum.card },
+        "irrelevant-practice": { condition_id: "irrelevant-practice", channel: "mock-retrieval-tool-call", practice: irrelevant.card },
       },
       decision_rule: declaration.decision_rule,
       profile_input_hash: profileInputHash,
