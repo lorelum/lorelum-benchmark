@@ -16,6 +16,7 @@ Issue #96 需要一条独立轨道，验证 coding agent 在工程任务中会�
 - candidate 先跑本地 pilot 确认 baseline 下 agent 确实会失败，再正式用作对照。
 - `async-cleanup-v1` 的 `pilot-r5` 因 Pi extension 在 `tool_execution_end` 中读取不存在的 `args.path` 而失效；它只保留为无效运行证据，后续修复与方向性观察均在冻结的下一 revision `async-cleanup-v2` 完成。
 - v2 用快速导航故障报告提供真实修改动机，并以运行有效性门隔离 extension 错误、trace/audit 不一致和 private 泄露；每条件执行三次，不创建正式 record。
+- `pilot-r7` 证明该题面对 `deepseek/deepseek-v4-pro` 没有区分度，且没有上下文检索动机时不会自行查询。v2 后续直接改为快速范围切换下的异步结果归属故障，并仅在公开事故材料中提供不解释的 `ui.response-ownership` 分类标识；不在 runner prompt 中要求 Skill 调用，也不注入行为约束。该轮只测上下文驱动的自主发现，不能覆盖或推翻 r7 对强自主发现的负结论。
 
 ## Capabilities
 

@@ -44,6 +44,14 @@ v2 增加公开成功路径回归，证明离开页面后的请求结果不得�
 
 `pilot-r6` 未生成 summary、trace、evaluator 或 record：Pi 的 Windows bash 后端解析到 WSL 后挂起，整批仅为无效环境证据。由于 v2 尚无记录结果，不创建 v3；在 v2 的 `tool-policy` 中声明 Git Bash，并由 runner 为每次 attempt 设置独立 `PI_CODING_AGENT_DIR/settings.json` 的 `shellPath`。该配置目录位于 attempt private 输出，不复制到 agent workspace，不改变模型、提示、工具、预算或条件。
 
+### v2 上下文驱动发现修订
+
+`pilot-r7` 的九次有效 attempt 显示：当前公开包名包含实现词，题面和公开回归又直接描述旧请求在离开页面后继续处理的生命周期边界；三个条件均自行通过质量门，处理组也没有发生查询。此结果保留为强自主发现（无任何上下文检索动机）的负证据，不得以新一轮结果覆盖。
+
+v2 的下一轮改为“快速切换项目范围后，旧范围请求的成功或失败终态覆盖当前范围”的异步结果归属故障。公开事故材料只出现真实但不解释的分类标识 `ui.response-ownership`，作为 agent 可引用的公开对象；不得出现 Lorelum、Skill、Practice、cleanup、AbortController、查询动作或行为约束。它不要求 agent 调用任何工具，agent 仍自行判断是否从可选目录发现能力并以该分类及已读公开文件锚定查询。runner 的共享 prompt、模型、预算、工具调用门禁和 condition 保持不变。
+
+私有质量门相应验证旧范围请求在 success 与 failure 两种终态下均不再影响当前范围的状态；允许取消、失效标记、请求代次等任意等价实现。公开 starter 名称也必须移除实现词。此轮仅能报告“上下文驱动的自主发现”信号，不能声称强自主发现。
+
 ### 风险与前置
 
 - 场景偏简单，agent 可能表现过好导致 baseline 失败模式不成立。candidate 先跑本地 pilot 确认 baseline 下 agent 确实会失败。

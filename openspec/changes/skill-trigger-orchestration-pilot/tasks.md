@@ -64,3 +64,10 @@
 - [x] 建立 v2 reference、等价实现与只保护成功分支/空 cleanup anti-pattern 校准，并验证判别力。 [写入范围：v2 private calibration]
 - [x] 在 v2 tool-policy 声明隔离 Git Bash 环境，runner 为每个 attempt 设置 private `PI_CODING_AGENT_DIR`，并以真实 Pi bash 调用验证其不经 WSL。 [写入范围：v2 private execution]
 - [x] 运行 validate、contracts、v2 定向测试、strict OpenSpec、calibration 与泄露审计；全部通过后运行三条件各三次的 scratch 诊断。 [写入范围：scratch/ only]
+
+## 10. v2 上下文驱动发现修订
+
+- [x] 在 Issue #96 与 OpenSpec 记录 r7 对强自主发现的负结论，以及下一轮只测上下文驱动发现的边界。 [写入范围：Issue #96、OpenSpec]
+- [ ] 以快速项目范围切换重写 v2 public task、starter 与公开回归；移除所有实现词泄露，并添加不解释的 `ui.response-ownership` 事故分类。 [写入范围：v2 public]
+- [ ] 将私有 Oracle、AST/runtime probes 与 calibration fixtures 改为验证旧范围 success/reject 均不影响当前范围状态。 [写入范围：v2 private]
+- [ ] 保持 runner prompt、模型、预算与工具门禁不变；更新 snapshot、运行资格校验和三条件各三次 scratch 诊断。 [写入范围：v2 private、scratch/]
