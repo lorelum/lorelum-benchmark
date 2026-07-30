@@ -7,18 +7,17 @@ const mode = modeFlag >= 0 ? Bun.argv[modeFlag + 1] : "resolve";
 if (mode !== "resolve" && mode !== "reject") throw new Error("--mode must be resolve or reject");
 
 const dashboardPath = join(appRoot, "src", "Dashboard.tsx");
-const mainPath = join(appRoot, "src", "main.tsx");
 const wrapperPath = join(appRoot, "src", "__lorelum-react.ts");
-const testPath = join(appRoot, "tests", "__lorelum-lifecycle.probe.spec.ts");
+const testPath = join(appRoot, "tests", "__lorelum-response-ownership.probe.spec.ts");
 
 const wrapper = `import { useEffect, useState as reactUseState, type Dispatch, type SetStateAction } from "react";
 export { useEffect };
-type ProbeState = typeof globalThis & { __lorelumUnmounted?: boolean; __lorelumSetterCalls?: number };
+type ProbeState = typeof globalThis & { __lorelumTrackStaleWrites?: boolean; __lorelumSetterCalls?: number };
 export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>] {
   const [value, setValue] = reactUseState(initialState);
   const tracked: Dispatch<SetStateAction<S>> = (next) => {
     const probe = globalThis as ProbeState;
-    if (probe.__lorelumUnmounted) probe.__lorelumSetterCalls = (probe.__lorelumSetterCalls ?? 0) + 1;
+    if (probe.__lorelumTrackStaleWrites) probe.__lorelumSetterCalls = (probe.__lorelumSetterCalls ?? 0) + 1;
     return setValue(next);
   };
   return [value, tracked];
@@ -26,8 +25,8 @@ export function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateA
 `;
 
 const probeTest = `import { expect, test } from "@playwright/test";
-declare global { interface Window { __lorelumReleaseProjectRequest?: () => void; __lorelumUnmountApp?: () => void; __lorelumUnmounted?: boolean; __lorelumSetterCalls?: number; __forceProjectsRejected?: boolean; } }
-test("does not call state setters after unmount (${mode})", async ({ page }) => {
+declare global { interface Window { __lorelumReleaseLatestProjectRequest?: () => void; __lorelumReleasePendingProjectRequests?: () => void; __lorelumTrackStaleWrites?: boolean; __lorelumSetterCalls?: number; __forceProjectsRejectedScopes?: string[]; } }
+test("does not update state from a superseded scope (${mode})", async ({ page }) => {
   await page.addInitScript((responseMode) => {
     const original = window.setTimeout.bind(window);
     const delayed: Array<() => void> = [];
@@ -38,16 +37,21 @@ test("does not call state setters after unmount (${mode})", async ({ page }) => 
       }
       return original(handler, timeout, ...args);
     }) as typeof window.setTimeout;
-    window.__lorelumReleaseProjectRequest = () => { for (const release of delayed.splice(0)) release(); };
+    window.__lorelumReleaseLatestProjectRequest = () => { delayed.pop()?.(); };
+    window.__lorelumReleasePendingProjectRequests = () => { for (const release of delayed.splice(0)) release(); };
     window.__lorelumSetterCalls = 0;
-    window.__forceProjectsRejected = responseMode === "reject";
+    window.__forceProjectsRejectedScopes = responseMode === "reject" ? ["active"] : [];
   }, ${JSON.stringify(mode)});
   await page.goto("/");
-  await page.waitForFunction(() => typeof window.__lorelumReleaseProjectRequest === "function" && typeof window.__lorelumUnmountApp === "function");
+  await page.waitForFunction(() => typeof window.__lorelumReleaseLatestProjectRequest === "function");
+  await page.getByRole("button", { name: "已归档项目" }).click();
   await page.evaluate(() => {
-    window.__lorelumUnmounted = true;
-    window.__lorelumUnmountApp?.();
-    window.__lorelumReleaseProjectRequest?.();
+    window.__lorelumReleaseLatestProjectRequest?.();
+  });
+  await expect(page.getByRole("list", { name: "已归档项目" })).toContainText("遗留 API 下线");
+  await page.evaluate(() => {
+    window.__lorelumTrackStaleWrites = true;
+    window.__lorelumReleasePendingProjectRequests?.();
   });
   await page.waitForTimeout(50);
   await expect.poll(() => page.evaluate(() => window.__lorelumSetterCalls)).toBe(0);
@@ -55,17 +59,15 @@ test("does not call state setters after unmount (${mode})", async ({ page }) => 
 `;
 
 async function run(): Promise<number> {
-  const [dashboard, main] = await Promise.all([readFile(dashboardPath, "utf8"), readFile(mainPath, "utf8")]);
+  const dashboard = await readFile(dashboardPath, "utf8");
   if (!dashboard.includes('from "react"')) throw new Error("Runtime probe requires src/Dashboard.tsx to import React from react");
-  if (!main.includes("const root = createRoot")) throw new Error("Runtime probe requires the v2 app root entrypoint");
   const instrumentedDashboard = dashboard.replace('from "react"', 'from "./__lorelum-react"');
-  const instrumentedMain = main.replace("window.__unmountProjectOverview = () => root.unmount();", "window.__unmountProjectOverview = () => root.unmount();\n(globalThis as typeof globalThis & { __lorelumUnmountApp?: () => void }).__lorelumUnmountApp = () => root.unmount();");
   try {
-    await Promise.all([writeFile(dashboardPath, instrumentedDashboard), writeFile(mainPath, instrumentedMain), writeFile(wrapperPath, wrapper), writeFile(testPath, probeTest)]);
-    const child = Bun.spawn([process.execPath, "run", "test", "--", "tests/__lorelum-lifecycle.probe.spec.ts"], { cwd: appRoot, stdout: "inherit", stderr: "inherit" });
+    await Promise.all([writeFile(dashboardPath, instrumentedDashboard), writeFile(wrapperPath, wrapper), writeFile(testPath, probeTest)]);
+    const child = Bun.spawn([process.execPath, "run", "test", "--", "tests/__lorelum-response-ownership.probe.spec.ts"], { cwd: appRoot, stdout: "inherit", stderr: "inherit" });
     return await child.exited;
   } finally {
-    await Promise.all([writeFile(dashboardPath, dashboard), writeFile(mainPath, main), rm(wrapperPath, { force: true }), rm(testPath, { force: true })]);
+    await Promise.all([writeFile(dashboardPath, dashboard), rm(wrapperPath, { force: true }), rm(testPath, { force: true })]);
   }
 }
 

@@ -11,17 +11,17 @@ sets:
         extends: shared-react-vite
         overlay:
           path: private/calibration/sets/cleanup-probe/v2/overlays/reference
-          sha256: f1423b34d513669994978596402b156fe0081cc427d19c165339c150765f333b
+          sha256: 03e658bf69e0aa7db18b2abda08609f531f93bdf5b9e4d2d18ae09f7d9662ca7
       equivalent-tree:
         extends: shared-react-vite
         overlay:
           path: private/calibration/sets/cleanup-probe/v2/overlays/equivalent
-          sha256: 99e4260d4cbdc2528a5352358ceb6614800cc34c94775f53b8490e2178c6702d
+          sha256: a999cac70b52022087c9b7311ad0e4e1580c43c3f95e1fdf6704b345a6c0b67e
       anti-pattern-tree:
         extends: shared-react-vite
         overlay:
           path: private/calibration/sets/cleanup-probe/v2/overlays/anti-pattern
-          sha256: 7fb6759f0ae1854b909e07443b58d322bb737918889213d53b1ae9a48686d3b9
+          sha256: 94436f4aa33da67c56067cbfa84b9f3e9298a1436c73502c57d9ca171e5d0532
     fixtures:
       reference: reference-tree
       equivalent: equivalent-tree

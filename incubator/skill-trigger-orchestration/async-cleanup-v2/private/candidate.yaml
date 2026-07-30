@@ -27,7 +27,8 @@ runtime:
     playwright: 1.61.1
 public_behavior:
   loading_message: 加载中…
-  project_count: 3
+  active_project_count: 2
+  archived_project_count: 1
   active_label: 进行中
   archived_label: 已归档
   unavailable_message: 项目列表暂时不可用
@@ -40,4 +41,4 @@ public_boundary:
 baseline_expectation:
   functional: false
   practice_adherence: false
-  reason: Dashboard 在页面离开后仍处理请求终态，公开导航回归与私有双终态质量门均应失败。
+  reason: Dashboard 在范围切换后仍处理旧范围请求终态，公开范围切换回归与私有双终态质量门均应失败。

@@ -12,7 +12,7 @@ async function execute(appRoot: string, mode: "resolve" | "reject"): Promise<num
   return await child.exited;
 }
 
-test("runtime gate rejects post-unmount setters in both terminal paths and accepts an invalidation guard", async () => {
+test("runtime gate rejects superseded-scope setters in both terminal paths and accepts an invalidation guard", async () => {
   const root = await mkdtemp(join(tmpdir(), "lorelum-cleanup-runtime-"));
   const appRoot = join(root, "app");
   try {
@@ -24,23 +24,24 @@ test("runtime gate rejects post-unmount setters in both terminal paths and accep
 
     const dashboard = join(appRoot, "src", "Dashboard.tsx");
     const source = await readFile(dashboard, "utf8");
-    const guarded = source.replace(/  useEffect\(\(\) => \{[\s\S]*?\n  \}, \[\]\);/, `  useEffect(() => {
+    const guarded = source.replace(/  useEffect\(\(\) => \{[\s\S]*?\n  \}, \[scope\]\);/, `  useEffect(() => {
     let active = true;
-    fetchProjects()
+    setState({ kind: "loading", scope });
+    fetchProjects(scope)
       .then((response) => {
         if (!active) return;
         if (response.status === 200) {
-          setState({ kind: "ready", projects: response.body.projects });
+          setState({ kind: "ready", scope, projects: response.body.projects });
         } else {
-          setState({ kind: "error", message: "项目列表暂时不可用" });
+          setState({ kind: "error", scope, message: "项目列表暂时不可用" });
         }
       })
       .catch(() => {
         if (!active) return;
-        setState({ kind: "error", message: "项目列表暂时不可用" });
+        setState({ kind: "error", scope, message: "项目列表暂时不可用" });
       });
     return () => { active = false; };
-  }, []);`);
+  }, [scope]);`);
     await writeFile(dashboard, guarded);
     expect(await execute(appRoot, "resolve")).toBe(0);
     expect(await execute(appRoot, "reject")).toBe(0);

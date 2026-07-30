@@ -112,12 +112,12 @@ export default function lorelumExtension(pi: ExtensionAPI) {
           throw new Error("lorelum_query requires public_refs already read by the agent and a query anchored to those inputs.");
         }
         const constraint = await behaviorConstraint();
-        const scope = condition === "lorelum-retrieval" ? "当前组件中的异步项目请求" : "当前表单的提交前校验";
+        const scope = condition === "lorelum-retrieval" ? "当前项目范围的异步结果" : "当前表单的提交前校验";
         const response = {
           query_id: toolCallId,
           scope_constraint: scope,
           matched_practice: {
-            id: condition === "lorelum-retrieval" ? "react.async-lifecycle" : "react.form-validation",
+            id: condition === "lorelum-retrieval" ? "react.async-result-ownership" : "react.form-validation",
             version: "v1",
             sha256: practiceSha256,
           },
