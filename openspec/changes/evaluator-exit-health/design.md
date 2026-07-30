@@ -91,10 +91,16 @@ historical execution context.
 Rollback is a revert of the runner and focused-test change. No candidate,
 formal record, or frozen revision is mutated.
 
-## Open Questions
+## Planning Confirmation
 
-- Confirm that `execution-failed` remains the correct public health state for
-  evaluator launch, timeout, and nonzero-exit failures, rather than adding a
-  new evaluator-specific state.
-- Confirm that historical replay must not repair a workspace by installing
-  dependencies, even when its public lockfile would permit it.
+The requirements owner confirmed after the OpenSpec-only PR:
+
+- Candidate observable behavior, Practice conditions, baseline discrimination,
+  private semantic/quality acceptance, starter and snapshot identity, and
+  model, prompt, budget, and blind-review boundaries remain unchanged.
+- `execution-failed` is the non-health state for evaluator launch, timeout,
+  and nonzero-exit failures. A non-healthy evaluator contributes no semantic,
+  Practice observation, or joint-pass result.
+- Historical replay is evaluator-only. It must not install dependencies,
+  mutate a workspace, rerun Pi, call a model, create a formal record, or
+  support a #91 condition comparison when unavailable.

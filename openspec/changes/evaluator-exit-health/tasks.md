@@ -1,7 +1,7 @@
 ## 0. Planning Gate
 
-- [ ] 0.1 After the OpenSpec-only PR exists, confirm in #118 and `design.md` that candidate observable behavior, Practice conditions, baseline discrimination, private semantic/quality acceptance, starter/snapshot identity, and model/prompt/budget/blind-review boundaries remain unchanged.
-- [ ] 0.2 Confirm that `execution-failed` is the evaluator non-health state and historical replays must not install dependencies, mutate workspaces, or rerun Pi/model work.
+- [x] 0.1 After the OpenSpec-only PR exists, confirm in #118 and `design.md` that candidate observable behavior, Practice conditions, baseline discrimination, private semantic/quality acceptance, starter/snapshot identity, and model/prompt/budget/blind-review boundaries remain unchanged.
+- [x] 0.2 Confirm that `execution-failed` is the evaluator non-health state and historical replays must not install dependencies, mutate workspaces, or rerun Pi/model work.
 
 ## 1. Evaluator Health Handling
 
