@@ -51,6 +51,7 @@ type ReplayReason =
   | "invalid-history-summary"
   | "missing-history-summary"
   | "missing-workspace"
+  | "ambiguous-workspace"
   | "workspace-outside-history-root"
   | "workspace-integrity-unavailable"
   | "workspace-modified-during-replay"
@@ -184,6 +185,7 @@ const commitPattern = /^[a-f0-9]{7,64}$/;
 const identifierPattern = /^[A-Za-z0-9._-]+$/;
 const replayReasons = new Set<ReplayReason>([
   "candidate-validation-failed", "invalid-history-summary", "missing-history-summary", "missing-workspace",
+  "ambiguous-workspace",
   "workspace-outside-history-root", "workspace-integrity-unavailable", "workspace-modified-during-replay",
   "evaluator-execution-failed", "evaluator-timed-out", "invalid-evaluator-output",
 ]);
@@ -279,13 +281,17 @@ async function historicalWorkspace(historyRoot: string, entry: HistoricalSummary
   const root = await realpath(historyRoot);
   const candidateRoot = resolve(root, entry.candidate);
   if (!pathInside(root, candidateRoot)) throw new Error("workspace-outside-history-root");
-  const app = resolve(candidateRoot, entry.condition, `attempt-${entry.repeat}`, "workspace", "app");
-  let resolvedApp: string;
-  try {
-    resolvedApp = await realpath(app);
-  } catch {
-    throw new Error("missing-workspace");
-  }
+  // #90 wrote its v1 summary one level above the candidate-specific run root;
+  // later invocations may write attempts directly below that summary root.
+  const locations = [
+    resolve(candidateRoot, entry.condition, `attempt-${entry.repeat}`, "workspace", "app"),
+    resolve(candidateRoot, entry.candidate, entry.condition, `attempt-${entry.repeat}`, "workspace", "app"),
+  ];
+  const resolved = await Promise.all(locations.map((location) => realpath(location).catch(() => undefined)));
+  const found = [...new Set(resolved.filter((location): location is string => Boolean(location)))];
+  if (found.length === 0) throw new Error("missing-workspace");
+  if (found.length > 1) throw new Error("ambiguous-workspace");
+  const resolvedApp = found[0];
   if (!pathInside(root, resolvedApp)) throw new Error("workspace-outside-history-root");
   const stat = await lstat(resolvedApp);
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("missing-workspace");

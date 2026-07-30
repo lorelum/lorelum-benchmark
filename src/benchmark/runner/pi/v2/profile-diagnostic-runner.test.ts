@@ -46,7 +46,7 @@ async function withReplayFixture(evaluator: string): Promise<{ candidate: string
   await mkdir(join(candidate, "private", "evaluator"), { recursive: true });
   await writeFile(join(candidate, "private", "evaluator", "evaluate.ts"), evaluator);
   const historyRoot = await mkdtemp(join(tmpdir(), "lorelum-history-"));
-  const app = join(historyRoot, candidateId, "baseline", "attempt-1", "workspace", "app");
+  const app = join(historyRoot, candidateId, candidateId, "baseline", "attempt-1", "workspace", "app");
   await mkdir(app, { recursive: true });
   await writeFile(join(app, "candidate.txt"), "unchanged");
   const entry = parseHistoricalSummary({ schema_version: "profile-diagnostic-summary/v1", entries: [legacyEntry(candidateId, "baseline")] }, candidateId)[0];
@@ -188,7 +188,7 @@ test("replays an existing workspace with a current evaluator despite historical 
 test("marks a missing workspace not executable without an evaluator invocation", async () => {
   const fixture = await withReplayFixture('throw new Error("evaluator should not execute");');
   try {
-    await rm(join(fixture.historyRoot, "neutral-contract-fixture-v1", "baseline", "attempt-1"), { force: true, recursive: true });
+    await rm(join(fixture.historyRoot, "neutral-contract-fixture-v1", "neutral-contract-fixture-v1", "baseline", "attempt-1"), { force: true, recursive: true });
     const replay = await replayHistoricalWorkspace(fixture.historyRoot, fixture.candidate, fixture.entry, evaluatorCommit, 10_000);
     expect(replay).toMatchObject({ evaluation_status: "not-executable", replay_reason: "missing-workspace" });
   } finally {
