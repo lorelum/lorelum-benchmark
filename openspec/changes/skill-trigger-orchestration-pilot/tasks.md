@@ -81,4 +81,4 @@
 - [x] 将 AST/runtime evaluator 与 reference/equivalent/anti-pattern calibration 改为覆盖跨范围、同范围重载以及旧操作 resolve/reject 的结果归属。 [写入范围：v2 private evaluator、calibration]
 - [x] 在 runner 增加三次触发校准与“未通过则停止”门，并在 summary 中单列发现门结果。 [写入范围：v2 private execution]
 - [x] 重生成 snapshot，运行 validate、contracts、v2 定向测试、strict OpenSpec、calibration 和泄露审计。 [写入范围：v2 private、scratch/]
-- [ ] 在上述离线门禁全部通过后，运行三次 `lorelum-retrieval` 触发校准；仅三次均形成完整查询链路时，再运行三条件各三次 scratch quality pilot。 [写入范围：scratch/]
+- [x] 在上述离线门禁全部通过后，运行三次 `lorelum-retrieval` 触发校准；三次均有效但均未形成完整查询链路，故按门禁阻止三条件 scratch quality pilot，并报告 `diagnostic-only`。 [写入范围：scratch/]
