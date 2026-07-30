@@ -136,6 +136,22 @@ export function evaluatorResult(stdout: string): ProfileDiagnosticEvaluatorResul
   return undefined;
 }
 
+export function classifyEvaluatorResult(evaluation: CommandResult): Pick<DiagnosticEntry, "evaluation_status" | "semantic" | "practice_observation" | "observation_reason" | "joint_pass" | "error"> {
+  if (evaluation.timedOut) return { evaluation_status: "execution-failed", error: "evaluator-timed-out" };
+  if (evaluation.code !== 0) return { evaluation_status: "execution-failed", error: "evaluator-exit-nonzero" };
+
+  const result = evaluatorResult(evaluation.stdout);
+  if (!result) return { evaluation_status: "invalid-output", error: "evaluator-invalid-output" };
+
+  return {
+    evaluation_status: "evaluated",
+    semantic: result.semantic,
+    practice_observation: result.practice_observation,
+    observation_reason: result.observation_reason,
+    joint_pass: result.semantic === "pass" && result.practice_observation === "observed",
+  };
+}
+
 export function piArgs(modelId: string, payload: PracticePayload): string[] {
   const args = [
     "--print", "--no-session", "--no-context-files", "--no-extensions",
@@ -197,25 +213,20 @@ async function runAttempt(
     return entry;
   }
 
-  const evaluation = await run(
-    [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
-    candidatePath
-  );
-  await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluation.stdout);
-  await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluation.stderr);
-
-  const result = evaluatorResult(evaluation.stdout);
-  if (!result) {
-    entry.evaluation_status = "invalid-output";
-    entry.error = "Evaluator did not emit a structured result";
+  let evaluation: CommandResult;
+  try {
+    evaluation = await run(
+      [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
+      candidatePath,
+      shared.budget.max_duration_minutes * 60_000
+    );
+  } catch {
+    entry.error = "evaluator-launch-failed";
     return entry;
   }
-
-  entry.evaluation_status = "evaluated";
-  entry.semantic = result.semantic;
-  entry.practice_observation = result.practice_observation;
-  entry.observation_reason = result.observation_reason;
-  entry.joint_pass = result.semantic === "pass" && result.practice_observation === "observed";
+  await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluation.stdout);
+  await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluation.stderr);
+  Object.assign(entry, classifyEvaluatorResult(evaluation));
   return entry;
 }
 
