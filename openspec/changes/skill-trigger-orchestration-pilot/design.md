@@ -90,3 +90,15 @@ calibration sets 声明三个 fixture，各自测探针的不同判据：
 v2 的方向性 pilot 固定使用 `deepseek/deepseek-v4-pro` 与既有预算，baseline、lorelum-retrieval、irrelevant-practice 各三次。未查询归类为主动发现失败；完整查询但质量门失败归类为理解或实施失败；运行有效性门失败归类为实验无效。只有处理组三次都完整成功且两个对照组三次都未通过质量门，才报告方向性正信号；其余结果均为 diagnostic-only。
 
 anti-pattern 与 naive starter 的区别：naive starter 是 baseline 预期产出（压根不写 cleanup，探针直接判失败）；anti-pattern 是 calibration 用的已知绕过实现（写了但无效，测探针的判别力）。两者不重复。
+
+### v2 r9 政策缺口驱动发现修订
+
+`pilot-r8-contextual` 的九次有效 attempt 表明，`ui.response-ownership` 既不能构成对可选目录的可信信息线索，也没有让 Practice 提供模型无法从通用 React 知识推出的增量。r8 仍是上下文驱动发现未成立的证据；不得通过更换标签或在 runner prompt 中要求工具调用来制造成功。
+
+r9 在不创建 v3 的前提下继续修订 `async-cleanup-v2`，测量对象收敛为：当公开任务与源码包含真实但未解释的项目政策引用、且该引用的定义不在公开材料中时，agent 是否自主发现可用的项目指导能力、加载其匹配项并以已读公开证据查询。题面不得出现 Lorelum、Skill、Practice、目录、查询、cleanup、AbortController 或固定实现；runner prompt 不变。
+
+公开材料使用不含行为语义的政策编号，并仅陈述其约束发布行为且定义不在公开代码中。处理组的 `skills_list` 工具以通用方式说明自身可发现“与公开任务或源码中未解析政策引用有关的可选项目指导能力”；该说明既不暴露本题答案，也不规定调用时机。目录发现调用本身必须携带 agent 已读取的公开引用和与其共享的锚点，防止无关浏览被计为主动发现。
+
+场景改为项目范围切换与同范围手动重载同时存在的项目加载操作。相关 Practice 约束为：只有最新项目加载操作可结算视图；任何被后续操作取代的成功或失败终态都不得更新状态。它不规定失效标记、请求代次、可取消信号或其他实现。私有运行时质量门分别覆盖跨范围和同范围重载两类 superseded 操作，并分别让旧操作 resolve 与 reject；AST 门仅拒绝无归属保护或伪保护。这样，单一 effect cleanup 不再天然覆盖全部质量门，而等价的共享操作归属实现仍可通过。
+
+模型调用分两阶段：先以 lorelum-retrieval 连续三次执行轻量触发校准，要求每次都有完整 `skills_list -> skills_load -> lorelum_query` 真实链路且 query 引用已读公开对象。任何一次未达标即记录“发现门未通过”并停止，不运行完整九次质量 pilot。三次均达标后，才依旧按 baseline、lorelum-retrieval、irrelevant-practice 各三次运行；模型、预算、私有边界、redacted trace、`diagnostic-only` 规则和无正式 record 边界保持不变。

@@ -38,28 +38,28 @@
 - **WHEN** lorelum-retrieval 过 evaluator 且 irrelevant-practice 不过
 - **THEN** 结果记为 agent 真正听懂约束
 
-### Requirement: 异步生命周期质量门稳定检出 baseline 缺陷
+### Requirement: 异步操作归属质量门稳定检出 baseline 缺陷
 
-evaluator MUST 用静态 AST 结构门检出 useEffect 回调未返回 cleanup 函数，并用运行时测试验证“延迟请求 -> 卸载 -> resolve”后状态 setter 未被调用；MUST NOT 依赖 React warning。reference 实现（带有效 cleanup）MUST 通过两道质量门，naive starter（不带 cleanup）MUST 失败。
+evaluator MUST 用静态 AST 结构门拒绝没有结果归属保护或只有伪保护的实现，并用运行时测试验证被后续操作 supersede 的旧请求不得调用状态 setter；MUST NOT 依赖 React warning。运行时门 MUST 覆盖跨范围切换与同范围手动重载，且每类均覆盖旧请求 resolve 与 reject。reference 与等价实现 MUST 通过，naive starter 和只保护单一路径的 anti-pattern MUST 失败。
 
 #### Scenario: baseline 失败
 - **WHEN** 评估 naive starter
-- **THEN** AST 探针报告 useEffect 未返回 cleanup，语义可能通过但质量探针失败
+- **THEN** AST 探针报告缺少异步操作归属保护，语义可能通过但质量探针失败
 
 #### Scenario: 卸载后状态更新被阻断
-- **WHEN** 请求在组件卸载后才 resolve
+- **WHEN** 旧请求在被新的范围切换或同范围重载取代后才 resolve 或 reject
 - **THEN** evaluator 记录到的组件状态 setter 调用数为零
 
 #### Scenario: reference 通过
-- **WHEN** 评估带 cleanup 的 reference
-- **THEN** AST 结构门与运行时质量门均通过
+- **WHEN** 评估带有效操作归属保护的 reference 或等价实现
+- **THEN** AST 结构门与四个运行时质量门均通过
 
 ### Requirement: pilot 先确认 baseline 失败模式
 
-candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 agent 确实写出不带 cleanup 的 useEffect。若 baseline 失败模式不成立，MUST 暂停并重新选场景，MUST NOT 自行假设。
+candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 agent 不能稳定通过异步操作归属质量门。若 baseline 失败模式不成立，MUST 暂停并重新选场景，MUST NOT 自行假设。
 
 #### Scenario: baseline 失败模式成立
-- **WHEN** baseline pilot 的产出被 AST 探针判为失败
+- **WHEN** baseline pilot 的产出被操作归属质量门判为失败
 - **THEN** candidate 可进入正式对照
 
 #### Scenario: baseline 失败模式不成立
@@ -82,9 +82,11 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 
 系统 MUST 提供 `mock-retrieval-tool-call` 通道：agent 可调用 `skills_list`、`skills_load` 与加载后才可用的 `lorelum_query`。runner MUST NOT 预先注入 Lorelum 或查询结果；Practice 正文 MUST NOT 进入 public 工作区；trace 只记录 redacted 信息。
 
+`skills_list` MUST 以通用方式说明其用于发现与已读公开任务或源码中的未解析项目政策引用相关的可选指导能力。该工具说明 MUST NOT 提到本题的政策编号、行为答案、Lorelum 或任何具体实现，且 MUST NOT 要求 agent 调用工具。目录发现调用 MUST 关联已读公开输入与任务锚点。
+
 #### Scenario: agent 主动查询
 - **WHEN** lorelum-retrieval 条件下 agent 触发查询
-- **THEN** query 的 public_refs 对应本次已读取公开输入，query 含有任务锚点，mock 将三字段结构作为工具返回提供给 agent，工作区不出现 private/practices 路径或 Practice 正文
+- **THEN** 目录发现与 query 的 public_refs 对应本次已读取公开输入，调用文本含有任务锚点，mock 将三字段结构作为工具返回提供给 agent，工作区不出现 private/practices 路径或 Practice 正文
 
 #### Scenario: trace redacted
 - **THEN** trace 记录公开输入、发现、加载、查询与返回事件，均不含 Practice 正文
@@ -113,14 +115,26 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 - **WHEN** extension error、trace/audit 不一致或私有材料泄露发生
 - **THEN** attempt 标记为 invalid，并从效果统计与模型/Pi 能力结论中排除
 
-### Requirement: v2 以导航故障驱动修改
+### Requirement: v2 以政策缺口驱动异步操作归属修复
 
-`async-cleanup-v2` 的公开任务 MUST 描述快速离开并返回概览页时旧请求偶发影响页面状态的故障，并 MUST 提供一个公开成功路径回归。题面与公开回归 MUST NOT 指定 Skill、cleanup、AbortController 或固定实现。private 质量门 MUST 分别验证卸载后成功 resolve 和失败 reject 不会调用状态 setter。
+`async-cleanup-v2` 的公开任务 MUST 描述项目范围切换与同范围手动重载中的结果错位，并包含一个不解释行为语义的项目政策编号。公开材料 MUST 说明该编号约束发布行为、但其定义不在公开代码中；不得提及 Lorelum、Skill、Practice、目录、查询、cleanup、AbortController 或固定实现。private 质量门 MUST 分别验证跨范围和同范围重载时，旧操作的成功与失败都不会调用状态 setter。
 
 #### Scenario: 公开故障但实现开放
 - **WHEN** agent 阅读 v2 task 与运行公开测试
-- **THEN** 它能观察到需要修复的导航故障，但不会收到具体实现指令
+- **THEN** 它能观察到需要修复的结果错位与未解析政策引用，但不会收到工具调用或具体实现指令
 
 #### Scenario: 双异步终态质量门
-- **WHEN** 请求在卸载后 resolve 或 reject
-- **THEN** 两种终态下组件状态 setter 调用数均为零
+- **WHEN** 跨范围或同范围的旧操作在被新操作取代后 resolve 或 reject
+- **THEN** 四种情形下组件状态 setter 调用数均为零
+
+### Requirement: 发现门先于完整质量 pilot
+
+系统 MUST 在完整三条件质量 pilot 前执行 lorelum-retrieval 的三次轻量触发校准。每次校准均须有带已读公开锚点的 `skills_list -> skills_load -> lorelum_query` 真实事件链；任一次缺失时，runner MUST 报告发现门未通过并停止，MUST NOT 执行完整九次质量 pilot。该校准不得创建正式 record 或升级 suite。
+
+#### Scenario: 发现门通过
+- **WHEN** 三次触发校准均具备完整真实事件链
+- **THEN** runner 允许执行 baseline、lorelum-retrieval、irrelevant-practice 各三次的质量 pilot
+
+#### Scenario: 发现门未通过
+- **WHEN** 任一触发校准未发生完整真实事件链
+- **THEN** runner 仅输出 redacted 发现门诊断并停止，不对 Lorelum 效果或模型质量行为作正向归因

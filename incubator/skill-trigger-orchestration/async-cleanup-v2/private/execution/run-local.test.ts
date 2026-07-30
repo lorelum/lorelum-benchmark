@@ -14,11 +14,12 @@ async function execute(args: string[], env = Bun.env): Promise<{ code: number; s
   return { code, stdout, stderr };
 }
 
-test("dry-run plans only the three declared conditions and a public workspace", async () => {
+test("dry-run plans the discovery gate before an optional quality pilot", async () => {
   const result = await execute(["--dry-run", "--repeat", "1"]);
   expect(result.code).toBe(0);
-  const plan = JSON.parse(result.stdout) as { planned_runs: Array<{ condition: string }>; workspace_template: string[] };
-  expect(plan.planned_runs.map((entry) => entry.condition)).toEqual(["baseline", "lorelum-retrieval", "irrelevant-practice"]);
+  const plan = JSON.parse(result.stdout) as { discovery_gate: { planned_runs: Array<{ condition: string }> }; quality_pilot: string; workspace_template: string[] };
+  expect(plan.discovery_gate.planned_runs.map((entry) => entry.condition)).toEqual(["lorelum-retrieval"]);
+  expect(plan.quality_pilot).toBe("not-requested");
   expect(plan.workspace_template).toEqual(["task.md", "app/**"]);
   expect(plan.workspace_template.join("\n")).not.toContain("private");
 });
@@ -35,16 +36,16 @@ test("copies only the starter app source into each agent workspace", async () =>
   try {
     const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
-    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: Array<{ initial_workspace_files: string[]; condition: string }> };
-    expect(summary.entries).toHaveLength(3);
-    for (const entry of summary.entries) {
+    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { discovery_gate: { attempts: Array<{ initial_workspace_files: string[]; condition: string }> } };
+    expect(summary.discovery_gate.attempts).toHaveLength(1);
+    for (const entry of summary.discovery_gate.attempts) {
       expect(entry.initial_workspace_files).toContain("app/package.json");
       expect(entry.initial_workspace_files.some((file) => file.includes("node_modules/") || file.includes("dist/"))).toBeFalse();
       expect(entry.initial_workspace_files.some((file) => file.includes("private/") || file.includes("practices/"))).toBeFalse();
     }
-    const settings = await Bun.file(join(repositoryRoot, output, "baseline", "attempt-1", "pi-agent", "settings.json")).json() as { shellPath: string };
+    const settings = await Bun.file(join(repositoryRoot, output, "discovery-gate", "lorelum-retrieval", "attempt-1", "pi-agent", "settings.json")).json() as { shellPath: string };
     expect(settings.shellPath).toBe("D:/ad/Git/bin/bash.exe");
-    expect(await Bun.file(join(repositoryRoot, output, "baseline", "attempt-1", "workspace", ".pi", "settings.json")).exists()).toBeFalse();
+    expect(await Bun.file(join(repositoryRoot, output, "discovery-gate", "lorelum-retrieval", "attempt-1", "workspace", ".pi", "settings.json")).exists()).toBeFalse();
   } finally {
     await cleanup();
     await rm(join(repositoryRoot, output), { recursive: true, force: true });
@@ -57,16 +58,12 @@ test("runner never fabricates retrieval events when the agent did not call the e
   try {
     const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
-    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: Array<{ condition: string; trace: { channel: string; complete?: boolean; events: Array<{ event: string }> } }> };
-    const byCondition = new Map(summary.entries.map((e) => [e.condition, e]));
-    expect(byCondition.get("baseline")!.trace.channel).toBe("none");
-    expect(byCondition.get("baseline")!.trace.events).toHaveLength(0);
-    const lorelum = byCondition.get("lorelum-retrieval")!;
+    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { discovery_gate: { attempts: Array<{ condition: string; trace: { channel: string; complete?: boolean; events: Array<{ event: string }> } }> } };
+    const lorelum = summary.discovery_gate.attempts[0];
+    expect(lorelum.condition).toBe("lorelum-retrieval");
     expect(lorelum.trace.channel).toBe("mock-retrieval-tool-call");
     expect(lorelum.trace.events).toHaveLength(0);
     expect(lorelum.trace.complete).toBeFalse();
-    const irrelevant = byCondition.get("irrelevant-practice")!;
-    expect(irrelevant.trace.events).toHaveLength(0);
     // trace must not contain Practice card text
     const serialized = JSON.stringify(summary);
     expect(serialized).not.toContain("异步副作用在组件卸载后不再影响状态");
@@ -97,8 +94,10 @@ test("preflight succeeds and enters the run loop, producing a summary", async ()
   try {
     const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
-    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { entries: unknown[] };
-    expect(summary.entries).toHaveLength(3);
+    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { discovery_gate: { status: string; attempts: unknown[] }; quality_pilot: string };
+    expect(summary.discovery_gate.status).toBe("fail");
+    expect(summary.discovery_gate.attempts).toHaveLength(1);
+    expect(summary.quality_pilot).toBe("blocked");
   } finally {
     await cleanup();
     await rm(join(repositoryRoot, output), { recursive: true, force: true });
@@ -111,10 +110,10 @@ test("marks extension errors invalid and excludes them from a signal", async () 
   try {
     const result = await execute(["--output", output, "--repeat", "1", "--skip-install"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
-    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { outcome: string; entries: Array<{ validity: { valid: boolean; reasons: string[] } }> };
+    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { outcome: string; discovery_gate: { attempts: Array<{ validity: { valid: boolean; reasons: string[] } }> } };
     expect(summary.outcome).toBe("diagnostic-only");
-    expect(summary.entries.every((entry) => entry.validity.valid === false)).toBeTrue();
-    expect(summary.entries.every((entry) => entry.validity.reasons.includes("extension error in Pi stderr"))).toBeTrue();
+    expect(summary.discovery_gate.attempts.every((entry) => entry.validity.valid === false)).toBeTrue();
+    expect(summary.discovery_gate.attempts.every((entry) => entry.validity.reasons.includes("extension error in Pi stderr"))).toBeTrue();
   } finally {
     await cleanup();
     await rm(join(repositoryRoot, output), { recursive: true, force: true });
@@ -140,10 +139,25 @@ test("dry-run does not trigger the model preflight", async () => {
   try {
     const result = await execute(["--dry-run", "--repeat", "1"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
     expect(result.code).toBe(0);
-    const plan = JSON.parse(result.stdout) as { planned_runs: Array<{ condition: string }> };
-    expect(plan.planned_runs.map((entry) => entry.condition)).toEqual(["baseline", "lorelum-retrieval", "irrelevant-practice"]);
+    const plan = JSON.parse(result.stdout) as { discovery_gate: { planned_runs: Array<{ condition: string }> } };
+    expect(plan.discovery_gate.planned_runs.map((entry) => entry.condition)).toEqual(["lorelum-retrieval"]);
   } finally {
     await cleanup();
+  }
+});
+
+test("quality pilot starts only after every discovery-gate attempt has a complete trace", async () => {
+  const output = "scratch/skill-trigger-local/test-discovery-gate-pass";
+  const { wrapper, cleanup } = await createFakePi(true, "error: connection refused", false, true);
+  try {
+    const result = await execute(["--output", output, "--repeat", "1", "--skip-install", "--quality-pilot"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper });
+    expect(result.code).toBe(0);
+    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as { discovery_gate: { status: string }; entries: Array<{ condition: string }> };
+    expect(summary.discovery_gate.status).toBe("pass");
+    expect(summary.entries.map((entry) => entry.condition)).toEqual(["baseline", "lorelum-retrieval", "irrelevant-practice"]);
+  } finally {
+    await cleanup();
+    await rm(join(repositoryRoot, output), { recursive: true, force: true });
   }
 });
 
@@ -166,14 +180,14 @@ test("generates a unified diff with forward-slash paths", async () => {
   }
 });
 
-async function createFakePi(succeedPrint: boolean, failureMessage = "error: connection refused", emitExtensionError = false): Promise<{ wrapper: string; cleanup: () => Promise<void> }> {
+async function createFakePi(succeedPrint: boolean, failureMessage = "error: connection refused", emitExtensionError = false, emitDiscoveryTrace = false): Promise<{ wrapper: string; cleanup: () => Promise<void> }> {
   const fixtureRoot = await mkdtemp(join(tmpdir(), "lorelum-fake-pi-"));
   const fakeTs = join(fixtureRoot, "fake-pi.ts");
   const versionBranch = 'if (a.includes("--version")) { console.log("0.80.10"); process.exit(0); }';
   const printBranch = succeedPrint
-    ? `if (a.includes("--print")) { if (${emitExtensionError ? "true" : "false"} && a.includes("@task.md")) process.stderr.write("Extension error (test): observation failed\\n"); console.log("ok"); process.exit(0); }`
+    ? `if (a.includes("--print")) { if (${emitExtensionError ? "true" : "false"} && a.includes("@task.md")) process.stderr.write("Extension error (test): observation failed\\n"); if (${emitDiscoveryTrace ? "true" : "false"} && a.includes("@task.md") && process.env.LORELUM_MOCK_AUDIT_PATH) appendFileSync(process.env.LORELUM_MOCK_AUDIT_PATH, ["public_input_read", "skill_discovered", "skill_loaded", "practice_query_issued", "practice_query_resolved"].map((event) => JSON.stringify({ event, query_id: "query-1", public_refs: [{ path: "task.md", sha256: "task-hash" }] })).join("\\n") + "\\n"); console.log("ok"); process.exit(0); }`
     : `if (a.includes("--print")) { process.stderr.write(${JSON.stringify(`${failureMessage}\n`)}); process.exit(1); }`;
-  await writeFile(fakeTs, 'const a = process.argv.slice(2); ' + versionBranch + ' ' + printBranch + ' console.error("unknown args"); process.exit(1);');
+  await writeFile(fakeTs, 'import { appendFileSync } from "node:fs"; const a = process.argv.slice(2); ' + versionBranch + ' ' + printBranch + ' console.error("unknown args"); process.exit(1);');
   const isWin = process.platform === "win32";
   const wrapperPath = isWin ? join(fixtureRoot, "fake-pi.cmd") : join(fixtureRoot, "fake-pi");
   const wrapper = isWin

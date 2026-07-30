@@ -21,6 +21,15 @@ test("当前范围服务不可用时展示错误提示", async ({ page }) => {
   await expect(page.getByRole("alert")).toHaveText("项目列表暂时不可用");
 });
 
+test("可以重新加载当前范围", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("list", { name: "进行中项目" })).toBeVisible();
+
+  await page.getByRole("button", { name: "重新加载当前范围" }).click();
+  await expect(page.getByRole("status")).toHaveText("加载中…");
+  await expect(page.getByRole("list", { name: "进行中项目" })).toBeVisible();
+});
+
 test("范围切换后保留当前范围内容", async ({ page }) => {
   await page.addInitScript(() => {
     const original = window.setTimeout.bind(window);

@@ -20,7 +20,7 @@ type ToolPolicy = {
     config_scope?: unknown;
   };
 };
-type Options = { dryRun: boolean; skipInstall: boolean; repeat?: number; outputPath: string };
+type Options = { dryRun: boolean; skipInstall: boolean; qualityPilot: boolean; repeat?: number; outputPath: string };
 type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number };
 type AuditEvent = Record<string, unknown> & { event: string };
 
@@ -53,11 +53,13 @@ function parseOptions(): Options {
   let repeat: number | undefined;
   let dryRun = false;
   let skipInstall = false;
+  let qualityPilot = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
     if (argument === "--dry-run") { dryRun = true; continue; }
     if (argument === "--skip-install") { skipInstall = true; continue; }
+    if (argument === "--quality-pilot") { qualityPilot = true; continue; }
     if (argument === "--repeat") {
       const value = Number(args[++index]);
       if (!Number.isInteger(value) || value < 1) fail("--repeat must be a positive integer");
@@ -70,7 +72,7 @@ function parseOptions(): Options {
     }
     fail(`Unknown option: ${argument}`);
   }
-  return { dryRun, skipInstall, repeat, outputPath };
+  return { dryRun, skipInstall, qualityPilot, repeat, outputPath };
 }
 
 async function run(command: string[], cwd: string, timeoutMs?: number, env = Bun.env): Promise<CommandResult> {
@@ -165,8 +167,10 @@ async function workspaceFiles(workspace: string): Promise<string[]> {
 type EvaluatorResult = {
   semantic: string;
   astProbe: string;
-  resolveProbe: string;
-  rejectProbe: string;
+  scopeResolveProbe: string;
+  scopeRejectProbe: string;
+  reloadResolveProbe: string;
+  reloadRejectProbe: string;
   practiceProbe: string;
   dualPass: boolean;
 };
@@ -174,13 +178,15 @@ type EvaluatorResult = {
 function evaluatorResult(stdout: string): EvaluatorResult | undefined {
   for (const line of stdout.trim().split(/\r?\n/).reverse()) {
     try {
-      const value = JSON.parse(line) as { semantic?: unknown; ast_probe?: unknown; runtime_resolve_probe?: unknown; runtime_reject_probe?: unknown; practice_probe?: unknown };
-      if (typeof value.semantic === "string" && typeof value.ast_probe === "string" && typeof value.runtime_resolve_probe === "string" && typeof value.runtime_reject_probe === "string" && typeof value.practice_probe === "string") {
+      const value = JSON.parse(line) as { semantic?: unknown; ast_probe?: unknown; runtime_scope_resolve_probe?: unknown; runtime_scope_reject_probe?: unknown; runtime_reload_resolve_probe?: unknown; runtime_reload_reject_probe?: unknown; practice_probe?: unknown };
+      if (typeof value.semantic === "string" && typeof value.ast_probe === "string" && typeof value.runtime_scope_resolve_probe === "string" && typeof value.runtime_scope_reject_probe === "string" && typeof value.runtime_reload_resolve_probe === "string" && typeof value.runtime_reload_reject_probe === "string" && typeof value.practice_probe === "string") {
         return {
           semantic: value.semantic,
           astProbe: value.ast_probe,
-          resolveProbe: value.runtime_resolve_probe,
-          rejectProbe: value.runtime_reject_probe,
+          scopeResolveProbe: value.runtime_scope_resolve_probe,
+          scopeRejectProbe: value.runtime_scope_reject_probe,
+          reloadResolveProbe: value.runtime_reload_resolve_probe,
+          reloadRejectProbe: value.runtime_reload_reject_probe,
           practiceProbe: value.practice_probe,
           dualPass: value.semantic === "pass" && value.practice_probe === "pass"
         };
@@ -289,7 +295,8 @@ async function runAttempt(
   conditions: Conditions,
   piRuntime: { shellPath: string },
   command: string,
-  skipInstall: boolean
+  skipInstall: boolean,
+  evaluate: boolean
 ): Promise<Record<string, unknown>> {
   const attemptPath = resolve(outputPath, condition.id, `attempt-${attempt}`);
   const workspace = resolve(attemptPath, "workspace");
@@ -331,13 +338,13 @@ async function runAttempt(
   const workspaceFilesAfterAgent = await workspaceFiles(workspace);
   let evaluation: EvaluatorResult | undefined;
   let evaluator: CommandResult | undefined;
-  if (pi.code === 0 && !pi.timedOut) {
+  if (evaluate && pi.code === 0 && !pi.timedOut) {
     if (!skipInstall) {
       const install = await run([process.execPath, "install"], resolve(workspace, "app"), 120_000);
     await Bun.write(resolve(attemptPath, "install.stdout.log"), install.stdout);
       await Bun.write(resolve(attemptPath, "install.stderr.log"), install.stderr);
     }
-    evaluator = await run([process.execPath, "run", resolve(candidateRoot, "private/evaluator/evaluate.ts"), resolve(workspace, "app")], candidateRoot);
+    evaluator = await run([process.execPath, "run", resolve(candidateRoot, "private/evaluator/evaluate-operation-ownership.ts"), resolve(workspace, "app")], candidateRoot);
     await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluator.stdout);
     await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluator.stderr);
     evaluation = evaluatorResult(evaluator.stdout);
@@ -351,6 +358,7 @@ async function runAttempt(
   await writeJson(resolve(attemptPath, "trace.json"), trace);
   const invalidReasons = await invalidityReasons(condition, pi, workspaceFilesAfterAgent, auditEvents, trace);
   const valid = invalidReasons.length === 0;
+  const completeTrace = (trace as { complete?: unknown }).complete === true;
   const traceEvents = (trace as { events: AuditEvent[] }).events;
   const discovered = traceEvents.some((event) => event.event === "skill_discovered");
   const queryAnchored = traceEvents.some((event) => event.event === "practice_query_issued" && Array.isArray(event.public_refs) && event.public_refs.length > 0);
@@ -367,14 +375,16 @@ async function runAttempt(
     evaluator: evaluator ? { code: evaluator.code, duration_ms: evaluator.durationMs } : null,
     semantic: evaluation?.semantic ?? "not-run",
     ast_probe: evaluation?.astProbe ?? "not-run",
-    runtime_resolve_probe: evaluation?.resolveProbe ?? "not-run",
-    runtime_reject_probe: evaluation?.rejectProbe ?? "not-run",
+    runtime_scope_resolve_probe: evaluation?.scopeResolveProbe ?? "not-run",
+    runtime_scope_reject_probe: evaluation?.scopeRejectProbe ?? "not-run",
+    runtime_reload_resolve_probe: evaluation?.reloadResolveProbe ?? "not-run",
+    runtime_reload_reject_probe: evaluation?.reloadRejectProbe ?? "not-run",
     practice_probe: evaluation?.practiceProbe ?? "not-run",
     dual_pass: evaluation?.dualPass ?? false,
     validity: { valid, reasons: invalidReasons },
     skill_discovery: discovered,
     query_anchored: queryAnchored,
-    constraint_adopted: condition.id === "lorelum-retrieval" && discovered && queryAnchored && evaluation?.practiceProbe === "pass",
+    constraint_adopted: condition.id === "lorelum-retrieval" && completeTrace && queryAnchored && evaluation?.dualPass === true,
     trace,
     output: relativeToRepository(attemptPath)
   };
@@ -403,12 +413,16 @@ const piRuntime = await loadPiRuntime();
 await verifySnapshot();
 const runnable = plannedConditions(conditions);
 const repeat = options.repeat ?? conditions.shared_execution.repetitions;
-const planned = runnable.flatMap((condition) => Array.from({ length: repeat }, (_, index) => ({ condition: condition.id, attempt: index + 1 })));
+const discoveryCondition = runnable.find((condition) => condition.id === "lorelum-retrieval");
+if (!discoveryCondition) fail("Missing lorelum-retrieval discovery condition");
+const discoveryPlan = Array.from({ length: repeat }, (_, index) => ({ condition: discoveryCondition.id, attempt: index + 1 }));
+const qualityPlan = runnable.flatMap((condition) => Array.from({ length: repeat }, (_, index) => ({ condition: condition.id, attempt: index + 1 })));
 
 if (options.dryRun) {
   console.log(JSON.stringify({
     schema_version: "skill-trigger-local-plan/v2",
-    planned_runs: planned,
+    discovery_gate: { planned_runs: discoveryPlan },
+    quality_pilot: options.qualityPilot ? { planned_runs: qualityPlan } : "not-requested",
     workspace_template: ["task.md", "app/**"],
     output: relativeToRepository(options.outputPath)
   }, null, 2));
@@ -421,17 +435,45 @@ const version = await run([command, "--version"], repositoryRoot);
 if (version.code !== 0) fail(`Unable to start Pi command ${command}: ${(version.stderr || version.stdout).trim()}`);
 await preflightModel(command, conditions.shared_execution.model.id);
 
+const discoveryEntries: Record<string, unknown>[] = [];
+for (let attempt = 1; attempt <= repeat; attempt += 1) {
+  const entry = await runAttempt(resolve(options.outputPath, "discovery-gate"), discoveryCondition, attempt, conditions, piRuntime, command, options.skipInstall, false);
+  discoveryEntries.push(entry);
+}
+const discoveryPassed = discoveryEntries.length === repeat && discoveryEntries.every((entry) => {
+  const validity = entry.validity as { valid?: unknown } | undefined;
+  const trace = entry.trace as { complete?: unknown } | undefined;
+  return validity?.valid === true && trace?.complete === true && entry.query_anchored === true;
+});
+const discoveryGate = { status: discoveryPassed ? "pass" : "fail", attempts: discoveryEntries };
+
+if (!discoveryPassed || !options.qualityPilot) {
+  const summary = {
+    schema_version: "skill-trigger-local-summary/v2",
+    generated_at: new Date().toISOString(),
+    pi_version: version.stdout.trim(),
+    model: conditions.shared_execution.model.id,
+    discovery_gate: discoveryGate,
+    quality_pilot: !discoveryPassed ? "blocked" : "not-requested",
+    outcome: "diagnostic-only",
+  };
+  await writeJson(resolve(options.outputPath, "summary.json"), summary);
+  console.log(JSON.stringify({ output: relativeToRepository(options.outputPath), ...summary }, null, 2));
+  process.exit(0);
+}
+
 const entries: Record<string, unknown>[] = [];
 for (const condition of runnable) {
   for (let attempt = 1; attempt <= repeat; attempt += 1) {
-    const entry = await runAttempt(options.outputPath, condition, attempt, conditions, piRuntime, command, options.skipInstall);
+    const entry = await runAttempt(resolve(options.outputPath, "quality-pilot"), condition, attempt, conditions, piRuntime, command, options.skipInstall, true);
     entries.push(entry);
     await writeJson(resolve(options.outputPath, "summary.json"), {
       schema_version: "skill-trigger-local-summary/v2",
       generated_at: new Date().toISOString(),
       pi_version: version.stdout.trim(),
       model: conditions.shared_execution.model.id,
-      planned_runs: planned.length,
+      discovery_gate: discoveryGate,
+      planned_runs: qualityPlan.length,
       decision_rule: "lorelum-passes-and-irrelevant-fails",
       outcome: outcome(entries, repeat),
       entries

@@ -71,3 +71,14 @@
 - [x] 以快速项目范围切换重写 v2 public task、starter 与公开回归；移除所有实现词泄露，并添加不解释的 `ui.response-ownership` 事故分类。 [写入范围：v2 public]
 - [x] 将私有 Oracle、AST/runtime probes 与 calibration fixtures 改为验证旧范围 success/reject 均不影响当前范围状态。 [写入范围：v2 private]
 - [x] 保持 runner prompt、模型、预算与工具门禁不变；更新 snapshot、运行资格校验和三条件各三次 scratch 诊断。 [写入范围：v2 private、scratch/]
+
+## 11. v2 政策缺口驱动发现修订
+
+- [x] 在 Issue #96 与 OpenSpec 记录 r8 的无查询/区分度不足结论，并确认 r9 只测“政策缺口下的上下文驱动自主发现”，不创建 v3。 [写入范围：Issue #96、OpenSpec]
+- [x] 将处理组目录工具改为通用的“未解析政策引用”能力发现接口；发现调用也必须以已读公开输入锚定，不得透露本题答案或要求调用。 [写入范围：v2 private execution]
+- [x] 将公开题面与 starter 改为不泄露语义的项目政策编号，以及范围切换与同范围重载并发的项目加载场景；不出现 Lorelum、Skill、Practice、目录、查询或实现词。 [写入范围：v2 public]
+- [x] 新建版本化的异步操作归属 Practice 与等长无关对照元数据；保留 r8 使用的 Practice 源码作为历史材料，不原地改写。 [写入范围：v2 private practices]
+- [x] 将 AST/runtime evaluator 与 reference/equivalent/anti-pattern calibration 改为覆盖跨范围、同范围重载以及旧操作 resolve/reject 的结果归属。 [写入范围：v2 private evaluator、calibration]
+- [x] 在 runner 增加三次触发校准与“未通过则停止”门，并在 summary 中单列发现门结果。 [写入范围：v2 private execution]
+- [x] 重生成 snapshot，运行 validate、contracts、v2 定向测试、strict OpenSpec、calibration 和泄露审计。 [写入范围：v2 private、scratch/]
+- [ ] 在上述离线门禁全部通过后，运行三次 `lorelum-retrieval` 触发校准；仅三次均形成完整查询链路时，再运行三条件各三次 scratch quality pilot。 [写入范围：scratch/]

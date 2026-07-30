@@ -15,19 +15,23 @@ export function Dashboard() {
   const [scope, setScope] = useState<ProjectScope>("active");
   const [state, setState] = useState<ViewState>({ kind: "loading", scope: "active" });
 
-  useEffect(() => {
-    setState({ kind: "loading", scope });
-    fetchProjects(scope)
+  const loadProjects = (nextScope: ProjectScope) => {
+    setState({ kind: "loading", scope: nextScope });
+    fetchProjects(nextScope)
       .then((response) => {
         if (response.status === 200) {
-          setState({ kind: "ready", scope, projects: response.body.projects });
+          setState({ kind: "ready", scope: nextScope, projects: response.body.projects });
         } else {
-          setState({ kind: "error", scope, message: "项目列表暂时不可用" });
+          setState({ kind: "error", scope: nextScope, message: "项目列表暂时不可用" });
         }
       })
       .catch(() => {
-        setState({ kind: "error", scope, message: "项目列表暂时不可用" });
+        setState({ kind: "error", scope: nextScope, message: "项目列表暂时不可用" });
       });
+  };
+
+  useEffect(() => {
+    loadProjects(scope);
   }, [scope]);
 
   const selectScope = (nextScope: ProjectScope) => {
@@ -45,6 +49,7 @@ export function Dashboard() {
             </button>
           ))}
         </nav>
+        <button type="button" onClick={() => loadProjects(scope)}>重新加载当前范围</button>
         {state.kind === "loading" && <p role="status">加载中…</p>}
         {state.kind === "error" && <p role="alert">{state.message}</p>}
         {state.kind === "ready" && (

@@ -5,7 +5,7 @@ kernel:
   profile: skill-trigger-orchestration/v1
   materializer_kind: react-vite
 calibration_roles:
-  - id: cleanup-probe-matrix
+  - id: operation-ownership-matrix
     command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
     expect: { kind: pass }
 calibration_sets:
@@ -41,4 +41,4 @@ public_boundary:
 baseline_expectation:
   functional: false
   practice_adherence: false
-  reason: Dashboard 在范围切换后仍处理旧范围请求终态，公开范围切换回归与私有双终态质量门均应失败。
+  reason: Dashboard 在范围切换或同范围重新加载后仍处理较早操作终态，公开范围切换回归与私有四路径质量门均应失败。

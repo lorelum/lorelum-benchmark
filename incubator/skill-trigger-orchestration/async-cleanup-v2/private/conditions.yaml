@@ -23,8 +23,8 @@ conditions:
     status: declared
     channel: mock-retrieval-tool-call
     practice:
-      path: private/practices/oracle.async-lifecycle.v1.md
-      sha256: d40038d89f3a135fe31db42cbe3decf00e7b0807d42eecd57a7be8ec55b6aaf8
+      path: private/practices/oracle.async-operation-ownership.v2.md
+      sha256: 37d54f577f45f80aeadbd5f2c3ea2a57e4d60e6f42d2b18a488999f9f50ac8af
   - id: irrelevant-practice
     status: declared
     channel: mock-retrieval-tool-call

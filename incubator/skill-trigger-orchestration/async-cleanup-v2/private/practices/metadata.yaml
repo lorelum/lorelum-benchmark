@@ -5,6 +5,10 @@ cards:
     version: v1
     path: oracle.async-lifecycle.v1.md
     rendered_characters: 480
+  - id: react.async-operation-ownership
+    version: v2
+    path: oracle.async-operation-ownership.v2.md
+    rendered_characters: 480
   - id: react.form-validation
     version: v1
     path: irrelevant.form-validation.v1.md

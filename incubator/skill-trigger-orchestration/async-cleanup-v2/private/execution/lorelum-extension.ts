@@ -6,6 +6,7 @@ import { Type } from "typebox";
 
 type PublicInput = { path: string; sha256: string; anchors: string[] };
 type ReadEvent = { toolName?: unknown; toolCallId?: unknown; args?: unknown; isError?: unknown };
+type AnchoredRequest = { query: string; public_refs: string[] };
 
 function required(name: string): string {
   const value = process.env[name];
@@ -34,6 +35,16 @@ function readPathFromStart(event: ReadEvent): string | undefined {
   if (!event.args || typeof event.args !== "object") return undefined;
   const path = (event.args as { path?: unknown }).path;
   return typeof path === "string" ? path : undefined;
+}
+
+function anchoredPublicInputs(cwd: string, request: AnchoredRequest, publicInputs: Map<string, PublicInput>): { refs: string[]; inputs: PublicInput[]; matchedAnchors: string[] } | undefined {
+  const refs = request.public_refs.map((entry) => relativePublicPath(cwd, entry)).filter((entry): entry is string => Boolean(entry));
+  const inputs = refs.map((entry) => publicInputs.get(entry)).filter((entry): entry is PublicInput => Boolean(entry));
+  const queryAnchors = anchors(request.query);
+  const knownAnchors = new Set(inputs.flatMap((entry) => entry.anchors));
+  const matchedAnchors = queryAnchors.filter((entry) => knownAnchors.has(entry));
+  if (inputs.length !== refs.length || matchedAnchors.length === 0) return undefined;
+  return { refs, inputs, matchedAnchors };
 }
 
 export default function lorelumExtension(pi: ExtensionAPI) {
@@ -101,23 +112,19 @@ export default function lorelumExtension(pi: ExtensionAPI) {
         public_refs: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
       }),
       async execute(toolCallId, params, _signal, _onUpdate, ctx) {
-        if (!loaded) throw new Error("Load Lorelum with skills_load before querying it.");
-        const refs = params.public_refs.map((entry) => relativePublicPath(ctx.cwd, entry)).filter((entry): entry is string => Boolean(entry));
-        const inputs = refs.map((entry) => publicInputs.get(entry)).filter((entry): entry is PublicInput => Boolean(entry));
-        const queryAnchors = anchors(params.query);
-        const knownAnchors = new Set(inputs.flatMap((entry) => entry.anchors));
-        const matchedAnchors = queryAnchors.filter((entry) => knownAnchors.has(entry));
-        if (inputs.length !== refs.length || matchedAnchors.length === 0) {
-          await auditSafely({ event: "practice_query_rejected", query_id: toolCallId, query_sha256: sha256(params.query), public_refs: refs });
+      if (!loaded) throw new Error("Load Lorelum with skills_load before querying it.");
+        const evidence = anchoredPublicInputs(ctx.cwd, params, publicInputs);
+        if (!evidence) {
+          await auditSafely({ event: "practice_query_rejected", query_id: toolCallId, query_sha256: sha256(params.query), public_refs: params.public_refs });
           throw new Error("lorelum_query requires public_refs already read by the agent and a query anchored to those inputs.");
         }
         const constraint = await behaviorConstraint();
-        const scope = condition === "lorelum-retrieval" ? "当前项目范围的异步结果" : "当前表单的提交前校验";
+        const scope = condition === "lorelum-retrieval" ? "当前项目加载操作的结果归属" : "当前表单的提交前校验";
         const response = {
           query_id: toolCallId,
           scope_constraint: scope,
           matched_practice: {
-            id: condition === "lorelum-retrieval" ? "react.async-result-ownership" : "react.form-validation",
+            id: condition === "lorelum-retrieval" ? "react.async-operation-ownership" : "react.form-validation",
             version: "v1",
             sha256: practiceSha256,
           },
@@ -127,8 +134,8 @@ export default function lorelumExtension(pi: ExtensionAPI) {
           event: "practice_query_issued",
           query_id: toolCallId,
           query_sha256: sha256(params.query),
-          public_refs: inputs.map(({ path, sha256: digest }) => ({ path, sha256: digest })),
-          matched_anchors: matchedAnchors,
+          public_refs: evidence.inputs.map(({ path, sha256: digest }) => ({ path, sha256: digest })),
+          matched_anchors: evidence.matchedAnchors,
         });
         await auditSafely({
           event: "practice_query_resolved",
@@ -145,27 +152,43 @@ export default function lorelumExtension(pi: ExtensionAPI) {
 
   pi.registerTool({
     name: "skills_list",
-    label: "Skill Directory",
-    description: "List optional skills available for this coding task.",
-    parameters: Type.Object({}),
-    async execute(toolCallId) {
+    label: "Project Guidance",
+    description: "Discover optional project guidance for unresolved references in files you have read.",
+    parameters: Type.Object({
+      query: Type.String({ minLength: 1 }),
+      public_refs: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
+    }),
+    async execute(toolCallId, params, _signal, _onUpdate, ctx) {
+      const evidence = anchoredPublicInputs(ctx.cwd, params, publicInputs);
+      if (!evidence) {
+        await auditSafely({ event: "skill_discovery_rejected", tool_call_id: toolCallId, query_sha256: sha256(params.query) });
+        throw new Error("skills_list requires public_refs already read by the agent and a query anchored to those inputs.");
+      }
       discovered = true;
-      await auditSafely({ event: "skill_discovered", tool_call_id: toolCallId, skill_id: "lorelum", skill_version: skillVersion });
-      return { content: [{ type: "text", text: "[{\"id\":\"lorelum\",\"version\":\"mock-v2\"}]" }] };
+      await auditSafely({
+        event: "skill_discovered",
+        tool_call_id: toolCallId,
+        skill_id: "lorelum",
+        skill_version: skillVersion,
+        query_sha256: sha256(params.query),
+        public_refs: evidence.inputs.map(({ path, sha256: digest }) => ({ path, sha256: digest })),
+        matched_anchors: evidence.matchedAnchors,
+      });
+      return { content: [{ type: "text", text: "[{\"id\":\"lorelum\",\"version\":\"mock-v2\",\"summary\":\"Project guidance lookup\"}]" }] };
     },
   });
 
   pi.registerTool({
     name: "skills_load",
-    label: "Load Skill",
-    description: "Load a skill returned by skills_list.",
+    label: "Load Guidance",
+    description: "Load an entry returned by skills_list.",
     parameters: Type.Object({ id: Type.String({ minLength: 1 }) }),
     async execute(toolCallId, params) {
       if (!discovered || params.id !== "lorelum") throw new Error("Use skills_list and load the returned Lorelum skill.");
       loaded = true;
       registerQuery();
       await auditSafely({ event: "skill_loaded", tool_call_id: toolCallId, skill_id: "lorelum", skill_version: skillVersion });
-      return { content: [{ type: "text", text: "Lorelum loaded. lorelum_query is now available." }] };
+      return { content: [{ type: "text", text: "Project guidance loaded. lorelum_query is now available." }] };
     },
   });
 }

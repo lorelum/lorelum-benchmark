@@ -5,12 +5,13 @@ semantic_oracle:
     - 加载完成后展示当前进行中范围的项目及其状态。
     - 当前范围服务不可用时展示错误提示。
     - 快速切换范围后，旧范围响应不会覆盖当前范围内容。
+    - 可以重新加载当前范围。
 practice_probe:
-  command: bun run private/evaluator/evaluate.ts public/starter/app
-  component: src/ 下所有 useEffect 调用
-  required_cleanup: 由范围变化触发异步副作用（await 或 .then）的 useEffect 必须返回有效失效机制，且旧范围请求 resolve 或 reject 均不得调用状态 setter。
-  accepts: AbortController 取消、失效标记、请求代次或任意使旧范围状态写入失效的等价写法。
-  rejects: 不返回失效机制；返回空函数；仅阻断成功分支或任意未阻断旧范围状态更新的伪修复。
+  command: bun run private/evaluator/evaluate-operation-ownership.ts public/starter/app
+  component: src/Dashboard.tsx 中的项目加载入口与终态处理。
+  required_ownership: 每次范围切换或同范围重新加载都必须取代此前项目加载操作；被取代操作 resolve 或 reject 时均不得调用状态 setter。
+  accepts: 请求代次、失效标记、可取消信号或任意共享最新操作归属的等价写法。
+  rejects: 无操作归属保护；仅按范围判断；仅保护成功分支；每个加载入口各自保护而无法共同取代旧操作。
 baseline_expected_result:
   semantic: fail
   practice_probe: fail
