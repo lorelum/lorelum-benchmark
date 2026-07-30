@@ -1,7 +1,7 @@
 ## 1. Lifecycle And Planning Gate
 
 - [x] 1.1 Strict-validate this OpenSpec change and complete the public/private leakage audit for its artifacts.
-- [ ] 1.2 Create the OpenSpec-only commit and PR linked to issue #116 on this branch; do not include runner, candidate, model-run, or result changes.
+- [x] 1.2 Create the OpenSpec-only commit and PR linked to issue #116 on this branch; do not include runner, candidate, model-run, or result changes.
 - [ ] 1.3 Record the requirements-owner planning confirmation in issue #116, `design.md`, and this checklist: observable behavior, baseline discrimination, relevant and equal-length irrelevant controls, private acceptance, immutable inputs, model/prompt/tools/budget, blind-review boundary, schedule algorithm, minimum repeats, independent-candidate threshold, and uncertainty presentation.
 
 ## 2. Plan And Schedule Contract
