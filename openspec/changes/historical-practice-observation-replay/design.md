@@ -122,6 +122,26 @@ Rollback is a revert of the replay implementation and OpenSpec change. The
 historical workspaces, v1 summaries, candidates, and formal benchmark history
 are never mutated.
 
+## Verification Outcome
+
+The #90 v1 summaries declared twelve attempts (two candidates, three
+conditions, two repetitions), and all twelve historical workspaces were
+replayed with evaluator provenance `bf73e27`. Every replay produced a valid v2
+result and preserved its workspace tree. Both public/private isolation audits
+passed.
+
+Neither candidate is eligible for #91. Each has a failed current private
+calibration matrix, which makes its decision `indeterminate` regardless of the
+historical joint-pass comparison. The profile candidate also has one
+indeterminate oracle observation; the project-directory candidate has
+indeterminate baseline and irrelevant observations. No model, Pi, retrieval,
+formal manifest, record, or suite revision was created.
+
+The standard `kernel calibrate` command was attempted but its Bun child-process
+launch failed in this desktop environment. Direct matrix execution also exited
+non-zero; focused private tests isolated a failing project-directory combined
+evaluator assertion while both probes and the profile evaluator test passed.
+
 ## Open Questions
 
 ## Planning Confirmation
