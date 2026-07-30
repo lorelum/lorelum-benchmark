@@ -226,14 +226,17 @@ test("makes candidate-level expansion decisions and writes a redacted replay sum
     practice_observation: jointPass ? "observed" as const : "not-observed" as const,
     joint_pass: jointPass,
   }));
-  const eligible = expansionDecisions(entries);
+  const passingAudits = { [candidate]: { calibration: "passed" as const, leakage: "passed" as const } };
+  expect(expansionDecisions(entries)[0]).toMatchObject({ status: "indeterminate", calibration_status: "not-verified", leakage_audit_status: "not-verified" });
+  const eligible = expansionDecisions(entries, passingAudits);
   expect(eligible[0].status).toBe("eligible-for-expansion");
-  expect(expansionDecisions([{ ...entries[0], evaluation_status: "not-executable" }])[0].status).toBe("indeterminate");
-  expect(expansionDecisions(entries.map((entry) => ({ ...entry, joint_pass: false, practice_observation: "not-observed" as const })))[0].status).toBe("adjust-before-expansion");
+  expect(expansionDecisions([{ ...entries[0], evaluation_status: "not-executable" }], passingAudits)[0].status).toBe("indeterminate");
+  expect(expansionDecisions(entries.map((entry) => ({ ...entry, joint_pass: false, practice_observation: "not-observed" as const })), passingAudits)[0].status).toBe("adjust-before-expansion");
+  expect(expansionDecisions(entries, { [candidate]: { calibration: "failed", leakage: "passed" } })[0].status).toBe("indeterminate");
 
   const output = await mkdtemp(join(tmpdir(), "lorelum-replay-summary-"));
   try {
-    await writeHistoricalReplaySummary(output, entries, evaluatorCommit);
+    await writeHistoricalReplaySummary(output, entries, evaluatorCommit, passingAudits);
     const summary = await readFile(join(output, "summary.json"), "utf8");
     expect(summary).toContain("historical-evaluator-replay");
     expect(summary).toContain("eligible-for-expansion");

@@ -86,8 +86,13 @@ export type CandidateExpansionDecision = {
   candidate: string;
   profile_input_hash: string;
   status: "eligible-for-expansion" | "adjust-before-expansion" | "indeterminate";
+  calibration_status: "passed" | "failed" | "not-verified";
+  leakage_audit_status: "passed" | "failed" | "not-verified";
   conditions: Record<"baseline" | "oracle-practice" | "irrelevant-practice", ConditionReplayCounts>;
 };
+
+type AuditStatus = "passed" | "failed" | "not-verified";
+type CandidateReplayAudits = Record<string, { calibration: AuditStatus; leakage: AuditStatus }>;
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -358,7 +363,7 @@ function emptyConditionCounts(): ConditionReplayCounts {
   };
 }
 
-export function expansionDecisions(entries: HistoricalReplayEntry[]): CandidateExpansionDecision[] {
+export function expansionDecisions(entries: HistoricalReplayEntry[], audits: CandidateReplayAudits = {}): CandidateExpansionDecision[] {
   const groups = new Map<string, HistoricalReplayEntry[]>();
   for (const entry of entries) {
     const key = `${entry.candidate}\0${entry.profile_input_hash}`;
@@ -380,10 +385,15 @@ export function expansionDecisions(entries: HistoricalReplayEntry[]): CandidateE
     const indeterminate = observations.includes("indeterminate") || observations.includes("not-run");
     const oracle = conditions["oracle-practice"].joint_pass;
     const strictLead = oracle > conditions.baseline.joint_pass && oracle > conditions["irrelevant-practice"].joint_pass;
+    const audit = audits[group[0].candidate] ?? { calibration: "not-verified" as const, leakage: "not-verified" as const };
     return {
       candidate: group[0].candidate,
       profile_input_hash: group[0].profile_input_hash,
-      status: unhealthy ? "indeterminate" : indeterminate || !strictLead ? "adjust-before-expansion" : "eligible-for-expansion",
+      status: unhealthy || audit.calibration !== "passed" || audit.leakage !== "passed"
+        ? "indeterminate"
+        : indeterminate || !strictLead ? "adjust-before-expansion" : "eligible-for-expansion",
+      calibration_status: audit.calibration,
+      leakage_audit_status: audit.leakage,
       conditions,
     };
   }).sort((left, right) => left.candidate.localeCompare(right.candidate) || left.profile_input_hash.localeCompare(right.profile_input_hash));
@@ -396,8 +406,8 @@ export async function evaluatorSourceCommit(): Promise<string> {
   return commit;
 }
 
-export async function writeHistoricalReplaySummary(path: string, entries: HistoricalReplayEntry[], evaluatorCommit: string): Promise<CandidateExpansionDecision[]> {
-  const decisions = expansionDecisions(entries);
+export async function writeHistoricalReplaySummary(path: string, entries: HistoricalReplayEntry[], evaluatorCommit: string, audits: CandidateReplayAudits = {}): Promise<CandidateExpansionDecision[]> {
+  const decisions = expansionDecisions(entries, audits);
   const qualifiedCandidates = decisions.filter((decision) => decision.status === "eligible-for-expansion").map((decision) => ({ candidate: decision.candidate, profile_input_hash: decision.profile_input_hash }));
   await Bun.write(joinPath(path, "summary.json"), `${JSON.stringify({
     schema_version: "profile-diagnostic-summary/v2",
@@ -556,7 +566,23 @@ export async function writeSummary(path: string, entries: DiagnosticEntry[], int
   }, null, 2)}\n`);
 }
 
-type Options = { candidatePaths: string[]; outputPath: string; dryRun: boolean; replayHistory?: string };
+type Options = {
+  candidatePaths: string[];
+  outputPath: string;
+  dryRun: boolean;
+  replayHistory?: string;
+  calibrationAudits: Record<string, AuditStatus>;
+  leakageAudits: Record<string, AuditStatus>;
+};
+
+function parseAuditOption(value: string | undefined, label: string, audits: Record<string, AuditStatus>): void {
+  const [candidate, status, extra] = value?.split("=") ?? [];
+  if (!candidate || !safeIdentifier(candidate) || !status || extra || !(["passed", "failed"] as string[]).includes(status)) {
+    fail(`${label} requires <candidate>=passed|failed`);
+  }
+  if (audits[candidate] !== undefined) fail(`${label} may be specified once per candidate`);
+  audits[candidate] = status as AuditStatus;
+}
 
 function parseOptions(): Options {
   const args = Bun.argv.slice(2);
@@ -564,6 +590,8 @@ function parseOptions(): Options {
   let outputPath = requireScratchPath(`scratch/profile-diagnostics/${timestamp()}`);
   let dryRun = false;
   let replayHistory: string | undefined;
+  const calibrationAudits: Record<string, AuditStatus> = {};
+  const leakageAudits: Record<string, AuditStatus> = {};
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -572,6 +600,14 @@ function parseOptions(): Options {
       const value = args[++index];
       if (!value) fail("--replay-history requires a profile-diagnostics directory");
       replayHistory = resolve(value);
+      continue;
+    }
+    if (arg === "--calibration-audit") {
+      parseAuditOption(args[++index], "--calibration-audit", calibrationAudits);
+      continue;
+    }
+    if (arg === "--leakage-audit") {
+      parseAuditOption(args[++index], "--leakage-audit", leakageAudits);
       continue;
     }
     if (arg === "--output") {
@@ -584,10 +620,10 @@ function parseOptions(): Options {
   }
 
   if (candidatePaths.length === 0) {
-    fail("Usage: bun run src/benchmark/runner/pi/v2/profile-diagnostic-runner.ts <candidate-path>... [--output <dir>] [--dry-run|--replay-history <history-dir>]");
+    fail("Usage: bun run src/benchmark/runner/pi/v2/profile-diagnostic-runner.ts <candidate-path>... [--output <dir>] [--dry-run|--replay-history <history-dir> --calibration-audit <candidate>=passed|failed --leakage-audit <candidate>=passed|failed]");
   }
   if (dryRun && replayHistory) fail("--dry-run cannot be combined with --replay-history");
-  return { candidatePaths, outputPath, dryRun, replayHistory };
+  return { candidatePaths, outputPath, dryRun, replayHistory, calibrationAudits, leakageAudits };
 }
 
 if (import.meta.path === process.argv[1]) {
@@ -602,14 +638,19 @@ if (options.replayHistory) {
   await mkdir(options.outputPath, { recursive: true });
   const commit = await evaluatorSourceCommit();
   const replayEntries: HistoricalReplayEntry[] = [];
+  const audits: CandidateReplayAudits = {};
   for (const candidatePath of options.candidatePaths) {
     const manifest = await verifyCandidateDeclaration(candidatePath);
     const conditions = await readYaml<Conditions>(resolve(candidatePath, "private/conditions.yaml"), "private/conditions.yaml");
     const repetitions = repetitionsFromConditions(conditions);
+    audits[manifest.id] = {
+      calibration: options.calibrationAudits[manifest.id] ?? "not-verified",
+      leakage: options.leakageAudits[manifest.id] ?? "not-verified",
+    };
     replayEntries.push(...await replayCandidateHistory(options.replayHistory, candidatePath, manifest, repetitions, commit));
-    await writeHistoricalReplaySummary(options.outputPath, replayEntries, commit);
+    await writeHistoricalReplaySummary(options.outputPath, replayEntries, commit, audits);
   }
-  const decisions = await writeHistoricalReplaySummary(options.outputPath, replayEntries, commit);
+  const decisions = await writeHistoricalReplaySummary(options.outputPath, replayEntries, commit, audits);
   console.log(JSON.stringify({ output: relativePath(options.outputPath), entries: replayEntries.length, decisions }, null, 2));
   process.exit(replayEntries.some((entry) => entry.evaluation_status !== "evaluated") ? 1 : 0);
 }
