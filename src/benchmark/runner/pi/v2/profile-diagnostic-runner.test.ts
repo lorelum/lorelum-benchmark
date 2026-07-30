@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { cp, mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, rm, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { piArgs, evaluatorResult, verifyCandidateDeclaration, verifySnapshotIdentity, isRecord } from "./profile-diagnostic-runner";
+import { expansionDecisions, evaluatorResult, isRecord, parseHistoricalSummary, piArgs, replayHistoricalWorkspace, verifyCandidateDeclaration, verifySnapshotIdentity, writeHistoricalReplaySummary } from "./profile-diagnostic-runner";
 
 const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
 
@@ -16,6 +16,41 @@ async function withFixture(mutator?: (path: string) => Promise<void>): Promise<s
   await Bun.write(join(path, "private/candidate.yaml"), patched);
   if (mutator) await mutator(path);
   return path;
+}
+
+const historicalHash = "a".repeat(64);
+const historicalSnapshot = "b".repeat(64);
+const evaluatorCommit = "c".repeat(40);
+
+function legacyEntry(candidate: string, condition: "baseline" | "oracle-practice" | "irrelevant-practice", repeat = 1) {
+  return {
+    candidate,
+    condition,
+    repeat,
+    status: "evaluation-failed",
+    trace: {
+      condition_id: condition,
+      channel: condition === "baseline" ? "none" : "condition-scoped-private-runtime",
+      profile_input_hash: historicalHash,
+      ...(condition === "baseline" ? {} : { practice_id: "practice-card", practice_version: "v1", practice_sha256: "d".repeat(64) }),
+    },
+    source_commit: "e".repeat(40),
+    snapshot_id: historicalSnapshot,
+    profile_input_hash: historicalHash,
+  };
+}
+
+async function withReplayFixture(evaluator: string): Promise<{ candidate: string; historyRoot: string; entry: ReturnType<typeof parseHistoricalSummary>[number]; cleanup: () => Promise<void> }> {
+  const candidate = await withFixture();
+  const candidateId = "neutral-contract-fixture-v1";
+  await mkdir(join(candidate, "private", "evaluator"), { recursive: true });
+  await writeFile(join(candidate, "private", "evaluator", "evaluate.ts"), evaluator);
+  const historyRoot = await mkdtemp(join(tmpdir(), "lorelum-history-"));
+  const app = join(historyRoot, candidateId, "baseline", "attempt-1", "workspace", "app");
+  await mkdir(app, { recursive: true });
+  await writeFile(join(app, "candidate.txt"), "unchanged");
+  const entry = parseHistoricalSummary({ schema_version: "profile-diagnostic-summary/v1", entries: [legacyEntry(candidateId, "baseline")] }, candidateId)[0];
+  return { candidate, historyRoot, entry, cleanup: async () => { await rm(candidate, { force: true, recursive: true }); await rm(historyRoot, { force: true, recursive: true }); } };
 }
 
 test("baseline piArgs never includes --append-system-prompt", async () => {
@@ -130,4 +165,81 @@ test("isRecord distinguishes objects from arrays and primitives", () => {
   expect(isRecord([])).toBe(false);
   expect(isRecord(null)).toBe(false);
   expect(isRecord("string")).toBe(false);
+});
+
+test("parses only redacted v1 history entries", () => {
+  const candidate = "candidate-v1";
+  const parsed = parseHistoricalSummary({ schema_version: "profile-diagnostic-summary/v1", entries: [legacyEntry(candidate, "oracle-practice")] }, candidate);
+  expect(parsed).toHaveLength(1);
+  expect(parsed[0]).toMatchObject({ candidate, condition: "oracle-practice", source_commit: "e".repeat(40), profile_input_hash: historicalHash });
+  expect(() => parseHistoricalSummary({ schema_version: "profile-diagnostic-summary/v1", entries: [{ ...legacyEntry(candidate, "baseline"), trace: { path: "private/secret" } }] }, candidate)).toThrow("invalid-history-summary");
+});
+
+test("replays an existing workspace with a current evaluator despite historical identity differences", async () => {
+  const fixture = await withReplayFixture('console.log(JSON.stringify({ semantic: "pass", practice_observation: "observed" }));');
+  try {
+    const replay = await replayHistoricalWorkspace(fixture.historyRoot, fixture.candidate, fixture.entry, evaluatorCommit, 10_000);
+    expect(replay).toMatchObject({ evaluation_status: "evaluated", semantic: "pass", practice_observation: "observed", joint_pass: true, evaluator_source_commit: evaluatorCommit, snapshot_id: historicalSnapshot, profile_input_hash: historicalHash });
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("marks a missing workspace not executable without an evaluator invocation", async () => {
+  const fixture = await withReplayFixture('throw new Error("evaluator should not execute");');
+  try {
+    await rm(join(fixture.historyRoot, "neutral-contract-fixture-v1", "baseline", "attempt-1"), { force: true, recursive: true });
+    const replay = await replayHistoricalWorkspace(fixture.historyRoot, fixture.candidate, fixture.entry, evaluatorCommit, 10_000);
+    expect(replay).toMatchObject({ evaluation_status: "not-executable", replay_reason: "missing-workspace" });
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("records malformed evaluator output and workspace mutation without serializing logs", async () => {
+  const malformed = await withReplayFixture('console.log("not a structured result");');
+  try {
+    const replay = await replayHistoricalWorkspace(malformed.historyRoot, malformed.candidate, malformed.entry, evaluatorCommit, 10_000);
+    expect(replay).toMatchObject({ evaluation_status: "invalid-output", replay_reason: "invalid-evaluator-output" });
+  } finally {
+    await malformed.cleanup();
+  }
+
+  const mutating = await withReplayFixture('await Bun.write(`${process.argv[2]}/changed.txt`, "changed"); console.log(JSON.stringify({ semantic: "pass", practice_observation: "observed" }));');
+  try {
+    const replay = await replayHistoricalWorkspace(mutating.historyRoot, mutating.candidate, mutating.entry, evaluatorCommit, 10_000);
+    expect(replay).toMatchObject({ evaluation_status: "execution-failed", replay_reason: "workspace-modified-during-replay" });
+  } finally {
+    await mutating.cleanup();
+  }
+});
+
+test("makes candidate-level expansion decisions and writes a redacted replay summary", async () => {
+  const candidate = "candidate-v1";
+  const entries = ([
+    ["baseline", false], ["irrelevant-practice", false], ["oracle-practice", true],
+  ] as const).map(([condition, jointPass]) => ({
+    ...legacyEntry(candidate, condition),
+    evaluator_source_commit: evaluatorCommit,
+    evaluation_status: "evaluated" as const,
+    semantic: "pass",
+    practice_observation: jointPass ? "observed" as const : "not-observed" as const,
+    joint_pass: jointPass,
+  }));
+  const eligible = expansionDecisions(entries);
+  expect(eligible[0].status).toBe("eligible-for-expansion");
+  expect(expansionDecisions([{ ...entries[0], evaluation_status: "not-executable" }])[0].status).toBe("indeterminate");
+  expect(expansionDecisions(entries.map((entry) => ({ ...entry, joint_pass: false, practice_observation: "not-observed" as const })))[0].status).toBe("adjust-before-expansion");
+
+  const output = await mkdtemp(join(tmpdir(), "lorelum-replay-summary-"));
+  try {
+    await writeHistoricalReplaySummary(output, entries, evaluatorCommit);
+    const summary = await readFile(join(output, "summary.json"), "utf8");
+    expect(summary).toContain("historical-evaluator-replay");
+    expect(summary).toContain("eligible-for-expansion");
+    expect(summary).not.toContain("private/");
+    expect(summary).not.toContain(output);
+  } finally {
+    await rm(output, { force: true, recursive: true });
+  }
 });

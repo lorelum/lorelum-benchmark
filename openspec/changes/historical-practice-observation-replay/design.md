@@ -124,10 +124,24 @@ are never mutated.
 
 ## Open Questions
 
-- Before implementation, the requirements owner must confirm the observable
-  behavior and relevant/irrelevant controls remain those fixed by #114; that
-  historical v2 replay is the only acceptable evidence input; the stated
-  private semantic/quality acceptance and redaction boundary; the immutable
-  starter/source identities; and the unchanged model, prompt, budget, and
-  no-blind-review boundaries. These confirmations are recorded as the planning
-  gate rather than inferred from this issue.
+## Planning Confirmation
+
+The requirements owner confirmed the following after the OpenSpec-only PR:
+
+- Both candidates retain the observable behavior, baseline discrimination
+  expectation, and relevant/irrelevant Practice controls established by #114.
+- Private semantic and quality acceptance is unchanged. Replay summaries may
+  contain only redacted identity fields and stable reason codes, never Practice
+  text, private paths, oracle/evaluator material, or workspace paths.
+- Replay is evaluator-only and read-only: it does not invoke Pi, a model, or
+  retrieval; it neither creates nor changes a historical workspace, formal
+  manifest, record, or suite revision. Model, prompt, budget, conditions,
+  repetitions, and the no-blind-review boundary remain unchanged, and results
+  do not enter the #91 denominator.
+- Historical source/snapshot/input identities and the current v2 evaluator
+  identity intentionally differ. Replay preserves the historical identities,
+  records the current evaluator Git commit separately, and does not reject a
+  replay because those identities differ.
+- #91 admits only candidates independently marked
+  `eligible-for-expansion`. If none qualify, #91 pauses pending a separate
+  issue to adjust a candidate, Practice, or probe.

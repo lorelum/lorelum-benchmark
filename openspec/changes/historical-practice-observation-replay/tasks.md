@@ -1,12 +1,12 @@
 ## 0. Planning Gate
 
-- [ ] 0.1 After this change's OpenSpec-only PR exists, confirm in #117 and
+- [x] 0.1 After this change's OpenSpec-only PR exists, confirm in #117 and
   `design.md` that the two candidates' observable behavior, expected baseline
   discrimination, and relevant/irrelevant Practice controls remain unchanged.
-- [ ] 0.2 Confirm the private semantic and quality acceptance, redaction
+- [x] 0.2 Confirm the private semantic and quality acceptance, redaction
   boundary, immutable starter/source identities, and that no private material
   is placed in public inputs or replay summaries.
-- [ ] 0.3 Confirm replay does not alter the fixed model, prompt, budget,
+- [x] 0.3 Confirm replay does not alter the fixed model, prompt, budget,
   conditions, repetitions, or no-blind-review boundary; it must not call a
   model, create a formal record, or become part of the #91 denominator.
 
