@@ -9,7 +9,7 @@ shared_execution:
   additional_shared_system_prompt: none
   additional_shared_system_prompt_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
   tool_policy: private/execution/tool-policy.yaml
-  tool_policy_sha256: 3c8ad6d2df673e319019301918680b9d417801b4b554a5475c3bb5b0388ba2ab
+  tool_policy_sha256: bc0b37f6384e44d686b80a940c48487f578dd9b607f47381a8213e1006b1b760
   budget:
     max_duration_minutes: 10
   workspace: clean-copy-per-attempt

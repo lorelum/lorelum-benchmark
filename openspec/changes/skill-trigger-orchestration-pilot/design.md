@@ -42,6 +42,8 @@ extension 在 `tool_execution_start` 中以 `toolCallId` 记录已读取 public 
 
 v2 增加公开成功路径回归，证明离开页面后的请求结果不得再被已销毁页面处理；该回归描述行为而非实现。private runtime probe 同时覆盖成功与失败分支。reference、等价实现与 anti-pattern 在 v2 独立校准，anti-pattern 至少覆盖只保护成功分支的伪修复。
 
+`pilot-r6` 未生成 summary、trace、evaluator 或 record：Pi 的 Windows bash 后端解析到 WSL 后挂起，整批仅为无效环境证据。由于 v2 尚无记录结果，不创建 v3；在 v2 的 `tool-policy` 中声明 Git Bash，并由 runner 为每次 attempt 设置独立 `PI_CODING_AGENT_DIR/settings.json` 的 `shellPath`。该配置目录位于 attempt private 输出，不复制到 agent workspace，不改变模型、提示、工具、预算或条件。
+
 ### 风险与前置
 
 - 场景偏简单，agent 可能表现过好导致 baseline 失败模式不成立。candidate 先跑本地 pilot 确认 baseline 下 agent 确实会失败。

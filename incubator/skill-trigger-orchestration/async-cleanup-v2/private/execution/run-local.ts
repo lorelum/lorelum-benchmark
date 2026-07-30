@@ -14,6 +14,12 @@ type Conditions = {
   };
   conditions: Condition[];
 };
+type ToolPolicy = {
+  pi_runtime?: {
+    shell_path?: unknown;
+    config_scope?: unknown;
+  };
+};
 type Options = { dryRun: boolean; skipInstall: boolean; repeat?: number; outputPath: string };
 type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number };
 type AuditEvent = Record<string, unknown> & { event: string };
@@ -110,6 +116,15 @@ async function loadConditions(): Promise<Conditions> {
     if (await hashFile(practicePath) !== condition.practice.sha256) fail(`Condition ${condition.id} Practice hash does not match`);
   }
   return document;
+}
+
+async function loadPiRuntime(): Promise<{ shellPath: string }> {
+  const document = Bun.YAML.parse(await Bun.file(resolve(candidateRoot, "private/execution/tool-policy.yaml")).text()) as ToolPolicy;
+  const runtime = document?.pi_runtime;
+  if (!runtime || runtime.config_scope !== "attempt-private" || typeof runtime.shell_path !== "string" || !runtime.shell_path) {
+    fail("tool-policy.yaml must declare an attempt-private pi_runtime.shell_path");
+  }
+  return { shellPath: runtime.shell_path };
 }
 
 async function verifySnapshot(): Promise<void> {
@@ -272,6 +287,7 @@ async function runAttempt(
   condition: Condition,
   attempt: number,
   conditions: Conditions,
+  piRuntime: { shellPath: string },
   command: string,
   skipInstall: boolean
 ): Promise<Record<string, unknown>> {
@@ -292,12 +308,15 @@ async function runAttempt(
   ];
 
   const auditPath = resolve(attemptPath, "lorelum-audit.jsonl");
-  let piEnvironment = Bun.env;
+  const piAgentDirectory = resolve(attemptPath, "pi-agent");
+  await mkdir(piAgentDirectory, { recursive: true });
+  await writeJson(resolve(piAgentDirectory, "settings.json"), { shellPath: piRuntime.shellPath });
+  let piEnvironment = { ...Bun.env, PI_CODING_AGENT_DIR: piAgentDirectory };
   if (condition.id !== "baseline") {
     if (condition.practice === "none" || typeof condition.practice !== "object") fail(`Condition ${condition.id} requires a Practice reference`);
     piArgs.push("--extension", resolve(candidateRoot, "private/execution/lorelum-extension.ts"));
     piEnvironment = {
-      ...Bun.env,
+      ...piEnvironment,
       LORELUM_MOCK_CONDITION: condition.id,
       LORELUM_MOCK_PRACTICE_PATH: resolve(candidateRoot, condition.practice.path),
       LORELUM_MOCK_PRACTICE_SHA256: condition.practice.sha256,
@@ -341,6 +360,7 @@ async function runAttempt(
     attempt,
     practice_sha256: typeof condition.practice === "object" ? condition.practice.sha256 : null,
     workspace: relativeToRepository(workspace),
+    pi_runtime: { config_scope: "attempt-private", shell_path: piRuntime.shellPath },
     initial_workspace_files: initialFiles,
     agent_workspace_files: workspaceFilesAfterAgent,
     pi: { code: pi.code, timed_out: pi.timedOut, duration_ms: pi.durationMs },
@@ -379,6 +399,7 @@ function outcome(entries: Record<string, unknown>[], repetitions: number): "sign
 
 const options = parseOptions();
 const conditions = await loadConditions();
+const piRuntime = await loadPiRuntime();
 await verifySnapshot();
 const runnable = plannedConditions(conditions);
 const repeat = options.repeat ?? conditions.shared_execution.repetitions;
@@ -403,7 +424,7 @@ await preflightModel(command, conditions.shared_execution.model.id);
 const entries: Record<string, unknown>[] = [];
 for (const condition of runnable) {
   for (let attempt = 1; attempt <= repeat; attempt += 1) {
-    const entry = await runAttempt(options.outputPath, condition, attempt, conditions, command, options.skipInstall);
+    const entry = await runAttempt(options.outputPath, condition, attempt, conditions, piRuntime, command, options.skipInstall);
     entries.push(entry);
     await writeJson(resolve(options.outputPath, "summary.json"), {
       schema_version: "skill-trigger-local-summary/v2",

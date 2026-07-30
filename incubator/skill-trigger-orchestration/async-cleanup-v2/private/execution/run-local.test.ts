@@ -42,6 +42,9 @@ test("copies only the starter app source into each agent workspace", async () =>
       expect(entry.initial_workspace_files.some((file) => file.includes("node_modules/") || file.includes("dist/"))).toBeFalse();
       expect(entry.initial_workspace_files.some((file) => file.includes("private/") || file.includes("practices/"))).toBeFalse();
     }
+    const settings = await Bun.file(join(repositoryRoot, output, "baseline", "attempt-1", "pi-agent", "settings.json")).json() as { shellPath: string };
+    expect(settings.shellPath).toBe("D:/ad/Git/bin/bash.exe");
+    expect(await Bun.file(join(repositoryRoot, output, "baseline", "attempt-1", "workspace", ".pi", "settings.json")).exists()).toBeFalse();
   } finally {
     await cleanup();
     await rm(join(repositoryRoot, output), { recursive: true, force: true });
