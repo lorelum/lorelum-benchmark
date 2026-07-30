@@ -1,5 +1,5 @@
 import { cp, lstat, mkdir, realpath } from "node:fs/promises";
-import { basename, isAbsolute, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { joinPath, relativePath, sha256Directory, workspaceRoot } from "../../../fs";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace, type PracticePayload, type ResolvedInjectionCalibration } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
@@ -268,7 +268,7 @@ function pathInside(root: string, path: string): boolean {
   return fromRoot !== "" && fromRoot !== ".." && !fromRoot.startsWith(`..${sep}`) && !isAbsolute(fromRoot);
 }
 
-async function historicalWorkspace(historyRoot: string, entry: HistoricalSummaryEntry): Promise<string> {
+async function historicalWorkspace(historyRoot: string, entry: HistoricalSummaryEntry): Promise<{ app: string; workspace: string }> {
   const root = await realpath(historyRoot);
   const candidateRoot = resolve(root, entry.candidate);
   if (!pathInside(root, candidateRoot)) throw new Error("workspace-outside-history-root");
@@ -279,10 +279,12 @@ async function historicalWorkspace(historyRoot: string, entry: HistoricalSummary
   const found = [...new Set((await Promise.all(locations.map((location) => realpath(location).catch(() => undefined)))).filter((location): location is string => Boolean(location)))];
   if (found.length === 0) throw new Error("missing-workspace");
   if (found.length > 1) throw new Error("ambiguous-workspace");
-  if (!pathInside(root, found[0])) throw new Error("workspace-outside-history-root");
-  const stat = await lstat(found[0]);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("missing-workspace");
-  return found[0];
+  const app = found[0];
+  const workspace = await realpath(dirname(app));
+  if (!pathInside(root, app) || !pathInside(root, workspace)) throw new Error("workspace-outside-history-root");
+  const [appStat, workspaceStat] = await Promise.all([lstat(app), lstat(workspace)]);
+  if (!appStat.isDirectory() || appStat.isSymbolicLink() || !workspaceStat.isDirectory() || workspaceStat.isSymbolicLink()) throw new Error("missing-workspace");
+  return { app, workspace };
 }
 
 function replayEntry(entry: HistoricalSummaryEntry, evaluatorSourceCommit: string, status: HistoricalReplayEntry["evaluation_status"], reason?: ReplayReason): HistoricalReplayEntry {
@@ -291,10 +293,11 @@ function replayEntry(entry: HistoricalSummaryEntry, evaluatorSourceCommit: strin
 
 export async function replayHistoricalWorkspace(historyRoot: string, candidatePath: string, entry: HistoricalSummaryEntry, evaluatorSourceCommit: string, evaluatorTimeoutMs: number): Promise<HistoricalReplayEntry> {
   let app: string;
+  let workspace: string;
   let before: string;
   try {
-    app = await historicalWorkspace(historyRoot, entry);
-    before = await sha256Directory(app);
+    ({ app, workspace } = await historicalWorkspace(historyRoot, entry));
+    before = await sha256Directory(workspace);
   } catch (error) {
     const reason = error instanceof Error && replayReasons.has(error.message as ReplayReason) ? error.message as ReplayReason : "workspace-integrity-unavailable";
     return replayEntry(entry, evaluatorSourceCommit, "not-executable", reason);
@@ -306,7 +309,7 @@ export async function replayHistoricalWorkspace(historyRoot: string, candidatePa
     return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "evaluator-execution-failed");
   }
   try {
-    if (before !== await sha256Directory(app)) return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "workspace-modified-during-replay");
+    if (before !== await sha256Directory(workspace)) return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "workspace-modified-during-replay");
   } catch {
     return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "workspace-integrity-unavailable");
   }
@@ -324,9 +327,12 @@ function emptyConditionCounts(): ConditionReplayCounts {
 
 export function expansionDecisions(entries: HistoricalReplayEntry[], audits: CandidateReplayAudits = {}): CandidateExpansionDecision[] {
   const groups = new Map<string, HistoricalReplayEntry[]>();
+  const plannedKeysByCandidate = new Map<string, Set<string>>();
   for (const entry of entries) {
     const key = `${entry.candidate}\0${entry.profile_input_hash}`;
     groups.set(key, [...(groups.get(key) ?? []), entry]);
+    const plannedKey = `${entry.condition}\0${entry.repeat}`;
+    plannedKeysByCandidate.set(entry.candidate, new Set([...(plannedKeysByCandidate.get(entry.candidate) ?? []), plannedKey]));
   }
   return [...groups.values()].map((group) => {
     const conditions = Object.fromEntries(replayConditionIds.map((condition) => [condition, emptyConditionCounts()])) as CandidateExpansionDecision["conditions"];
@@ -340,10 +346,13 @@ export function expansionDecisions(entries: HistoricalReplayEntry[], audits: Can
       if (entry.joint_pass) counts.joint_pass += 1;
     }
     const audit = audits[group[0].candidate] ?? { calibration: "not-verified" as const, leakage: "not-verified" as const };
+    const plannedKeys = plannedKeysByCandidate.get(group[0].candidate)!;
+    const groupKeys = new Set(group.map((entry) => `${entry.condition}\0${entry.repeat}`));
+    const completeDenominator = group.length === plannedKeys.size && groupKeys.size === plannedKeys.size && [...plannedKeys].every((key) => groupKeys.has(key));
     const unhealthy = group.some((entry) => entry.evaluation_status !== "evaluated");
     const indeterminate = group.some((entry) => entry.practice_observation === "indeterminate" || entry.practice_observation === "not-run");
     const strictLead = conditions["oracle-practice"].joint_pass > conditions.baseline.joint_pass && conditions["oracle-practice"].joint_pass > conditions["irrelevant-practice"].joint_pass;
-    return { candidate: group[0].candidate, profile_input_hash: group[0].profile_input_hash, status: unhealthy || audit.calibration !== "passed" || audit.leakage !== "passed" ? "indeterminate" : indeterminate || !strictLead ? "adjust-before-expansion" : "eligible-for-expansion", calibration_status: audit.calibration, leakage_audit_status: audit.leakage, conditions };
+    return { candidate: group[0].candidate, profile_input_hash: group[0].profile_input_hash, status: !completeDenominator || unhealthy || audit.calibration !== "passed" || audit.leakage !== "passed" ? "indeterminate" : indeterminate || !strictLead ? "adjust-before-expansion" : "eligible-for-expansion", calibration_status: audit.calibration, leakage_audit_status: audit.leakage, conditions };
   }).sort((left, right) => left.candidate.localeCompare(right.candidate) || left.profile_input_hash.localeCompare(right.profile_input_hash));
 }
 

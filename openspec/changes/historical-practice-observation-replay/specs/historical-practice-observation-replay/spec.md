@@ -63,6 +63,13 @@ effect.
   only, and #91 may include that qualified candidate without including an
   ineligible candidate
 
+#### Scenario: Split historical input identity
+- **WHEN** one historical input identity does not contain exactly every planned
+  condition and repetition for its candidate
+- **THEN** that identity is `indeterminate` and cannot qualify the candidate
+  for expansion, even when its partial joint-pass counts strictly lead both
+  controls
+
 #### Scenario: No candidate qualifies
 - **WHEN** neither historical candidate is `eligible-for-expansion`
 - **THEN** the report directs #91 to remain paused and requires a separate

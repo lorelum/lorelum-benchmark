@@ -261,6 +261,12 @@ test("records malformed output, nonzero evaluator exits, and workspace mutations
   } finally {
     await mutating.cleanup();
   }
+  const siblingMutation = await withReplayFixture('await Bun.write(`${process.argv[2]}/../task.md`, "changed"); console.log(JSON.stringify({ semantic: "pass", practice_observation: "observed" }));');
+  try {
+    expect(await replayHistoricalWorkspace(siblingMutation.historyRoot, siblingMutation.candidate, siblingMutation.entry, evaluatorCommit, 10_000)).toMatchObject({ evaluation_status: "execution-failed", replay_reason: "workspace-modified-during-replay" });
+  } finally {
+    await siblingMutation.cleanup();
+  }
 });
 
 test("makes candidate-level expansion decisions and writes a redacted replay summary", async () => {
@@ -273,6 +279,20 @@ test("makes candidate-level expansion decisions and writes a redacted replay sum
   expect(expansionDecisions(entries, passingAudits)[0].status).toBe("eligible-for-expansion");
   expect(expansionDecisions([{ ...entries[0], evaluation_status: "not-executable" }], passingAudits)[0].status).toBe("indeterminate");
   expect(expansionDecisions(entries.map((entry) => ({ ...entry, joint_pass: false, practice_observation: "not-observed" as const })), passingAudits)[0].status).toBe("adjust-before-expansion");
+  const splitHash = "f".repeat(64);
+  const splitInput = ([1, 2] as const).flatMap((repeat) => ([
+    ["baseline", false], ["irrelevant-practice", false], ["oracle-practice", true],
+  ] as const).map(([condition, jointPass]) => ({
+    ...legacyEntry(candidate, condition, repeat),
+    profile_input_hash: repeat === 1 ? historicalHash : splitHash,
+    trace: { ...legacyEntry(candidate, condition, repeat).trace, profile_input_hash: repeat === 1 ? historicalHash : splitHash },
+    evaluator_source_commit: evaluatorCommit,
+    evaluation_status: "evaluated" as const,
+    semantic: "pass",
+    practice_observation: jointPass ? "observed" as const : "not-observed" as const,
+    joint_pass: jointPass,
+  })));
+  expect(expansionDecisions(splitInput, passingAudits).map((decision) => decision.status)).toEqual(["indeterminate", "indeterminate"]);
   const output = await mkdtemp(join(tmpdir(), "lorelum-replay-summary-"));
   try {
     await writeHistoricalReplaySummary(output, entries, evaluatorCommit, passingAudits);
