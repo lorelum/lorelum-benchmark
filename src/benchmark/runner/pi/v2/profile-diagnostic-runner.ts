@@ -4,6 +4,7 @@ import { joinPath, relativePath, workspaceRoot } from "../../../fs";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace, type PracticePayload, type ResolvedInjectionCalibration } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
 import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from "./preflight";
+import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
 
 const scratchRoot = resolve(workspaceRoot, "scratch");
 
@@ -43,6 +44,9 @@ export type DiagnosticEntry = {
   practice_observation?: PracticeObservation;
   observation_reason?: string;
   joint_pass?: boolean;
+  block?: number;
+  planned_position?: number;
+  actual_execution_position?: number;
   error?: string;
 };
 
@@ -219,71 +223,94 @@ async function runAttempt(
   return entry;
 }
 
-export async function writeSummary(path: string, entries: DiagnosticEntry[], interrupted: boolean): Promise<void> {
+export function redactedSchedule(schedule: ScheduledAttempt[]) {
+  return schedule.map(({ path: _path, candidate_path: _candidatePath, ...attempt }) => attempt);
+}
+
+export function diagnosticOutputPath(path: string): string {
+  return relative(workspaceRoot, path).replaceAll("\\", "/");
+}
+
+export async function writeSummary(path: string, plan: DiagnosticPlan, schedule: ScheduledAttempt[], entries: DiagnosticEntry[], interrupted: boolean): Promise<void> {
   await Bun.write(joinPath(path, "summary.json"), `${JSON.stringify({
-    schema_version: "profile-diagnostic-summary/v2",
+    schema_version: "profile-diagnostic-summary/v3",
     generated_at: new Date().toISOString(),
+    plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, schedule: redactedSchedule(schedule) },
     entries,
+    report: summarizePlan(plan, schedule, entries),
     interrupted,
   }, null, 2)}\n`);
 }
 
-type Options = { candidatePaths: string[]; outputPath: string; dryRun: boolean };
+type Options = { planPath: string; outputPath: string; dryRun: boolean };
 
 function parseOptions(): Options {
   const args = Bun.argv.slice(2);
-  const candidatePaths: string[] = [];
+  let planPath: string | undefined;
   let outputPath = requireScratchPath(`scratch/profile-diagnostics/${timestamp()}`);
   let dryRun = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--dry-run") { dryRun = true; continue; }
+    if (arg === "--plan") {
+      const value = args[++index];
+      if (!value) fail("--plan requires a path");
+      planPath = resolve(workspaceRoot, value);
+      continue;
+    }
     if (arg === "--output") {
       const value = args[++index];
       if (!value) fail("--output requires a directory");
       outputPath = requireScratchPath(value);
       continue;
     }
-    candidatePaths.push(resolve(workspaceRoot, arg));
+    fail(`Unknown profile diagnostic option: ${arg}`);
   }
 
-  if (candidatePaths.length === 0) {
-    fail("Usage: bun run src/benchmark/runner/pi/v2/profile-diagnostic-runner.ts <candidate-path>... [--output <dir>] [--dry-run]");
+  if (!planPath) {
+    fail("Usage: bun run src/benchmark/runner/pi/v2/profile-diagnostic-runner.ts --plan <plan.yaml> [--output <dir>] [--dry-run]");
   }
-  return { candidatePaths, outputPath, dryRun };
+  return { planPath, outputPath, dryRun };
 }
 
 if (import.meta.path === process.argv[1]) {
 const options = parseOptions();
-const declaredConditions: InjectionConditionId[] = ["baseline", "oracle-practice", "irrelevant-practice"];
 let interrupted = false;
 process.on("SIGINT", () => { interrupted = true; });
 
 const entries: DiagnosticEntry[] = [];
+const plan = await readDiagnosticPlan(options.planPath);
+const schedule = buildSchedule(plan);
 
 if (options.dryRun) {
-  const plan = [];
-  for (const candidatePath of options.candidatePaths) {
+  for (const candidate of plan.candidates) {
+    const candidatePath = resolve(workspaceRoot, candidate.path);
     const manifest = await verifyCandidateDeclaration(candidatePath);
+    const identity = await verifySnapshotIdentity(candidatePath, manifest);
+    if (manifest.id !== candidate.id || manifest.source.source_commit !== candidate.source_commit || identity.snapshotId !== candidate.snapshot_id || identity.profileInputHash !== candidate.profile_input_hash) {
+      fail(`Diagnostic plan identity mismatch for ${candidate.id}`);
+    }
     const conditions = await readYaml<Conditions>(resolve(candidatePath, "private/conditions.yaml"), "private/conditions.yaml");
-    for (const conditionId of declaredConditions) {
-      for (let repeat = 1; repeat <= conditions.shared_execution.repetitions; repeat += 1) {
-        plan.push({ candidate: manifest.id, condition: conditionId, repeat });
-      }
+    for (const conditionId of diagnosticConditions) {
+      if (!conditions.conditions.some((condition) => condition.id === conditionId && condition.status === "declared")) fail(`Diagnostic plan condition is not declared: ${candidate.id}/${conditionId}`);
     }
   }
-  console.log(JSON.stringify({ schema_version: "profile-diagnostic-plan/v1", planned_runs: plan, output: relativePath(options.outputPath) }, null, 2));
+  console.log(JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions }, planned_runs: redactedSchedule(schedule), output: diagnosticOutputPath(options.outputPath) }, null, 2));
   process.exit(0);
 }
 
 if (Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("Profile diagnostics require LORELUM_LOCAL_EXPERIMENT=1");
 
-await mkdir(options.outputPath, { recursive: true });
 const command = await piCommand(workspaceRoot);
 
-for (const candidatePath of options.candidatePaths) {
+await mkdir(options.outputPath, { recursive: true });
+await Bun.write(joinPath(options.outputPath, "plan.json"), `${JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, schedule: redactedSchedule(schedule) }, null, 2)}\n`);
+
+let actualExecutionPosition = 0;
+for (const plannedCandidate of plan.candidates) {
   if (interrupted) break;
+  const candidatePath = resolve(workspaceRoot, plannedCandidate.path);
   let manifest: CandidateManifest;
   let snapshotId: string;
   let profileInputHash: string;
@@ -297,6 +324,8 @@ for (const candidatePath of options.candidatePaths) {
     profileInputHash = identity.profileInputHash;
     profile = await resolveInjectionCalibration(candidatePath);
     conditions = await readYaml<Conditions>(resolve(candidatePath, "private/conditions.yaml"), "private/conditions.yaml");
+    if (manifest.id !== plannedCandidate.id || manifest.source.source_commit !== plannedCandidate.source_commit || snapshotId !== plannedCandidate.snapshot_id || profileInputHash !== plannedCandidate.profile_input_hash) fail(`Diagnostic plan identity mismatch for ${plannedCandidate.id}`);
+    for (const conditionId of diagnosticConditions) if (!conditions.conditions.some((condition) => condition.id === conditionId && condition.status === "declared")) fail(`Diagnostic plan condition is not declared: ${plannedCandidate.id}/${conditionId}`);
   } catch (error) {
     entries.push({
       candidate: relativePath(candidatePath),
@@ -309,7 +338,7 @@ for (const candidatePath of options.candidatePaths) {
       profile_input_hash: "unknown",
       error: error instanceof Error ? error.message : String(error),
     });
-    await writeSummary(options.outputPath, entries, interrupted);
+    await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
     continue;
   }
 
@@ -327,40 +356,24 @@ for (const candidatePath of options.candidatePaths) {
       profile_input_hash: profileInputHash,
       error: error instanceof Error ? error.message : String(error),
     });
-    await writeSummary(options.outputPath, entries, interrupted);
+    await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
     continue;
   }
 
-  for (const conditionId of declaredConditions) {
+  for (const scheduledAttempt of schedule.filter((attempt) => attempt.id === manifest.id)) {
     if (interrupted) break;
-    for (let repeat = 1; repeat <= conditions.shared_execution.repetitions; repeat += 1) {
-      if (interrupted) break;
-      try {
-        const entry = await runAttempt(
-          options.outputPath, candidatePath, manifest.id, manifest,
-          snapshotId, profileInputHash, profile, conditionId, repeat,
-          conditions.shared_execution, command
-        );
-        entries.push(entry);
-      } catch (error) {
-        entries.push({
-          candidate: manifest.id,
-          condition: conditionId,
-          repeat,
-          evaluation_status: "execution-failed",
-          trace: { condition_id: conditionId, channel: "none", profile_input_hash: profileInputHash },
-          source_commit: manifest.source.source_commit,
-          snapshot_id: snapshotId,
-          profile_input_hash: profileInputHash,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-      await writeSummary(options.outputPath, entries, interrupted);
+    actualExecutionPosition += 1;
+    try {
+      const entry = await runAttempt(options.outputPath, candidatePath, manifest.id, manifest, snapshotId, profileInputHash, profile, scheduledAttempt.condition as InjectionConditionId, scheduledAttempt.block, conditions.shared_execution, command);
+      entries.push({ ...entry, block: scheduledAttempt.block, planned_position: scheduledAttempt.planned_position, actual_execution_position: actualExecutionPosition });
+    } catch (error) {
+      entries.push({ candidate: manifest.id, condition: scheduledAttempt.condition, repeat: scheduledAttempt.block, block: scheduledAttempt.block, planned_position: scheduledAttempt.planned_position, actual_execution_position: actualExecutionPosition, evaluation_status: "execution-failed", trace: { condition_id: scheduledAttempt.condition, channel: "none", profile_input_hash: profileInputHash }, source_commit: manifest.source.source_commit, snapshot_id: snapshotId, profile_input_hash: profileInputHash, error: error instanceof Error ? error.message : String(error) });
     }
+    await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
   }
 }
 
-await writeSummary(options.outputPath, entries, interrupted);
-console.log(JSON.stringify({ output: relativePath(options.outputPath), entries: entries.length, interrupted }, null, 2));
+await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
+console.log(JSON.stringify({ output: diagnosticOutputPath(options.outputPath), entries: entries.length, interrupted }, null, 2));
 process.exit(interrupted || entries.some((entry) => entry.evaluation_status !== "evaluated") ? 1 : 0);
 }

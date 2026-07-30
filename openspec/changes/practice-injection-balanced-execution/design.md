@@ -43,9 +43,10 @@ than regenerating an order while executing.
 The plan seed is a scheduling input only. It never appears as a provider model
 parameter or as a claim that model sampling is deterministic. A fixed global
 condition order is rejected because it confounds condition with execution
-position. Selecting a particular balanced permutation algorithm is deferred to
-the planning confirmation so it can be pre-registered with its minimum repeat
-requirements.
+position. The confirmed `cyclic-latin-square/v1` algorithm derives a base
+permutation from the seed and candidate identity, then rotates it across three
+blocks so every condition occupies every execution position once. This
+algorithm requires a repeat count divisible by three.
 
 ### Redacted schedule and identity-bound results
 
@@ -70,9 +71,11 @@ The report emits a diagnostic or uncertain conclusion whenever the preplanned
 schedule is incomplete, any result is unhealthy, calibration is not valid, or
 the planned analysis cannot be applied. Three repeats may only support a
 candidate-level directional screen. A reproducible-direction statement needs
-the pre-registered number of independent candidates and uncertainty display;
-causal or generalized claims require separately pre-registered estimation and
-uncertainty rules.
+at least three independent candidates, all of which meet the complete,
+healthy, no-required-indeterminate directional-screen rule. Each candidate
+reports a paired-block 10,000-resample percentile 95% bootstrap interval;
+candidate profile inputs are never pooled. Causal or generalized claims remain
+out of scope.
 
 ## Risks / Trade-offs
 
@@ -106,12 +109,26 @@ Rollback is a revert of the runner and plan/report contract. Existing scratch
 results remain historical and are neither rewritten nor merged with a run
 using this plan.
 
-## Open Questions
+## Planning Confirmation
 
-- Which pre-registered block permutation or cycle algorithm provides the
-  required balance, and what minimum repeat count makes it valid?
-- How many independently designed candidates and which uncertainty display are
-  required before the report can use the reproducible-direction grade?
-- Which already-calibrated candidates, immutable source commits, model,
-  prompt, tools, budget, and blind-review boundary will form the first
-  dry-run-only plan?
+- The first plan is `balanced-diagnostics-v1`, with schedule seed
+  `balanced-diagnostics-v1`, three repetitions per condition, and
+  `cyclic-latin-square/v1` scheduling. The plan is a committed incubator YAML;
+  its seed is never a provider model parameter.
+- Its cohort is the existing `profile-update-command-boundary-v1` and
+  `project-directory-resource-state-v1` candidates at their current immutable
+  source commit, snapshot, and profile-input identities. Existing #90/#91
+  scratch output remains historical and is not mixed with these results.
+- Public observable behavior, baseline discrimination, relevant and equal
+  length irrelevant controls, private acceptance, calibration, and immutable
+  inputs remain as currently declared. Private Practice text, paths,
+  evaluator/oracle content, and calibration source stay out of plans, traces,
+  and agent workspaces.
+- Pi 0.80.10, DeepSeek v4 Pro, no additional system prompt, the existing tool
+  policy, ten-minute budget, clean copy per attempt, and no blind review remain
+  fixed. This change makes no model call and creates no formal record.
+- A three-repeat result is only a candidate-level directional screen. A
+  reproducible-direction statement requires three independent candidates that
+  all qualify, with per-candidate paired-block 10,000-resample percentile 95%
+  bootstrap intervals. No cross-profile pooling, causal claim, or
+  generalization claim is allowed.
