@@ -70,4 +70,4 @@
 - [x] 在 Issue #96 与 OpenSpec 记录 r7 对强自主发现的负结论，以及下一轮只测上下文驱动发现的边界。 [写入范围：Issue #96、OpenSpec]
 - [x] 以快速项目范围切换重写 v2 public task、starter 与公开回归；移除所有实现词泄露，并添加不解释的 `ui.response-ownership` 事故分类。 [写入范围：v2 public]
 - [x] 将私有 Oracle、AST/runtime probes 与 calibration fixtures 改为验证旧范围 success/reject 均不影响当前范围状态。 [写入范围：v2 private]
-- [ ] 保持 runner prompt、模型、预算与工具门禁不变；更新 snapshot、运行资格校验和三条件各三次 scratch 诊断。 [写入范围：v2 private、scratch/]
+- [x] 保持 runner prompt、模型、预算与工具门禁不变；更新 snapshot、运行资格校验和三条件各三次 scratch 诊断。 [写入范围：v2 private、scratch/]
