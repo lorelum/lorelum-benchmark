@@ -2,6 +2,7 @@ import { cp, lstat, mkdir, realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { joinPath, relativePath, sha256Directory, workspaceRoot } from "../../../fs";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace, type PracticePayload, type ResolvedInjectionCalibration } from "../../../kernel/profiles/injection-calibration/v1/runtime";
+import { resolveRuntimeClosureIfDeclared, clearRuntimeClosureStaging } from "../../../evaluator/runtime-closure";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
 import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from "./preflight";
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
@@ -61,7 +62,8 @@ type ReplayReason =
   | "workspace-modified-during-replay"
   | "evaluator-execution-failed"
   | "evaluator-timed-out"
-  | "invalid-evaluator-output";
+  | "invalid-evaluator-output"
+  | "evaluator-runtime-closure-unverified";
 
 export type HistoricalReplayEntry = Omit<DiagnosticEntry, "error" | "block" | "planned_position" | "actual_execution_position"> & {
   evaluator_source_commit: string;
@@ -302,9 +304,11 @@ export async function replayHistoricalWorkspace(historyRoot: string, candidatePa
     const reason = error instanceof Error && replayReasons.has(error.message as ReplayReason) ? error.message as ReplayReason : "workspace-integrity-unavailable";
     return replayEntry(entry, evaluatorSourceCommit, "not-executable", reason);
   }
+  const closureEnv = await evaluatorClosureEnv(candidatePath, entry.candidate);
+  if (closureEnv.error) return replayEntry(entry, evaluatorSourceCommit, "execution-failed", closureEnv.error);
   let evaluation: CommandResult;
   try {
-    evaluation = await run([process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), app], candidatePath, evaluatorTimeoutMs);
+    evaluation = await run([process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), app], candidatePath, evaluatorTimeoutMs, closureEnv.env);
   } catch {
     return replayEntry(entry, evaluatorSourceCommit, "execution-failed", "evaluator-execution-failed");
   }
@@ -412,6 +416,16 @@ export function piArgs(modelId: string, payload: PracticePayload): string[] {
   return args;
 }
 
+
+async function evaluatorClosureEnv(candidatePath: string, manifestId: string): Promise<{ env: Record<string, string>; error: null } | { env: null; error: "evaluator-runtime-closure-unverified" }> {
+  try {
+    const closure = await resolveRuntimeClosureIfDeclared(candidatePath, manifestId);
+    return { env: closure ? { LORELUM_EVALUATOR_RUNTIME_CLOSURE_ROOT: closure.resolution_root } : {}, error: null };
+  } catch {
+    return { env: null, error: "evaluator-runtime-closure-unverified" };
+  }
+}
+
 async function runAttempt(
   outputPath: string,
   candidatePath: string,
@@ -458,12 +472,18 @@ async function runAttempt(
     return entry;
   }
 
+  const closureEnv = await evaluatorClosureEnv(candidatePath, candidateId);
+  if (closureEnv.error) {
+    entry.error = closureEnv.error;
+    return entry;
+  }
   let evaluation: CommandResult;
   try {
     evaluation = await run(
       [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
       candidatePath,
-      shared.budget.max_duration_minutes * 60_000
+      shared.budget.max_duration_minutes * 60_000,
+      closureEnv.env
     );
   } catch {
     entry.error = "evaluator-launch-failed";

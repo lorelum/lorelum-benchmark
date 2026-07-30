@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
 import { expansionDecisions, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, verifyCandidateDeclaration, verifySnapshotIdentity, writeHistoricalReplaySummary } from "./profile-diagnostic-runner";
+import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 
 const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
 
@@ -303,5 +304,42 @@ test("makes candidate-level expansion decisions and writes a redacted replay sum
     expect(summary).not.toContain(output);
   } finally {
     await rm(output, { force: true, recursive: true });
+  }
+});
+
+test("runtime closure failure records execution-failed without semantic fields", async () => {
+  const candidate = await withFixture();
+  const candidateId = "neutral-contract-fixture-v1";
+  const historyRoot = await mkdtemp(join(tmpdir(), "lorelum-closure-fail-"));
+  try {
+    await mkdir(join(candidate, "private", "evaluator"), { recursive: true });
+    await writeFile(join(candidate, "private", "evaluator", "runtime-closure.yaml"), Bun.YAML.stringify({
+      version: "v1",
+      package_manager: "bun",
+      dependencies: { typescript: "5.9.3" },
+      lock_input: { package_json_sha256: "0".repeat(64), bun_lock_sha256: "0".repeat(64) },
+      integrity: { algorithm: "sha256", typescript_sha256: "0".repeat(64) },
+    }));
+    const app = join(historyRoot, candidateId, candidateId, "baseline", "attempt-1", "workspace", "app");
+    await mkdir(app, { recursive: true });
+    await writeFile(join(app, "candidate.txt"), "unchanged");
+    const entry = parseHistoricalSummary({ schema_version: "profile-diagnostic-summary/v1", entries: [legacyEntry(candidateId, "baseline")] }, candidateId)[0];
+    const replay = await replayHistoricalWorkspace(historyRoot, candidate, entry, evaluatorCommit, 10_000);
+    expect(replay.evaluation_status).toBe("execution-failed");
+    expect(replay.replay_reason).toBe("evaluator-runtime-closure-unverified");
+    expect(replay.semantic).toBeUndefined();
+    expect(replay.practice_observation).toBeUndefined();
+  } finally {
+    await rm(candidate, { force: true, recursive: true });
+    await rm(historyRoot, { force: true, recursive: true });
+  }
+});
+
+test("resolveRuntimeClosureIfDeclared returns null for a candidate without a closure", async () => {
+  const path = await withFixture();
+  try {
+    expect(await resolveRuntimeClosureIfDeclared(path, "neutral-contract-fixture-v1")).toBeNull();
+  } finally {
+    await rm(path, { force: true, recursive: true });
   }
 });

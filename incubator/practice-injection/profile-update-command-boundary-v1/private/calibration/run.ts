@@ -11,6 +11,10 @@ type CalibrationCase = {
 
 const candidateRoot = resolve(import.meta.dirname, "..", "..");
 const probePath = join(candidateRoot, "private", "evaluator", "verify-command-boundary.ts");
+const repositoryRoot = resolve(candidateRoot, "..", "..", "..");
+const closureModule = await import(pathToFileURL(join(repositoryRoot, "src", "benchmark", "evaluator", "runtime-closure.ts")).href) as typeof import("../../../../../src/benchmark/evaluator/runtime-closure");
+const candidateId = (Bun.YAML.parse(await Bun.file(join(candidateRoot, "private", "candidate.yaml")).text()) as { id: string }).id;
+const parserRoot = (await closureModule.resolveRuntimeClosure(candidateRoot, candidateId)).resolution_root;
 const stagedManifestPath = process.env.LORELUM_CALIBRATION_SETS_MANIFEST;
 if (!stagedManifestPath) throw new Error("Calibration fixtures must be staged by the kernel");
 const stagedPublicStarterRoot = process.env.LORELUM_CALIBRATION_PUBLIC_STARTER;
@@ -88,7 +92,7 @@ async function startDevServer(appPath: string): Promise<{ baseUrl: string; kill:
 }
 
 async function observe(appPath: string): Promise<"observed" | "not-observed" | "indeterminate"> {
-  const child = Bun.spawn([process.execPath, "run", probePath, appPath, appPath], { cwd: candidateRoot, stdout: "pipe", stderr: "pipe" });
+  const child = Bun.spawn([process.execPath, "run", probePath, appPath, parserRoot], { cwd: candidateRoot, stdout: "pipe", stderr: "pipe" });
   const [stdout] = await Promise.all([new Response(child.stdout).text(), child.exited]);
   for (const line of stdout.trim().split(/\r?\n/).reverse()) {
     try {
