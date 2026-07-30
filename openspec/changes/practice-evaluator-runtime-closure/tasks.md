@@ -1,9 +1,9 @@
 ## 0. Planning Gate
 
-- [ ] 0.1 After the OpenSpec-only PR exists, confirm in #122 and `design.md` that the two candidates' observable behavior, Practice controls, private semantic/quality acceptance, starter and snapshot identity, and #117 historical interpretation remain unchanged.
-- [ ] 0.2 Confirm closure versioning, source, integrity identifier, update policy, and offline/CI rebuild path; confirm no host ancestor dependency search or global Bun/Node dependency source.
-- [ ] 0.3 Confirm that clean calibration health means both candidate evaluators start reproducibly and emit valid v2 health results, while semantic/probe failures remain distinct from runtime execution failures.
-- [ ] 0.4 Confirm no private evaluator/oracle/Practice/calibration material will enter agent workspaces, public prompts, traces, issue, or PR summaries.
+- [x] 0.1 After the OpenSpec-only PR exists, confirm in #122 and `design.md` that the two candidates' observable behavior, Practice controls, private semantic/quality acceptance, starter and snapshot identity, and #117 historical interpretation remain unchanged.
+- [x] 0.2 Confirm closure versioning, source, integrity identifier, update policy, and offline/CI rebuild path; confirm no host ancestor dependency search or global Bun/Node dependency source.
+- [x] 0.3 Confirm that clean calibration health means both candidate evaluators start reproducibly and emit valid v2 health results, while semantic/probe failures remain distinct from runtime execution failures.
+- [x] 0.4 Confirm no private evaluator/oracle/Practice/calibration material will enter agent workspaces, public prompts, traces, issue, or PR summaries.
 
 ## 1. Reproduction And Runtime Contract
 

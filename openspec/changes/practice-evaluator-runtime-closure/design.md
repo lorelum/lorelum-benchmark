@@ -84,4 +84,23 @@ evaluator 输出、oracle 或 Practice 内容。
 
 ## Planning Confirmation
 
-Pending initial OpenSpec-only PR and requirements-owner confirmation in #122.
+The requirements owner confirmed in #122 after initial OpenSpec-only PR #123:
+
+- The two candidates' observable public behavior, starter, Practice controls,
+  private semantic/quality acceptance, conditions, oracle, scoring semantics,
+  and #117 historical interpretation remain unchanged. Historical workspaces
+  are not rewritten; no Pi, model, retrieval, formal record, or suite revision
+  is authorized.
+- The closure is candidate-scoped, private, versioned, and fixed by locked
+  rebuild inputs plus an integrity identifier. Dependency changes use a new
+  closure version. CI and offline reconstruction use only those declared
+  inputs; evaluator resolution cannot search ancestor `node_modules` or depend
+  on global Bun/Node installation or incidental host state.
+- Healthy calibration means that both candidate evaluators reliably start in an
+  isolated materialized environment and emit healthy v2 contract results.
+  Normal semantic/probe failure remains distinct from runtime execution
+  failure; missing, tampered, or incompatible closure inputs fail closed.
+- Private evaluator, oracle, Practice, and calibration contents stay out of
+  agent workspaces, public prompts, traces, #122, and PR summaries. Public
+  evidence is limited to closure version/integrity identifier, stable failure
+  category, and health state.
