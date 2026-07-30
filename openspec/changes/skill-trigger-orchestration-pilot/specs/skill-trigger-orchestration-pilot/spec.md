@@ -100,3 +100,27 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 #### Scenario: 过程链缺失
 - **WHEN** trace 缺少任一层事件但结果通过
 - **THEN** 不记为听懂约束
+
+### Requirement: revision 冻结与运行有效性
+
+系统 MUST 将发生 extension telemetry 异常的 `async-cleanup-v1` pilot 保留为无效历史证据，且 MUST NOT 修改该 revision。后续修复必须创建 `async-cleanup-v2`。每次 v2 attempt MUST 在效果判定前通过运行有效性门：extension error 为零，trace 与 audit 一致，且 stdout、stderr、summary、trace 与 agent workspace 均不含 private 路径或 Practice 原文。
+
+#### Scenario: end event 不含 args
+- **WHEN** Pi 发出不含 args 的 `tool_execution_end` read event
+- **THEN** extension 仅用该 event 的 toolCallId 结算先前 start event，且不抛出异常、不干扰 agent
+
+#### Scenario: 无效 attempt 不作能力归因
+- **WHEN** extension error、trace/audit 不一致或私有材料泄露发生
+- **THEN** attempt 标记为 invalid，并从效果统计与模型/Pi 能力结论中排除
+
+### Requirement: v2 以导航故障驱动修改
+
+`async-cleanup-v2` 的公开任务 MUST 描述快速离开并返回概览页时旧请求偶发影响页面状态的故障，并 MUST 提供一个公开成功路径回归。题面与公开回归 MUST NOT 指定 Skill、cleanup、AbortController 或固定实现。private 质量门 MUST 分别验证卸载后成功 resolve 和失败 reject 不会调用状态 setter。
+
+#### Scenario: 公开故障但实现开放
+- **WHEN** agent 阅读 v2 task 与运行公开测试
+- **THEN** 它能观察到需要修复的导航故障，但不会收到具体实现指令
+
+#### Scenario: 双异步终态质量门
+- **WHEN** 请求在卸载后 resolve 或 reject
+- **THEN** 两种终态下组件状态 setter 调用数均为零

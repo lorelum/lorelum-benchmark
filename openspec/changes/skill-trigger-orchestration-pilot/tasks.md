@@ -52,3 +52,14 @@
 - [x] 将 AST 探针定位为结构门，增加“延迟请求 -> 卸载 -> resolve”后状态 setter 不得调用的运行时质量门。
 - [x] 将 signal 收紧为处理组每次 dual pass 且两个对照每次质量门失败；缺少真实过程链一律不得计入。
 - [x] 重生成 snapshot、重跑 calibration 与 3 条件 x 2 次诊断；结果为 no-obvious-signal，处理组未形成真实查询链路。
+
+## 9. v2 有效性与任务修订
+
+- [x] 在 Issue #96、proposal 与 design 中冻结 `async-cleanup-v1` 的 `pilot-r5` 为 extension telemetry 异常导致的无效证据；不得再修改 v1。 [写入范围：Issue #96、OpenSpec]
+- [x] 创建 `async-cleanup-v2` 的正式 public/private 源码、v2 snapshot 与独立 calibration materials。 [写入范围：`incubator/skill-trigger-orchestration/async-cleanup-v2/`]
+- [x] 修复 v2 extension 的 read 事件关联：start 记录路径、end 仅按 toolCallId 结算，所有 telemetry 错误不影响 agent。 [写入范围：v2 private execution]
+- [x] 为 v2 runner 增加 extension error、trace/audit 一致性及 private 泄露运行有效性门，并在 summary 分离有效性、发现、锚定、采纳、语义、AST、resolve 与 reject 质量门。 [写入范围：v2 private execution]
+- [x] 增加 extension 隔离测试：无 end.args 不抛错、显式链路完整 redacted、未调用 Skill 不产生伪事件、返回不含私有材料。 [写入范围：v2 private execution]
+- [x] 将公开题面和公开回归改为快速导航故障报告；私有 probe 分别覆盖卸载后 resolve 和 reject。 [写入范围：v2 public、private evaluator]
+- [x] 建立 v2 reference、等价实现与只保护成功分支/空 cleanup anti-pattern 校准，并验证判别力。 [写入范围：v2 private calibration]
+- [ ] 运行 validate、contracts、v2 定向测试、strict OpenSpec、calibration 与泄露审计；全部通过后运行三条件各三次的 scratch 诊断。 [写入范围：scratch/ only]

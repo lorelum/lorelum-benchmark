@@ -14,6 +14,8 @@ Issue #96 需要一条独立轨道，验证 coding agent 在工程任务中会�
 - candidate 声明 kernel（core v1 / 新 profile / materializer react-vite），复用共享 react-vite calibration base + overlay 机制。
 - 三个 condition 对照：baseline（地板）、lorelum-retrieval（实验组，走完整链路）、irrelevant-practice（盲从检测）。不设 oracle-practice 天花板。
 - candidate 先跑本地 pilot 确认 baseline 下 agent 确实会失败，再正式用作对照。
+- `async-cleanup-v1` 的 `pilot-r5` 因 Pi extension 在 `tool_execution_end` 中读取不存在的 `args.path` 而失效；它只保留为无效运行证据，后续修复与方向性观察均在冻结的下一 revision `async-cleanup-v2` 完成。
+- v2 用快速导航故障报告提供真实修改动机，并以运行有效性门隔离 extension 错误、trace/audit 不一致和 private 泄露；每条件执行三次，不创建正式 record。
 
 ## Capabilities
 

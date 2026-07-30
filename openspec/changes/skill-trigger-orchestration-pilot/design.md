@@ -6,7 +6,7 @@
 
 ### 场景选择
 
-候选场景：异步副作用生命周期超出组件（useEffect 发请求，组件卸载后 setState）。
+候选场景：异步副作用生命周期超出组件（useEffect 发请求，组件卸载后 setState）。`async-cleanup-v1` 的 `pilot-r5` 已确认因 extension telemetry 异常无效，revision 冻结；v2 将题面改为快速导航故障报告：快速离开并返回概览页时，旧请求偶发影响页面状态。题面不得写入 Skill、cleanup、AbortController 或固定实现。
 
 选择理由：
 
@@ -34,7 +34,13 @@ baseline 下 agent 写出不带 cleanup 的 useEffect。由 AST 探针稳定检�
 
 ### 度量
 
-主量看过程：trace 记录公开输入读取、Skill 发现、Skill 加载、带任务锚点的查询及结构化返回。处理组只有同时具备完整真实事件链、语义通过与质量门通过，才可计为成功。辅量看结果：AST 结构门拒绝明显伪 cleanup，运行时门通过“延迟请求 -> 卸载 -> resolve”断言卸载后状态 setter 调用数为零。没有过程链、结果却碰巧对，不算。
+主量看过程：trace 记录公开输入读取、Skill 发现、Skill 加载、带任务锚点的查询及结构化返回。处理组只有同时具备完整真实事件链、语义通过与质量门通过，才可计为成功。辅量看结果：AST 结构门拒绝明显伪 cleanup，运行时门分别通过“延迟请求 -> 卸载 -> resolve”与“延迟请求 -> 卸载 -> reject”断言卸载后状态 setter 调用数为零。没有过程链、结果却碰巧对，不算。
+
+### v2 运行有效性
+
+extension 在 `tool_execution_start` 中以 `toolCallId` 记录已读取 public 输入的路径，在 `tool_execution_end` 中仅按该 ID 结算；end event 不得读取 `args`。观测、审计和路径解析失败必须被 extension 内部吸收，绝不影响 agent。出现 extension error、trace 与 audit 不一致，或 stdout/stderr/summary/trace 出现 private 路径或 Practice 原文时，attempt 标记为 invalid 且不进入效果判定。
+
+v2 增加公开成功路径回归，证明离开页面后的请求结果不得再被已销毁页面处理；该回归描述行为而非实现。private runtime probe 同时覆盖成功与失败分支。reference、等价实现与 anti-pattern 在 v2 独立校准，anti-pattern 至少覆盖只保护成功分支的伪修复。
 
 ### 风险与前置
 
@@ -70,5 +76,7 @@ calibration sets 声明三个 fixture，各自测探针的不同判据：
 - reference：带 cleanup 的正确实现，MUST 通过 AST 探针。证明探针能接受正确实现。
 - equivalent：命名/布局不同但职责等价的正确实现（如用 AbortController 而非 mounted 标志），MUST 通过探针。证明探针不把单一写法当唯一答案。
 - anti-pattern：看似处理了实则没处理的绕过实现--例如在卸载后仍 setState 但加了个空的 cleanup 函数，或把请求挪到组件外但仍未取消。MUST 被探针拒绝。证明探针不漏判伪装正确的写法。
+
+v2 的方向性 pilot 固定使用 `deepseek/deepseek-v4-pro` 与既有预算，baseline、lorelum-retrieval、irrelevant-practice 各三次。未查询归类为主动发现失败；完整查询但质量门失败归类为理解或实施失败；运行有效性门失败归类为实验无效。只有处理组三次都完整成功且两个对照组三次都未通过质量门，才报告方向性正信号；其余结果均为 diagnostic-only。
 
 anti-pattern 与 naive starter 的区别：naive starter 是 baseline 预期产出（压根不写 cleanup，探针直接判失败）；anti-pattern 是 calibration 用的已知绕过实现（写了但无效，测探针的判别力）。两者不重复。
