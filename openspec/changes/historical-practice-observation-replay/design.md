@@ -125,17 +125,19 @@ are never mutated.
 ## Verification Outcome
 
 The #90 v1 summaries declared twelve attempts (two candidates, three
-conditions, two repetitions), and all twelve historical workspaces were
-replayed with evaluator provenance `bf73e27`. Every replay produced a valid v2
-result and preserved its workspace tree. Both public/private isolation audits
-passed.
+conditions, two repetitions). The final evaluator-only replay used evaluator
+provenance `a612790`, preserved all twelve planned denominator entries, and
+recorded no private paths or evaluator logs. Each candidate had three healthy
+`evaluated` entries and three entries that failed the historical workspace-tree
+integrity check; those six entries remain in the report with stable reasons and
+do not contribute fabricated evaluator outcomes. Both public/private isolation
+audits passed.
 
 Neither candidate is eligible for #91. Each has a failed current private
-calibration matrix, which makes its decision `indeterminate` regardless of the
-historical joint-pass comparison. The profile candidate also has one
-indeterminate oracle observation; the project-directory candidate has
-indeterminate baseline and irrelevant observations. No model, Pi, retrieval,
-formal manifest, record, or suite revision was created.
+calibration matrix and incomplete healthy replay denominator, which makes its
+decision `indeterminate` regardless of the historical joint-pass comparison.
+No model, Pi, retrieval, formal manifest, record, or suite revision was
+created.
 
 The standard `kernel calibrate` command was attempted but its Bun child-process
 launch failed in this desktop environment. Direct matrix execution also exited
