@@ -48,22 +48,28 @@ material, private paths, agent workspace paths, or raw private evaluator logs.
   audit categories needed to reproduce the diagnostic classification
 
 ### Requirement: Expansion entry decision is bounded and conservative
-The diagnostic system MUST conclude only `eligible-for-expansion`,
-`adjust-before-expansion`, or `indeterminate` for the two historical #90
-candidates. It MUST retain per-candidate and per-input denominators and MUST
-NOT combine replay entries with future #91 executions or claim a causal
-Practice effect.
+The diagnostic system MUST conclude `eligible-for-expansion`,
+`adjust-before-expansion`, or `indeterminate` independently for each of the
+two historical #90 candidates. It MUST retain per-candidate and per-input
+denominators, identify the qualified candidate subset for #91, and MUST NOT
+combine replay entries with future #91 executions or claim a causal Practice
+effect.
 
 #### Scenario: Strict directional signal
-- **WHEN** calibration and leakage audits pass, every planned replay is
-  `evaluated`, and the relevant Practice condition has a strictly greater raw
-  joint-pass count than both controls for each candidate under the same input
-  identity
-- **THEN** the report concludes `eligible-for-expansion` only for those bounded
-  historical inputs
+- **WHEN** calibration and leakage audits pass, every planned replay for one
+  candidate is `evaluated`, and its relevant Practice condition has a strictly
+  greater raw joint-pass count than both controls under the same input identity
+- **THEN** the report concludes `eligible-for-expansion` for that candidate
+  only, and #91 may include that qualified candidate without including an
+  ineligible candidate
+
+#### Scenario: No candidate qualifies
+- **WHEN** neither historical candidate is `eligible-for-expansion`
+- **THEN** the report directs #91 to remain paused and requires a separate
+  candidate, Practice, or probe adjustment issue before a new expansion plan
 
 #### Scenario: Incomplete or unhealthy replay
-- **WHEN** any planned workspace is missing, a replay is not evaluated, or a
-  required calibration or leakage audit fails
-- **THEN** the report concludes `indeterminate` and does not make a condition
-  comparison
+- **WHEN** a candidate has a missing planned workspace, a replay is not
+  evaluated, or a required calibration or leakage audit fails
+- **THEN** the report concludes `indeterminate` for that candidate and excludes
+  it from #91 without making a condition comparison

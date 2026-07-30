@@ -28,7 +28,8 @@
   fields.
 - [ ] 2.2 Implement the per-candidate, per-input conservative decision rule
   for `eligible-for-expansion`, `adjust-before-expansion`, and
-  `indeterminate`; prohibit cross-input or future-#91 aggregation.
+  `indeterminate`; #91 admits only eligible candidates and pauses when none
+  qualify, without cross-input or future-#91 aggregation.
 - [ ] 2.3 Add focused tests covering a healthy negative observation, malformed
   evaluator output, missing workspace, redaction, and each decision outcome.
 

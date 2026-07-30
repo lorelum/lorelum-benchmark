@@ -74,15 +74,22 @@ the stated comparison.
 
 ### Conservative #91 entry decision
 
-The decision is `eligible-for-expansion` only when every planned replay is
-`evaluated`, calibration and leakage audits pass, and for each candidate under
-the same historical input identity the relevant Practice condition's raw
-joint-pass count is strictly greater than both baseline and irrelevant
-Practice. If healthy data lack this strict lead, or any Practice observation is
-indeterminate/insufficient to discriminate, the decision is
-`adjust-before-expansion`. Missing workspaces, replay faults, invalid output,
-or failed calibration/audits yield `indeterminate` and prohibit a condition
-comparison.
+Each candidate has an independent decision. A candidate is
+`eligible-for-expansion` only when every one of its planned replays is
+`evaluated`, calibration and leakage audits pass, and, within the same
+historical input identity, the relevant Practice condition's raw joint-pass
+count is strictly greater than both baseline and irrelevant Practice. #91 may
+include only these eligible candidates. Healthy candidates without this strict
+lead, or with indeterminate/insufficient Practice evidence, are
+`adjust-before-expansion` and are excluded from #91. Missing workspaces, replay
+faults, invalid output, or failed calibration/audits yield `indeterminate` and
+also exclude that candidate from #91.
+
+If no existing candidate is eligible, #91 is paused rather than repurposed as
+an unqualified search. A separate issue must first adjust the candidate,
+Practice, or probe and establish a new input identity before another expansion
+decision. The batch-level conclusion is therefore a qualified candidate list,
+not an aggregate pass/fail result.
 
 This deliberately does not score or average candidate results, and it does not
 make a causal claim. A looser aggregate rule is rejected because the issue
