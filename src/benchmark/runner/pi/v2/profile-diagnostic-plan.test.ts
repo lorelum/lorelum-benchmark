@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { join } from "node:path";
+import { workspaceRoot } from "../../../fs";
 import { buildSchedule, diagnosticConditions, parseDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ReportEntry } from "./profile-diagnostic-plan";
 import { diagnosticOutputPath, redactedSchedule } from "./profile-diagnostic-runner";
 
@@ -18,7 +20,7 @@ test("cyclic Latin schedule is deterministic and balances positions", () => {
   const serialized = JSON.stringify(redactedSchedule(schedule));
   expect(serialized).not.toContain("candidate_path");
   expect(serialized).not.toContain("incubator/practice-injection");
-  expect(diagnosticOutputPath("E:\\lorelum-benchmark-issue-116\\scratch\\profile-diagnostics\\test")).toBe("scratch/profile-diagnostics/test");
+  expect(diagnosticOutputPath(join(workspaceRoot, "scratch", "profile-diagnostics", "test"))).toBe("scratch/profile-diagnostics/test");
 });
 
 test("plan rejects a non-balanced repetition count and unknown condition declaration", () => {
