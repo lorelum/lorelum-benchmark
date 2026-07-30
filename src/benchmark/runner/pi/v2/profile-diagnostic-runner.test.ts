@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { piArgs, evaluatorResult, verifyCandidateDeclaration, verifySnapshotIdentity, isRecord } from "./profile-diagnostic-runner";
+import { piArgs, classifyEvaluatorResult, evaluatorResult, verifyCandidateDeclaration, verifySnapshotIdentity, isRecord } from "./profile-diagnostic-runner";
 
 const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
 
@@ -123,6 +123,53 @@ test("evaluatorResult rejects incomplete or unsupported observation output", () 
 
 test("evaluatorResult returns undefined when no structured result is present", () => {
   expect(evaluatorResult("no JSON here")).toBeUndefined();
+});
+
+test("nonzero evaluator exit discards a structured partial result", () => {
+  const result = classifyEvaluatorResult({
+    code: 1,
+    stdout: '{"semantic":"pass","practice_observation":"observed"}',
+    stderr: "private/evaluator assertion failed",
+    timedOut: false,
+    durationMs: 1,
+  });
+  expect(result).toEqual({ evaluation_status: "execution-failed", error: "evaluator-exit-nonzero" });
+  expect(result).not.toHaveProperty("semantic");
+  expect(result).not.toHaveProperty("practice_observation");
+  expect(result).not.toHaveProperty("joint_pass");
+});
+
+test("timed out evaluator discards output without leaking stderr", () => {
+  const result = classifyEvaluatorResult({
+    code: null,
+    stdout: '{"semantic":"pass","practice_observation":"observed"}',
+    stderr: "E:\\private\\evaluator\\oracle.yaml",
+    timedOut: true,
+    durationMs: 1,
+  });
+  expect(result).toEqual({ evaluation_status: "execution-failed", error: "evaluator-timed-out" });
+  expect(JSON.stringify(result)).not.toContain("private");
+});
+
+test("zero-exit evaluator requires a complete structured result", () => {
+  const result = classifyEvaluatorResult({ code: 0, stdout: "no JSON", stderr: "", timedOut: false, durationMs: 1 });
+  expect(result).toEqual({ evaluation_status: "invalid-output", error: "evaluator-invalid-output" });
+});
+
+test("zero-exit semantic failure remains a healthy evaluator result", () => {
+  const result = classifyEvaluatorResult({
+    code: 0,
+    stdout: '{"semantic":"fail","practice_observation":"not-run"}',
+    stderr: "",
+    timedOut: false,
+    durationMs: 1,
+  });
+  expect(result).toEqual({
+    evaluation_status: "evaluated",
+    semantic: "fail",
+    practice_observation: "not-run",
+    joint_pass: false,
+  });
 });
 
 test("isRecord distinguishes objects from arrays and primitives", () => {
