@@ -12,6 +12,6 @@
 ## 3. Recalibration and re-admission
 
 - [x] 3.1 Run reference, responsibility-equivalent, and anti-pattern calibration; verify the runtime closure and public/private leakage boundary. [Execution scope: `scratch/`; both matrices and runner public-workspace audit passed]
-- [ ] 3.2 Record the repaired runner source identity for re-admission without modifying candidate snapshots or pre-repair plans. [Execution scope: `scratch/`]
-- [ ] 3.3 Run focused tests, `bun run validate`, OpenSpec strict validation, and `git diff --check`.
+- [x] 3.2 Record the repaired runner source identity for re-admission without modifying candidate snapshots or pre-repair plans. [Execution scope: `scratch/`; runner commit `9d8647f`]
+- [x] 3.3 Run focused tests, `bun run validate`, OpenSpec strict validation, and `git diff --check`.
 - [ ] 3.4 After all gates pass, run one authorized redacted three-condition re-admission gate and record only diagnostic status. [Execution scope: `scratch/`]
