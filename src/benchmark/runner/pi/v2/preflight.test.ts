@@ -22,6 +22,7 @@ test("Pi preflight uses an isolated, tool-free command and removes its temporary
   await expect(preflightPiAndModel("fake-pi", "deepseek/deepseek-v4-pro", fakePi)).resolves.toEqual({ version: "0.80.10" });
   expect(calls).toHaveLength(2);
   expect(calls[0].command).toEqual(["fake-pi", "--version"]);
+  expect(calls[0].timeoutMs).toBe(preflightTimeoutMs);
   expect(calls[1].command).toEqual([
     "fake-pi", "--print", "--no-session", "--no-tools", "--no-context-files", "--no-skills", "--no-extensions", "--model", "deepseek/deepseek-v4-pro", "Reply with exactly: ok"
   ]);
@@ -47,4 +48,16 @@ test("Pi preflight fails closed when its isolated probe times out", async () => 
 
   await expect(preflightPiAndModel("fake-pi", "deepseek/deepseek-v4-pro", fakePi)).rejects.toThrow("model unreachable: preflight timed out after 90s");
   expect(classifyPreflightFailure({ code: null, stdout: "", stderr: "", timedOut: true, durationMs: preflightTimeoutMs })).toBe("model unreachable: preflight timed out after 90s");
+});
+
+test("a timed-out version probe fails closed before the model probe", async () => {
+  const calls: Array<{ command: string[]; timeoutMs?: number }> = [];
+  const fakePi: CommandRunner = async (command, _cwd, timeoutMs) => {
+    calls.push({ command, timeoutMs });
+    if (command.includes("--version")) return { code: null, stdout: "", stderr: "", timedOut: true, durationMs: preflightTimeoutMs };
+    throw new Error("model probe must not run after a version timeout");
+  };
+
+  await expect(preflightPiAndModel("fake-pi", "deepseek/deepseek-v4-pro", fakePi)).rejects.toThrow("model unreachable: preflight timed out after 90s");
+  expect(calls).toEqual([{ command: ["fake-pi", "--version"], timeoutMs: preflightTimeoutMs }]);
 });

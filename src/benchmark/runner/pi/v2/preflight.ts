@@ -69,7 +69,8 @@ export function classifyPreflightFailure(result: CommandResult): string {
 export async function preflightPiAndModel(command: string, modelId: string, commandRunner: CommandRunner = run): Promise<{ version: string }> {
   const probeDirectory = await mkdtemp(join(tmpdir(), "lorelum-pi-preflight-"));
   try {
-    const version = await commandRunner([command, "--version"], probeDirectory);
+    const version = await commandRunner([command, "--version"], probeDirectory, preflightTimeoutMs);
+    if (version.timedOut) fail(classifyPreflightFailure(version));
     if (version.code !== 0) fail(`Unable to start Pi command ${command}: ${(version.stderr || version.stdout).trim()}`);
     const probe = await commandRunner(preflightPiArgs(command, modelId), probeDirectory, preflightTimeoutMs);
     if (probe.code !== 0 || probe.timedOut) fail(classifyPreflightFailure(probe));
