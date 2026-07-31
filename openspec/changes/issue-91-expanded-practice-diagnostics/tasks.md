@@ -19,3 +19,8 @@
 - [x] 4.1 Execute one repeat per condition for the selected candidate after prerequisites pass; do not create a formal record or suite revision. [Execution scope: `scratch/`]
 - [x] 4.2 Produce a redacted summary grouped by candidate and `profile_input_hash`, preserving planned denominators and all outcome states. [Execution scope: `scratch/`]
 - [x] 4.3 Apply the strict joint-pass rule: oracle led both controls in this one-block diagnostic, but #91 remains limited to diagnostic evidence pending three-repeat screening; no causal or generalized claims.
+
+## 5. Balanced three-repeat screening
+
+- [x] 5.1 Execute the first declared candidate's fixed three-repeat screen from `balanced-diagnostics-v2`; retain only redacted scratch evidence and bind it to the active runner source. (9/9 attempts completed; candidate result is `directional-screen`.)
+- [ ] 5.2 Execute the second declared candidate's fixed three-repeat screen only after an explicit continuation decision; do not combine incomplete candidate denominators or emit an aggregate conclusion.

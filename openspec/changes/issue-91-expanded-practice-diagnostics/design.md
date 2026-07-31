@@ -71,3 +71,11 @@ commit, snapshot, and profile-input identity; a joint pass still requires a
 healthy private semantic result and observed Practice behavior. The resulting
 scratch summary is diagnostic evidence only: it creates no formal manifest,
 record, suite revision, #92 aggregation, causal claim, or expansion decision.
+
+## Execution Status
+
+The first declared candidate completed its fixed three-repeat screen. At the
+requirements owner's instruction, execution stopped before the second declared
+candidate began. The incomplete second candidate remains a planned but empty
+denominator, so the batch-level report remains diagnostic-only and no
+cross-candidate conclusion is permitted.
