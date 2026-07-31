@@ -739,7 +739,7 @@ for (const plannedCandidate of plan.candidates) {
   }
 
   try {
-    await preflightPiAndModel(command, conditions.shared_execution.model.id, workspaceRoot);
+    await preflightPiAndModel(command, conditions.shared_execution.model.id);
   } catch (error) {
     entries.push({
       candidate: manifest.id,

@@ -87,3 +87,9 @@ without creating a model call, candidate workspace, artifact, or record.
 None. The requested execution boundary remains the existing model, prompt, and
 ten-minute candidate budget; only the preflight's own isolation and bounded
 deadline change.
+
+## Planning Confirmation
+
+The requester confirmed this isolated preflight strategy before implementation.
+The confirmation is recorded on #130; the follow-up remains a scratch-only,
+diagnostic-only rerun of #129 after this repair merges.
