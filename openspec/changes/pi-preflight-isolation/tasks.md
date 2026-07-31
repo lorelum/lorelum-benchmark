@@ -1,6 +1,6 @@
 ## 1. OpenSpec and planning gate
 
-- [ ] 1.1 Strictly validate this change and create the initial OpenSpec-only PR linked to #130.
+- [x] 1.1 Strictly validate this change and create the initial OpenSpec-only PR linked to #130. (`openspec validate ... --strict` passed; PR #131)
 - [ ] 1.2 Record the confirmed isolated probe flags, finite allowance, unchanged model/prompt/attempt budget, and scratch-only re-admission boundary in #130 and this change before implementation.
 
 ## 2. Isolated preflight
