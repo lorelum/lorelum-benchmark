@@ -56,8 +56,18 @@ One repeat is diagnostic-only. A candidate advances only when calibration is hea
 
 Rollback leaves candidate inputs and historical artifacts untouched; ignored scratch output is disposable and no formal record is created.
 
-## Open Questions
+## Planning Confirmation
 
-- Confirm the Pi command, model id, prompt/tool policy, 10-minute budget, and authorization for the local one-repeat model call.
-- Confirm expected baseline defect and the minimum meaningful oracle-versus-control distinction for both candidates.
-- Confirm the source commit and snapshot identities in `balanced-diagnostics-v1` are the intended immutable inputs.
+The requirements owner authorized the balanced three-repeat #91 verification.
+The committed `balanced-diagnostics-v2` plan is the immutable execution input:
+its two declared candidates each run baseline, oracle-practice, and
+irrelevant-practice three times. Observable behavior, the expected baseline
+defect, the related and equal-length irrelevant controls, and private semantic
+and quality acceptance remain those declared by each fixed candidate profile.
+
+The run uses the candidate-declared model, prompt/tool policy, and ten-minute
+budget, with no blind review. Every attempt must preserve the plan's source
+commit, snapshot, and profile-input identity; a joint pass still requires a
+healthy private semantic result and observed Practice behavior. The resulting
+scratch summary is diagnostic evidence only: it creates no formal manifest,
+record, suite revision, #92 aggregation, causal claim, or expansion decision.
