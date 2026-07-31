@@ -1,6 +1,6 @@
 ## Context
 
-The #123 runtime-closure fix makes both current candidates calibratable in a clean materialized environment. The repository already has `incubator/practice-injection-plans/balanced-diagnostics-v1.yaml`: two candidates, three conditions, three repeats, schedule seed, and bound source/snapshot/profile identities. Mainline runner behavior must be reconciled with that plan-only contract before any diagnostic invocation; otherwise candidate-local `conditions.yaml` can silently change the planned denominator.
+The #123 runtime-closure fix makes both current candidates calibratable in a clean materialized environment. The repository now adds immutable `incubator/practice-injection-plans/balanced-diagnostics-v2.yaml` with current snapshot identities for the same two candidates, three conditions, and three repeats. The mainline runner already consumes this plan-only contract, but currently executes its entire schedule; a one-candidate score check needs a constrained, derivable one-repeat selection.
 
 This is an incubator admission gate for #91, not a formal benchmark run. Historical results remain immutable.
 
@@ -23,9 +23,9 @@ This is an incubator admission gate for #91, not a formal benchmark run. Histori
 
 ### Plan-only execution
 
-The runner SHALL consume the versioned plan and reject candidate-list or `--repeat` overrides. It validates candidate id, source commit, snapshot id, profile input hash, declared conditions, schedule seed, and repeat count before workspace creation. The checked-in three-repeat plan remains the expansion denominator; the gate derives a one-repeat slice without mutating it.
+The runner SHALL consume the versioned plan and reject candidate-list or `--repeat` overrides. It validates candidate id, source commit, snapshot id, profile input hash, declared conditions, schedule seed, and repeat count before workspace creation. A dedicated one-repeat gate option selects exactly one registered candidate and its first pre-registered three-condition block; it neither mutates nor replaces the checked-in `balanced-diagnostics-v2` three-repeat plan.
 
-Reading candidate-local repetitions is rejected because it can diverge from the registered plan.
+Reading candidate-local repetitions is rejected because it can diverge from the registered plan. Running only oracle-practice is also rejected because the two controls are necessary to diagnose execution and injection failures.
 
 ### Gate order
 
@@ -50,7 +50,7 @@ One repeat is diagnostic-only. A candidate advances only when calibration is hea
 
 1. Strictly validate this change and create its OpenSpec-only PR for #91.
 2. Obtain planning confirmation and write it back to this design and `tasks.md`.
-3. Reconcile plan-only runner behavior and tests, then run validation and leakage audits.
+3. Add the plan-derived one-repeat gate and focused tests, then run validation and leakage audits.
 4. Run authorized preflight, calibration, and one-repeat gate, retaining only redacted scratch evidence.
 5. Review whether to authorize three-repeat screening or keep #91 paused.
 

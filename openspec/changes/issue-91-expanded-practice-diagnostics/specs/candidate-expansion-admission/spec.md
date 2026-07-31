@@ -24,6 +24,10 @@ The workflow MUST validate source commit, snapshot id, profile input hash, decla
 - **WHEN** `conditions.yaml` declares a different repetition count than the registered plan
 - **THEN** the runner keeps the registered plan identity and rejects an override rather than silently changing the denominator
 
+#### Scenario: One-repeat gate preserves the registered controls
+- **WHEN** a maintainer selects one registered candidate for a diagnostic score check
+- **THEN** the runner executes exactly that candidate's first pre-registered baseline, oracle-practice, and irrelevant-practice block, records the parent plan identity, and does not modify or replace the three-repeat plan
+
 ### Requirement: Dry-run evidence preserves health and privacy boundaries
 
 The one-repeat diagnostic gate MUST produce redacted per-candidate and per-condition health, semantic, Practice-observation, joint-pass, and identity evidence. It MUST retain unhealthy attempts in denominators and MUST NOT include Practice text, private paths, evaluator/oracle material, or workspace paths in reported summaries.

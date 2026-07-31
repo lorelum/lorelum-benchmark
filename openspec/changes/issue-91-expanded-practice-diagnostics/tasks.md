@@ -5,8 +5,8 @@
 
 ## 2. Plan-bound runner reconciliation
 
-- [ ] 2.1 Restore or implement plan-only input using `balanced-diagnostics-v1`, identity validation, schedule ordering, and a one-repeat gate slice without candidate-local overrides. [Write scope: `src/benchmark/runner/pi/v2/`, `incubator/practice-injection-plans/`]
-- [ ] 2.2 Add focused tests for plan identity mismatch, repetition override rejection, redacted schedule output, and preserved denominators. [Write scope: `src/benchmark/runner/pi/v2/`]
+- [x] 2.1 Implement a plan-derived one-candidate, first-block gate using `balanced-diagnostics-v2`, identity validation, schedule ordering, and no candidate-local overrides. [Write scope: `src/benchmark/runner/pi/v2/`, `incubator/practice-injection-plans/`]
+- [x] 2.2 Add focused tests for one-repeat selection, redacted schedule output, and preserved denominators. [Write scope: `src/benchmark/runner/pi/v2/`]
 
 ## 3. Prerequisite validation
 
