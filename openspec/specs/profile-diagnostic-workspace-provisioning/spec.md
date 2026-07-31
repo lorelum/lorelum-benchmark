@@ -40,4 +40,3 @@ The runner MUST provision dependencies after the Pi process exits, so the agent 
 #### Scenario: Pi receives no preinstalled workspace
 - **WHEN** the runner begins a diagnostic attempt
 - **THEN** it invokes Pi before public dependency provisioning and verifies the public/private workspace boundary before evaluation
-
