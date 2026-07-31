@@ -10,12 +10,12 @@
 
 ## 3. Prerequisite validation
 
-- [ ] 3.1 Run Pi/model preflight after planning confirmation, with failure classification that does not echo credentials or create a workspace. [Execution scope: `scratch/`]
-- [ ] 3.2 Run both complete calibration matrices through the versioned runtime closure in a clean isolated environment; report hashes and pass/fail only. [Execution scope: `scratch/`]
-- [ ] 3.3 Run focused tests, `bun run validate`, OpenSpec strict validation, `git diff --check`, and public/private leakage audits.
+- [x] 3.1 Run Pi/model preflight after planning confirmation, with failure classification that does not echo credentials or create a workspace. [Execution scope: `scratch/`; passed within the gate run]
+- [x] 3.2 Run both complete calibration matrices through the versioned runtime closure in a clean isolated environment; report hashes and pass/fail only. [Execution scope: `scratch/`; both exited 0 and passed]
+- [x] 3.3 Run focused tests, `bun run validate`, OpenSpec strict validation, `git diff --check`, and public/private leakage audits. (30 focused tests passed; validate and strict validation passed.)
 
 ## 4. One-repeat diagnostic gate
 
-- [ ] 4.1 Execute one repeat per condition for both candidates only after prerequisites pass; do not create a formal record or suite revision. [Execution scope: `scratch/`]
-- [ ] 4.2 Produce a redacted summary grouped by candidate and `profile_input_hash`, preserving planned denominators and all outcome states. [Execution scope: `scratch/`]
-- [ ] 4.3 Apply the strict joint-pass rule and decide whether to authorize three-repeat screening or keep #91 paused, without causal or generalized claims.
+- [x] 4.1 Execute one repeat per condition for the selected candidate after prerequisites pass; do not create a formal record or suite revision. [Execution scope: `scratch/`]
+- [x] 4.2 Produce a redacted summary grouped by candidate and `profile_input_hash`, preserving planned denominators and all outcome states. [Execution scope: `scratch/`]
+- [x] 4.3 Apply the strict joint-pass rule: oracle led both controls in this one-block diagnostic, but #91 remains limited to diagnostic evidence pending three-repeat screening; no causal or generalized claims.
