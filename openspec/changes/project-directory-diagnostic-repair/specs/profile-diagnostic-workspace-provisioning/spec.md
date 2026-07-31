@@ -2,18 +2,32 @@
 
 ### Requirement: Public dependencies are provisioned before evaluation
 
-After Pi completes an attempt and before private evaluator invocation, the profile diagnostic runner MUST provision dependencies in the clean public app workspace using the current Bun executable and `install --frozen-lockfile`. It MUST use only the workspace's public package manifest and lockfile and MUST NOT install, mount, or resolve any private dependency path into the agent workspace.
+Before Pi starts, the profile diagnostic runner MUST capture the clean public app
+workspace's regular `package.json` and `bun.lock`, including their content
+identities, into runner-controlled staging outside the agent workspace. After
+Pi completes and before private evaluator invocation, it MUST verify the
+workspace copies still have those identities, provision only from the staged
+inputs using the current Bun executable with `install --frozen-lockfile
+--ignore-scripts`, and copy only the generated dependencies into the public
+app workspace. It MUST NOT install, mount, or resolve any private dependency
+path into the agent workspace.
 
 #### Scenario: Evaluator receives a lockfile-provisioned public workspace
 - **WHEN** Pi completes an attempt whose public app workspace declares a lockfile
-- **THEN** the runner provisions dependencies from that lockfile before invoking the private evaluator
+- **THEN** the runner provisions dependencies from the pre-Pi staged public
+  lockfile before invoking the private evaluator
+
+#### Scenario: Pi changes a dependency input
+- **WHEN** Pi modifies, replaces, or removes the public `package.json` or
+  `bun.lock` after their pre-Pi identities were captured
+- **THEN** the runner fails closed without invoking the installer or evaluator
 
 ### Requirement: Provisioning fails closed with a redacted category
 
 The runner MUST record `evaluation_status=execution-failed` and a stable redacted provisioning reason when public dependency provisioning fails or times out. It MUST NOT invoke the private evaluator or infer semantic, Practice observation, or joint-pass fields from the failed attempt.
 
 #### Scenario: Frozen install fails
-- **WHEN** `install --frozen-lockfile` exits nonzero or exceeds its timeout
+- **WHEN** `install --frozen-lockfile --ignore-scripts` exits nonzero or exceeds its timeout
 - **THEN** the runner records the provisioning failure and skips evaluator invocation
 
 ### Requirement: Provisioning occurs after the agent attempt

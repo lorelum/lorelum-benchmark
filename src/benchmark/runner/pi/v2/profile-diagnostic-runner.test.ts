@@ -246,9 +246,10 @@ test("provisions the public app after Pi and before private evaluation", async (
         }
         if (command[1] === "install") {
           phases.push("provision");
-          expect(cwd.replaceAll("\\", "/")).toEndWith("workspace/app");
-          expect(command).toEqual([process.execPath, "install", "--frozen-lockfile"]);
+          expect(cwd.replaceAll("\\", "/")).toEndWith("provisioning-inputs");
+          expect(command).toEqual([process.execPath, "install", "--frozen-lockfile", "--ignore-scripts"]);
           expect((await workspaceFiles(cwd)).some((file) => file.includes("private/") || file.includes("practices/"))).toBe(false);
+          await mkdir(join(cwd, "node_modules"), { recursive: true });
           return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
         }
         phases.push("evaluator");
@@ -300,6 +301,44 @@ test("failed public dependency provisioning skips evaluator with a redacted exec
     expect(entry.practice_observation).toBeUndefined();
     expect(entry.joint_pass).toBeUndefined();
     expect(JSON.stringify(entry)).not.toContain("private");
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("Pi-modified dependency inputs fail closed before lifecycle scripts or evaluator execution", async () => {
+  const fixture = await withAttemptFixture();
+  const phases: string[] = [];
+  try {
+    const profile = await resolveInjectionCalibration(fixture.candidate);
+    const entry = await runAttempt(
+      fixture.output,
+      fixture.candidate,
+      "neutral-contract-fixture-v1",
+      { id: "neutral-contract-fixture-v1", kernel: { core: "v1", profile: "injection-calibration/v1", materializer_kind: "react-vite" }, source: { source_commit: "abc123" } },
+      "snapshot",
+      profile.profile_input_hash,
+      profile,
+      "baseline",
+      1,
+      { pi_version: "test", model: { id: "test-model" }, budget: { max_duration_minutes: 1 }, repetitions: 1 },
+      "fake-pi",
+      async (command, cwd) => {
+        if (command[0] === "fake-pi") {
+          phases.push("pi");
+          await writeFile(join(cwd, "app", "package.json"), '{"scripts":{"postinstall":"exit 1"}}\n');
+          await writeFile(join(cwd, "app", "bun.lock"), "modified\n");
+          return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
+        }
+        phases.push(command[1] === "install" ? "provision" : "evaluator");
+        throw new Error("modified dependency inputs must not run host commands");
+      }
+    );
+    expect(phases).toEqual(["pi"]);
+    expect(entry).toEqual(expect.objectContaining({ evaluation_status: "execution-failed", error: "public-dependency-inputs-modified" }));
+    expect(entry.semantic).toBeUndefined();
+    expect(entry.practice_observation).toBeUndefined();
+    expect(JSON.stringify(entry)).not.toContain("postinstall");
   } finally {
     await fixture.cleanup();
   }

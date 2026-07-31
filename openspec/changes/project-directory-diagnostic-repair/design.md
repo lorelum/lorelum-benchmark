@@ -27,7 +27,15 @@ The requester confirmed that the public project-directory behavior, existing ora
 
 ### Public lockfile provisioning before evaluation
 
-After Pi exits and before starting the private evaluator, the runner SHALL invoke the current Bun executable with `install --frozen-lockfile` in the public app workspace. The command receives the workspace's normal environment, never private dependency paths. A bounded provisioning failure SHALL record `execution-failed` with a stable redacted reason and SHALL not invoke the evaluator.
+Before Pi starts, the runner captures regular public `package.json` and
+`bun.lock` files plus their hashes into runner-controlled staging outside the
+agent workspace. After Pi exits, it verifies the in-workspace files retain
+those identities, invokes the current Bun executable from staging with
+`install --frozen-lockfile --ignore-scripts`, and copies only the generated
+dependencies into the public app workspace. The installer therefore never
+reads Pi-authored dependency metadata or runs lifecycle scripts. A bounded
+provisioning or identity failure SHALL record `execution-failed` with a stable
+redacted reason and SHALL not invoke the evaluator.
 
 ### Public behavior and treatment remain fixed
 
@@ -40,7 +48,9 @@ Nonzero evaluator exits remain non-healthy even if structured output exists. Pro
 ## Risks / Trade-offs
 
 - [Public lockfile cannot reconstruct the workspace] -> fail closed before evaluation and retain only a redacted provisioning category.
-- [Provisioning exposes private dependency paths] -> run only in the public app workspace and audit the workspace file tree before evaluator invocation.
+- [Pi changes dependency metadata or adds lifecycle scripts] -> capture and
+  verify immutable pre-Pi inputs, provision only from runner staging, and pass
+  `--ignore-scripts`.
 - [Repair changes runner behavior for every candidate] -> add focused ordering/failure tests and revalidate both candidates' calibration before re-admission.
 - [Private diagnostics leak] -> restrict reports to stable categories, hashes, and redacted condition identity.
 

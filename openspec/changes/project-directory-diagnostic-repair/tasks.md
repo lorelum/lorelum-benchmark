@@ -8,6 +8,8 @@
 - [x] 2.1 Reproduce the candidate failure in a clean workspace and classify the stable redacted failure category without exposing private material. [Execution scope: `scratch/`; public tests pass after frozen install]
 - [x] 2.2 Implement public lockfile dependency provisioning after Pi and before evaluator invocation; do not change candidate/evaluator/probe inputs. [Write scope: `src/benchmark/runner/pi/v2/`]
 - [x] 2.3 Add focused regression tests for provisioning order, frozen-install failure, and evaluator health boundary. [Write scope: `src/benchmark/runner/pi/v2/`]
+- [x] 2.4 Capture immutable pre-Pi public dependency inputs, provision from runner staging with lifecycle scripts disabled, and fail closed on input drift. [Write scope: `src/benchmark/runner/pi/v2/`]
+- [x] 2.5 Add a regression test that a Pi-modified manifest/lockfile with a lifecycle script never reaches provisioning or evaluator execution. [Write scope: `src/benchmark/runner/pi/v2/`]
 
 ## 3. Recalibration and re-admission
 
