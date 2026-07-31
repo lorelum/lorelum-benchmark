@@ -12,4 +12,4 @@
 ## 3. Validation and re-admission
 
 - [x] 3.1 Run focused tests, `bun run validate`, strict OpenSpec validation, public/private leakage audit, and `git diff --check`.
-- [ ] 3.2 After all gates pass, run one authorized redacted three-condition one-repeat re-admission gate; bind output to the repaired runner source identity and record diagnostic status only. [Execution scope: `scratch/`]
+- [x] 3.2 After all gates pass, run one authorized redacted three-condition one-repeat re-admission gate; bind output to the repaired runner source identity and record diagnostic status only. [Execution scope: `scratch/`; all three conditions completed, evaluator health was evaluated, and the report remained `diagnostic-only`]
