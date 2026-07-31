@@ -11,7 +11,8 @@ The candidate has no formal record and remains in `incubator/`. The diagnostic s
 - Provision public dependencies in each clean workspace after Pi and before private evaluation.
 - Apply the smallest verified runner repair without changing the public task behavior, Practice pair, model, prompt, budget, evaluator/probe, or decision rule.
 - Validate reference, responsibility-equivalent, and anti-pattern calibration without changing the candidate snapshot; bind later re-admission output to the repaired runner source identity.
-- Verify public/private separation, evaluator health, and a one-repeat redacted re-admission gate.
+- Verify public/private separation and evaluator health before handing the
+  one-repeat redacted re-admission gate to #128.
 
 **Non-Goals:**
 
@@ -60,7 +61,8 @@ Nonzero evaluator exits remain non-healthy even if structured output exists. Pro
 2. Confirm the fixed public behavior, treatment pair, private acceptance role, immutable source/snapshot policy, and re-admission model boundary with the requester.
 3. Add public lockfile provisioning and focused ordering/failure tests.
 4. Run full private calibration, closure verification, public/private audit, `bun run validate`, and strict OpenSpec validation.
-5. Run one authorized redacted gate and report diagnostic-only admission status under the repaired runner source identity.
+5. Hand off the authorized redacted gate to #128, which owns its explicit
+   one-repeat plan contract and diagnostic-only result boundary.
 
 ## Open Questions
 

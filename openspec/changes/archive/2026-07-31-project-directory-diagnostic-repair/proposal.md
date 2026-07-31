@@ -7,7 +7,8 @@
 - Provision public workspace dependencies after Pi and before the private evaluator, using the public lockfile and a fail-closed fixed Bun command.
 - Record a stable redacted execution failure and skip evaluator invocation when provisioning fails.
 - Preserve the public task behavior, related/irrelevant Practice pair, private evaluator/probe, and decision-rule meaning.
-- Re-run one redacted three-condition diagnostic gate only after all repair validations pass.
+- Hand off the redacted three-condition re-admission gate to #128 after all
+  repair validations pass.
 
 ## Capabilities
 
