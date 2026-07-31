@@ -1,6 +1,6 @@
 ## 1. OpenSpec and planning gate
 
-- [ ] 1.1 Strictly validate this change and create the initial OpenSpec-only PR linked to #126.
+- [x] 1.1 Strictly validate this change and create the initial OpenSpec-only PR linked to #126. (`openspec validate ... --strict` passed; PR #127)
 - [ ] 1.2 Confirm the fixed public behavior, existing relevant/irrelevant Practice pair, private semantic/quality acceptance role, immutable source/snapshot policy, and re-admission model boundary; record the answer in this change and #126.
 
 ## 2. Failure classification and repair
