@@ -8,6 +8,7 @@ import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from ".
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
 
 const scratchRoot = resolve(workspaceRoot, "scratch");
+const publicDependencyProvisioningTimeoutMs = 120_000;
 
 export type SharedExecution = {
   pi_version: string;
@@ -426,7 +427,26 @@ async function evaluatorClosureEnv(candidatePath: string, manifestId: string): P
   }
 }
 
-async function runAttempt(
+type AttemptCommandRunner = (command: string[], cwd: string, timeoutMs?: number, env?: Record<string, string>) => Promise<CommandResult>;
+
+export async function provisionPublicWorkspaceDependencies(
+  appWorkspace: string,
+  commandRunner: AttemptCommandRunner = run
+): Promise<"provisioned" | "public-dependency-provisioning-failed" | "public-dependency-provisioning-timed-out"> {
+  try {
+    const provisioning = await commandRunner(
+      [process.execPath, "install", "--frozen-lockfile"],
+      appWorkspace,
+      publicDependencyProvisioningTimeoutMs
+    );
+    if (provisioning.timedOut) return "public-dependency-provisioning-timed-out";
+    return provisioning.code === 0 ? "provisioned" : "public-dependency-provisioning-failed";
+  } catch {
+    return "public-dependency-provisioning-failed";
+  }
+}
+
+export async function runAttempt(
   outputPath: string,
   candidatePath: string,
   candidateId: string,
@@ -437,7 +457,8 @@ async function runAttempt(
   conditionId: InjectionConditionId,
   repeat: number,
   shared: SharedExecution,
-  command: string
+  command: string,
+  commandRunner: AttemptCommandRunner = run
 ): Promise<DiagnosticEntry> {
   const attemptPath = resolve(outputPath, candidateId, conditionId, `attempt-${repeat}`);
   const workspace = resolve(attemptPath, "workspace");
@@ -452,7 +473,7 @@ async function runAttempt(
   const payload = await resolvePracticePayload(candidatePath, profile, conditionId);
   const trace = redactedInjectionTrace(profile, payload);
 
-  const pi = await run([command, ...piArgs(shared.model.id, payload)], workspace, shared.budget.max_duration_minutes * 60_000);
+  const pi = await commandRunner([command, ...piArgs(shared.model.id, payload)], workspace, shared.budget.max_duration_minutes * 60_000);
   await Bun.write(resolve(attemptPath, "pi.stdout.log"), pi.stdout);
   await Bun.write(resolve(attemptPath, "pi.stderr.log"), pi.stderr);
 
@@ -472,6 +493,12 @@ async function runAttempt(
     return entry;
   }
 
+  const provisioning = await provisionPublicWorkspaceDependencies(resolve(workspace, "app"), commandRunner);
+  if (provisioning !== "provisioned") {
+    entry.error = provisioning;
+    return entry;
+  }
+
   const closureEnv = await evaluatorClosureEnv(candidatePath, candidateId);
   if (closureEnv.error) {
     entry.error = closureEnv.error;
@@ -479,7 +506,7 @@ async function runAttempt(
   }
   let evaluation: CommandResult;
   try {
-    evaluation = await run(
+    evaluation = await commandRunner(
       [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
       candidatePath,
       shared.budget.max_duration_minutes * 60_000,

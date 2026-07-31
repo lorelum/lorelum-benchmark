@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { expansionDecisions, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, verifyCandidateDeclaration, verifySnapshotIdentity, writeHistoricalReplaySummary } from "./profile-diagnostic-runner";
+import { expansionDecisions, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary } from "./profile-diagnostic-runner";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 
 const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
@@ -51,6 +51,17 @@ async function withReplayFixture(evaluator: string): Promise<{ candidate: string
   await writeFile(join(app, "candidate.txt"), "unchanged");
   const entry = parseHistoricalSummary({ schema_version: "profile-diagnostic-summary/v1", entries: [legacyEntry(candidateId, "baseline")] }, candidateId)[0];
   return { candidate, historyRoot, entry, cleanup: async () => { await rm(candidate, { force: true, recursive: true }); await rm(historyRoot, { force: true, recursive: true }); } };
+}
+
+async function withAttemptFixture(): Promise<{ candidate: string; output: string; cleanup: () => Promise<void> }> {
+  const candidate = await withFixture(async (path) => {
+    const app = join(path, "public", "starter", "app");
+    await mkdir(app, { recursive: true });
+    await writeFile(join(app, "package.json"), '{"name":"public-starter","private":true}\n');
+    await writeFile(join(app, "bun.lock"), "{}\n");
+  });
+  const output = await mkdtemp(join(tmpdir(), "lorelum-profile-attempt-"));
+  return { candidate, output, cleanup: async () => { await rm(candidate, { force: true, recursive: true }); await rm(output, { force: true, recursive: true }); } };
 }
 
 test("baseline piArgs never includes --append-system-prompt", async () => {
@@ -205,6 +216,93 @@ test("zero-exit semantic failure remains a healthy evaluator result", () => {
     practice_observation: "not-run",
     joint_pass: false,
   });
+});
+
+test("provisions the public app after Pi and before private evaluation", async () => {
+  const fixture = await withAttemptFixture();
+  const phases: string[] = [];
+  try {
+    const profile = await resolveInjectionCalibration(fixture.candidate);
+    const entry = await runAttempt(
+      fixture.output,
+      fixture.candidate,
+      "neutral-contract-fixture-v1",
+      { id: "neutral-contract-fixture-v1", kernel: { core: "v1", profile: "injection-calibration/v1", materializer_kind: "react-vite" }, source: { source_commit: "abc123" } },
+      "snapshot",
+      profile.profile_input_hash,
+      profile,
+      "baseline",
+      1,
+      { pi_version: "test", model: { id: "test-model" }, budget: { max_duration_minutes: 1 }, repetitions: 1 },
+      "fake-pi",
+      async (command, cwd) => {
+        if (command[0] === "fake-pi") {
+          phases.push("pi");
+          const files = await workspaceFiles(cwd);
+          expect(files).toContain("app/package.json");
+          expect(files).not.toContain("app/node_modules/.cache");
+          expect(files.some((file) => file.includes("private/") || file.includes("practices/"))).toBe(false);
+          return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
+        }
+        if (command[1] === "install") {
+          phases.push("provision");
+          expect(cwd.replaceAll("\\", "/")).toEndWith("workspace/app");
+          expect(command).toEqual([process.execPath, "install", "--frozen-lockfile"]);
+          expect((await workspaceFiles(cwd)).some((file) => file.includes("private/") || file.includes("practices/"))).toBe(false);
+          return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
+        }
+        phases.push("evaluator");
+        expect(command[1]).toBe("run");
+        return { code: 0, stdout: '{"semantic":"pass","practice_observation":"observed"}', stderr: "", timedOut: false, durationMs: 1 };
+      }
+    );
+    expect(entry.error).toBeUndefined();
+    expect(phases).toEqual(["pi", "provision", "evaluator"]);
+    expect(entry).toMatchObject({ evaluation_status: "evaluated", semantic: "pass", practice_observation: "observed", joint_pass: true });
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("failed public dependency provisioning skips evaluator with a redacted execution failure", async () => {
+  const fixture = await withAttemptFixture();
+  const phases: string[] = [];
+  try {
+    const profile = await resolveInjectionCalibration(fixture.candidate);
+    const entry = await runAttempt(
+      fixture.output,
+      fixture.candidate,
+      "neutral-contract-fixture-v1",
+      { id: "neutral-contract-fixture-v1", kernel: { core: "v1", profile: "injection-calibration/v1", materializer_kind: "react-vite" }, source: { source_commit: "abc123" } },
+      "snapshot",
+      profile.profile_input_hash,
+      profile,
+      "baseline",
+      1,
+      { pi_version: "test", model: { id: "test-model" }, budget: { max_duration_minutes: 1 }, repetitions: 1 },
+      "fake-pi",
+      async (command) => {
+        if (command[0] === "fake-pi") {
+          phases.push("pi");
+          return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
+        }
+        if (command[1] === "install") {
+          phases.push("provision");
+          return { code: 1, stdout: "", stderr: "E:\\private\\dependency-source", timedOut: false, durationMs: 1 };
+        }
+        phases.push("evaluator");
+        throw new Error("evaluator must not run after provisioning failure");
+      }
+    );
+    expect(phases).toEqual(["pi", "provision"]);
+    expect(entry).toEqual(expect.objectContaining({ evaluation_status: "execution-failed", error: "public-dependency-provisioning-failed" }));
+    expect(entry.semantic).toBeUndefined();
+    expect(entry.practice_observation).toBeUndefined();
+    expect(entry.joint_pass).toBeUndefined();
+    expect(JSON.stringify(entry)).not.toContain("private");
+  } finally {
+    await fixture.cleanup();
+  }
 });
 
 test("isRecord distinguishes objects from arrays and primitives", () => {

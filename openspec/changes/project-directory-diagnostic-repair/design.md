@@ -1,6 +1,6 @@
 ## Context
 
-The second #91 candidate, `project-directory-resource-state-v1`, failed its one-repeat gate after passing its runtime-closure calibration. The oracle attempt was non-healthy because the evaluator exited nonzero; baseline and irrelevant-practice were semantically healthy but their Practice observations were indeterminate. Sanitized diagnostics rule out closure, dependency, timeout, and launch failures, but do not expose private assertion content.
+The second #91 candidate, `project-directory-resource-state-v1`, failed its one-repeat gate after passing its runtime-closure calibration. The runner copied its public starter to a clean workspace and invoked the private evaluator without first installing the public lockfile dependencies. The evaluator's public semantic test therefore failed in the unprovisioned workspace; running the same public test after `bun install --frozen-lockfile` passed. The private Practice probe already observed the expected signal, so neither the candidate nor scoring contract requires change.
 
 The candidate has no formal record and remains in `incubator/`. The diagnostic scratch output is historical evidence and must not be overwritten or merged with later results.
 
@@ -8,47 +8,50 @@ The candidate has no formal record and remains in `incubator/`. The diagnostic s
 
 **Goals:**
 
-- Reproduce the mismatch in a clean candidate-scoped workspace and classify it as candidate behavior, evaluator process contract, or probe calibration failure.
-- Apply the smallest verified repair without changing the public task behavior, Practice pair, model, prompt, budget, or decision rule.
-- Recalibrate reference, responsibility-equivalent, and anti-pattern fixtures; regenerate the candidate snapshot and bind a new execution-plan identity.
+- Provision public dependencies in each clean workspace after Pi and before private evaluation.
+- Apply the smallest verified runner repair without changing the public task behavior, Practice pair, model, prompt, budget, evaluator/probe, or decision rule.
+- Validate reference, responsibility-equivalent, and anti-pattern calibration without changing the candidate snapshot; bind later re-admission output to the repaired runner source identity.
 - Verify public/private separation, evaluator health, and a one-repeat redacted re-admission gate.
 
 **Non-Goals:**
 
-- No change to the first candidate, #91 historical scratch results, or formal benchmark records.
+- No change to either candidate, private evaluator/probe, #91 historical scratch results, or formal benchmark records.
 - No public disclosure of private evaluator/oracle/Practice text or calibration fixture content.
 - No three-repeat #91 expansion, causal claim, or #92 aggregation in this change.
 
 ## Decisions
 
-### Candidate-scoped repair before expansion
+### Confirmed repair boundary
 
-The repair remains candidate-scoped. If the mismatch is a reusable evaluator helper defect, the helper SHALL receive a new version and the candidate SHALL explicitly bind it; an existing frozen helper SHALL not be rewritten.
+The requester confirmed that the public project-directory behavior, existing oracle and irrelevant Practice pair, condition channels, decision rule, Pi/model, prompt, 10-minute budget, and no-blind-review boundary remain fixed. The root cause is now classified as public workspace provisioning, so no scoring simplification, candidate change, evaluator change, snapshot update, or new candidate plan is needed. The runner repair updates OpenSpec/stable specification and focused tests.
+
+### Public lockfile provisioning before evaluation
+
+After Pi exits and before starting the private evaluator, the runner SHALL invoke the current Bun executable with `install --frozen-lockfile` in the public app workspace. The command receives the workspace's normal environment, never private dependency paths. A bounded provisioning failure SHALL record `execution-failed` with a stable redacted reason and SHALL not invoke the evaluator.
 
 ### Public behavior and treatment remain fixed
 
-The public task describes project loading, search, loading, empty, error, and retry-recovery states. The repair SHALL preserve those observable requirements. The existing oracle and equal-length irrelevant Practice identities, condition channels, model, prompt, budget, and strict joint-pass decision rule are fixed inputs; changing any requires a separate confirmed scope.
+The public task describes project loading, search, loading, empty, error, and retry-recovery states. The existing oracle and equal-length irrelevant Practice identities, condition channels, model, prompt, budget, and strict joint-pass decision rule are fixed inputs; changing any requires a separate confirmed scope.
 
 ### Fail closed and preserve evidence
 
-Nonzero evaluator exits remain non-healthy even if structured output exists. Diagnosis may classify only stable redacted categories. The repaired candidate gets a new snapshot and a new immutable plan identity; the prior plan and scratch runs remain unchanged.
+Nonzero evaluator exits remain non-healthy even if structured output exists. Provisioning failures are separately redacted and do not run the evaluator. Prior scratch runs remain unchanged; post-repair output uses the new runner source identity and is not combined with it.
 
 ## Risks / Trade-offs
 
-- [Private assertion is over-constrained] -> prove reference, responsibility-equivalent, and anti-pattern calibration behavior before accepting any evaluator change.
-- [Candidate implementation violates public behavior] -> repair the candidate while preserving the public task and re-run semantic calibration.
-- [Repair changes input identity] -> regenerate snapshot and use a new plan; never combine prior and repaired attempts.
+- [Public lockfile cannot reconstruct the workspace] -> fail closed before evaluation and retain only a redacted provisioning category.
+- [Provisioning exposes private dependency paths] -> run only in the public app workspace and audit the workspace file tree before evaluator invocation.
+- [Repair changes runner behavior for every candidate] -> add focused ordering/failure tests and revalidate both candidates' calibration before re-admission.
 - [Private diagnostics leak] -> restrict reports to stable categories, hashes, and redacted condition identity.
 
 ## Migration Plan
 
 1. Strictly validate this change and create the OpenSpec-only PR linked to #126.
 2. Confirm the fixed public behavior, treatment pair, private acceptance role, immutable source/snapshot policy, and re-admission model boundary with the requester.
-3. Reproduce and classify the failure, then apply the minimal candidate-scoped repair with focused tests.
+3. Add public lockfile provisioning and focused ordering/failure tests.
 4. Run full private calibration, closure verification, public/private audit, `bun run validate`, and strict OpenSpec validation.
-5. Regenerate the candidate snapshot and create a new plan identity; run one authorized redacted gate and report diagnostic-only admission status.
+5. Run one authorized redacted gate and report diagnostic-only admission status under the repaired runner source identity.
 
 ## Open Questions
 
-- Does the failure arise from a public behavior mismatch, evaluator process exit semantics, or a probe/calibration defect? Implementation is blocked until the clean reproduction classifies it.
-- The public task and existing treatment/decision-rule inputs are treated as fixed. Any contrary change requires explicit requester confirmation and a separate scope.
+None.
