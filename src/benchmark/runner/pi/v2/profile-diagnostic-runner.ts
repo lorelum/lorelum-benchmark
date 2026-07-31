@@ -575,7 +575,7 @@ export async function writeSummary(path: string, plan: DiagnosticPlan, schedule:
   await Bun.write(joinPath(path, "summary.json"), `${JSON.stringify({
     schema_version: "profile-diagnostic-summary/v3",
     generated_at: new Date().toISOString(),
-    plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, schedule: redactedSchedule(schedule) },
+    plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, ...(plan.execution_gate ? { execution_gate: plan.execution_gate } : {}), schedule: redactedSchedule(schedule) },
     entries,
     report: summarizePlan(plan, schedule, entries),
     interrupted,
@@ -692,7 +692,7 @@ if (options.dryRun) {
       if (!conditions.conditions.some((condition) => condition.id === conditionId && condition.status === "declared")) fail(`Diagnostic plan condition is not declared: ${candidate.id}/${conditionId}`);
     }
   }
-  console.log(JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions }, planned_runs: redactedSchedule(schedule), output: diagnosticOutputPath(options.outputPath) }, null, 2));
+  console.log(JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, ...(plan.execution_gate ? { execution_gate: plan.execution_gate } : {}) }, planned_runs: redactedSchedule(schedule), output: diagnosticOutputPath(options.outputPath) }, null, 2));
   process.exit(0);
 }
 
@@ -701,7 +701,7 @@ if (Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("Profile diagnostics require 
 const command = await piCommand(workspaceRoot);
 
 await mkdir(options.outputPath, { recursive: true });
-await Bun.write(joinPath(options.outputPath, "plan.json"), `${JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, schedule: redactedSchedule(schedule) }, null, 2)}\n`);
+await Bun.write(joinPath(options.outputPath, "plan.json"), `${JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, ...(plan.execution_gate ? { execution_gate: plan.execution_gate } : {}), schedule: redactedSchedule(schedule) }, null, 2)}\n`);
 
 let actualExecutionPosition = 0;
 for (const plannedCandidate of plan.candidates) {

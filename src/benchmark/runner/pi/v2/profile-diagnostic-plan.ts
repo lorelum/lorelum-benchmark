@@ -5,6 +5,12 @@ import type { PracticeObservation } from "./profile-diagnostic-runner";
 export const diagnosticConditions = ["baseline", "oracle-practice", "irrelevant-practice"] as const;
 export type DiagnosticCondition = typeof diagnosticConditions[number];
 export type PlanCandidate = { id: string; path: string; source_commit: string; snapshot_id: string; profile_input_hash: string };
+export type OneRepeatReAdmissionGate = {
+  kind: "one-repeat-re-admission";
+  parent_plan: { id: string; repetitions: number };
+  candidate_id: string;
+  parent_block: number;
+};
 export type DiagnosticPlan = {
   schema_version: "profile-diagnostic-plan/v2";
   id: string;
@@ -14,6 +20,7 @@ export type DiagnosticPlan = {
   independent_candidate_threshold: number;
   conditions: DiagnosticCondition[];
   candidates: PlanCandidate[];
+  execution_gate?: OneRepeatReAdmissionGate;
 };
 export type ScheduledAttempt = Omit<PlanCandidate, "path"> & { candidate_path: string; block: number; planned_position: number; condition: DiagnosticCondition };
 export type ReportEntry = {
@@ -36,12 +43,29 @@ function positive(value: unknown, label: string): number {
   return value as number;
 }
 
+function oneRepeatReAdmissionGate(value: unknown): OneRepeatReAdmissionGate {
+  const gate = record(value, "Diagnostic execution_gate");
+  if (gate.kind !== "one-repeat-re-admission") throw new Error("Diagnostic execution_gate.kind must be one-repeat-re-admission");
+  const parentPlan = record(gate.parent_plan, "Diagnostic execution_gate.parent_plan");
+  const repetitions = positive(parentPlan.repetitions, "Diagnostic execution_gate.parent_plan.repetitions");
+  if (repetitions % diagnosticConditions.length !== 0) throw new Error("Diagnostic execution_gate parent plan repetitions must be divisible by 3");
+  const parentBlock = positive(gate.parent_block, "Diagnostic execution_gate.parent_block");
+  if (parentBlock > repetitions) throw new Error("Diagnostic execution_gate.parent_block must exist in the parent plan");
+  return {
+    kind: "one-repeat-re-admission",
+    parent_plan: { id: text(parentPlan.id, "Diagnostic execution_gate.parent_plan.id"), repetitions },
+    candidate_id: text(gate.candidate_id, "Diagnostic execution_gate.candidate_id"),
+    parent_block: parentBlock,
+  };
+}
+
 export function parseDiagnosticPlan(value: unknown, planPath: string): DiagnosticPlan {
   const document = record(value, "Diagnostic plan");
   if (document.schema_version !== "profile-diagnostic-plan/v2") throw new Error("Diagnostic plan schema_version must be profile-diagnostic-plan/v2");
   if (document.schedule_algorithm !== "cyclic-latin-square/v1") throw new Error("Diagnostic plan schedule_algorithm must be cyclic-latin-square/v1");
   const repetitions = positive(document.repetitions, "Diagnostic plan repetitions");
-  if (repetitions % diagnosticConditions.length !== 0) throw new Error("Diagnostic plan repetitions must be divisible by 3");
+  const executionGate = document.execution_gate === undefined ? undefined : oneRepeatReAdmissionGate(document.execution_gate);
+  if (repetitions % diagnosticConditions.length !== 0 && (repetitions !== 1 || !executionGate)) throw new Error("Diagnostic plan repetitions must be divisible by 3 unless it declares one-repeat-re-admission");
   const rawCandidates = document.candidates;
   if (!Array.isArray(rawCandidates) || rawCandidates.length === 0) throw new Error("Diagnostic plan must declare candidates");
   const ids = new Set<string>();
@@ -55,9 +79,12 @@ export function parseDiagnosticPlan(value: unknown, planPath: string): Diagnosti
     if (!resolved.startsWith(`${workspaceRoot}${sep}`)) throw new Error(`Candidate path escapes workspace: ${candidatePath}`);
     return { id, path: candidatePath.replaceAll("\\", "/"), source_commit: text(candidate.source_commit, `${id}.source_commit`), snapshot_id: text(candidate.snapshot_id, `${id}.snapshot_id`), profile_input_hash: text(candidate.profile_input_hash, `${id}.profile_input_hash`) };
   });
+  if (executionGate && (repetitions !== 1 || candidates.length !== 1 || candidates[0].id !== executionGate.candidate_id)) {
+    throw new Error("one-repeat-re-admission must declare exactly its one candidate with repetitions: 1");
+  }
   const threshold = positive(document.independent_candidate_threshold, "Diagnostic plan independent_candidate_threshold");
   if (!Array.isArray(document.conditions) || document.conditions.length !== diagnosticConditions.length || document.conditions.some((condition, index) => condition !== diagnosticConditions[index])) throw new Error("Diagnostic plan conditions must declare baseline, oracle-practice, irrelevant-practice in order");
-  return { schema_version: "profile-diagnostic-plan/v2", id: text(document.id, "Diagnostic plan id"), schedule_seed: text(document.schedule_seed, "Diagnostic plan schedule_seed"), schedule_algorithm: "cyclic-latin-square/v1", repetitions, independent_candidate_threshold: threshold, conditions: [...diagnosticConditions], candidates };
+  return { schema_version: "profile-diagnostic-plan/v2", id: text(document.id, "Diagnostic plan id"), schedule_seed: text(document.schedule_seed, "Diagnostic plan schedule_seed"), schedule_algorithm: "cyclic-latin-square/v1", repetitions, independent_candidate_threshold: threshold, conditions: [...diagnosticConditions], candidates, ...(executionGate ? { execution_gate: executionGate } : {}) };
 }
 
 export async function readDiagnosticPlan(path: string): Promise<DiagnosticPlan> {
@@ -103,6 +130,7 @@ function interval(deltas: number[], seed: string): [number, number] {
 }
 
 export function summarizePlan(plan: DiagnosticPlan, schedule: ScheduledAttempt[], entries: ReportEntry[]) {
+  const isReAdmissionGate = plan.execution_gate?.kind === "one-repeat-re-admission";
   const groups = plan.candidates.map((candidate) => {
     const candidateSchedule = schedule.filter((attempt) => attempt.id === candidate.id);
     const candidateEntries = entries.filter((entry) => entry.candidate === candidate.id && entry.profile_input_hash === candidate.profile_input_hash);
@@ -120,8 +148,8 @@ export function summarizePlan(plan: DiagnosticPlan, schedule: ScheduledAttempt[]
       return oracle - controlResult;
     });
     const qualified = !blocked && rate("oracle-practice") > rate("baseline") && rate("oracle-practice") > rate("irrelevant-practice") && (byCondition["oracle-practice"].semantic.pass as number) >= (byCondition.baseline.semantic.pass as number) && (byCondition["oracle-practice"].semantic.pass as number) >= (byCondition["irrelevant-practice"].semantic.pass as number);
-    return { candidate: candidate.id, profile_input_hash: candidate.profile_input_hash, conditions: byCondition, oracle_deltas: { baseline: { raw: rate("oracle-practice") - rate("baseline"), bootstrap_95: interval(deltas("baseline"), `analysis\0${plan.schedule_seed}\0${candidate.id}\0baseline`) }, "irrelevant-practice": { raw: rate("oracle-practice") - rate("irrelevant-practice"), bootstrap_95: interval(deltas("irrelevant-practice"), `analysis\0${plan.schedule_seed}\0${candidate.id}\0irrelevant`) } }, conclusion_grade: blocked ? "diagnostic-or-uncertain" : qualified ? "directional-screen" : "diagnostic" };
+    return { candidate: candidate.id, profile_input_hash: candidate.profile_input_hash, conditions: byCondition, oracle_deltas: { baseline: { raw: rate("oracle-practice") - rate("baseline"), bootstrap_95: interval(deltas("baseline"), `analysis\0${plan.schedule_seed}\0${candidate.id}\0baseline`) }, "irrelevant-practice": { raw: rate("oracle-practice") - rate("irrelevant-practice"), bootstrap_95: interval(deltas("irrelevant-practice"), `analysis\0${plan.schedule_seed}\0${candidate.id}\0irrelevant`) } }, conclusion_grade: isReAdmissionGate ? "diagnostic-only" : blocked ? "diagnostic-or-uncertain" : qualified ? "directional-screen" : "diagnostic" };
   });
-  const reproducible = groups.length >= plan.independent_candidate_threshold && groups.every((group) => group.conclusion_grade === "directional-screen");
+  const reproducible = !isReAdmissionGate && groups.length >= plan.independent_candidate_threshold && groups.every((group) => group.conclusion_grade === "directional-screen");
   return { schema_version: "profile-diagnostic-report/v1", groups, overall_conclusion_grade: reproducible ? "reproducible-direction" : "diagnostic-only" };
 }
