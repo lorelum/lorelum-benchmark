@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { workspaceRoot } from "../../../fs";
 import { buildSchedule, diagnosticConditions, parseDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ReportEntry } from "./profile-diagnostic-plan";
-import { diagnosticOutputPath, redactedSchedule } from "./profile-diagnostic-runner";
+import { diagnosticOutputPath, redactedSchedule, writeSummary } from "./profile-diagnostic-runner";
 
 function plan(overrides: Record<string, unknown> = {}): DiagnosticPlan {
   return parseDiagnosticPlan({
@@ -25,7 +27,72 @@ test("cyclic Latin schedule is deterministic and balances positions", () => {
 
 test("plan rejects a non-balanced repetition count and unknown condition declaration", () => {
   expect(() => plan({ repetitions: 2 })).toThrow("divisible by 3");
+  expect(() => plan({ repetitions: 1 })).toThrow("one-repeat-re-admission");
   expect(() => plan({ conditions: ["baseline", "oracle-practice", "other"] })).toThrow("conditions must declare");
+});
+
+test("explicit one-repeat re-admission gate schedules each condition once and remains diagnostic-only", () => {
+  const diagnosticPlan = plan({
+    repetitions: 1,
+    independent_candidate_threshold: 1,
+    execution_gate: {
+      kind: "one-repeat-re-admission",
+      parent_plan: { id: "balanced-diagnostics-v2", repetitions: 3 },
+      candidate_id: "candidate-a",
+      parent_block: 1,
+    },
+  });
+  const schedule = buildSchedule(diagnosticPlan);
+  expect(schedule).toHaveLength(3);
+  expect(schedule.map((attempt) => attempt.condition).sort()).toEqual([...diagnosticConditions].sort());
+  const entries: ReportEntry[] = schedule.map((attempt) => ({ candidate: attempt.id, condition: attempt.condition, repeat: attempt.block, block: attempt.block, planned_position: attempt.planned_position, evaluation_status: "evaluated", source_commit: attempt.source_commit, snapshot_id: attempt.snapshot_id, profile_input_hash: attempt.profile_input_hash, semantic: "pass", practice_observation: attempt.condition === "oracle-practice" ? "observed" : "not-observed", joint_pass: attempt.condition === "oracle-practice" }));
+  const summary = summarizePlan(diagnosticPlan, schedule, entries);
+  expect(summary.groups[0].conclusion_grade).toBe("diagnostic-only");
+  expect(summary.overall_conclusion_grade).toBe("diagnostic-only");
+});
+
+test("one-repeat re-admission gate fails closed when it is not exactly one candidate", () => {
+  expect(() => plan({
+    repetitions: 1,
+    execution_gate: {
+      kind: "one-repeat-re-admission",
+      parent_plan: { id: "balanced-diagnostics-v2", repetitions: 3 },
+      candidate_id: "another-candidate",
+      parent_block: 1,
+    },
+  })).toThrow("exactly its one candidate");
+  expect(() => plan({
+    repetitions: 3,
+    execution_gate: {
+      kind: "one-repeat-re-admission",
+      parent_plan: { id: "balanced-diagnostics-v2", repetitions: 3 },
+      candidate_id: "candidate-a",
+      parent_block: 1,
+    },
+  })).toThrow("exactly its one candidate");
+});
+
+test("one-repeat summary persists only redacted gate metadata", async () => {
+  const diagnosticPlan = plan({
+    repetitions: 1,
+    execution_gate: {
+      kind: "one-repeat-re-admission",
+      parent_plan: { id: "balanced-diagnostics-v2", repetitions: 3 },
+      candidate_id: "candidate-a",
+      parent_block: 1,
+    },
+  });
+  const output = await mkdtemp(join(tmpdir(), "lorelum-one-repeat-summary-"));
+  try {
+    await writeSummary(output, diagnosticPlan, buildSchedule(diagnosticPlan), [], false);
+    const summary = await Bun.file(join(output, "summary.json")).json() as { plan: { execution_gate?: unknown } };
+    expect(summary.plan.execution_gate).toEqual(diagnosticPlan.execution_gate);
+    const serialized = JSON.stringify(summary);
+    expect(serialized).not.toContain("incubator/practice-injection");
+    expect(serialized).not.toContain("private/");
+  } finally {
+    await rm(output, { force: true, recursive: true });
+  }
 });
 
 test("summary retains planned denominators and downgrades unhealthy or indeterminate attempts", () => {
