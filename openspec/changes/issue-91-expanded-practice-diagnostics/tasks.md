@@ -1,6 +1,6 @@
 ## 1. OpenSpec and planning gate
 
-- [ ] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #91.
+- [x] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #91. (`openspec validate ... --strict` passed; PR #125)
 - [ ] 1.2 Confirm observable behavior, expected baseline defect, related and equal-length irrelevant controls, private semantic/quality acceptance, immutable source identities, model/prompt/budget, and blind-review boundary; record the answers in this change.
 
 ## 2. Plan-bound runner reconciliation
