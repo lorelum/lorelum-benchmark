@@ -12,4 +12,3 @@
 
 - [x] 3.1 Add focused controlled-Pi tests for the restricted arguments, successful delayed probe, timeout classification, and no project-file mutation. [Write scope: `src/benchmark/runner/pi/v2/`]
 - [x] 3.2 Run focused Pi v2 tests, `bun run validate`, strict OpenSpec validation, a public/private leakage audit, and `git diff --check`. (`bun run test:pi:v2` 63 pass; `bun run validate` passed; public workspace audit passed.)
-- [ ] 3.3 After the repair is merged, rerun #129's authorized scratch-only one-repeat gate; do not create a formal manifest or record and do not use the result for an effect claim.
