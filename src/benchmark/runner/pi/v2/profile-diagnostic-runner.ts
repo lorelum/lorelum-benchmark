@@ -1,6 +1,6 @@
-import { cp, lstat, mkdir, realpath } from "node:fs/promises";
+import { cp, lstat, mkdir, realpath, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { joinPath, relativePath, sha256Directory, workspaceRoot } from "../../../fs";
+import { joinPath, relativePath, sha256Directory, sha256File, workspaceRoot } from "../../../fs";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace, type PracticePayload, type ResolvedInjectionCalibration } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
@@ -8,6 +8,7 @@ import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from ".
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
 
 const scratchRoot = resolve(workspaceRoot, "scratch");
+const publicDependencyProvisioningTimeoutMs = 120_000;
 
 export type SharedExecution = {
   pi_version: string;
@@ -426,7 +427,59 @@ async function evaluatorClosureEnv(candidatePath: string, manifestId: string): P
   }
 }
 
-async function runAttempt(
+type AttemptCommandRunner = (command: string[], cwd: string, timeoutMs?: number, env?: Record<string, string>) => Promise<CommandResult>;
+
+type PublicDependencyInputs = {
+  appWorkspace: string;
+  packageJsonPath: string;
+  bunLockPath: string;
+  packageJsonHash: string;
+  bunLockHash: string;
+  stagingWorkspace: string;
+};
+
+async function regularFileHash(path: string): Promise<string> {
+  const details = await lstat(path);
+  if (!details.isFile() || details.isSymbolicLink()) throw new Error("public-dependency-input-is-not-a-regular-file");
+  return sha256File(path);
+}
+
+export async function capturePublicDependencyInputs(appWorkspace: string, stagingWorkspace: string): Promise<PublicDependencyInputs> {
+  const packageJsonPath = resolve(appWorkspace, "package.json");
+  const bunLockPath = resolve(appWorkspace, "bun.lock");
+  const [packageJsonHash, bunLockHash] = await Promise.all([regularFileHash(packageJsonPath), regularFileHash(bunLockPath)]);
+  await mkdir(stagingWorkspace, { recursive: true });
+  await Promise.all([
+    cp(packageJsonPath, resolve(stagingWorkspace, "package.json")),
+    cp(bunLockPath, resolve(stagingWorkspace, "bun.lock")),
+  ]);
+  return { appWorkspace, packageJsonPath, bunLockPath, packageJsonHash, bunLockHash, stagingWorkspace };
+}
+
+export async function provisionPublicWorkspaceDependencies(
+  inputs: PublicDependencyInputs,
+  commandRunner: AttemptCommandRunner = run
+): Promise<"provisioned" | "public-dependency-inputs-modified" | "public-dependency-provisioning-failed" | "public-dependency-provisioning-timed-out"> {
+  try {
+    const [packageJsonHash, bunLockHash] = await Promise.all([regularFileHash(inputs.packageJsonPath), regularFileHash(inputs.bunLockPath)]);
+    if (packageJsonHash !== inputs.packageJsonHash || bunLockHash !== inputs.bunLockHash) return "public-dependency-inputs-modified";
+    const provisioning = await commandRunner(
+      [process.execPath, "install", "--frozen-lockfile", "--ignore-scripts"],
+      inputs.stagingWorkspace,
+      publicDependencyProvisioningTimeoutMs
+    );
+    if (provisioning.timedOut) return "public-dependency-provisioning-timed-out";
+    if (provisioning.code !== 0) return "public-dependency-provisioning-failed";
+    const stagedNodeModules = resolve(inputs.stagingWorkspace, "node_modules");
+    await rm(resolve(inputs.appWorkspace, "node_modules"), { force: true, recursive: true });
+    await cp(stagedNodeModules, resolve(inputs.appWorkspace, "node_modules"), { recursive: true });
+    return "provisioned";
+  } catch {
+    return "public-dependency-provisioning-failed";
+  }
+}
+
+export async function runAttempt(
   outputPath: string,
   candidatePath: string,
   candidateId: string,
@@ -437,7 +490,8 @@ async function runAttempt(
   conditionId: InjectionConditionId,
   repeat: number,
   shared: SharedExecution,
-  command: string
+  command: string,
+  commandRunner: AttemptCommandRunner = run
 ): Promise<DiagnosticEntry> {
   const attemptPath = resolve(outputPath, candidateId, conditionId, `attempt-${repeat}`);
   const workspace = resolve(attemptPath, "workspace");
@@ -452,10 +506,6 @@ async function runAttempt(
   const payload = await resolvePracticePayload(candidatePath, profile, conditionId);
   const trace = redactedInjectionTrace(profile, payload);
 
-  const pi = await run([command, ...piArgs(shared.model.id, payload)], workspace, shared.budget.max_duration_minutes * 60_000);
-  await Bun.write(resolve(attemptPath, "pi.stdout.log"), pi.stdout);
-  await Bun.write(resolve(attemptPath, "pi.stderr.log"), pi.stderr);
-
   const entry: DiagnosticEntry = {
     candidate: candidateId,
     condition: conditionId,
@@ -467,8 +517,26 @@ async function runAttempt(
     profile_input_hash: profileInputHash,
   };
 
+  let dependencyInputs: PublicDependencyInputs;
+  try {
+    dependencyInputs = await capturePublicDependencyInputs(resolve(workspace, "app"), resolve(attemptPath, "provisioning-inputs"));
+  } catch {
+    entry.error = "public-dependency-inputs-unavailable";
+    return entry;
+  }
+
+  const pi = await commandRunner([command, ...piArgs(shared.model.id, payload)], workspace, shared.budget.max_duration_minutes * 60_000);
+  await Bun.write(resolve(attemptPath, "pi.stdout.log"), pi.stdout);
+  await Bun.write(resolve(attemptPath, "pi.stderr.log"), pi.stderr);
+
   if (pi.code !== 0 || pi.timedOut) {
     entry.error = pi.timedOut ? "Pi timed out" : `Pi failed with exit code ${pi.code ?? "unknown"}`;
+    return entry;
+  }
+
+  const provisioning = await provisionPublicWorkspaceDependencies(dependencyInputs, commandRunner);
+  if (provisioning !== "provisioned") {
+    entry.error = provisioning;
     return entry;
   }
 
@@ -479,7 +547,7 @@ async function runAttempt(
   }
   let evaluation: CommandResult;
   try {
-    evaluation = await run(
+    evaluation = await commandRunner(
       [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
       candidatePath,
       shared.budget.max_duration_minutes * 60_000,
