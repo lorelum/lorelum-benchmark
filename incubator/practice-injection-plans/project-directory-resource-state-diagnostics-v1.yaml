@@ -1,0 +1,13 @@
+schema_version: profile-diagnostic-plan/v2
+id: project-directory-resource-state-diagnostics-v1
+schedule_seed: balanced-diagnostics-v2
+schedule_algorithm: cyclic-latin-square/v1
+repetitions: 3
+independent_candidate_threshold: 3
+conditions: [baseline, oracle-practice, irrelevant-practice]
+candidates:
+  - id: project-directory-resource-state-v1
+    path: incubator/practice-injection/project-directory-resource-state-v1
+    source_commit: 51d695ed5e29ea3b256ced2a1000bdc225bb6e3e
+    snapshot_id: b4a318d75b816714c12b89fc6686110f93ed13a22531aaee4351e67fffd8e100
+    profile_input_hash: 372baf21ef491399ef071d1b7af1e76f909701b50789bff81d5bf478a768eac1

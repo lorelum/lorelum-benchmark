@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { access, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { classifyPreflightFailure, preflightPiAndModel, preflightTimeoutMs, type CommandRunner } from "./preflight";
+import { classifyPreflightFailure, isPiShim, preflightPiAndModel, preflightTimeoutMs, type CommandRunner } from "./preflight";
 
 const successfulResult = { code: 0, stdout: "0.80.10\n", stderr: "", timedOut: false, durationMs: 1 };
 
@@ -60,4 +60,10 @@ test("a timed-out version probe fails closed before the model probe", async () =
 
   await expect(preflightPiAndModel("fake-pi", "deepseek/deepseek-v4-pro", fakePi)).rejects.toThrow("model unreachable: preflight timed out after 90s");
   expect(calls).toEqual([{ command: ["fake-pi", "--version"], timeoutMs: preflightTimeoutMs }]);
+});
+
+test("only Pi shims receive recursive Windows cleanup", () => {
+  expect(isPiShim(["E:/repo/node_modules/.bin/pi.exe", "--print"])).toBe(true);
+  expect(isPiShim(["E:/repo/node_modules/.bin/pi.cmd", "--print"])).toBe(true);
+  expect(isPiShim([process.execPath, "run", "evaluate.ts"])).toBe(false);
 });

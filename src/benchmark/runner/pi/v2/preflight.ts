@@ -30,21 +30,42 @@ export async function piCommand(repositoryRoot: string): Promise<string> {
   return "pi";
 }
 
+function terminateProcessTree(child: Bun.Subprocess, recursive: boolean): void {
+  child.kill();
+  if (recursive && process.platform === "win32" && child.pid) {
+    try {
+      const killer = Bun.spawn(["taskkill.exe", "/PID", String(child.pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
+      killer.unref();
+    } catch {
+      // Direct kill above is sufficient when taskkill is unavailable.
+    }
+  }
+}
+
+export function isPiShim(command: string[]): boolean {
+  return /(?:^|[\\/])pi(?:\.exe|\.cmd)?$/i.test(command[0] ?? "");
+}
+
 async function run(command: string[], cwd: string, timeoutMs?: number, env?: Record<string, string>): Promise<CommandResult> {
   const started = performance.now();
   const child = Bun.spawn(command, { cwd, env: env ? { ...Bun.env, ...env } : Bun.env, stdout: "pipe", stderr: "pipe" });
-  let timedOut = false;
-  const timeout = timeoutMs === undefined ? undefined : setTimeout(() => {
-    timedOut = true;
-    child.kill();
-  }, timeoutMs);
-  const [code, stdout, stderr] = await Promise.all([
+  const completed = Promise.all([
     child.exited,
     new Response(child.stdout).text(),
     new Response(child.stderr).text()
-  ]);
-  if (timeout) clearTimeout(timeout);
-  return { code, stdout, stderr, timedOut, durationMs: Math.round(performance.now() - started) };
+  ]).then(([code, stdout, stderr]) => ({ code, stdout, stderr, timedOut: false }));
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = timeoutMs === undefined
+    ? undefined
+    : new Promise<{ code: number | null; stdout: string; stderr: string; timedOut: true }>((resolve) => {
+      timeoutHandle = setTimeout(() => {
+        resolve({ code: null, stdout: "", stderr: "", timedOut: true });
+        setTimeout(() => terminateProcessTree(child, isPiShim(command)), 0);
+      }, timeoutMs);
+    });
+  const result = await (timedOut ? Promise.race([completed, timedOut]) : completed);
+  if (timeoutHandle) clearTimeout(timeoutHandle);
+  return { ...result, durationMs: Math.round(performance.now() - started) };
 }
 
 export function preflightPiArgs(command: string, modelId: string): string[] {

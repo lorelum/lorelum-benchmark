@@ -31,6 +31,12 @@ Reading candidate-local repetitions is rejected because it can diverge from the 
 
 The sequence is preflight -> isolated calibration -> one-repeat diagnostic -> review -> authorized three-repeat expansion. A failure stops later stages and emits only a redacted category. Calibration is evaluator-only and cannot imply a Practice effect.
 
+On Windows, a timed-out Pi shim is terminated through an asynchronous
+recursive process-tree cleanup so its Node/Playwright descendants cannot hold
+the attempt open. Non-Pi Bun and evaluator commands receive direct cleanup
+only; recursive termination is deliberately not applied to them because test
+workers may share their parent process tree.
+
 ### Evidence and privacy
 
 Scratch may retain local diagnostic logs and diffs, but any reported summary contains only redacted condition and identity metadata, health, semantic, observation, and joint-pass states. Agent workspaces receive only `public/task.md` and `public/starter`; Practice payloads remain condition-scoped in memory.
@@ -59,11 +65,15 @@ Rollback leaves candidate inputs and historical artifacts untouched; ignored scr
 ## Planning Confirmation
 
 The requirements owner authorized the balanced three-repeat #91 verification.
-The committed `balanced-diagnostics-v2` plan is the immutable execution input:
-its two declared candidates each run baseline, oracle-practice, and
-irrelevant-practice three times. Observable behavior, the expected baseline
-defect, the related and equal-length irrelevant controls, and private semantic
-and quality acceptance remain those declared by each fixed candidate profile.
+`balanced-diagnostics-v2` remains immutable and supplied the first candidate's
+screen. The second candidate is bound in the separately versioned,
+single-candidate `project-directory-resource-state-diagnostics-v1` plan. It
+retains `balanced-diagnostics-v2`'s schedule seed and the declared source
+commit, snapshot id, and profile-input hash, and schedules baseline,
+oracle-practice, and irrelevant-practice three times. Observable behavior, the
+expected baseline defect, the related and equal-length irrelevant controls, and
+private semantic and quality acceptance remain those declared by the fixed
+candidate profile.
 
 The run uses the candidate-declared model, prompt/tool policy, and ten-minute
 budget, with no blind review. Every attempt must preserve the plan's source
@@ -79,3 +89,14 @@ requirements owner's instruction, execution stopped before the second declared
 candidate began. The incomplete second candidate remains a planned but empty
 denominator, so the batch-level report remains diagnostic-only and no
 cross-candidate conclusion is permitted.
+
+The second candidate's fixed continuation plan has passed identity dry-run,
+public-workspace path audit, focused Pi runner tests, workspace validation, and
+OpenSpec strict validation. Its required clean isolation calibration remains a
+hard gate: the first attempt reached the Pi invocation but did not return
+within the runner's fixed ten-minute attempt budget; the outer execution was
+stopped after its twenty-minute command limit. No semantic or Practice result
+was produced, so task 5.2 remains incomplete and this timeout is not candidate
+evidence. The kernel isolate check's known same-name dependency false positive
+remains outside #91; the retained evidence is the runner public-only test and
+the materialized public-path audit.

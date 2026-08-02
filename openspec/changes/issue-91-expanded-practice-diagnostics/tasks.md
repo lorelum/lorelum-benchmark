@@ -13,6 +13,7 @@
 - [x] 3.1 Run Pi/model preflight after planning confirmation, with failure classification that does not echo credentials or create a workspace. [Execution scope: `scratch/`; passed within the gate run]
 - [x] 3.2 Run both complete calibration matrices through the versioned runtime closure in a clean isolated environment; report hashes and pass/fail only. [Execution scope: `scratch/`; both exited 0 and passed]
 - [x] 3.3 Run focused tests, `bun run validate`, OpenSpec strict validation, `git diff --check`, and public/private leakage audits. (30 focused tests passed; validate and strict validation passed.)
+- [x] 3.4 Make timed-out Windows Pi shims terminate their descendant process tree without killing unrelated Bun/evaluator workers; add focused cleanup classification coverage. (`bun run test:pi:v2`: 68/68 passed.)
 
 ## 4. One-repeat diagnostic gate
 
@@ -23,4 +24,4 @@
 ## 5. Balanced three-repeat screening
 
 - [x] 5.1 Execute the first declared candidate's fixed three-repeat screen from `balanced-diagnostics-v2`; retain only redacted scratch evidence and bind it to the active runner source. (9/9 attempts completed; candidate result is `directional-screen`.)
-- [ ] 5.2 Execute the second declared candidate's fixed three-repeat screen only after an explicit continuation decision; do not combine incomplete candidate denominators or emit an aggregate conclusion.
+- [ ] 5.2 Execute the second declared candidate's fixed three-repeat screen only after an explicit continuation decision; do not combine incomplete candidate denominators or emit an aggregate conclusion. (Continuation plan and prerequisites passed; first attempt timed out before evaluation, so no candidate result or aggregate conclusion was emitted.)
