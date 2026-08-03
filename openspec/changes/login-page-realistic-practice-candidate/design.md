@@ -90,3 +90,31 @@ public 只含 task.md 与 starter；Oracle、Practice 文本、私有 evaluator�
   软评分（如分层、可访问性、视觉布局）？
 - 新 candidate 的 Practice 卡是沿用现有 `react.api.layered-design`，还是后续独立
   change 新增？
+
+## Resolved Questions
+
+- API contract 表达：确认采用 public starter 内独立 contract 文件（带 hash），题面
+  只引用实际存在的内容。
+- UI/UX 验收边界：语义硬门槛保持最小（题面声明的稳定可观察行为：登录成功/失败
+  反馈、防重复提交、提交期间禁用态）；分层/可访问性/视觉布局等交 JudgeAgent 软评分。
+- Practice 卡：沿用现有 `react.api.layered-design` 卡，不新增卡。
+- 语境真实性：虚构但可信的 SaaS 产品语境（如内部管理后台登录工单），不在仓库内
+  声称是真实公司官网；凭证/种子数据用真实风格占位，不用 demo 前缀。
+- 测试基础设施：保留 tests/、playwright 配置、API contract 等真实项目也会有的
+  基础设施。
+
+## Planning Confirmation
+
+Requirements owner confirmed after the OpenSpec-only PR (#141) and planning
+clarification, without a comment on issue #135:
+
+- 新建独立登录页 candidate，不改写 `login-page-layered-api-v1` 或历史结果；不实现
+  JudgeAgent provider；不执行正式 benchmark/跨 candidate 比较；不创建正式 record。
+- API contract 以 public starter 内独立文件表达（带 hash）。
+- 语义硬门槛最小化；UI/UX 其余维度为 JudgeAgent 软评分。
+- 沿用现有 `react.api.layered-design` Practice 卡。
+- 语境真实是最高验收标准：AI 在干净 workspace 运行时不能一眼认出这是 benchmark
+  测试环境；题面像真实开发派活，无 benchmark 语言与样板味。
+- task.md 与 starter 完成后，由独立子代理执行真实性审查（pass-or-fix 门禁），
+  审查记录写入 PR 证据链。
+- 真实性审查指南已随本 change 提供：`authenticity-review-guide.md`（任务 2.3 交付物，含提示词与检查清单），由需求方在评审阶段交给独立 AI 执行。

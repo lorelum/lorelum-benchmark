@@ -1,0 +1,15 @@
+id: login-page-auth-flow-v1
+semantic_oracle:
+  command: bun run test
+  assertions:
+    - 正确账号在原页面显示当前登录用户
+    - 错误账号显示通用错误
+    - 请求期间禁用控件且只发起一次请求
+practice_observation:
+  command: bun run private/evaluator/verify-layering.ts public/starter/app
+  signal_only: true
+  responsibilities:
+    - 组件外边界模块负责实际 transport 请求
+    - 401 在边界模块内转换为领域错误或领域结果
+    - 边界模块不把原始 response 或 response.body 返回给组件
+baseline_expected_result: { semantic: pass, practice_observation: not-observed }

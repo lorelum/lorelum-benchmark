@@ -1,0 +1,24 @@
+id: login-page-auth-flow-v1
+lifecycle_stage: candidate
+kernel:
+  core: v1
+  profile: injection-calibration/v1
+  materializer_kind: react-vite
+source:
+  kind: repository-local-starter
+  repository: lorelum/lorelum-benchmark
+  source_commit: 451c1b7dbf76dedc5921e7cc3fbc10e8de039ce5
+  public_root: public/starter/app
+  immutable_by: private/snapshot.json
+calibration_roles:
+  - id: calibration-matrix
+    command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
+    expect: { kind: pass }
+calibration_sets:
+  manifest: private/calibration/sets.yaml
+runtime:
+  package_manager: bun
+  node: 22.19.x
+  frontend: { vite: 7.1.7, react: 19.2.3, typescript: 5.9.3 }
+  browser_test: { playwright: 1.61.1 }
+baseline_expectation: { functional: true, practice_adherence: false, reason: 登录页占位未接通，Agent 接通后组件直接处理原始响应，分层不足。 }
