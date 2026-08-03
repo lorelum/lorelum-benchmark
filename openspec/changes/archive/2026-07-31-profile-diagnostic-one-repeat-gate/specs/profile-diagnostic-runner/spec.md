@@ -1,9 +1,5 @@
-## Purpose
+## MODIFIED Requirements
 
-Define the balanced, pre-registered execution and reporting contract for
-profile-aware Practice-injection diagnostic runs.
-
-## Requirements
 ### Requirement: Pre-registered balanced diagnostic schedule
 Before creating a workspace or invoking Pi, the profile diagnostic runner MUST
 construct and validate a complete schedule for each candidate x
@@ -49,44 +45,6 @@ other non-balanced repeat count.
 - **THEN** the plan seed is retained only in schedule metadata and is absent
   from provider model parameters and Pi model arguments
 
-### Requirement: Actual execution order is auditable and redacted
-The runner MUST preserve the pre-registered schedule and record actual
-attempt order and execution block in its redacted scratch output. Schedule and
-result output MUST include only condition IDs and existing redacted Practice
-identity metadata; they MUST NOT include Practice text, private paths,
-evaluator/oracle material, or workspace paths.
-
-#### Scenario: Actual order can be compared with the plan
-- **WHEN** the runner completes or isolates an attempt from a scheduled block
-- **THEN** its redacted result identifies the planned block, planned position,
-  and actual execution position without exposing private treatment content
-
-#### Scenario: Schedule output preserves private isolation
-- **WHEN** a schedule and diagnostic report are persisted to scratch output
-- **THEN** neither artifact contains Practice text, a private filesystem path,
-  evaluator/oracle content, or a workspace path
-
-### Requirement: Stratified diagnostic analysis retains every planned attempt
-The runner MUST report, by candidate x `profile_input_hash` and condition, the
-planned denominator, raw `joint_pass` proportion, oracle-minus-baseline and
-oracle-minus-irrelevant-practice differences, semantic outcomes, every
-Practice observation state, and every evaluation-health state. Unhealthy,
-incomplete, and `indeterminate` attempts MUST remain in planned denominators
-and their own status counts; the runner MUST NOT exclude them or relabel them
-as `not-observed`.
-
-#### Scenario: Non-health result remains in the denominator
-- **WHEN** an attempt is invalid-output, execution-failed, not-executable, or
-  incomplete
-- **THEN** the report retains it in the condition's planned denominator and
-  reports its actual health status without adding it to a semantic or Practice
-  observation numerator
-
-#### Scenario: Indeterminate observation is retained
-- **WHEN** an evaluated attempt has `practice_observation=indeterminate`
-- **THEN** the report increments the indeterminate count and does not count it
-  as `not-observed` or silently remove it from the comparison
-
 ### Requirement: Conclusion grade reflects diagnostic evidence
 The diagnostic report MUST include a conclusion grade derived from the
 pre-registered plan and observed completion, health, and calibration state.
@@ -116,34 +74,3 @@ directional-screen, expansion, or comparison conclusion.
 - **WHEN** any planned condition attempt is missing or non-healthy
 - **THEN** the report emits a diagnostic or uncertain conclusion and preserves
   the blocking status in its summary
-
-### Requirement: Pi and model preflight is isolated and bounded
-The profile diagnostic runner MUST verify the configured Pi command and model
-with a bounded probe before it creates a candidate workspace or invokes an
-attempt. The probe MUST use non-interactive, non-persistent Pi execution with
-tools, project context files, Skills, and extensions disabled. It MUST NOT
-receive task, candidate, Practice, private, evaluator, oracle, snapshot, or
-workspace inputs, and it MUST NOT modify the repository or candidate paths.
-
-The probe timeout MUST be finite and sufficient for the configured runtime's
-normal isolated startup. On command, provider, or deadline failure, the runner
-MUST fail closed with a redacted non-executable status; it MUST NOT report a
-candidate, semantic, Practice, Oracle, or comparative failure.
-
-#### Scenario: Healthy isolated preflight proceeds
-- **WHEN** the configured Pi command returns a successful response within the
-  bounded isolated-probe deadline
-- **THEN** the runner records the runtime version and may continue to create
-  fresh public-only candidate workspaces for the validated schedule
-
-#### Scenario: Preflight cannot alter project state
-- **WHEN** the model preflight is run from a repository containing OpenSpec,
-  candidate, or private files
-- **THEN** Pi receives no tools or project context and the probe leaves those
-  files unchanged without exposing their contents
-
-#### Scenario: Slow or unavailable preflight fails closed
-- **WHEN** the configured Pi command or provider does not return before the
-  finite probe deadline, or exits unsuccessfully
-- **THEN** the runner emits only a redacted non-executable diagnostic status
-  and creates no candidate workspace, formal manifest, or record

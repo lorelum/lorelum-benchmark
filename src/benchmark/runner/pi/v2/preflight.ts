@@ -1,9 +1,11 @@
-import { stat } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdtemp, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 export type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number };
 
-export const preflightTimeoutMs = 30_000;
+export const preflightTimeoutMs = 90_000;
+export type CommandRunner = (command: string[], cwd: string, timeoutMs?: number, env?: Record<string, string>) => Promise<CommandResult>;
 
 function fail(message: string): never {
   throw new Error(message);
@@ -45,6 +47,10 @@ async function run(command: string[], cwd: string, timeoutMs?: number, env?: Rec
   return { code, stdout, stderr, timedOut, durationMs: Math.round(performance.now() - started) };
 }
 
+export function preflightPiArgs(command: string, modelId: string): string[] {
+  return [command, "--print", "--no-session", "--no-tools", "--no-context-files", "--no-skills", "--no-extensions", "--model", modelId, "Reply with exactly: ok"];
+}
+
 function redactSecrets(text: string): string {
   return text
     .replace(/(?:sk-|api[_-]?key["']?\s*[:=]\s*["']?|bearer\s+)[A-Za-z0-9._~+/\-]{8,}={0,2}/gi, "<redacted>")
@@ -53,19 +59,25 @@ function redactSecrets(text: string): string {
 
 export function classifyPreflightFailure(result: CommandResult): string {
   const stderr = result.stderr || result.stdout;
-  if (result.timedOut) return "model unreachable: preflight timed out after 30s";
+  if (result.timedOut) return "model unreachable: preflight timed out after 90s";
   if (/api[_-]?key|unauthorized|401|invalid api key/i.test(stderr)) return "model unreachable: API key missing or invalid";
   if (/connection|refused|unreachable|network|timeout|ENOTFOUND|ECONNREFUSED/i.test(stderr)) return "model unreachable: endpoint not reachable";
   if (/model|not found|invalid/i.test(stderr)) return "model unreachable: model id invalid or unknown";
   return `model unreachable: ${redactSecrets(stderr).trim() || "unknown error"}`;
 }
 
-export async function preflightPiAndModel(command: string, modelId: string, cwd: string): Promise<{ version: string }> {
-  const version = await run([command, "--version"], cwd);
-  if (version.code !== 0) fail(`Unable to start Pi command ${command}: ${(version.stderr || version.stdout).trim()}`);
-  const probe = await run([command, "--print", "--no-session", "--model", modelId, "ok"], cwd, preflightTimeoutMs);
-  if (probe.code !== 0 || probe.timedOut) fail(classifyPreflightFailure(probe));
-  return { version: version.stdout.trim() };
+export async function preflightPiAndModel(command: string, modelId: string, commandRunner: CommandRunner = run): Promise<{ version: string }> {
+  const probeDirectory = await mkdtemp(join(tmpdir(), "lorelum-pi-preflight-"));
+  try {
+    const version = await commandRunner([command, "--version"], probeDirectory, preflightTimeoutMs);
+    if (version.timedOut) fail(classifyPreflightFailure(version));
+    if (version.code !== 0) fail(`Unable to start Pi command ${command}: ${(version.stderr || version.stdout).trim()}`);
+    const probe = await commandRunner(preflightPiArgs(command, modelId), probeDirectory, preflightTimeoutMs);
+    if (probe.code !== 0 || probe.timedOut) fail(classifyPreflightFailure(probe));
+    return { version: version.stdout.trim() };
+  } finally {
+    await rm(probeDirectory, { recursive: true, force: true });
+  }
 }
 
 export { run, fail };
