@@ -2,6 +2,7 @@
 
 ## Purpose
 TBD - created by archiving change practice-design-quality-gates. Update Purpose after archive.
+
 ## Requirements
 ### Requirement: Practice、任务和验收具有明确的信息边界
 

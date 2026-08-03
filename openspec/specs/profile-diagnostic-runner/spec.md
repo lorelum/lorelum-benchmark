@@ -2,6 +2,7 @@
 
 Define the balanced, pre-registered execution and reporting contract for
 profile-aware Practice-injection diagnostic runs.
+
 ## Requirements
 ### Requirement: Pre-registered balanced diagnostic schedule
 Before creating a workspace or invoking Pi, the profile diagnostic runner MUST
