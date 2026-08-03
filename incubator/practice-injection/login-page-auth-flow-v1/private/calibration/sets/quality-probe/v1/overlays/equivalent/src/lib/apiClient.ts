@@ -4,15 +4,12 @@ export type SessionReply =
 
 type SessionPayload = { email: string; password: string };
 
-declare global {
-  interface Window { __sessionRequestCount?: number }
-}
-
 export async function requestSession(payload: SessionPayload): Promise<SessionReply> {
-  window.__sessionRequestCount = (window.__sessionRequestCount ?? 0) + 1;
-  await new Promise((resolve) => window.setTimeout(resolve, 300));
-  if (payload.email === "admin@example.com" && payload.password === "admin123") {
-    return { status: 200, body: { user: { id: "u-1", display_name: "系统管理员", role: "admin" } } };
-  }
-  return { status: 401, body: { code: "invalid_credentials", message: "邮箱或密码错误" } };
+  const response = await fetch("/api/session", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = (await response.json()) as SessionReply["body"];
+  return { status: response.status as SessionReply["status"], body };
 }

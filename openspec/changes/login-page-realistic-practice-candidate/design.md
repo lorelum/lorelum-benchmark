@@ -118,3 +118,4 @@ clarification, without a comment on issue #135:
 - task.md 与 starter 完成后，由独立子代理执行真实性审查（pass-or-fix 门禁），
   审查记录写入 PR 证据链。
 - 真实性审查指南已随本 change 提供：`authenticity-review-guide.md`（任务 2.3 交付物，含提示词与检查清单），由需求方在评审阶段交给独立 AI 执行。
+- round 1 外部 AI 真实性审查已执行：8 项穿帮点全部修复（真占位 baseline、真实 fetch、测试不再数埋点、题面口语化、清理运行产物、API 文档只留契约、公司风格账号、补来龙去脉），修复记录与验证见 `authenticity-review-guide.md` 的「审查记录（round 1）」。

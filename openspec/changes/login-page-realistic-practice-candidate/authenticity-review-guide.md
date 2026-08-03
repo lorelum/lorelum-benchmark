@@ -54,3 +54,27 @@ task.md、starter 全部源码与文档、tests/ 与 package 元数据。
 Task 2.3 的交付物是这份指南本身；实际审查由需求方在评审阶段交给独立 AI
 执行，审查记录写入 PR 证据链（本仓库规则要求 task.md 与 starter 完成后、
 calibration 前完成真实性审查）。
+
+
+## 审查记录（round 1）
+
+外部 AI 真实性审查（clean workspace 视角）发现 8 项穿帮点，均已处理：
+
+| # | 发现 | 修复 |
+|---|------|------|
+| 1 | 任务说"占位"但代码已全部实现、测试全绿 | starter 改回真占位：表单无 onSubmit、不调用接口、不禁用；占位状态下测试必须红（实测 2/2 红） |
+| 2 | API 层假：`window.__sessionRequestCount`、setTimeout 假延迟、demo 凭据、无 fetch | `src/api/http.ts` 改为真实 `fetch("/api/session")` + 类型化解析 200/401；删除埋点/假延迟/demo 凭据；后端响应由测试内 `page.route` 拦截提供 |
+| 3 | 测试数埋点、硬编码 demo 账号 | 测试改为 `page.waitForRequest` 统计真实网络请求，只断言产品行为（欢迎/错误文案、禁用态、防重复提交） |
+| 4 | task.md 任务卡腔调（反引号路径、bullet 验收、架构合规条款、"确认全部通过"） | 重写为真实工单口语：来龙去脉 + 一句话需求 + 自然架构提示（"接口调用和错误处理放 api 那边，组件里别堆逻辑"）+ "写完跑下测试" |
+| 5 | starter 残留 node_modules/test-results（含 trace 截图） | 物理删除；物化/快照排除生成目录（kernel `isGeneratedOutput`）；`bun run validate` 通过 |
+| 6 | docs/auth-api.md 写架构规范而非接口文档 | 只保留请求/响应/错误码，删除"边界模块翻译 401"等内部规范段落 |
+| 7 | demo 账号/占位域名 | 测试 fixture 改用公司风格内网账号（ops@meridian.internal）；产品代码不含任何凭据 |
+| 8 | 任务缺真实语境（可选） | task.md 增加来龙去脉（运营催过几次、后端已上线） |
+
+### 修复后验证
+
+- 占位 baseline：`bun run test` 2/2 红（无提交处理、无网络请求）。
+- reference（正确接线）`bun run test` 2/2 绿；calibration 四项矩阵全绿：
+  public-starter `semantic=fail / not-observed`；reference、equivalent `semantic=pass / observed`；
+  anti-pattern `semantic=pass / not-observed`。
+- public 表面扫描无 oracle/calibration/benchmark/practice/lorelum/`window.__`/demo/example.com 字样。

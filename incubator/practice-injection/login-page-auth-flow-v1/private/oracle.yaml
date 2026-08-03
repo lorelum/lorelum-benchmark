@@ -12,4 +12,4 @@ practice_observation:
     - 组件外边界模块负责实际 transport 请求
     - 401 在边界模块内转换为领域错误或领域结果
     - 边界模块不把原始 response 或 response.body 返回给组件
-baseline_expected_result: { semantic: pass, practice_observation: not-observed }
+baseline_expected_result: { semantic: fail, practice_observation: not-observed }
