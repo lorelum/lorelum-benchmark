@@ -271,6 +271,69 @@ test("provisions the public app after Pi and before private evaluation", async (
   }
 });
 
+test("server launch failure records execution-failed without semantic fields", async () => {
+  const fixture = await withAttemptFixture();
+  try {
+    const profile = await resolveInjectionCalibration(fixture.candidate);
+    const entry = await runAttempt(
+      fixture.output,
+      fixture.candidate,
+      "neutral-contract-fixture-v1",
+      { id: "neutral-contract-fixture-v1", kernel: { core: "v1", profile: "injection-calibration/v1", materializer_kind: "react-vite" }, source: { source_commit: "abc123" } },
+      "snapshot",
+      profile.profile_input_hash,
+      profile,
+      "baseline",
+      1,
+      { pi_version: "test", model: { id: "test-model" }, budget: { max_duration_minutes: 1 }, repetitions: 1 },
+      "fake-pi",
+      async (command, cwd) => {
+        if (command[0] === "fake-pi") return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
+        if (command[1] === "install") { await mkdir(join(cwd, "node_modules"), { recursive: true }); return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 }; }
+        throw new Error("evaluator must not run after server launch failure");
+      },
+      async () => ({ ok: false as const, category: "evaluator-server-launch-failed" })
+    );
+    expect(entry).toEqual(expect.objectContaining({ evaluation_status: "execution-failed", error: "evaluator-server-launch-failed" }));
+    expect(entry.semantic).toBeUndefined();
+    expect(entry.practice_observation).toBeUndefined();
+    expect(entry.joint_pass).toBeUndefined();
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("unconfirmed server cleanup blocks comparison with execution-failed", async () => {
+  const fixture = await withAttemptFixture();
+  try {
+    const profile = await resolveInjectionCalibration(fixture.candidate);
+    const entry = await runAttempt(
+      fixture.output,
+      fixture.candidate,
+      "neutral-contract-fixture-v1",
+      { id: "neutral-contract-fixture-v1", kernel: { core: "v1", profile: "injection-calibration/v1", materializer_kind: "react-vite" }, source: { source_commit: "abc123" } },
+      "snapshot",
+      profile.profile_input_hash,
+      profile,
+      "baseline",
+      1,
+      { pi_version: "test", model: { id: "test-model" }, budget: { max_duration_minutes: 1 }, repetitions: 1 },
+      "fake-pi",
+      async (command, cwd) => {
+        if (command[0] === "fake-pi") return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
+        if (command[1] === "install") { await mkdir(join(cwd, "node_modules"), { recursive: true }); return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 }; }
+        return { code: 0, stdout: '{"semantic":"pass","practice_observation":"observed"}', stderr: "", timedOut: false, durationMs: 1 };
+      },
+      async (_cwd, port) => ({ ok: true, handle: { pid: 42, port, stop: async () => false } })
+    );
+    expect(entry).toEqual(expect.objectContaining({ evaluation_status: "execution-failed", error: "evaluator-cleanup-unverified" }));
+    expect(entry.semantic).toBeUndefined();
+    expect(entry.practice_observation).toBeUndefined();
+    expect(entry.joint_pass).toBeUndefined();
+  } finally {
+    await fixture.cleanup();
+  }
+});
 test("failed public dependency provisioning skips evaluator with a redacted execution failure", async () => {
   const fixture = await withAttemptFixture();
   const phases: string[] = [];

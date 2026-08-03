@@ -63,10 +63,13 @@ server 进程树。候选 `playwright.config.ts` 已支持 `PLAYWRIGHT_BASE_URL`
 
 ## Risks / Trade-offs
 
-- [动态端口竞态（释放后被占用）] → supervisor 启动后轮询就绪并在失败时重试一次，
-  仍失败则 fail closed。
-- [Windows 进程树清理不彻底] → 复用已验证的 `taskkill /T /F`，并用端口释放探测
-  验证清理。
+- [动态端口竞态（释放后被占用）] → 端口分配/启动失败时用新端口重试一次，仍失败则
+  fail closed（`evaluator-server-port-unavailable` / `evaluator-server-timeout`）。
+- [Windows 进程树清理不彻底] → 复用已验证的 `taskkill /T /F`，supervisor `stop`
+  用有界端口释放探测（重新绑定）验证清理；未确认时记录
+  `evaluator-cleanup-unverified` 且不进入比较。
+- [spawn 后进程立即退出被误判为 timeout] → supervisor 监测子进程 exited，立即退出
+  归为 `evaluator-server-launch-failed`。
 - [supervisor 增加 evaluator 启动复杂度] → 保持独立模块与聚焦测试，不侵入
   candidate 私有 evaluator 语义。
 - [清理状态无法确认] → 记录 `execution-failed` 且不进入比较（issue 验收口径）。

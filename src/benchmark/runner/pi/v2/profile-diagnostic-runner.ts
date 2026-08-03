@@ -554,12 +554,23 @@ export async function runAttempt(
     entry.error = "evaluator-server-port-unavailable";
     return entry;
   }
-  const server = await serverStarter(resolve(workspace, "app"), port);
+  // TOCTOU mitigation: the free port can be taken between allocation and
+  // bind, so retry once with a fresh port before failing closed.
+  let server = await serverStarter(resolve(workspace, "app"), port);
   if (!server.ok) {
-    entry.error = server.category;
-    return entry;
+    try {
+      port = await allocateFreePort();
+    } catch {
+      entry.error = "evaluator-server-port-unavailable";
+      return entry;
+    }
+    server = await serverStarter(resolve(workspace, "app"), port);
+    if (!server.ok) {
+      entry.error = server.category;
+      return entry;
+    }
   }
-  let evaluation: CommandResult | undefined;
+  let evaluation: CommandResult;
   let cleanupConfirmed = false;
   try {
     evaluation = await commandRunner(
@@ -569,16 +580,11 @@ export async function runAttempt(
       { ...closureEnv.env, PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${server.handle.port}` }
     );
   } catch {
-    entry.error = "evaluator-launch-failed";
     cleanupConfirmed = await server.handle.stop();
-    if (!cleanupConfirmed) entry.error = "evaluator-cleanup-unverified";
+    entry.error = cleanupConfirmed ? "evaluator-launch-failed" : "evaluator-launch-failed; evaluator-cleanup-unverified";
     return entry;
   } finally {
     if (!cleanupConfirmed) cleanupConfirmed = await server.handle.stop();
-  }
-  if (!evaluation) {
-    entry.error = "evaluator-launch-failed";
-    return entry;
   }
   await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluation.stdout);
   await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluation.stderr);

@@ -19,13 +19,16 @@ confirmed.
 - **THEN** the attempt records `execution-failed` with a stable redacted reason
   and produces no semantic or quality conclusion
 
-### Requirement: Evaluator child processes are cleaned up on exit, failure, and timeout
+### Requirement: Evaluator child processes are cleaned up on failure and timeout
 
-The evaluator WebServer and its Playwright workers MUST be terminated when the
-evaluator exits normally, fails, or times out. Cleanup MUST use the repository's
+The evaluator WebServer MUST be terminated by the supervisor when the evaluator
+exits, fails, or times out, and the evaluator process tree MUST be terminated
+on timeout or abnormal failure. Normal evaluator exit relies on the evaluator
+and its Playwright workers to self-recycle. Cleanup MUST use the repository's
 verified process-tree termination on Windows (`taskkill /T /F`) and Linux
-(recursive parent scan + SIGTERM). If cleanup cannot be confirmed, the attempt
-MUST be recorded as `execution-failed` rather than entering comparison.
+(recursive parent scan + SIGTERM). Cleanup MUST be verified with a bounded
+port-release probe; if cleanup cannot be confirmed, the attempt MUST be
+recorded as `execution-failed` rather than entering comparison.
 
 #### Scenario: Evaluator timeout cleans up the WebServer
 - **WHEN** an evaluator exceeds its attempt budget
