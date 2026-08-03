@@ -9,7 +9,9 @@ practice_observation:
   command: bun run private/evaluator/verify-layering.ts public/starter/app
   signal_only: true
   responsibilities:
-    - 组件外边界模块负责实际 transport 请求
+    - 组件不得直接导入 HTTP adapter、直接调用 transport 或读取传输响应（名称无关的结构检查，不限于 response 命名）
+    - 每个表单提交路径 await 一个组件外的领域操作
+    - 边界模块负责实际 transport 请求
     - 401 在边界模块内转换为领域错误或领域结果
-    - 边界模块不把原始 response 或 response.body 返回给组件
+    - 边界模块不把原始 response 或 response.body 返回给组件（名称无关）
 baseline_expected_result: { semantic: fail, practice_observation: not-observed }

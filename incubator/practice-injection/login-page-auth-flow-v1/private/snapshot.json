@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "83258fd82881973ad084bdfab47245249615ea5c2d35e5fd6b4125feb977cdb2",
+  "snapshot_id": "95bbc756a1030a73c7d22b1aa48079c8dd592f3b76a74b8e0cc23df551a35e69",
   "files": {
     "private/calibration.md": "5eb39ba4c1cd7cc682bae602d8d7b989011e233cf3802dd33fd215c4c4df1043",
     "private/calibration/run.ts": "dad9179762afcf52f756d6a043cf254111ae0cc82aedd6523cd432463499f80d",
@@ -29,9 +29,9 @@
     "private/evaluator/runtime-closure.yaml": "be722244c7a9f959e9e1ced7e9597af91c611d98c2acffa4702744f69be3ba36",
     "private/evaluator/runtime-closure/bun.lock": "ef93097b3538fd622f47c96698b78be7ed478a66ea32332aeda08ce388dd4754",
     "private/evaluator/runtime-closure/package.json": "228711f7fe3b45c7e49689b9deda0cf7510ef9f8d4b5ad0b69f5711fba1e3f4a",
-    "private/evaluator/verify-layering.ts": "42905a0e72a7d394a342c6482a669efc1ea6690d783102dbea7a7cdaac9982ec",
+    "private/evaluator/verify-layering.ts": "44fd10d0623dd94e47c4d116f7ac6c5f6ec482f6d123586fc0aca3b6a798be51",
     "private/execution/tool-policy.yaml": "bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6",
-    "private/oracle.yaml": "cc7423b6a513d780b0a69a7efb110aaed2abbb086694b1857ec9636f4317fd5f",
+    "private/oracle.yaml": "258c2b2440f1a7c66615f3e3cabf266c2bf8a080842fa6541b6680d5385277c2",
     "public/starter/app/.gitignore": "463b5f9362420aaa6bbf70c200b7cef361af47f34e60e6767851406f3091a39a",
     "public/starter/app/bun.lock": "2411ef1e129227bbbf76d8b91cff5972ced4ce495bbe7e04f12ecdb37869c5bd",
     "public/starter/app/docs/auth-api.md": "1770346ab75bc314ec08b838c669c81aa7ebd726e85e4db43dc7d98b0db2db88",

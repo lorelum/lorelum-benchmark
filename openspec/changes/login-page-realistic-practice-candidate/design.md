@@ -119,3 +119,4 @@ clarification, without a comment on issue #135:
   审查记录写入 PR 证据链。
 - 真实性审查指南已随本 change 提供：`authenticity-review-guide.md`（任务 2.3 交付物，含提示词与检查清单），由需求方在评审阶段交给独立 AI 执行。
 - round 1 外部 AI 真实性审查已执行：8 项穿帮点全部修复（真占位 baseline、真实 fetch、测试不再数埋点、题面口语化、清理运行产物、API 文档只留契约、公司风格账号、补来龙去脉），修复记录与验证见 `authenticity-review-guide.md` 的「审查记录（round 1）」。
+- D2 决议（需求方确认）：task.md 的「接口调用和错误处理放 api 那边，组件里别堆逻辑」是需求方为贴近真实环境有意保留的题面提示；practice_observation 作为任务对齐的分层质量信号（signal-only）测量，题面提示可能使 pilot 条件间观测趋平，此时 decision_rule 按 `otherwise: diagnostic-only` 处理，不构成失败。为适配该规范，verify-layering.ts 的组件/边界检查已升级为名称无关的结构检查（await 结果读取 .status/.body、边界返回原始传输对象等不依赖 response 命名），保证信号测量的是 Practice 一致的分层质量而非题面措辞。

@@ -135,6 +135,35 @@ function handlesTransportResponse(source: any): boolean {
   return found;
 }
 
+
+function awaitedResultNames(source: any): Set<string> {
+  const names = new Set<string>();
+  const visit = (node: any) => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && ts.isAwaitExpression(node.initializer)) {
+      names.add(node.name.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return names;
+}
+
+function componentReadsTransportDetail(source: any): boolean {
+  const awaitedNames = awaitedResultNames(source);
+  let read = false;
+  const visit = (node: any) => {
+    if (read) return;
+    if (ts.isPropertyAccessExpression(node) && ["status", "body"].includes(node.name.text)) {
+      const objectIsAwaited = ts.isIdentifier(node.expression) && awaitedNames.has(node.expression.text);
+      const objectIsAwaitedExpression = ts.isAwaitExpression(node.expression);
+      if (objectIsAwaited || objectIsAwaitedExpression) read = true;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return read;
+}
+
 function resolveLocalModule(importerPath: string, moduleSpecifier: string): string | undefined {
   if (!moduleSpecifier.startsWith(".")) return undefined;
   const base = resolve(dirname(importerPath), moduleSpecifier);
@@ -201,9 +230,19 @@ function isRawTransportValue(expression: any): boolean {
 }
 
 function returnsRawTransport(source: any): boolean {
+  const awaitedNames = awaitedResultNames(source);
   let raw = false;
   const visit = (node: any) => {
-    if (ts.isReturnStatement(node) && node.expression && isRawTransportValue(node.expression)) raw = true;
+    if (raw) return;
+    if (ts.isReturnStatement(node) && node.expression) {
+      const expression = node.expression;
+      const returnsAwaited = ts.isIdentifier(expression) && awaitedNames.has(expression.text);
+      const returnsAwaitedBody = ts.isPropertyAccessExpression(expression)
+        && expression.name.text === "body"
+        && ts.isIdentifier(expression.expression)
+        && awaitedNames.has(expression.expression.text);
+      if (returnsAwaited || returnsAwaitedBody || isRawTransportValue(expression)) raw = true;
+    }
     ts.forEachChild(node, visit);
   };
   visit(source);
@@ -221,7 +260,7 @@ if (!existsSync(componentPath)) {
 
   if (transportImports.length > 0) failures.push("LoginPage 不得直接导入 HTTP adapter。");
   for (const name of adapterCalls) failures.push(`LoginPage 不得直接调用 ${name}。`);
-  if (/response\.status|response\.body/.test(component.text)) failures.push("LoginPage 不得判断原始响应或读取原始响应体。");
+  if (componentReadsTransportDetail(component)) failures.push("LoginPage 不得判断原始响应或读取原始响应体。");
 
   const invokedImports = imports.flatMap((entry) => entry.names
     .filter((binding) => handlers.length > 0 && handlers.every((handler) => handler && hasAwaitedBindingCall(handler, binding.local)))

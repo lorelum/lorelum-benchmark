@@ -12,6 +12,7 @@
 
 - [x] 2.3 Provide an external-AI authenticity review guide (prompt + checklist) for `public/task.md` and `public/starter/app/`, documented in this change and the PR, so the requirements owner can hand the review to an independent AI before calibration; fix-list items are addressed before calibration. (指南：`authenticity-review-guide.md`，含提示词与 pass/fix 清单；用途与门禁写入 design.md Planning Confirmation 与本 PR 正文。)
   （round 1 审查已执行：8 项穿帮点全部修复，记录见 guide 的「审查记录（round 1）」。）
+  （D2 决议：题面分层提示为需求方有意保留；verify-layering.ts 升级为名称无关结构检查以适配该规范，详见 design.md。）
 
 ## 3. Calibration and snapshot
 
