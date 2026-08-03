@@ -37,7 +37,7 @@ task.md、starter 全部源码与文档、tests/ 与 package 元数据。
       vite.config、playwright.config、index.html、src/、tests/、docs/ 齐全。
 - [ ] docs/auth-api.md 像真实的内部 API 约定（请求/响应、错误码），而不是
       测试夹具说明。
-- [ ] src/api/http.ts 像真实的底层请求模块（含延迟/凭据模拟），代码里没有
+- [ ] src/api/http.ts 像真实的底层请求模块（真实 fetch、类型化解析；无假延迟、无凭据、无埋点），代码里没有
       benchmark 痕迹。
 - [ ] tests/login.spec.ts 用真实用户路径断言（角色/label/文案），没有
       "semantic pass"、评分等字样。

@@ -110,7 +110,7 @@ function directTransportCalls(source: any): Set<string> {
   return calls;
 }
 
-/** ???????????await ??????????? .status/.body??? DTO ???? */
+/** 边界模块处理传输响应：await 一个调用，并对结果读取 .status/.body（传输 DTO 处理）。 */
 function handlesTransportResponse(source: any): boolean {
   let found = false;
   const readsTransportDetail = (name: string) => {

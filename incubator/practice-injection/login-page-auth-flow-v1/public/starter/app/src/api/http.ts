@@ -14,5 +14,8 @@ export async function postSession(request: SessionRequest): Promise<SessionRespo
     body: JSON.stringify(request),
   });
   const body = (await response.json()) as SessionResponse["body"];
-  return { status: response.status as SessionResponse["status"], body };
+  if (response.status === 200) {
+    return { status: 200, body: body as { user: { id: string; display_name: string; role: string } } };
+  }
+  return { status: 401, body: body as { code: "invalid_credentials"; message: string } };
 }

@@ -11,22 +11,22 @@ sets:
         extends: shared-react-vite
         overlay:
           path: private/calibration/sets/quality-probe/v1/overlays/candidate
-          sha256: b6e85fa08e330dc572edc15ffbea3ed78e377f81f32b863da8092dbcae64ee75
+          sha256: 6bde8912265241da97686074b7b279bab5cf7b361578cbd6d269363b81d8643b
       reference-tree:
         extends: candidate-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v1/overlays/reference
-          sha256: ba8de8eab7e01153206b881d2613df13c462210a5ca1d3f5ee3040797fc9b2e3
+          sha256: 55387f34eda5178900e2a46ae149d537f425e652a5960383aa81dad627b0bc7d
       equivalent-tree:
         extends: candidate-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v1/overlays/equivalent
-          sha256: 7b6c34712a06c5ff0e9428dabf4b3c0f645ee58efab51892be5b4c3342e19b04
+          sha256: c20aabd0550e0a2d1d46b10d51921ce5a05747c7ce4a3bc0aba36218230498e3
       anti-pattern-tree:
         extends: candidate-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v1/overlays/anti-pattern
-          sha256: 81ac865e39dc7713b4b742e4ab80318aa44fe3b65f0953f8422521c4d7d828dd
+          sha256: 8feb4a29ef79da2fe02bd9e6043e0c15fb28556b23b63734d7ba81ee74e80b5f
     fixtures:
       reference: reference-tree
       equivalent: equivalent-tree
