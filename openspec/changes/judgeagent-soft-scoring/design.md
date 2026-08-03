@@ -92,3 +92,23 @@ quality artifact（sidecar）保存，`evaluator-result/v2` 不包含 judge 字�
 - rubric 以独立文件 + rubric hash 引用，还是内联在 judge 请求中？
 - judge 结果 artifact 引用挂在 run record 的哪个字段（独立 sidecar 还是
   manifest 字段）？默认：独立、版本化 sidecar。
+
+## Resolved Questions
+
+- `judge-result/v1` 扩展方式：确认在同一版本内扩展 v1（v1 尚无消费方与 record，不新增 v2）。
+- rubric 引用方式：确认采用独立文件 + rubric hash 引用，judge 输入不包含私有内容。
+- judge 结果 artifact 引用：确认采用独立、版本化 sidecar，不改 run record 契约。
+
+## Planning Confirmation
+
+Requirements owner confirmed after the OpenSpec-only PR (#139) and planning
+clarification, without a comment on issue #133:
+
+- 扩展 `judge-result/v1`（不新增 v2），补齐 provenance（judge model/version、
+  prompt hash、rubric hash、input hash、状态、维度分数、理由、confidence）。
+- rubric 以独立文件 + rubric hash 引用；judge 结果作为独立 sidecar artifact 引用。
+- 输入只允许公开 task、candidate diff/source 与声明的公开运行材料；拒绝
+  condition/Practice/Oracle/私有路径/calibration，fail closed。
+- mock provider 默认、CI 不调用外部模型；真实 provider 需显式 opt-in。
+- judge 只产生软质量信号，不改语义硬门槛与 `evaluator-result/v2`。
+- 不实现登录页专用 rubric；不把总分转成产品或模型结论；不改 #91/#125 结果。

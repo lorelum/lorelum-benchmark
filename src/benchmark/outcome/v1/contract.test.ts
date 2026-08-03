@@ -9,9 +9,14 @@ function judge(overrides: Record<string, unknown> = {}): Record<string, unknown>
   return {
     schema_version: "judge-result/v1",
     judge_version: 1,
+    judge: { id: "mock-judge", version: "0.1.0" },
     state: "observed",
     score: 80,
     criteria: [{ id: "layering", points: 50, max_points: 60 }, { id: "error-boundary", points: 30, max_points: 40 }],
+    prompt_hash: "a".repeat(64),
+    rubric_hash: "b".repeat(64),
+    input_hash: "c".repeat(64),
+    confidence: 90,
     ...overrides
   };
 }
@@ -50,6 +55,21 @@ test("non-observed states must score zero without criteria", () => {
   expect(() => assertJudgeResultV1(judge({ state: "not-run", score: 10, criteria: [] }))).toThrow("must score zero without criteria");
 });
 
+test("requires provenance identity and hashes", () => {
+  expect(() => assertJudgeResultV1({ ...judge(), judge: { id: "mock-judge" } })).toThrow("judge identity is invalid");
+  expect(() => assertJudgeResultV1({ ...judge(), prompt_hash: "not-a-hash" })).toThrow("provenance hash is missing or invalid");
+  expect(() => assertJudgeResultV1({ ...judge(), rubric_hash: undefined })).toThrow("provenance hash is missing or invalid");
+  expect(() => assertJudgeResultV1({ ...judge(), input_hash: "x".repeat(64) })).toThrow("provenance hash is missing or invalid");
+  expect(() => assertJudgeResultV1({ ...judge(), confidence: 101 })).toThrow("confidence is invalid");
+  expect(validateJudgeResult(judge())).toBe(true);
+});
+
+test("preserves criterion rationale when present", () => {
+  const withRationale = judge({ criteria: [{ id: "layering", points: 50, max_points: 60, rationale: "boundary module owns transport" }, { id: "error-boundary", points: 30, max_points: 40 }] });
+  expect(validateJudgeResult(withRationale)).toBe(true);
+  expect(assertJudgeResultV1(withRationale).criteria[0].rationale).toBe("boundary module owns transport");
+  expect(() => assertJudgeResultV1(judge({ criteria: [{ id: "layering", points: 50, max_points: 60, rationale: "" }] }))).toThrow("criterion rationale is invalid");
+});
 test("schema rejects observed results that carry a reason", () => {
   const observedWithReason = judge({ reason: "audit" });
   expect(validateJudgeResult(observedWithReason)).toBe(false);
