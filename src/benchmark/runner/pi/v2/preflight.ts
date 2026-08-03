@@ -1,6 +1,7 @@
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { terminateProcessTree } from "./process-tree";
 
 export type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number };
 
@@ -36,7 +37,7 @@ async function run(command: string[], cwd: string, timeoutMs?: number, env?: Rec
   let timedOut = false;
   const timeout = timeoutMs === undefined ? undefined : setTimeout(() => {
     timedOut = true;
-    child.kill();
+    void terminateProcessTree(child.pid).finally(() => child.kill());
   }, timeoutMs);
   const [code, stdout, stderr] = await Promise.all([
     child.exited,

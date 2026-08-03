@@ -1,10 +1,5 @@
-# profile-diagnostic-evaluator-health Specification
+## MODIFIED Requirements
 
-## Purpose
-
-Define evaluator-process health for Practice profile diagnostics so a partial
-or failed evaluator process cannot produce condition-comparison evidence.
-## Requirements
 ### Requirement: Profile diagnostic health requires successful evaluator completion
 
 The profile diagnostic runner MUST record `evaluation_status=evaluated` only
@@ -41,19 +36,3 @@ and MUST NOT produce semantic, Practice observation, or joint-pass fields.
 - **THEN** the runner MUST record `execution-failed` with a stable redacted
   category and MUST NOT emit semantic, Practice observation, or joint-pass
   fields
-
-### Requirement: Evaluator process failure remains redacted diagnostic evidence
-
-The runner MUST redact evaluator-process failures in every diagnostic summary.
-The runner MAY retain evaluator stdout and stderr in ignored scratch artifacts
-for local diagnosis. Public traces and summaries MUST expose only a stable
-failure category and MUST NOT expose evaluator output, private paths, Practice
-text, oracle material, or calibration material.
-
-#### Scenario: Historical workspace lacks evaluator dependencies
-- **WHEN** an evaluator-only replay cannot complete because its historical
-  workspace lacks a required dependency
-- **THEN** the replay MUST report a non-healthy evaluator result and MUST NOT
-  repair the workspace, rerun a model, or use the partial output in a condition
-  comparison
-

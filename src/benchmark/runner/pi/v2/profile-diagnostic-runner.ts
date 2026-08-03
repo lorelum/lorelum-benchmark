@@ -5,6 +5,7 @@ import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionT
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
 import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from "./preflight";
+import { allocateFreePort, realWebServerStarter, type WebServerStarter } from "./webserver-supervisor";
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
 
 const scratchRoot = resolve(workspaceRoot, "scratch");
@@ -491,7 +492,8 @@ export async function runAttempt(
   repeat: number,
   shared: SharedExecution,
   command: string,
-  commandRunner: AttemptCommandRunner = run
+  commandRunner: AttemptCommandRunner = run,
+  serverStarter: WebServerStarter = realWebServerStarter
 ): Promise<DiagnosticEntry> {
   const attemptPath = resolve(outputPath, candidateId, conditionId, `attempt-${repeat}`);
   const workspace = resolve(attemptPath, "workspace");
@@ -545,20 +547,51 @@ export async function runAttempt(
     entry.error = closureEnv.error;
     return entry;
   }
+  let port: number;
+  try {
+    port = await allocateFreePort();
+  } catch {
+    entry.error = "evaluator-server-port-unavailable";
+    return entry;
+  }
+  // TOCTOU mitigation: the free port can be taken between allocation and
+  // bind, so retry once with a fresh port before failing closed.
+  let server = await serverStarter(resolve(workspace, "app"), port);
+  if (!server.ok) {
+    try {
+      port = await allocateFreePort();
+    } catch {
+      entry.error = "evaluator-server-port-unavailable";
+      return entry;
+    }
+    server = await serverStarter(resolve(workspace, "app"), port);
+    if (!server.ok) {
+      entry.error = server.category;
+      return entry;
+    }
+  }
   let evaluation: CommandResult;
+  let cleanupConfirmed = false;
   try {
     evaluation = await commandRunner(
       [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
       candidatePath,
       shared.budget.max_duration_minutes * 60_000,
-      closureEnv.env
+      { ...closureEnv.env, PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${server.handle.port}` }
     );
   } catch {
-    entry.error = "evaluator-launch-failed";
+    cleanupConfirmed = await server.handle.stop();
+    entry.error = cleanupConfirmed ? "evaluator-launch-failed" : "evaluator-launch-failed; evaluator-cleanup-unverified";
     return entry;
+  } finally {
+    if (!cleanupConfirmed) cleanupConfirmed = await server.handle.stop();
   }
   await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluation.stdout);
   await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluation.stderr);
+  if (!cleanupConfirmed) {
+    entry.error = "evaluator-cleanup-unverified";
+    return entry;
+  }
   Object.assign(entry, classifyEvaluatorResult(evaluation));
   return entry;
 }
