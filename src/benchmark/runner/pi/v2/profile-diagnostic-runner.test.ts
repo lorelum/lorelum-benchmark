@@ -221,6 +221,7 @@ test("zero-exit semantic failure remains a healthy evaluator result", () => {
 test("provisions the public app after Pi and before private evaluation", async () => {
   const fixture = await withAttemptFixture();
   const phases: string[] = [];
+  let serverStopped = false;
   try {
     const profile = await resolveInjectionCalibration(fixture.candidate);
     const entry = await runAttempt(
@@ -255,10 +256,15 @@ test("provisions the public app after Pi and before private evaluation", async (
         phases.push("evaluator");
         expect(command[1]).toBe("run");
         return { code: 0, stdout: '{"semantic":"pass","practice_observation":"observed"}', stderr: "", timedOut: false, durationMs: 1 };
+      },
+      async (_cwd, port) => {
+        phases.push("server");
+        return { ok: true, handle: { pid: 42, port, stop: async () => { serverStopped = true; return true; } } };
       }
     );
     expect(entry.error).toBeUndefined();
-    expect(phases).toEqual(["pi", "provision", "evaluator"]);
+    expect(phases).toEqual(["pi", "provision", "server", "evaluator"]);
+    expect(serverStopped).toBe(true);
     expect(entry).toMatchObject({ evaluation_status: "evaluated", semantic: "pass", practice_observation: "observed", joint_pass: true });
   } finally {
     await fixture.cleanup();

@@ -87,3 +87,26 @@ server 进程树。候选 `playwright.config.ts` 已支持 `PLAYWRIGHT_BASE_URL`
 - 采用动态端口 + 受控 supervisor（推荐），还是保留 Playwright 内置 webServer 动态端口？
 - 失败分类是否沿用现有 `execution-failed` 枚举 + 稳定 error 类别（推荐），还是新增
   独立 `evaluation_status` 状态？
+
+## Resolved Questions
+
+- 端口方案：确认采用动态端口 + 受控 supervisor（runner 分配空闲端口、启动
+  server、轮询就绪、注入 `PLAYWRIGHT_BASE_URL`、finally 终止进程树；候选文件
+  零改动）。
+- 失败分类：确认沿用 `evaluation_status=execution-failed` 枚举 + 稳定脱敏 error
+  类别（`evaluator-server-port-unavailable`、`evaluator-server-launch-failed`、
+  `evaluator-server-timeout`、`evaluator-launch-failed`、`evaluator-timed-out`、
+  `evaluator-exit-nonzero`、`evaluator-cleanup-unverified`），不新增独立状态。
+
+## Planning Confirmation
+
+Requirements owner confirmed after the OpenSpec-only PR (#140) and planning
+clarification, without a comment on issue #134:
+
+- 动态端口 + 受控 supervisor；候选 `public/starter/app/playwright.config.ts` 与
+  `vite.config.ts` 及其 snapshot 保持不变（候选配置已支持外部 base URL 并禁用
+  内置 webServer）。
+- 失败沿用 `execution-failed` 枚举 + 稳定脱敏类别，不新增独立状态；启动失败不
+  产生语义/Practice/joint-pass 结论。
+- 不修改登录页题面、Practice、Oracle 或质量 rubric；不重跑 #91 已完成结果；
+  不改历史 record；不产生新 record；不改写 `evaluator-result/v2`、冻结 helper。
