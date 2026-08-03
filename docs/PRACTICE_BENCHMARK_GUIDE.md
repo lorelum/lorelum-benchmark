@@ -269,3 +269,50 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 ## 八、人工审阅
 
 本指南不强制人工审阅。各 candidate 自行决定哪些信号需要人工补充而非自动 probe；人工审阅不是当前小试的前置条件。若某 candidate 引入人工审阅，须在 candidate 设计中声明审阅范围、标准与记录方式，且不得用人工审阅把实现偏好升级为硬门槛。
+
+
+## 九、真实开发风格 candidate 环境规范
+
+candidate 的公开面（`public/task.md` 与 `public/starter/`）是 agent 在干净
+workspace 里看到的全部内容，也是真实性审查的唯一对象。以下规范来自 #135
+（`login-page-auth-flow-v1`）round 1 外部 AI 真实性审查的修复结论；后续
+candidate 的公开面必须满足，审查清单见
+`openspec/changes/login-page-realistic-practice-candidate/authenticity-review-guide.md`。
+
+### 1. 题面与代码状态一致（基线是真占位）
+
+- 任务描述的"未完成/占位"必须是代码的真实状态：表单未接通、接口未调用、无禁用
+  与反馈时，公开测试必须红；agent 打开代码要有真活可干，不能出现"任务说没做、
+  代码已做完、测试全绿"的矛盾。
+- 占位状态下公开语义测试红是正常基线；calibration 矩阵据此声明
+  `public-starter semantic=fail`，reference/anti-pattern 等完整实现才要求
+  `semantic=pass`。
+
+### 2. 真实网络与无埋点
+
+- API 模块必须真实调用网络（如 `fetch("/api/session")`）并做类型化解析；
+  不得使用 `window.__xxx` 计数器、setTimeout 假延迟，或把凭据写进产品代码。
+- 后端响应由测试内 `page.route` 拦截或 runner 提供；测试可以声明测试账号，
+  产品代码不得包含 demo 凭据或保留占位域名（如 example.com）。
+
+### 3. 测试断言产品行为
+
+- 公开测试只断言用户可观察行为（成功/失败文案、禁用态、防重复提交）；
+  网络请求计数使用 `page.waitForRequest` 等真实请求观测，不得依赖产品内部埋点。
+
+### 4. 题面口语化
+
+- 题面用真实工单口语，可含来龙去脉（谁报的、后端是否已上线、为什么现在做）；
+  不写反引号钉死的文件路径、bullet 式逐条验收、"确认全部通过"等验收腔。
+- 接口文档只写请求/响应/错误码契约；不写前端分层、DTO 翻译等内部架构规范。
+
+### 5. 无运行产物
+
+- starter 不得包含 `node_modules/`、`test-results/`、`dist/`、trace 截图等
+  运行产物；物化与快照必须排除生成目录；`bun run validate` 必须通过。
+
+### 6. 真实性审查门禁
+
+- task.md 与 starter 完成后、calibration 之前，由独立 AI（非实现方）按审查指南
+  执行 pass-or-fix 审查；fix 项清零后才进入 calibration/pilot。
+- 审查记录写入对应 change 与 PR 证据链。

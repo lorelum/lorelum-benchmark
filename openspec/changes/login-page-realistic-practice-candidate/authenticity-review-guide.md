@@ -1,5 +1,8 @@
 # 外部 AI 真实性审查指南（authenticity review guide）
 
+本指南对应 repo 级规范：`docs/PRACTICE_BENCHMARK_GUIDE.md`「九、真实开发风格 candidate 环境规范」；
+清单是逐条落地的检查项。
+
 本指南供需求方交给**独立 AI**（非本 change 的实现方）审查
 `public/task.md` 与 `public/starter/app/`，在 calibration 之前执行
 pass-or-fix 门禁。审查对象是"干净 workspace 中唯一可见的内容"：
