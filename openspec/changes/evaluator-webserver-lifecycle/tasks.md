@@ -17,4 +17,4 @@
 ## 4. Verification and evidence
 
 - [x] 4.1 Run `bun run test:pi:v2`, `bun run validate`, OpenSpec strict validation, and `git diff --check`; record command outcomes and omissions in the PR. (test:pi:v2 71/71, validate passed, strict validation passed, diff --check passed.) [Execution scope: repo-wide]
-- [x] 4.2 Confirm candidate `public/starter/app` files and snapshots are unchanged, no model call or record was created, and no frozen helper or #91/#125 result was modified; check off completed tasks immediately.
+- [x] 4.2 Confirm candidate `public/starter/app` files and snapshots are unchanged, no model call or record was created, and no frozen helper or #91/#125 result was modified; check off completed tasks immediately. (Local end-to-end evidence, scratch only, deleted afterwards: 3 supervisor rounds on distinct ports 8833/8855/8892 all ready and port-released after stop; one real evaluator run on port 8911 with `PLAYWRIGHT_BASE_URL` exit 0, 1 passed, cleanup confirmed; two consecutive full evaluator attempts on ports 7792/4846 both exit 0 with cleanup confirmed, no port conflict or residue.)
