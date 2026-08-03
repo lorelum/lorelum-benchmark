@@ -2,14 +2,19 @@ export type ExecutionHealth = "evaluated" | "execution-failed" | "invalid-output
 export type SemanticOutcome = "pass" | "fail" | "not-run";
 export type QualityOutcome = "observed" | "not-observed" | "indeterminate" | "not-run" | "judge-unavailable";
 
-export type JudgeCriteriaV1 = { id: string; points: number; max_points: number };
+export type JudgeCriteriaV1 = { id: string; points: number; max_points: number; rationale?: string };
 
 export type JudgeResultV1 = {
   schema_version: "judge-result/v1";
   judge_version: 1;
+  judge: { id: string; version: string };
   state: QualityOutcome;
   score: number;
   criteria: JudgeCriteriaV1[];
+  prompt_hash: string;
+  rubric_hash: string;
+  input_hash: string;
+  confidence: number;
   reason?: string;
 };
 
@@ -49,9 +54,17 @@ function exactKeys(value: Record<string, unknown>, allowed: string[], label: str
   if (unexpected.length > 0) fail(`${label} has unexpected fields: ${unexpected.join(", ")}`);
 }
 
+function validHash(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+}
+
 export function assertJudgeResultV1(value: unknown): JudgeResultV1 {
   if (!isRecord(value) || value.schema_version !== "judge-result/v1" || value.judge_version !== 1 || typeof value.state !== "string" || !qualityStates.includes(value.state as QualityOutcome)) fail("missing or invalid top-level fields");
-  exactKeys(value, ["schema_version", "judge_version", "state", "score", "criteria", "reason"], "result");
+  exactKeys(value, ["schema_version", "judge_version", "judge", "state", "score", "criteria", "prompt_hash", "rubric_hash", "input_hash", "confidence", "reason"], "result");
+  if (!isRecord(value.judge) || typeof value.judge.id !== "string" || !value.judge.id || typeof value.judge.version !== "string" || !value.judge.version) fail("judge identity is invalid");
+  exactKeys(value.judge, ["id", "version"], "judge identity");
+  if (!validHash(value.prompt_hash) || !validHash(value.rubric_hash) || !validHash(value.input_hash)) fail("provenance hash is missing or invalid");
+  if (!Number.isInteger(value.confidence) || value.confidence < 0 || value.confidence > 100) fail("confidence is invalid");
   if (!Number.isInteger(value.score) || value.score < 0 || value.score > 100 || !Array.isArray(value.criteria)) fail("score or criteria is invalid");
   if (value.reason !== undefined && (typeof value.reason !== "string" || !value.reason)) fail("reason is invalid");
 
@@ -60,7 +73,8 @@ export function assertJudgeResultV1(value: unknown): JudgeResultV1 {
   let maxPoints = 0;
   for (const criterion of value.criteria) {
     if (!isRecord(criterion) || !validId(criterion.id) || !Number.isInteger(criterion.points) || !Number.isInteger(criterion.max_points) || criterion.points < 0 || criterion.max_points < 1 || criterion.max_points > 100 || criterion.points > criterion.max_points) fail("quality criterion is invalid");
-    exactKeys(criterion, ["id", "points", "max_points"], "quality criterion");
+    exactKeys(criterion, ["id", "points", "max_points", "rationale"], "quality criterion");
+    if (typeof criterion.rationale !== "string" || !criterion.rationale) fail("criterion rationale is required and must be non-empty");
     if (criterionIds.has(criterion.id)) fail(`duplicate quality criterion: ${criterion.id}`);
     criterionIds.add(criterion.id);
     points += criterion.points;

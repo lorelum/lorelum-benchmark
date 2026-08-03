@@ -88,6 +88,14 @@ URI 引用。已提交的运行记录还必须包含按校验和寻址的 `run_m
 
 JudgeAgent/Practice 质量信号是独立软指标，与 `evaluator-result/v2` 的 quality 维度同属"仅报告"层。`judge-unavailable` 表示判分资源未产出信号，与 `not-observed`（有已校准负面证据）严格区分。JudgeAgent 结果使用独立 sidecar schema `judge-result/v1` 表达，不改写 `evaluator-result/v2`。
 
+JudgeAgent 能力（`src/benchmark/judge/`）遵循以下边界：
+
+- 输入只允许公开材料：`public/task.md`、`public/starter/`、candidate diff/source 与显式声明的公开运行材料；包含 condition、Practice、Oracle、私有 evaluator、私有路径或 calibration 的输入被拒绝并 fail closed。
+- 结果携带完整 provenance：judge model/version、prompt hash、rubric hash、input hash、状态、维度分数、理由和 confidence；缺失 hash 或非法结构化输出 fail closed，不伪造低分。
+- rubric 以独立文件 + rubric hash 引用；judge 结果作为可选 quality sidecar artifact 引用，不改 run record 契约。
+- 默认使用确定性 mock provider（CI 不调用外部模型）；真实 provider 需显式 opt-in 且不在 CI 执行。
+- judge 只产生软质量信号，不改变语义硬门槛与 `evaluator-result/v2`。
+
 ### joint_pass 与原始分数
 
 - `joint_pass` 仅为派生报告字段：`semantic=pass` 且质量 `observed` 时为真。它不是任务完成、execution health 或加权总分。

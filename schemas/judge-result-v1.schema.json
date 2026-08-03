@@ -3,10 +3,19 @@
   "title": "Lorelum JudgeAgent result v1 (sidecar)",
   "$comment": "Independent soft-quality sidecar. Never extends evaluator-result/v2. Sum-of-points invariants are enforced by assertJudgeResultV1 because JSON Schema cannot express them.",
   "type": "object",
-  "required": ["schema_version", "judge_version", "state"],
+  "required": ["schema_version", "judge_version", "judge", "state", "prompt_hash", "rubric_hash", "input_hash", "confidence"],
   "properties": {
     "schema_version": { "const": "judge-result/v1" },
     "judge_version": { "const": 1 },
+    "judge": {
+      "type": "object",
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "state": {
       "enum": ["observed", "not-observed", "indeterminate", "not-run", "judge-unavailable"]
     },
@@ -15,15 +24,20 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "points", "max_points"],
+        "required": ["id", "points", "max_points", "rationale"],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
           "points": { "type": "integer", "minimum": 0, "maximum": 100 },
-          "max_points": { "type": "integer", "minimum": 1, "maximum": 100 }
+          "max_points": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "rationale": { "type": "string", "minLength": 1 }
         },
         "additionalProperties": false
       }
     },
+    "prompt_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "rubric_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "input_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "confidence": { "type": "integer", "minimum": 0, "maximum": 100 },
     "reason": { "type": "string", "minLength": 1 }
   },
   "allOf": [
