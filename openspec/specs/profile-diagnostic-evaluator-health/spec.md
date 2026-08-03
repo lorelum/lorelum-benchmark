@@ -4,16 +4,18 @@
 
 Define evaluator-process health for Practice profile diagnostics so a partial
 or failed evaluator process cannot produce condition-comparison evidence.
-
 ## Requirements
-
 ### Requirement: Profile diagnostic health requires successful evaluator completion
 
 The profile diagnostic runner MUST record `evaluation_status=evaluated` only
-when the evaluator process completes without timeout or launch failure, exits
-with code zero, and emits a valid complete structured diagnostic result.
-Semantic and Practice observation fields MUST NOT be inferred from evaluator
-stdout when the evaluator process is non-healthy.
+when the evaluator process completes without timeout, launch failure, or
+WebServer startup failure, exits with code zero, and emits a valid complete
+structured diagnostic result. Semantic and Practice observation fields MUST
+NOT be inferred from evaluator stdout when the evaluator process is non-healthy.
+
+WebServer launch failure, dependency failure, port conflict, and evaluator
+timeout MUST be classified as `execution-failed` with a stable redacted reason
+and MUST NOT produce semantic, Practice observation, or joint-pass fields.
 
 #### Scenario: Structured output followed by a nonzero evaluator exit
 - **WHEN** an evaluator emits a syntactically valid diagnostic result but exits
@@ -34,6 +36,12 @@ stdout when the evaluator process is non-healthy.
 - **THEN** the runner MUST record `evaluation_status=invalid-output` and MUST
   NOT infer semantic, Practice observation, or joint pass fields
 
+#### Scenario: WebServer launch failure is not a semantic result
+- **WHEN** the attempt WebServer fails to start or a port conflict occurs
+- **THEN** the runner MUST record `execution-failed` with a stable redacted
+  category and MUST NOT emit semantic, Practice observation, or joint-pass
+  fields
+
 ### Requirement: Evaluator process failure remains redacted diagnostic evidence
 
 The runner MUST redact evaluator-process failures in every diagnostic summary.
@@ -48,3 +56,4 @@ text, oracle material, or calibration material.
 - **THEN** the replay MUST report a non-healthy evaluator result and MUST NOT
   repair the workspace, rerun a model, or use the partial output in a condition
   comparison
+
