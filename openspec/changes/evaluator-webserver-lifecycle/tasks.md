@@ -1,6 +1,6 @@
 ## 1. OpenSpec and planning gate
 
-- [ ] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #134. (`openspec validate evaluator-webserver-lifecycle --type change --strict`)
+- [x] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #134. (`openspec validate evaluator-webserver-lifecycle --type change --strict` passed; PR #140)
 - [ ] 1.2 Confirm with the requirements owner: dynamic port + controlled supervisor vs Playwright built-in webServer dynamic port; failure classification (existing `execution-failed` enum + stable error categories vs a new status). Record answers in this change's design.
 
 ## 2. Process-tree cleanup helper
