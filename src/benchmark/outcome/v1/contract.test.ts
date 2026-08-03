@@ -12,7 +12,7 @@ function judge(overrides: Record<string, unknown> = {}): Record<string, unknown>
     judge: { id: "mock-judge", version: "0.1.0" },
     state: "observed",
     score: 80,
-    criteria: [{ id: "layering", points: 50, max_points: 60 }, { id: "error-boundary", points: 30, max_points: 40 }],
+    criteria: [{ id: "layering", points: 50, max_points: 60, rationale: "boundary module owns transport" }, { id: "error-boundary", points: 30, max_points: 40, rationale: "domain errors translated at boundary" }],
     prompt_hash: "a".repeat(64),
     rubric_hash: "b".repeat(64),
     input_hash: "c".repeat(64),
@@ -55,6 +55,12 @@ test("non-observed states must score zero without criteria", () => {
   expect(() => assertJudgeResultV1(judge({ state: "not-run", score: 10, criteria: [] }))).toThrow("must score zero without criteria");
 });
 
+test("observed criteria require a non-empty rationale", () => {
+  const withoutRationale = judge({ criteria: [{ id: "layering", points: 50, max_points: 60 }, { id: "error-boundary", points: 30, max_points: 40 }] });
+  expect(validateJudgeResult(withoutRationale)).toBe(false);
+  expect(() => assertJudgeResultV1(withoutRationale)).toThrow("criterion rationale is required");
+  expect(() => assertJudgeResultV1(judge({ criteria: [{ id: "layering", points: 50, max_points: 60, rationale: "" }, { id: "error-boundary", points: 30, max_points: 40, rationale: "ok" }] }))).toThrow("criterion rationale is required");
+});
 test("requires provenance identity and hashes", () => {
   expect(() => assertJudgeResultV1({ ...judge(), judge: { id: "mock-judge" } })).toThrow("judge identity is invalid");
   expect(() => assertJudgeResultV1({ ...judge(), prompt_hash: "not-a-hash" })).toThrow("provenance hash is missing or invalid");
@@ -65,10 +71,10 @@ test("requires provenance identity and hashes", () => {
 });
 
 test("preserves criterion rationale when present", () => {
-  const withRationale = judge({ criteria: [{ id: "layering", points: 50, max_points: 60, rationale: "boundary module owns transport" }, { id: "error-boundary", points: 30, max_points: 40 }] });
+  const withRationale = judge({ criteria: [{ id: "layering", points: 50, max_points: 60, rationale: "boundary module owns transport" }, { id: "error-boundary", points: 30, max_points: 40, rationale: "domain errors translated at boundary" }] });
   expect(validateJudgeResult(withRationale)).toBe(true);
   expect(assertJudgeResultV1(withRationale).criteria[0].rationale).toBe("boundary module owns transport");
-  expect(() => assertJudgeResultV1(judge({ criteria: [{ id: "layering", points: 50, max_points: 60, rationale: "" }] }))).toThrow("criterion rationale is invalid");
+  expect(() => assertJudgeResultV1(judge({ criteria: [{ id: "layering", points: 50, max_points: 60, rationale: "" }] }))).toThrow("criterion rationale is required");
 });
 test("schema rejects observed results that carry a reason", () => {
   const observedWithReason = judge({ reason: "audit" });
@@ -85,9 +91,9 @@ test("rejects hidden weighted totals and score disagreement", () => {
 });
 
 test("rejects duplicate criteria and non-100 max points for observed", () => {
-  const duplicate = judge({ criteria: [{ id: "layering", points: 40, max_points: 50 }, { id: "layering", points: 40, max_points: 50 }] });
+  const duplicate = judge({ criteria: [{ id: "layering", points: 40, max_points: 50, rationale: "a" }, { id: "layering", points: 40, max_points: 50, rationale: "b" }] });
   expect(() => assertJudgeResultV1(duplicate)).toThrow("duplicate quality criterion");
-  const badTotal = judge({ criteria: [{ id: "layering", points: 80, max_points: 99 }] });
+  const badTotal = judge({ criteria: [{ id: "layering", points: 80, max_points: 99, rationale: "a" }] });
   expect(() => assertJudgeResultV1(badTotal)).toThrow("must total 100");
 });
 

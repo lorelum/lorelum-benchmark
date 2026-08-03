@@ -17,5 +17,5 @@
 ## 4. Docs and verification
 
 - [x] 4.1 Document the judge capability in `docs/BENCHMARK_PROTOCOL.md` and `docs/PI_RUNNER.md`: input allowlist, provenance, soft-signal-only boundary, mock-by-default. [Write scope: `docs/`]
-- [x] 4.2 Run `bun run test:contracts`, `bun run validate`, OpenSpec strict validation, and `git diff --check`; record command outcomes and omissions in the PR. (test:contracts 105/105 incl. judge + outcome tests, validate passed, strict validation passed, diff --check passed.) [Execution scope: repo-wide]
+- [x] 4.2 Run `bun run test:contracts`, `bun run validate`, OpenSpec strict validation, and `git diff --check`; record command outcomes and omissions in the PR. (test:contracts 110/110 incl. judge + outcome tests, validate passed, strict validation passed, diff --check passed; review round: path-level allowlist, rubric-driven mock, required rationale, JudgeOutcome documentation.) [Execution scope: repo-wide]
 - [x] 4.3 Confirm no model call, candidate change, snapshot, record, or frozen-helper rewrite was introduced; check off completed tasks immediately.

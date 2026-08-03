@@ -86,6 +86,16 @@ quality artifact（sidecar）保存，`evaluator-result/v2` 不包含 judge 字�
 
 回滚：删除新增 schema/代码/测试即可；不触碰 v2、冻结 helper 或历史记录。
 
+### JudgeOutcome 与 schema 合规记录的关系
+
+运行期 `JudgeOutcome`（`{ok:false, state, reason}`）是 provider 调用的状态表达，
+不是 schema 合规的 `judge-result/v1` 记录。两者关系为：
+
+- schema 合规记录：仅当 provider 产出完整 provenance（judge 身份、prompt/rubric/
+  input hash、confidence 与 observed 理由）时写入 quality sidecar。
+- fail-closed 状态（`judge-unavailable`/`not-run`）：当 provider 未运行、缺失 hash
+  或输出非法时使用 `JudgeOutcome`；若需写入 record，则补齐可得字段（如可推导的
+  input hash）或另设状态字段，不得伪造缺失的 hash 或低分。
 ## Open Questions
 
 - `judge-result/v1` 在同一版本内扩展，还是新增 `judge-result/v2` 并冻结 v1？

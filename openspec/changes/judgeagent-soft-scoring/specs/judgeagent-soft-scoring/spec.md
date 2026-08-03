@@ -4,11 +4,16 @@
 
 The JudgeAgent input constructor MUST accept only declared public material:
 the task card `public/task.md`, `public/starter/`, the candidate diff or source
-snapshot, and explicitly declared public run materials. It MUST reject inputs
-that contain condition identifiers, Practice text, Oracle material, private
-evaluators, private paths, or calibration material. Rejection MUST fail closed
-with a redacted audit reason and MUST NOT forward partial or private input to a
-provider.
+snapshot, and explicitly declared public run materials. Enforcement MUST be
+path-level: every material path MUST resolve inside the workspace and under an
+allowlisted public root (for example `public/...` or
+`suites/<suite>/tasks/<slug>/vN/public/...`) and the file MUST exist. A
+`declared-public` marker MUST NOT bypass the path allowlist. String fields MUST
+be rejected when they contain known private markers (private paths, Oracle
+material paths, condition identifiers, Practice payload, calibration paths, or
+evaluator paths); legitimate public text that merely mentions such words MUST
+NOT be rejected. Rejection MUST fail closed with a redacted audit reason and
+MUST NOT forward partial or private input to a provider.
 
 #### Scenario: Private path in judge input
 - **WHEN** an input candidate contains a private path, Practice text, Oracle content, or a condition identifier
@@ -32,6 +37,10 @@ or an unavailable provider MUST fail closed and MUST NOT fabricate a low score.
 #### Scenario: Missing hash fails closed
 - **WHEN** a provider result omits a required input, prompt, or rubric hash
 - **THEN** the result is rejected and recorded as `judge-unavailable` or `not-run` with an audit reason, never as a low score
+
+#### Scenario: Fail-closed state is not a schema-conforming record
+- **WHEN** a provider did not run or produced invalid output
+- **THEN** the run uses a fail-closed status (`judge-unavailable`/`not-run`) with an audit reason; if persisted, the record must not fabricate missing hashes or a low score, and may carry only derivable provenance fields
 
 ### Requirement: JudgeAgent is a soft quality signal only
 

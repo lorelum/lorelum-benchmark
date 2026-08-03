@@ -74,7 +74,7 @@ export function assertJudgeResultV1(value: unknown): JudgeResultV1 {
   for (const criterion of value.criteria) {
     if (!isRecord(criterion) || !validId(criterion.id) || !Number.isInteger(criterion.points) || !Number.isInteger(criterion.max_points) || criterion.points < 0 || criterion.max_points < 1 || criterion.max_points > 100 || criterion.points > criterion.max_points) fail("quality criterion is invalid");
     exactKeys(criterion, ["id", "points", "max_points", "rationale"], "quality criterion");
-    if (criterion.rationale !== undefined && (typeof criterion.rationale !== "string" || !criterion.rationale)) fail("criterion rationale is invalid");
+    if (typeof criterion.rationale !== "string" || !criterion.rationale) fail("criterion rationale is required and must be non-empty");
     if (criterionIds.has(criterion.id)) fail(`duplicate quality criterion: ${criterion.id}`);
     criterionIds.add(criterion.id);
     points += criterion.points;
