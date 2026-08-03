@@ -1,6 +1,6 @@
 ## 1. OpenSpec and planning gate
 
-- [ ] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #133. (`openspec validate judgeagent-soft-scoring --type change --strict`)
+- [x] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #133. (`openspec validate judgeagent-soft-scoring --type change --strict` passed; PR #139)
 - [ ] 1.2 Confirm with the requirements owner: judge-result/v1 in-place extension vs new v2, rubric reference placement, and sidecar artifact reference; record answers in this change's design.
 
 ## 2. Judge result contract
