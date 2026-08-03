@@ -35,6 +35,11 @@ bun run pi:coordinate -- scratch/requests/<run-id>.json
 Pi record 会保存完整 evaluator result 与 `quality_score`，供后续质量调整分析。未声明该字段的
 历史任务继续使用 Bun test evaluator。
 
+结果表达遵守仓库级 outcome 契约（`docs/BENCHMARK_PROTOCOL.md` 的「结果契约」一节）：任务完成只由
+`evaluator-result/v2` 的语义硬门槛决定，质量分为独立软指标；JudgeAgent 等独立判分结果使用 sidecar
+`judge-result/v1` 表达，不改写 `evaluator-result/v2`；`joint_pass` 仅为派生报告字段，禁止引入隐藏
+加权总分。
+
 `pi:requests` 会将 experiment ID、计划 hash 和 `smoke`/`pilot`/`official` run kind 写入请求，并按实验计划中的 task、condition 与重复次数生成稳定 run ID。`pilot` 记录只用于验证注入、方差和 evaluator 链路，永不进入正式比较或发布结论；`pi:coordinate`
 先执行 adapter preflight，再运行 Pi、以 `CANDIDATE_PATH` 桥接私有 evaluator，并捕获 Pi
 输出、evaluator 输出、候选 diff 与 adapter manifest。它会写入

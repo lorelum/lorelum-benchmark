@@ -23,7 +23,7 @@
 
 ### 1. 公开任务行为
 
-题面只描述目标产品行为与任何不可替代的公共接口；不得泄露私有验收或 reference 结构。
+题面只描述目标产品行为与任何不可替代的公共接口；不得泄露私有验收或 reference 结构。题面 MUST 用真实产品语境书写（真实产品/领域场景、自然的需求表述），不得一眼看出是测试环境样板；任务完成判定只跟题面声明的功能行为走。
 
 - 正例（#75）：题面要求"登录成功显示欢迎、失败显示通用错误、提交期间禁用并防重复提交"，由公开浏览器测试验证。
 - 反例：题面写明"必须在 `src/features/auth/loginService.ts` 中实现请求"--这是 reference 布局，属于实现偏好，不应进入公开题面。
@@ -214,12 +214,13 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 - **Practice 已观察**：该次运行的私有 probe 在其声明能力范围内观察到对应职责。
 - **Practice 未观察**：该次运行有已校准的负面证据；它不表示任务失败。
 - **Practice 不确定**：probe 不能可靠分类，必须保留审计原因；它不表示 Agent 未遵循 Practice。
-- **两者同时通过**：该次运行同时满足语义与质量信号--这是判断 Practice 是否带来方向性改善的依据。
-- **`evaluated` / 非健康评测**：前者是产生有效结构化结果的次数；后者分别列出 `invalid-output`、`execution-failed` 与 `not-executable` 的次数和原因。所有 `x/y` 的分母保留计划运行次数；非健康评测不得静默从分母剔除、改记为 `not-observed`，或计作任何通过/观测分子。
+- **JudgeAgent 不可用**：判分资源未产出信号，与 `not-observed` 严格区分；它不表示候选质量缺失，也不改变任务完成。
+- **两者同时通过（`joint_pass`）**：该次运行同时满足语义与质量信号--这是判断 Practice 是否带来方向性改善的依据。`joint_pass` 只是派生报告字段，不是任务完成、execution health 或加权总分。
+- **`evaluated` / 非健康评测 / 不确定**：`evaluated` 是产生有效结构化结果的次数；非健康分别列出 `invalid-output`、`execution-failed` 与 `not-executable` 的次数和原因；完成状态无法可靠判定时显式记录为 `indeterminate` 并保留审计原因。所有 `x/y` 的分母保留计划运行次数；非健康与 `indeterminate` 评测不得静默从分母剔除、改记为 `not-observed`，或计作任何通过/观测分子。
 
 ### 报告要求
 
-- 分别呈现语义通过、Practice 已观察、Practice 未观察、Practice 不确定、evaluator/execution health 与两者同时通过，不合并为总分。
+- 分别呈现语义通过、Practice 已观察、Practice 未观察、Practice 不确定、JudgeAgent 不可用、evaluator/execution health（含 `indeterminate`）与派生两者同时通过，不合并为总分；原始分数、probe 分值、计划分母与失败原因必须保留。
 - 结论只能描述已执行的 candidate、Practice、模型与条件；每个条件都必须同时报告计划次数、`evaluated` 次数和全部非健康状态，不能选择性排除运行。
 - 只有当所有条件均完成预先声明的重复次数、全部运行均为 `evaluated`、probe 校准通过、且相关 Practice 的语义通过次数不低于 baseline 与无关对照并且其“两者同时通过”次数严格领先二者时，才可称为**该 candidate 在该执行条件下的方向性信号**。
 - 即使满足上述条件，结论也只能说明该条件下的原始结果差异；它不证明 retrieval 有效、Practice 的因果效果、正式 benchmark 结果、产品效果或普遍模型能力。任一条件出现非健康评测、未完成计划次数或未通过校准时，只能报告诊断结果，不得作条件比较结论。

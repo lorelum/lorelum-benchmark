@@ -85,8 +85,24 @@ Execution health 表示"运行/评测链路本身是否可用"，与候选代码
 
 回滚：删除新增 schema/docs/测试即可恢复；不触碰 v2、冻结 helper 或历史记录。
 
-## Open Questions
+## Resolved Questions
 
-- JudgeAgent 结果采用新版本 schema 还是独立 sidecar？（推荐 sidecar，不修改 `evaluator-result/v2`。）
-- execution health 的 `indeterminate` 是否需要在现有 profile diagnostic 枚举中新增，还是仅作为新 schema 的契约状态？（默认：仅新 schema 契约状态，不改变现有枚举。）
-- `joint_pass` 的派生规则是否需要逐 task 声明质量信号成立条件？（默认：由 evaluator 输出的 quality 状态统一派生，无需逐 task 声明。）
+- JudgeAgent 结果表达：确认采用独立 sidecar schema（`judge-result/v1`），不修改 `evaluator-result/v2`。
+- `indeterminate` 范围：确认仅作为新契约 schema 状态，不改变现有 profile diagnostic `evaluation_status` 枚举。
+- `joint_pass` 派生：确认由 evaluator 输出的 quality `observed` 状态统一派生，无需逐 task 声明。
+
+## Planning Confirmation
+
+Requirements owner confirmed after the OpenSpec-only PR (#138) and planning
+clarification, without a comment on issue #132:
+
+- 语义硬门槛跟 task 卡走：任务完成仅由题面声明的功能行为（用户可观察 +
+  不可替代公共接口）决定，由私有语义检查验证；契约不预设具体 UI 行为。
+  task 卡必须用真实产品语境书写，不得一眼看出是测试环境样板。
+- JudgeAgent 质量分采用独立 sidecar schema（`judge-result/v1`），不改写
+  `evaluator-result/v2`。
+- execution health 的 `indeterminate` 仅在新契约/schema 中表达，不改现有
+  profile diagnostic `evaluation_status` 枚举。
+- `joint_pass` 仅由 `semantic=pass` 且质量 `observed` 派生；保留原始分数、
+  probe 分值、计划分母与失败原因；禁止隐藏加权总分；不实现 JudgeAgent
+  provider、不调用模型、不改 #91/#125 结果。
