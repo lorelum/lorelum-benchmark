@@ -50,6 +50,11 @@ test("non-observed states must score zero without criteria", () => {
   expect(() => assertJudgeResultV1(judge({ state: "not-run", score: 10, criteria: [] }))).toThrow("must score zero without criteria");
 });
 
+test("schema rejects observed results that carry a reason", () => {
+  const observedWithReason = judge({ reason: "audit" });
+  expect(validateJudgeResult(observedWithReason)).toBe(false);
+  expect(() => assertJudgeResultV1(observedWithReason)).toThrow("observed quality must not carry a reason");
+});
 test("rejects hidden weighted totals and score disagreement", () => {
   const weighted = judge({ weighted_total: 80 });
   expect(validateJudgeResult(weighted)).toBe(false);

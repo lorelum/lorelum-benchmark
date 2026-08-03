@@ -91,6 +91,14 @@ Execution health 表示"运行/评测链路本身是否可用"，与候选代码
 - `indeterminate` 范围：确认仅作为新契约 schema 状态，不改变现有 profile diagnostic `evaluation_status` 枚举。
 - `joint_pass` 派生：确认由 evaluator 输出的 quality `observed` 状态统一派生，无需逐 task 声明。
 
+## Enforcement Boundary
+
+本 change 只定义仓库级契约，按确认口径不接线到现有 runner/record 管道，因此需要显式区分"已强制"与"指导性"条款，避免归档后契约与实际管道脱节：
+
+- **已由 schema/断言强制**：`judge-result/v1` sidecar 的状态枚举（`observed`/`not-observed`/`indeterminate`/`not-run`/`judge-unavailable`）、observed 的 criterion 分值守恒与禁止 reason、`indeterminate`/`judge-unavailable` 必须带审计原因、拒绝隐藏加权总分；`src/benchmark/outcome/v1/contract.ts` 的 `assertJudgeResultV1`/`deriveJointPass`/`summarizeOutcomes` 及其 9 个聚焦测试，已接入 `test:contracts` 与 CI。
+- **指导性（后续 change 落地）**：将 health/semantic/quality/joint-pass 维度接入真实 summary/record 管道（如 profile diagnostic 报告、run record `outcome` 或未来 summary schema）、`summarizeOutcomes` 的分母保留规则作用于真实报告、现有 profile diagnostic 运行时枚举引入 `indeterminate`。这些不属于本 change 范围；接入时须走独立 OpenSpec change 并版本化，禁止改写冻结 helper。
+
+现有 profile diagnostic `evaluation_status` 枚举（`evaluated`/`execution-failed`/`invalid-output`/`not-executable`）保持不变；`indeterminate` 仅作为新契约载体可表达的状态。
 ## Planning Confirmation
 
 Requirements owner confirmed after the OpenSpec-only PR (#138) and planning

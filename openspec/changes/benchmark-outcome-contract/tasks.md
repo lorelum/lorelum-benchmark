@@ -13,7 +13,7 @@
 
 - [x] 3.1 Decide and implement the JudgeAgent result expression confirmed in 1.2: either a new schema version or an independent sidecar schema (default recommendation: sidecar such as `judge-result/v1`); never silently extend `evaluator-result/v2`. [Write scope: `schemas/`]
 - [x] 3.2 Add JSON Schema tests covering execution health states, quality states including `judge-unavailable`, derived `joint_pass`, raw score preservation, and rejection of hidden weighted totals. [Write scope: `src/benchmark/`]
-- [x] 3.3 Add focused runner/validator tests proving non-healthy and `indeterminate` attempts stay in planned denominators without entering pass/observation numerators. [Write scope: `src/benchmark/`]
+- [x] 3.3 Add focused contract-helper tests proving non-healthy and `indeterminate` attempts stay in planned denominators without entering pass/observation numerators; wiring into the real summary/record pipeline is out of scope (see design Enforcement Boundary). [Write scope: `src/benchmark/`]
 
 ## 4. Verification and evidence
 

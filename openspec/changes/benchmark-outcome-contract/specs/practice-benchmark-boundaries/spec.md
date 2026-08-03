@@ -6,7 +6,7 @@
 
 本 requirement 适用所有当前与未来 candidate，并受仓库级 `benchmark-outcome-contract` 约束：任务完成仅由 `semantic=pass` 决定；`joint_pass` 仅为 `semantic=pass` 且质量 `observed` 的派生报告字段，不得作为任务完成、evaluator health 或加权总分。原始分数、probe 分值、计划分母与失败原因 MUST 保留；不得引入隐藏加权总分。
 
-Practice-injection diagnostic 中的 `evaluated` 还 MUST 表示 evaluator 进程已成功完成并输出完整结构化结果。若 evaluator 无法启动、超时或以非零退出码结束，尝试 MUST 记录为非健康；完成状态无法可靠判定时 MUST 记录为 `indeterminate`。非健康与 `indeterminate` 尝试不得静默从条件分母剔除、改记为质量信号缺失或计作任何通过分子。
+Practice-injection diagnostic 中的 `evaluated` 还 MUST 表示 evaluator 进程已成功完成并输出完整结构化结果。若 evaluator 无法启动、超时或以非零退出码结束，尝试 MUST 记录为非健康。现有 profile diagnostic `evaluation_status` 枚举（`evaluated`/`execution-failed`/`invalid-output`/`not-executable`）保持不变；`indeterminate` 仅作为仓库级 outcome 契约（`benchmark-outcome-contract`）中新契约/sidecar 载体（如 `judge-result/v1` 或未来 summary schema）可表达的状态，不要求现有 runner 产出该状态。以 outcome 契约表达的结果中，完成状态无法可靠判定时 MUST 记录为 `indeterminate`；非健康与 `indeterminate` 尝试不得静默从条件分母剔除、改记为质量信号缺失或计作任何通过分子。
 
 #### Scenario: 功能正确但质量信号缺失
 - **WHEN** 候选通过所有公开语义测试但未满足一个 Practice 质量 probe
@@ -20,9 +20,9 @@ Practice-injection diagnostic 中的 `evaluated` 还 MUST 表示 evaluator 进�
 - **WHEN** evaluator 在输出部分或完整结构化文本后以非零退出码结束
 - **THEN** 结果 MUST 记录为非健康评测，不得将文本中的语义或质量字段用于条件比较
 
-#### Scenario: 完成状态不确定
-- **WHEN** evaluator 或 replay 无法可靠判定运行是否完成
-- **THEN** 结果 MUST 记录 execution health 为 `indeterminate` 并保留审计原因，且不得计入任何通过/观测分子
+#### Scenario: 完成状态不确定（outcome 契约载体）
+- **WHEN** 采用仓库级 outcome 契约（如 `judge-result/v1` sidecar 或未来 summary schema）表达的结果无法可靠判定运行是否完成
+- **THEN** 该结果 MUST 记录 execution health 为 `indeterminate` 并保留审计原因，且不得计入任何通过/观测分子；现有 profile diagnostic `evaluation_status` 枚举不要求新增该状态
 
 #### Scenario: 仅有命名差异的实现
 - **WHEN** 两个候选在任务行为和被测职责上等价，但使用不同的内部命名、helper 拆分或局部目录布局
@@ -30,7 +30,7 @@ Practice-injection diagnostic 中的 `evaluated` 还 MUST 表示 evaluator 进�
 
 ### Requirement: 候选结果以人可读原始维度呈现
 
-Practice-injection candidate 的结果 MUST 按条件单独列出注入内容、计划运行次数、`evaluated` 次数、每种 execution health 状态（含 `execution-failed`、`invalid-output`、`not-executable`、`indeterminate`）的次数、语义通过次数、质量 `observed`/`not-observed`/`indeterminate`/`not-run`/`judge-unavailable` 次数和派生 `joint_pass` 次数。每个 `x/y` 值 MUST 解释分子、分母和通过含义，分母 MUST 保留计划运行次数。结论 MUST 限定在已执行的 candidate、Practice、模型与条件上，不得将小样本本地对照表述为 retrieval 有效性、正式 benchmark、产品效果或普遍模型能力。
+Practice-injection candidate 的结果 MUST 按条件单独列出注入内容、计划运行次数、`evaluated` 次数、每种 execution health 状态（现有诊断枚举 `execution-failed`、`invalid-output`、`not-executable`；以 outcome 契约表达的结果另含 `indeterminate`）的次数、语义通过次数、质量 `observed`/`not-observed`/`indeterminate`/`not-run`/`judge-unavailable` 次数和派生 `joint_pass` 次数。每个 `x/y` 值 MUST 解释分子、分母和通过含义，分母 MUST 保留计划运行次数。结论 MUST 限定在已执行的 candidate、Practice、模型与条件上，不得将小样本本地对照表述为 retrieval 有效性、正式 benchmark、产品效果或普遍模型能力。
 
 #### Scenario: 本地三条件结果
 - **WHEN** 维护者在 PR、issue 或验证文档中报告三条件候选结果
