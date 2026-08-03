@@ -1,6 +1,6 @@
 ## 1. OpenSpec and planning gate
 
-- [ ] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #132. (`openspec validate benchmark-outcome-contract --type change --strict`)
+- [x] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #132. (`openspec validate benchmark-outcome-contract --type change --strict` passed; PR #138)
 - [ ] 1.2 Confirm with the requirements owner: JudgeAgent result expression (new schema version vs sidecar), execution health `indeterminate` adoption scope, joint_pass derivation rule, and raw-score preservation requirements; record the answers in #132 and this change's design.
 
 ## 2. Outcome contract artifacts
