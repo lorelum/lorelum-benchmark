@@ -1,6 +1,6 @@
 ## 1. OpenSpec and planning gate
 
-- [ ] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #135. (`openspec validate login-page-realistic-practice-candidate --type change --strict`)
+- [x] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #135. (`openspec validate login-page-realistic-practice-candidate --type change --strict` passed; PR #141)
 - [ ] 1.2 Confirm with the requirements owner: API contract as public starter contract vs starter-source-only; which UI/UX dimensions are deterministic semantic vs JudgeAgent soft scoring; Practice card reuse vs new card. Record answers in this change's design.
 
 ## 2. Candidate scaffold
