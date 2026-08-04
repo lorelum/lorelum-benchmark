@@ -508,7 +508,7 @@ export function buildSummary(input: {
 }
 
 const maxAttemptRetries = 2;
-const globalCapMs = 40 * 60_000; // whole pilot self-bounds, allowing retries
+const globalCapMs = 30 * 60_000; // whole pilot self-bounds, allowing retries
 
 function isCleanPi(entry: Record<string, unknown>): boolean {
   const pi = entry.pi as { code?: number | null; timed_out?: boolean; stalled?: boolean } | null | undefined;
