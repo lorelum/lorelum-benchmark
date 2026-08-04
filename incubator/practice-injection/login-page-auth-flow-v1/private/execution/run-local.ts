@@ -104,15 +104,14 @@ async function run(command: string[], cwd: string, options: { timeoutMs?: number
   const errPump = pump(child.stderr, errChunks);
 
   const killTree = () => {
+    // Fire-and-forget so the watchdog never blocks on the kill (taskkill can
+    // be slow on Windows; blocking here would stall the whole pilot).
     try {
       if (process.platform === "win32") {
-        // child.kill() does not terminate the process tree on Windows; use
-        // taskkill so spawned children (e.g. pi's node process) actually die,
-        // then fall back to child.kill() in case the tree survives.
-        Bun.spawnSync([`${process.env.SystemRoot ?? "C:\\Windows"}\\System32\\taskkill.exe`, "/PID", String(child.pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
-        child.kill("SIGKILL");
+        Bun.spawn([`${process.env.SystemRoot ?? "C:\\Windows"}\\System32\\taskkill.exe`, "/PID", String(child.pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
+        child.kill("SIGKILL").catch(() => {});
       } else {
-        child.kill("SIGKILL");
+        child.kill("SIGKILL").catch(() => {});
       }
     } catch {
       // best-effort
@@ -291,7 +290,6 @@ async function piCommand(): Promise<string> {
 }
 
 const preflightTimeoutMs = 60_000;
-const globalCapMs = 25 * 60_000; // whole pilot self-bounds to 25 minutes
 
 function redactSecrets(text: string): string {
   return text
@@ -366,12 +364,12 @@ async function startDevServer(appPath: string): Promise<{ baseUrl: string; kill:
 async function runAttempt(
   outputPath: string,
   condition: Condition,
-  attempt: number,
+  label: string,
   conditions: Conditions,
   command: string,
   taskMd: string,
 ): Promise<Record<string, unknown>> {
-  const attemptPath = resolve(outputPath, condition.id, `attempt-${attempt}`);
+  const attemptPath = resolve(outputPath, condition.id, label);
   const workspace = resolve(attemptPath, "workspace");
   await mkdir(attemptPath, { recursive: true });
   await copyPublicWorkspace(workspace);
@@ -442,7 +440,7 @@ async function runAttempt(
 
   return {
     condition: condition.id,
-    attempt,
+    attempt: label,
     practice_sha256: practice?.sha256 ?? null,
     workspace: relativeToRepository(workspace),
     initial_workspace_files: initialFiles,
@@ -509,6 +507,40 @@ export function buildSummary(input: {
   return { schema_version: "login-page-diagnostic-pilot-summary/v1", ...input };
 }
 
+const maxAttemptRetries = 2;
+const globalCapMs = 40 * 60_000; // whole pilot self-bounds, allowing retries
+
+function isCleanPi(entry: Record<string, unknown>): boolean {
+  const pi = entry.pi as { code?: number | null; timed_out?: boolean; stalled?: boolean } | null | undefined;
+  return Boolean(pi) && pi.code === 0 && pi.timed_out !== true && pi.stalled !== true;
+}
+
+// Retry a timed-out or failed attempt with a fresh workspace so a transient
+// slow/stalled model call never leaves a slot without a result. Up to
+// maxAttemptRetries extra attempts per slot; the final summary records the
+// logical attempt number and the number of retries used.
+async function runAttemptWithRetries(
+  outputPath: string,
+  condition: Condition,
+  attempt: number,
+  conditions: Conditions,
+  command: string,
+  taskMd: string,
+): Promise<Record<string, unknown>> {
+  let entry: Record<string, unknown> | undefined;
+  let usedRetries = 0;
+  for (let retry = 0; retry <= maxAttemptRetries; retry += 1) {
+    const label = retry === 0 ? `attempt-${attempt}` : `attempt-${attempt}-r${retry}`;
+    entry = await runAttempt(outputPath, condition, label, conditions, command, taskMd);
+    usedRetries = retry;
+    if (isCleanPi(entry)) break;
+    if (retry < maxAttemptRetries) {
+      console.log(`retrying ${condition.id}/${label}: pi code=${String(entry.pi?.code)} timedOut=${String(entry.pi?.timed_out)} stalled=${String(entry.pi?.stalled)}`);
+    }
+  }
+  return { ...(entry ?? {}), attempt, retry_count: usedRetries };
+}
+
 export async function main(): Promise<number> {
   const options = parseOptions();
   const planBundle = await frozenPlan();
@@ -573,7 +605,7 @@ if (options.preflightOnly) process.exit(0);
         console.log(`global cap ${globalCapMs / 60_000}min reached; marking remaining attempts as not-run`);
         break;
       }
-      const entry = await runAttempt(options.outputPath, condition, attempt, conditions, command, taskMd);
+      const entry = await runAttemptWithRetries(options.outputPath, condition, attempt, conditions, command, taskMd);
       entries.push(entry);
       await writeJson(resolve(options.outputPath, "summary.json"), buildSummary({
         generated_at: new Date().toISOString(),

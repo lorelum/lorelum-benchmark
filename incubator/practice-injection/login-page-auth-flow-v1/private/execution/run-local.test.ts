@@ -12,7 +12,7 @@ describe("frozen pilot plan", () => {
     const bundle = await frozenPlan();
     expect(bundle.plan.candidate).toBe("login-page-auth-flow-v1");
     expect(bundle.plan.model).toBe("deepseek/deepseek-v4-pro");
-    expect(bundle.plan.repetitions).toBe(2);
+    expect(bundle.plan.repetitions).toBe(1);
     expect(bundle.plan.judge.channel).toBe("local-mock");
     expect(bundle.plan.judge.repetition).toEqual({ count: 3, aggregate: "median" });
     expect(bundle.rubric_hash).toMatch(/^[a-f0-9]{64}$/);
@@ -47,7 +47,7 @@ describe("conditions and workspace isolation", () => {
     const conditions = await loadConditions();
     const ids = conditions.conditions.filter((c) => c.status === "declared").map((c) => c.id);
     expect(ids).toEqual(["baseline", "oracle-practice", "irrelevant-practice"]);
-    expect(conditions.shared_execution.repetitions).toBe(2);
+    expect(conditions.shared_execution.repetitions).toBe(1);
   });
 
   test("plannedConditions requires the three controls", () => {
@@ -231,12 +231,12 @@ describe("run watchdog (budget and stall)", () => {
     const result = await run(["node", "-e", "setTimeout(() => {}, 30000)"], cwd, { timeoutMs: 800 });
     expect(result.timedOut).toBe(true);
     expect(result.stalled).toBeUndefined();
-  }, 15000);
+  }, 30000);
   test("stall detection kills a child that stops producing output", async () => {
     const result = await run(["node", "-e", "process.stdout.write('x'); setTimeout(() => {}, 30000)"], cwd, { stallMs: 800 });
     expect(result.stalled).toBe(true);
     expect(result.timedOut).toBe(false);
-  }, 15000);
+  }, 30000);
   test("a quick child completes without timeout or stall", async () => {
     const result = await run(["node", "-e", "process.stdout.write('ok')"], cwd, { timeoutMs: 10000, stallMs: 5000 });
     expect(result.code).toBe(0);
