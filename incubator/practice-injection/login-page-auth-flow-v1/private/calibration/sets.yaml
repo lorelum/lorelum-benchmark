@@ -53,17 +53,17 @@ sets:
         extends: candidate-foundation
         overlay:
           path: private/calibration/sets/login-page-judge/v1/overlays/equivalent
-          sha256: cef9a84845781d361f4776fd8901f74a1e9ce8d1958e906cca45440e8d6f7a8d
+          sha256: 94fb633aaac636cc9fe2b777b6a3af74510f557c4c03d69a39ab72a7b7900390
       anti-pattern-tree:
         extends: candidate-foundation
         overlay:
           path: private/calibration/sets/login-page-judge/v1/overlays/anti-pattern
-          sha256: 0511173d5e37238aee4c45d75b7d77088512444176ce41cf5b17f1682bdc740c
+          sha256: 5ca6dbc02304e27ffc569869728f97cb001bcc0f8bd72b5d4195489277314cbd
       boundary-tree:
         extends: candidate-foundation
         overlay:
           path: private/calibration/sets/login-page-judge/v1/overlays/boundary
-          sha256: 989d09a160ec4466715e2503a1eb47aec35dcced3a238154dab4c50722412489
+          sha256: d81250ac81e7d1592adae602c581457e9a49cf459af0bcf05ca264ef9aecb3e2
     fixtures:
       reference: reference-tree
       equivalent: equivalent-tree

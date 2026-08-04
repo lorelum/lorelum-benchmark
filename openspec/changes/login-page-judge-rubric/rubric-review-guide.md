@@ -67,25 +67,23 @@ rubric 与离线校准做 pass-or-fix 审查。你**不修改任何文件**，�
 
 - 日期 / 审查者 / 结论：2026-08-04 / 独立评审员（与实现者分离）/ round 1 发现
   3 项 fix（P1、P2、P3），已全部修复并验证，**fix 清零**。
-- 只读命令：`bun test private/judge` 修复前 11 pass、修复后 13 pass；
-  `input-audit.ts` 通过（fail_closed_negative_checks 为空）；judge 校准矩阵
-  passed（reference=100 / equivalent=100 Δ=0 / anti-pattern=29 gap=71 /
-  boundary=51，全部 observed、无分歧、无低 confidence）。
+- 只读命令（证据路径；校准矩阵分数在 private calibrate 输出中，不在此列出）：
+  `bun test private/judge`（修复前 11 pass、修复后 13 pass）；
+  `input-audit.ts` 通过（fail_closed_negative_checks 为空）；
+  `private/judge/calibrate.ts`（经 kernel 实体化后运行）通过，矩阵四项阈值
+  checks 全真、全部 observed、无分歧、无低 confidence。
 
 fix 清单与处理：
 
-1. **Fix-1（P1）状态变量命名硬绑定**：评分器原硬编码 `submitting`/
-   `setSubmitting`，等价实现改名为 `isPending` 即掉 30 分。修复：从
-   `useState(false)` 解构捕获状态 flag 名（setter 置 true 者优先），
-   `disabled`/`aria-busy`/防重复/finally 重置均用捕获名匹配；login-page-judge
-   集合的 equivalent fixture 改为 `isPending`/`setPending` 改名变体；新增回归
-   测试。修复后矩阵 equivalent=100（Δ=0）。
+1. **Fix-1（P1）状态变量命名硬绑定**：评分器原硬编码固定状态变量名，等价实现
+   改名即明显掉分。修复：从 `useState(false)` 解构捕获状态 flag 名（setter 置
+   true 者优先），`disabled`/`aria-busy`/防重复/finally 重置均用捕获名匹配；
+   login-page-judge 集合的 equivalent fixture 改为改名变体；新增回归测试。
 2. **Fix-2（P2）import 别名/扩展名敏感**：`resolveImport` 增加 `.js`/`.jsx`/
    index 候选；未解析的项目 import（`./` 或 `@/`）且组件不 fetch、不读原始
-   响应时按边界委托处理（30 分，不再误判为 15）；新增别名 import 回归测试。
+   响应时按边界委托处理；新增别名 import 回归测试。
 3. **Fix-3（P3）多 `<form>` 组件选择**：`scoreDimensions` 优先选择带 onSubmit
    的组件文件，避免共享 Form 组件被误选。
 
 - 全部 fix 清零；锚点分数稳定（确定性 mock，spread 恒为 0），本 change 不进入
   pilot；真实模型对 rubric 的实际区分效果留到 pilot 阶段验证。
-
