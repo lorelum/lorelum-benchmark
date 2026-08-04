@@ -1,0 +1,46 @@
+﻿id: login-page-judge-rubric
+version: v1
+judge:
+  id: mock-judge
+  version: "0.1.0"
+prompt: >-
+  Score the candidate login page against the login-page rubric. Assess API and
+  page responsibility boundaries, submission state handling, form experience,
+  and UI and UX from the candidate source. Return structured results only.
+dimensions:
+  - id: api-page-boundary
+    max_points: 30
+    description: >-
+      UI components delegate HTTP transport and status translation to a boundary
+      module. Components do not call fetch directly and do not read raw
+      transport responses such as response status and body. Assessment is
+      structural and does not depend on file names, directory layout, or helper
+      names.
+  - id: state-handling
+    max_points: 30
+    description: >-
+      Submission state is tracked while a request is pending and reset when it
+      settles. Inputs and the submit button are disabled during the request,
+      duplicate submission is guarded, and both success and failure feedback are
+      visible to the user.
+  - id: form-experience
+    max_points: 20
+    description: >-
+      The form provides appropriate input types and autocomplete attributes,
+      disables controls during submission, marks the busy state, and prevents
+      duplicate submission.
+  - id: ui-ux
+    max_points: 20
+    description: >-
+      Form controls have labels, the page has a clear heading, feedback uses
+      accessible status and alert roles, and the page uses semantic layout.
+repetition:
+  count: 3
+  aggregate: median
+thresholds:
+  reference_min: 80
+  equivalent_tolerance: 10
+  anti_pattern_max: 50
+  anti_pattern_gap: 25
+  low_confidence: 65
+  disagreement_spread: 15
