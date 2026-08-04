@@ -231,12 +231,12 @@ describe("run watchdog (budget and stall)", () => {
     const result = await run(["node", "-e", "setTimeout(() => {}, 30000)"], cwd, { timeoutMs: 800 });
     expect(result.timedOut).toBe(true);
     expect(result.stalled).toBeUndefined();
-  });
+  }, 15000);
   test("stall detection kills a child that stops producing output", async () => {
     const result = await run(["node", "-e", "process.stdout.write('x'); setTimeout(() => {}, 30000)"], cwd, { stallMs: 800 });
     expect(result.stalled).toBe(true);
     expect(result.timedOut).toBe(false);
-  });
+  }, 15000);
   test("a quick child completes without timeout or stall", async () => {
     const result = await run(["node", "-e", "process.stdout.write('ok')"], cwd, { timeoutMs: 10000, stallMs: 5000 });
     expect(result.code).toBe(0);

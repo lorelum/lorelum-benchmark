@@ -107,8 +107,10 @@ async function run(command: string[], cwd: string, options: { timeoutMs?: number
     try {
       if (process.platform === "win32") {
         // child.kill() does not terminate the process tree on Windows; use
-        // taskkill so spawned children (e.g. pi's node process) actually die.
+        // taskkill so spawned children (e.g. pi's node process) actually die,
+        // then fall back to child.kill() in case the tree survives.
         Bun.spawnSync([`${process.env.SystemRoot ?? "C:\\Windows"}\\System32\\taskkill.exe`, "/PID", String(child.pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
+        child.kill("SIGKILL");
       } else {
         child.kill("SIGKILL");
       }
@@ -152,11 +154,16 @@ async function run(command: string[], cwd: string, options: { timeoutMs?: number
     // regardless so the pilot never blocks on a stuck child.
     const grace = await Promise.race([
       exitPromise.then((exitCode) => ({ died: true as const, code: exitCode })),
-      new Promise<{ died: false }>((resolvePromise) => setTimeout(() => resolvePromise({ died: false }), 5000)),
+      new Promise<{ died: false }>((resolvePromise) => setTimeout(() => resolvePromise({ died: false }), 2000)),
     ]);
     if (grace.died) code = grace.code;
   }
-  await Promise.all([outPump, errPump]);
+  // Bound the pump wait: if the killed child's process tree survives, its
+  // stdout pipe may never close; do not block the pilot on it.
+  await Promise.race([
+    Promise.all([outPump, errPump]),
+    new Promise((resolvePromise) => setTimeout(resolvePromise, 2000)),
+  ]);
   return {
     code,
     stdout: outChunks.join(""),
