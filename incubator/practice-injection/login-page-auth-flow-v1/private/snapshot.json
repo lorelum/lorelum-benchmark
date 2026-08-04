@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "1d64ad4a79e05fd51bbf54a5429d6e1ac61d47df654e5868fe1317a45c2fcb7f",
+  "snapshot_id": "fdfd835cc73b8b4143987fd85a607972529f7389c62422714b26a2d5ac97c23a",
   "files": {
     "private/calibration.md": "310e0609b6269854686b5feece466e4f4260651d76bb89540abadd0b4a0d1694",
     "private/calibration/run.ts": "dad9179762afcf52f756d6a043cf254111ae0cc82aedd6523cd432463499f80d",
@@ -35,7 +35,13 @@
     "private/evaluator/runtime-closure/bun.lock": "ef93097b3538fd622f47c96698b78be7ed478a66ea32332aeda08ce388dd4754",
     "private/evaluator/runtime-closure/package.json": "228711f7fe3b45c7e49689b9deda0cf7510ef9f8d4b5ad0b69f5711fba1e3f4a",
     "private/evaluator/verify-layering.ts": "44fd10d0623dd94e47c4d116f7ac6c5f6ec482f6d123586fc0aca3b6a798be51",
+    "private/execution/judge.ts": "2d81e05a4b43cbb76eb1728bd90d4a2eb03f2c79cc63abc501b65bbca030a7a7",
+    "private/execution/plan.ts": "7f654e1cfdec5d1fbcb293e068e1d9ea76fb443aee1e388f2a6896736cd9d2d0",
+    "private/execution/plan.yaml": "6b82ff224a2e0ebd191c4fc1563927242a414dc6496dd66cd49a2b221ae278af",
+    "private/execution/run-local.test.ts": "ca6c95fa40f6ade27b49291098e97e20c76bad861dbc1445f38adc87abd5dd30",
+    "private/execution/run-local.ts": "89d179d0ef8c1921cd3d33316e1ee51fc3fcd9f87cd928cdb03260f833ac5a3d",
     "private/execution/tool-policy.yaml": "bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6",
+    "private/execution/unified-diff.ts": "3591b144d12d8525cae8ec7c790b898f2a0ae473d3ed3a5ef9e57a34aad3344a",
     "private/judge/aggregate.ts": "631dc7f9f3fcf28067e8d91466efdba27a51734d54145221596ee36f50096b3a",
     "private/judge/calibrate.ts": "3afc8c73df5ed0195183faa754ee52c962013d7167fb2b171a57b0a4fae8b8f6",
     "private/judge/input-audit.ts": "29dea9b44985d2fabc2efe7309e06e2674e260c50cfba9680472dfbf2a53580f",

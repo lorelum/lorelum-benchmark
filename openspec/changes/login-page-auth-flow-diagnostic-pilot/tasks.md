@@ -1,23 +1,23 @@
 ﻿## 1. OpenSpec and planning gate
 
-- [ ] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #137. (`openspec validate login-page-auth-flow-diagnostic-pilot --type change --strict` passed; PR #xxx)
-- [ ] 1.2 Confirm with the requirements owner: repetition count (default 2), judge scoring repetition strategy per attempt (n=3 median vs single), and pilot local-provider-only (mock judge vs real provider); record answers in this change's design without writing an issue comment unless the owner asks.
+- [x] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #137. (`openspec validate login-page-auth-flow-diagnostic-pilot --type change --strict` passed; PR #143)
+- [x] 1.2 Confirm with the requirements owner: repetition count (2), judge scoring repetition strategy per attempt (n=3 median), pilot local-provider-only (local mock judge); recorded in design.md without an issue comment.
 
 ## 2. Execution plan freezing
 
-- [ ] 2.1 Freeze and validate the execution plan artifact: candidate source commit, `private/snapshot.json`, login-page rubric hash, profile hash, model, prompt hash, budget, and repetitions; plan dry-run must pass without model calls. [Write scope: `incubator/practice-injection/login-page-auth-flow-v1/private/execution/`]
+- [x] 2.1 Freeze and validate the execution plan artifact: `private/execution/plan.yaml` + `plan.ts` (source_commit, profile, model, pi_version, budget, repetitions, prompt_template, judge channel/n=3); `verifyPlanFrozen` detects drift; snapshot verified read-only; plan dry-run passes without model calls.
 
 ## 3. Pilot executor implementation
 
-- [ ] 3.1 Implement `private/execution/run-local.ts` for `login-page-auth-flow-v1` (adapt #75 pattern): clean workspace per attempt (only `public/task.md` + `public/starter/`), Practice runtime injection, per-attempt semantic evaluator + JudgeAgent (login-page rubric, `judge-result/v1` sidecar), execution failure categories, identity binding, and scratch-only output. [Write scope: `incubator/practice-injection/login-page-auth-flow-v1/private/execution/`]
-- [ ] 3.2 Add dry-run and preflight gates: snapshot/conditions/rubric-hash validation, public/private workspace audit, runner/evaluator preflight, and JudgeAgent preflight; any failed gate stops before model calls. [Write scope: `incubator/practice-injection/login-page-auth-flow-v1/private/execution/`]
+- [x] 3.1 Implement `private/execution/run-local.ts` for `login-page-auth-flow-v1`: clean workspace per attempt (task.md + public starter only), Practice runtime injection, per-attempt semantic evaluator + JudgeAgent (local mock, n=3 median, `judge-result/v1` sidecar), execution failure categories, identity binding, scratch-only output.
+- [x] 3.2 Add dry-run and preflight gates: plan freeze + snapshot read-only verification, public/private workspace audit, runner/evaluator preflight (pi version match + model reachability), JudgeAgent preflight (rubric load + hash); any failed gate stops before model calls. Semantic evaluator runs against a pre-started Vite server via `PLAYWRIGHT_BASE_URL` (Playwright standalone webServer hangs on this host).
 
 ## 4. Tests and verification
 
-- [ ] 4.1 Add focused tests: plan-freeze validation, workspace isolation (no private material), judge sidecar schema/provenance shape, failure-category classification, and summary aggregation (signal / no-obvious-signal / uncertain). [Write scope: `incubator/practice-injection/login-page-auth-flow-v1/private/execution/`]
-- [ ] 4.2 Run plan dry-run, public/private audit, JudgeAgent preflight, `bun run test:pi:v2`, `bun run validate`, OpenSpec strict validation, and `git diff --check`; record command outcomes and omissions in the PR. [Execution scope: repo-wide]
-- [ ] 4.3 Confirm no formal record, no suite revision, no release, and no modification to shared runner/schema/existing results; check off completed tasks immediately. [Execution scope: repo-wide]
+- [x] 4.1 Add focused tests (14 pass): plan-freeze validation (incl. pi_version/prompt_template drift + prompt hash), workspace isolation (no private/oracle material), judge sidecar schema/provenance, failure-category classification + redaction, summary aggregation (signal / no-obvious-signal / uncertain, incl. judge-unavailable -> uncertain), buildSummary prompt-hash binding.
+- [x] 4.2 Run plan dry-run, public/private audit, JudgeAgent preflight, `bun run validate`, OpenSpec strict validation, and `git diff --check`; record command outcomes and omissions in the PR. (`bun run test:pi:v2` crashes on `src/benchmark/runner/pi/v2/process-tree.test.ts` (Bun panic, Windows process-tree kill) — environmental, no runner code changed; recorded as omission.)
+- [x] 4.3 Confirm no formal record, no suite revision, no release, and no modification to shared runner/schema/existing results; check off completed tasks immediately.
 
 ## 5. Pilot execution (post-review gate)
 
-- [ ] 5.1 After preflight and independent review pass, execute the three-condition diagnostic pilot into ignored `scratch/`; read only the redacted summary, keep raw pi logs / evaluator output / judge sidecars / diffs in scratch, and report diagnostic/uncertain conclusions only. [Execution scope: `incubator/practice-injection/login-page-auth-flow-v1` + `scratch/`]
+- [ ] 5.1 After preflight and independent review pass, execute the three-condition diagnostic pilot into ignored `scratch/`; read only the redacted summary, keep raw pi logs / evaluator output / judge sidecars / diffs in scratch, and report diagnostic/uncertain conclusions only. (Independent review pass: fix 全部清零; preflight passed; first run reached baseline/attempt-2 then hung on the Playwright standalone webServer — fixed by pre-starting the Vite server with PLAYWRIGHT_BASE_URL; verified evaluator completes ~12s; re-run in progress.)

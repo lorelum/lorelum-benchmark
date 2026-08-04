@@ -125,8 +125,17 @@ irrelevant-practice）输出 signal / no-obvious-signal；健康样本不足或 
 
 ## Resolved Questions
 
-（规划澄清后填写）
+- 重复次数：确认每组 2 次（沿用 `conditions.yaml` 的 repetitions=2），可用
+  `--repeat` 覆盖。
+- judge 评分重复策略：每次尝试按 #136 rubric 的 n=3 取中位数（本地 mock 评分器，
+  确定性可复现）。
+- judge 通道：pilot 只使用本地 provider（确定性 mock 评分器）；Pi 模型调用本身
+  为真实（deepseek-v4-pro），但 judge 评分不调用外部模型。
 
 ## Planning Confirmation
 
-（规划澄清后填写；不回写 issue #137 评论，除非需求方要求。）
+Requirements owner confirmed through plan-mode questions (no issue comment on
+#137): 每组 2 次重复；judge 每次尝试 n=3 取中位数（本地 mock）；pilot 的 judge
+通道只用本地 provider；执行真实 pilot 前需独立审查门禁（pass-or-fix，参照 #136）；
+规划确认不回写 issue #137，只写回本 design。实现按 tasks.md 顺序推进并持续提交
+到 PR #143。
