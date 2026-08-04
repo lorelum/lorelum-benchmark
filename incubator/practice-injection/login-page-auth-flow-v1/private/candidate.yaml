@@ -1,4 +1,4 @@
-id: login-page-auth-flow-v1
+﻿id: login-page-auth-flow-v1
 lifecycle_stage: candidate
 kernel:
   core: v1
@@ -13,6 +13,9 @@ source:
 calibration_roles:
   - id: calibration-matrix
     command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
+    expect: { kind: pass }
+  - id: judge-rubric-calibration
+    command: [bun, run, "{{candidate_path}}/private/judge/calibrate.ts"]
     expect: { kind: pass }
 calibration_sets:
   manifest: private/calibration/sets.yaml

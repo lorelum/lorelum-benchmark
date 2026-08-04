@@ -124,8 +124,42 @@ issue 待确认问题：单次评分、多次取中位数或固定小 panel。�
 
 ## Resolved Questions
 
-（规划澄清后填写）
+- 评分重复策略：确认采用 deterministic mock provider 的 n=3 次评分取中位数，
+  已固化到 `rubric-v1.yaml`（repetition.count=3 / aggregate=median）。
+- 锚点与区分度口径：reference 总分 >= 80；equivalent 与 reference 差值 <= 10；
+  anti-pattern 总分 <= 50 且比 reference 低 >= 25；boundary 不要求固定分数，
+  只要求分类与理由稳定。
+- 低 confidence 与分歧口径：confidence < 65 记为低 confidence；三次评分
+  spread > 15 记为分歧，分歧时 sidecar 状态为 `indeterminate` 并记录各次分数
+  与原因（不伪造低分）。
+- 被测行为：保持四个质量维度（API/页面职责边界、状态处理、表单体验、UI/UX）；
+  baseline 预期缺陷仅限职责边界与状态反馈不足，不把命名、目录或 helper 结构
+  当作缺陷（评分器为结构检测，不依赖固定命名）。
+- 对照：只校准 reference、不同命名/目录的 equivalent、anti-pattern、boundary
+  四类 private fixture，不新增 unrelated Practice 对照。
+- 复用边界：继续使用现有 candidate 的 public starter、private semantic
+  evaluator 与 `judge-result/v1`；不修改 starter、现有 evaluator、snapshot 或
+  正式 record。
+- 模型边界：只使用 deterministic mock（固定 prompt、mock-judge@0.1.0、离线），
+  不调用真实模型、不进入 default suite、不创建 pilot/formal record。
 
 ## Planning Confirmation
 
-（规划澄清后填写；需求方确认，不写回 issue 评论。）
+Requirements owner confirmed the full planning scope through task conversation
+and plan-mode questions (no issue comment on #136):
+
+- ④ 被测行为：四个质量维度（API/页面职责边界、状态处理、表单体验、UI/UX）；
+  baseline 预期缺陷仅限职责边界与状态反馈不足，采用结构检测，命名/目录/helper
+  差异永不扣分。
+- ⑤ 对照范围：只校准 reference、不同命名/目录的 equivalent、anti-pattern、
+  boundary 四类 private fixture，不新增 unrelated Practice 对照。
+- ⑥ 复用边界：继续使用现有 candidate 的 public starter、private semantic
+  evaluator 与 `judge-result/v1`，不修改 starter、现有 evaluator、snapshot 或
+  正式 record。
+- ⑦ 模型边界：保持 issue 范围 **mock-only**（固定 prompt、mock-judge@0.1.0、
+  离线）；不调用真实模型、不进入 default suite、不创建 pilot/formal record；
+  真实模型对 rubric 的实际区分效果留到 pilot 阶段验证。
+- ⑧ 独立审查：需要独立 AI 审查门禁（参照 #135），审查 rubric 维度路径无关性、
+  校准矩阵区分度、输入脱敏与无 condition 推断；pass-or-fix 记录进 PR 证据链。
+
+实现按 tasks.md 推进并持续提交到同一分支与 PR #142。
