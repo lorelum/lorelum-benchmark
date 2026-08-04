@@ -291,7 +291,6 @@ async function piCommand(): Promise<string> {
 }
 
 const preflightTimeoutMs = 60_000;
-const stallTimeoutMs = 120_000; // no output for 2 minutes => stalled model call
 const globalCapMs = 25 * 60_000; // whole pilot self-bounds to 25 minutes
 
 function redactSecrets(text: string): string {
@@ -398,7 +397,10 @@ async function runAttempt(
     piArgs.push("--append-system-prompt", `Apply this Practice while completing the task:\n\n${await Bun.file(resolve(candidateRoot, practice.path)).text()}`);
   }
 
-  const pi = await run([command, ...piArgs], workspace, { timeoutMs: conditions.shared_execution.budget.max_duration_minutes * 60_000, stallMs: stallTimeoutMs });
+  // pi.exe buffers its stdout until exit, so pipe-based stall detection cannot
+  // observe live model progress and would kill working runs; rely on the
+  // per-attempt budget and the global cap to bound the pilot instead.
+  const pi = await run([command, ...piArgs], workspace, { timeoutMs: conditions.shared_execution.budget.max_duration_minutes * 60_000 });
   await Bun.write(resolve(attemptPath, "pi.stdout.log"), pi.stdout);
   await Bun.write(resolve(attemptPath, "pi.stderr.log"), pi.stderr);
 
