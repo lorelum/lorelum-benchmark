@@ -78,7 +78,21 @@ async function run(command: string[], cwd: string, timeoutMs?: number, extraEnv?
   const started = performance.now();
   const child = Bun.spawn(command, { cwd, env: { ...Bun.env, ...extraEnv }, stdout: "pipe", stderr: "pipe" });
   let timedOut = false;
-  const timeout = timeoutMs === undefined ? undefined : setTimeout(() => { timedOut = true; child.kill(); }, timeoutMs);
+  const timeout = timeoutMs === undefined ? undefined : setTimeout(() => {
+    timedOut = true;
+    try {
+      if (process.platform === "win32") {
+        // child.kill() does not terminate the process tree on Windows; use
+        // taskkill so the spawned tree (e.g. pi's node child) actually exits
+        // and child.exited resolves instead of hanging forever.
+        Bun.spawnSync(["taskkill", "/PID", String(child.pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
+      } else {
+        child.kill("SIGKILL");
+      }
+    } catch {
+      // best-effort; the timeout result is still reported by the caller
+    }
+  }, timeoutMs);
   const [code, stdout, stderr] = await Promise.all([
     child.exited,
     new Response(child.stdout).text(),
