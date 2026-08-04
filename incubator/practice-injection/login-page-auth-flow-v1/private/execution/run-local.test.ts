@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { assertJudgeResultV1 } from "../../../../../src/benchmark/outcome/v1/contract";
 import { frozenPlan, loadPlan, verifyPlanFrozen, TASK_PROMPT } from "./plan";
 import { runJudge, readSourceMap } from "./judge";
-import { evaluatorResult, outcome, classifyPreflightFailure, redactSecrets, plannedConditions, loadConditions, copyPublicWorkspace, workspaceFiles, buildSummary } from "./run-local";
+import { evaluatorResult, outcome, classifyPreflightFailure, redactSecrets, plannedConditions, loadConditions, copyPublicWorkspace, workspaceFiles, buildSummary, run } from "./run-local";
 
 describe("frozen pilot plan", () => {
   test("frozenPlan succeeds against the current candidate state", async () => {
@@ -222,5 +222,26 @@ export async function postSession(request: { email: string; password: string }):
     const outcomeResult = await runJudge(dir, "接通登录页。", 3);
     expect(outcomeResult.state).toBe("judge-unavailable");
     expect(outcomeResult.reason).toContain("judge input rejected");
+  });
+});
+
+describe("run watchdog (budget and stall)", () => {
+  const cwd = resolve(import.meta.dir, "..", "..");
+  test("budget timeout kills a long-running child and reports timedOut", async () => {
+    const result = await run(["node", "-e", "setTimeout(() => {}, 30000)"], cwd, { timeoutMs: 800 });
+    expect(result.timedOut).toBe(true);
+    expect(result.stalled).toBeUndefined();
+  });
+  test("stall detection kills a child that stops producing output", async () => {
+    const result = await run(["node", "-e", "process.stdout.write('x'); setTimeout(() => {}, 30000)"], cwd, { stallMs: 800 });
+    expect(result.stalled).toBe(true);
+    expect(result.timedOut).toBe(false);
+  });
+  test("a quick child completes without timeout or stall", async () => {
+    const result = await run(["node", "-e", "process.stdout.write('ok')"], cwd, { timeoutMs: 10000, stallMs: 5000 });
+    expect(result.code).toBe(0);
+    expect(result.timedOut).toBe(false);
+    expect(result.stalled).toBeUndefined();
+    expect(result.stdout).toContain("ok");
   });
 });

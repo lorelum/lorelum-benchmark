@@ -22,7 +22,7 @@ type Conditions = {
   conditions: Condition[];
 };
 type Options = { dryRun: boolean; preflightOnly: boolean; repeat?: number; outputPath: string };
-type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number };
+type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; stalled?: boolean; durationMs: number };
 
 const candidateRoot = resolve(import.meta.dir, "../..");
 const repositoryRoot = resolve(candidateRoot, "../../..");
@@ -74,34 +74,98 @@ function parseOptions(): Options {
   return { dryRun, preflightOnly, repeat, outputPath };
 }
 
-async function run(command: string[], cwd: string, timeoutMs?: number, extraEnv?: Record<string, string>): Promise<CommandResult> {
-  const started = performance.now();
-  const child = Bun.spawn(command, { cwd, env: { ...Bun.env, ...extraEnv }, stdout: "pipe", stderr: "pipe" });
+async function run(command: string[], cwd: string, options: { timeoutMs?: number; stallMs?: number; env?: Record<string, string> } = {}): Promise<CommandResult> {
+  const started = Date.now();
+  const child = Bun.spawn(command, { cwd, env: { ...Bun.env, ...options.env }, stdout: "pipe", stderr: "pipe" });
+  const exitPromise = child.exited;
+  const outChunks: string[] = [];
+  const errChunks: string[] = [];
+  let lastOutput = Date.now();
   let timedOut = false;
-  const timeout = timeoutMs === undefined ? undefined : setTimeout(() => {
-    timedOut = true;
+  let stalled = false;
+  let code: number | null = null;
+
+  const pump = async (stream: ReadableStream<Uint8Array> | null, target: string[]) => {
+    if (!stream) return;
+    try {
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        target.push(decoder.decode(value, { stream: true }));
+        lastOutput = Date.now();
+      }
+    } catch {
+      // stream closed or errored
+    }
+  };
+  const outPump = pump(child.stdout, outChunks);
+  const errPump = pump(child.stderr, errChunks);
+
+  const killTree = () => {
     try {
       if (process.platform === "win32") {
         // child.kill() does not terminate the process tree on Windows; use
-        // taskkill so the spawned tree (e.g. pi's node child) actually exits
-        // and child.exited resolves instead of hanging forever.
-        Bun.spawnSync(["taskkill", "/PID", String(child.pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
+        // taskkill so spawned children (e.g. pi's node process) actually die.
+        Bun.spawnSync([`${process.env.SystemRoot ?? "C:\\Windows"}\\System32\\taskkill.exe`, "/PID", String(child.pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
       } else {
         child.kill("SIGKILL");
       }
     } catch {
-      // best-effort; the timeout result is still reported by the caller
+      // best-effort
     }
-  }, timeoutMs);
-  const [code, stdout, stderr] = await Promise.all([
-    child.exited,
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-  ]);
-  if (timeout) clearTimeout(timeout);
-  return { code, stdout, stderr, timedOut, durationMs: Math.round(performance.now() - started) };
-}
+  };
 
+  // Watchdog: stop when the child exits, or fire (and kill the tree) when the
+  // per-command budget is exhausted or the child stops producing output for
+  // stallMs. This keeps the pilot self-bounded without manual termination.
+  const watchdogPromise = (async () => {
+    for (;;) {
+      const outcome = await Promise.race([
+        exitPromise.then(() => "exit"),
+        new Promise<string>((resolvePromise) => setTimeout(() => resolvePromise("tick"), 250)),
+      ]);
+      if (outcome === "exit") return;
+      const elapsed = Date.now() - started;
+      if (options.timeoutMs !== undefined && elapsed >= options.timeoutMs) {
+        timedOut = true;
+        killTree();
+        return;
+      }
+      if (options.stallMs !== undefined && Date.now() - lastOutput > options.stallMs) {
+        stalled = true;
+        killTree();
+        return;
+      }
+    }
+  })();
+
+  const finished = await Promise.race([
+    exitPromise.then((exitCode) => ({ kind: "exit" as const, code: exitCode })),
+    watchdogPromise.then(() => ({ kind: "watchdog" as const })),
+  ]);
+  if (finished.kind === "exit") {
+    code = finished.code;
+  } else {
+    // Watchdog fired: give the killed tree a short grace to die, then return
+    // regardless so the pilot never blocks on a stuck child.
+    const grace = await Promise.race([
+      exitPromise.then((exitCode) => ({ died: true as const, code: exitCode })),
+      new Promise<{ died: false }>((resolvePromise) => setTimeout(() => resolvePromise({ died: false }), 5000)),
+    ]);
+    if (grace.died) code = grace.code;
+  }
+  await Promise.all([outPump, errPump]);
+  return {
+    code,
+    stdout: outChunks.join(""),
+    stderr: errChunks.join(""),
+    timedOut,
+    ...(stalled ? { stalled: true } : {}),
+    durationMs: Math.round(Date.now() - started),
+  };
+}
 async function hashFile(path: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", await Bun.file(path).arrayBuffer());
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -137,7 +201,7 @@ async function verifySnapshot(): Promise<void> {
     "--incubator",
     "practice-injection",
     "login-page-auth-flow-v1",
-  ], repositoryRoot);
+  ], repositoryRoot, { timeoutMs: 120_000 });
   if (result.code !== 0) fail(`Candidate snapshot verification failed: ${(result.stderr || result.stdout).trim()}`);
 }
 
@@ -173,7 +237,7 @@ async function ensureDependencies(appPath: string): Promise<void> {
   } catch {
     // fall through to install
   }
-  if (await run(["bun", "install", "--frozen-lockfile"], appPath).then((result) => result.code) !== 0) {
+  if (await run(["bun", "install", "--frozen-lockfile"], appPath, { timeoutMs: 300_000 }).then((result) => result.code) !== 0) {
     fail(`Unable to install locked dependencies for ${relativeToRepository(appPath)}`);
   }
 }
@@ -219,7 +283,9 @@ async function piCommand(): Promise<string> {
   return "pi";
 }
 
-const preflightTimeoutMs = 30_000;
+const preflightTimeoutMs = 60_000;
+const stallTimeoutMs = 120_000; // no output for 2 minutes => stalled model call
+const globalCapMs = 25 * 60_000; // whole pilot self-bounds to 25 minutes
 
 function redactSecrets(text: string): string {
   return text
@@ -237,10 +303,16 @@ function classifyPreflightFailure(result: CommandResult): string {
 }
 
 async function preflightModel(command: string, modelId: string): Promise<void> {
-  const result = await run([command, "--print", "--no-session", "--model", modelId, "ok"], repositoryRoot, preflightTimeoutMs);
-  if (result.code !== 0 || result.timedOut) {
-    fail(classifyPreflightFailure(result));
+  // Model API latency is variable; retry before failing so a single slow
+  // response does not block the whole pilot.
+  let lastFailure = "";
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const result = await run([command, "--print", "--no-session", "--model", modelId, "ok"], repositoryRoot, { timeoutMs: preflightTimeoutMs });
+    if (result.code === 0 && !result.timedOut) return;
+    lastFailure = classifyPreflightFailure(result);
+    if (attempt < 3) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000));
   }
+  fail(lastFailure);
 }
 
 type ViteDevServer = {
@@ -319,7 +391,7 @@ async function runAttempt(
     piArgs.push("--append-system-prompt", `Apply this Practice while completing the task:\n\n${await Bun.file(resolve(candidateRoot, practice.path)).text()}`);
   }
 
-  const pi = await run([command, ...piArgs], workspace, conditions.shared_execution.budget.max_duration_minutes * 60_000);
+  const pi = await run([command, ...piArgs], workspace, { timeoutMs: conditions.shared_execution.budget.max_duration_minutes * 60_000, stallMs: stallTimeoutMs });
   await Bun.write(resolve(attemptPath, "pi.stdout.log"), pi.stdout);
   await Bun.write(resolve(attemptPath, "pi.stderr.log"), pi.stderr);
 
@@ -335,7 +407,7 @@ async function runAttempt(
     const appPath = resolve(workspace, "app");
     const server = await startDevServer(appPath);
     try {
-      evaluator = await run([process.execPath, "run", resolve(candidateRoot, "private/evaluator/evaluate.ts"), appPath], candidateRoot, undefined, { PLAYWRIGHT_BASE_URL: server.baseUrl });
+      evaluator = await run([process.execPath, "run", resolve(candidateRoot, "private/evaluator/evaluate.ts"), appPath], candidateRoot, { timeoutMs: 300_000, env: { PLAYWRIGHT_BASE_URL: server.baseUrl } });
     } finally {
       await server.kill();
     }
@@ -365,7 +437,7 @@ async function runAttempt(
     practice_sha256: practice?.sha256 ?? null,
     workspace: relativeToRepository(workspace),
     initial_workspace_files: initialFiles,
-    pi: { code: pi.code, timed_out: pi.timedOut, duration_ms: pi.durationMs },
+    pi: { code: pi.code, timed_out: pi.timedOut, stalled: pi.stalled ?? false, duration_ms: pi.durationMs },
     evaluator: evaluator ? { code: evaluator.code, duration_ms: evaluator.durationMs } : null,
     semantic: evaluation?.semantic ?? "not-run",
     practice_observation: evaluation?.practiceObservation ?? "not-run",
@@ -406,7 +478,7 @@ function outcome(entries: Record<string, unknown>[], repeat: number): "signal" |
     : "no-obvious-signal";
 }
 
-export { outcome, evaluatorResult, classifyPreflightFailure, redactSecrets, plannedConditions, loadConditions, verifySnapshot, copyPublicWorkspace, workspaceFiles, parseOptions, startDevServer };
+export { outcome, evaluatorResult, classifyPreflightFailure, redactSecrets, plannedConditions, loadConditions, verifySnapshot, copyPublicWorkspace, workspaceFiles, parseOptions, startDevServer, run };
 
 export function buildSummary(input: {
   generated_at: string;
@@ -485,8 +557,13 @@ console.log(JSON.stringify({
 if (options.preflightOnly) process.exit(0);
 
   const entries: Record<string, unknown>[] = [];
+  const pilotStart = Date.now();
   for (const condition of runnable) {
     for (let attempt = 1; attempt <= repeat; attempt += 1) {
+      if (Date.now() - pilotStart > globalCapMs) {
+        console.log(`global cap ${globalCapMs / 60_000}min reached; marking remaining attempts as not-run`);
+        break;
+      }
       const entry = await runAttempt(options.outputPath, condition, attempt, conditions, command, taskMd);
       entries.push(entry);
       await writeJson(resolve(options.outputPath, "summary.json"), buildSummary({
@@ -504,12 +581,14 @@ if (options.preflightOnly) process.exit(0);
         judge: planBundle.plan.judge,
         planned_runs: planned.length,
         outcome: outcome(entries, repeat),
+        global_cap_reached: Date.now() - pilotStart > globalCapMs,
         entries,
       }));
     }
   }
 
-  console.log(JSON.stringify({ output: relativeToRepository(options.outputPath), outcome: outcome(entries, repeat), entries }, null, 2));
+  console.log(JSON.stringify({ output: relativeToRepository(options.outputPath), outcome: outcome(entries, repeat),
+        global_cap_reached: Date.now() - pilotStart > globalCapMs, entries }, null, 2));
   return 0;
 }
 
