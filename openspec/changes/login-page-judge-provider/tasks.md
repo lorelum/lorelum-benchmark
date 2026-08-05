@@ -5,7 +5,7 @@
 
 ## 2. SourceMap contract and provider [write scope: `src/benchmark/judge/`]
 
-- [x] 2.1 Add `src/benchmark/judge/source-map.ts`: `sourceMapFromWorkspace` (exclude generated dirs, sorted keys), `sourceMapToDiff`, `sourceMapFromDiff` (canonical `path\0content` `\n`-joined).
+- [x] 2.1 Add `src/benchmark/judge/source-map.ts`: `sourceMapFromWorkspace` (exclude generated dirs, sorted keys), `sourceMapToDiff`, `sourceMapFromDiff` (canonical `path\0<length>\0<content>` `\n`-joined; length prefix keeps content newlines unambiguous).
 - [x] 2.2 Add `src/benchmark/judge/providers.ts` registry (mock + practice-layered-api/v2) and the `practice-layered-api/v2` provider wrapping the shared scorer (`scoreSourceV2`), returning `judge-result/v1`; keep `mock-judge` default.
 
 ## 3. Runner wiring [write scope: `src/benchmark/runner/pi/v2/profile-diagnostic-runner.ts`]

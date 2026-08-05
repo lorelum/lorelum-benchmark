@@ -46,8 +46,9 @@ runner 可调用的 v2 judge 通道与明确的 SourceMap / indeterminate 协议
   - `sourceMapFromWorkspace(appRoot)`：收集 app 下所有文件，排除生成目录
     （node_modules/dist/test-results/playwright-report/.git/.vite/.practice-runtime/
     .run-workspaces/logs），key=规范化相对路径，**按键排序**（确定性）。
-  - `sourceMapToDiff(files)`：`Object.entries(files).sort()` 后 `path\0content`
-    以 `\n` 连接（与 v2 calibrate 的序列化一致）。
+  - `sourceMapToDiff(files)`：`Object.entries(files).sort()` 后按
+    `path\0<length>\0<content>` 长度前缀格式以 `\n` 连接；长度前缀使含换行的内容
+    也能无损 round-trip（`path\0content` 直接 `\n` 连接会与内容换行冲突）。
   - `sourceMapFromDiff(diff)`：解析回 SourceMap。
 - 同一候选无论文件遍历顺序如何，SourceMap 与 diff 完全一致；tsconfig 包含在
   集合中供别名解析；非源码文件（如注入的 `docs/frontend-guide.md`）保留在集合中，
