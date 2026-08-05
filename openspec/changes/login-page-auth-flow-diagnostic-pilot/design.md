@@ -131,6 +131,9 @@ irrelevant-practice）输出 signal / no-obvious-signal；健康样本不足或 
   确定性可复现）。
 - judge 通道：pilot 只使用本地 provider（确定性 mock 评分器）；Pi 模型调用本身
   为真实（deepseek-v4-pro），但 judge 评分不调用外部模型。
+- 模型选择：需求方于 2026-08-05 确认将 pilot 模型从 `deepseek-v4-pro` 切换为
+  `deepseek-v4-flash`（v6 重跑；原因：v4-pro 每轮 reasoning 生成量大、单次尝试
+  100–300s，flash 为同 provider 的快速档；记录于 issue #137 评论）。
 
 ## Planning Confirmation
 

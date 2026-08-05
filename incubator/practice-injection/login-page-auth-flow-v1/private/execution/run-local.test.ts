@@ -11,7 +11,7 @@ describe("frozen pilot plan", () => {
   test("frozenPlan succeeds against the current candidate state", async () => {
     const bundle = await frozenPlan();
     expect(bundle.plan.candidate).toBe("login-page-auth-flow-v1");
-    expect(bundle.plan.model).toBe("deepseek/deepseek-v4-pro");
+    expect(bundle.plan.model).toBe("deepseek/deepseek-v4-flash");
     expect(bundle.plan.repetitions).toBe(1);
     expect(bundle.plan.judge.channel).toBe("local-mock");
     expect(bundle.plan.judge.repetition).toEqual({ count: 3, aggregate: "median" });
@@ -118,7 +118,7 @@ describe("evaluator and outcome aggregation", () => {
       profile_input_hash: "z".repeat(64),
       pi_version: "0.80.10",
       prompt_hash: promptHash,
-      model: "deepseek/deepseek-v4-pro",
+      model: "deepseek/deepseek-v4-flash",
       repetitions: 2,
       judge: { channel: "local-mock", repetition: { count: 3, aggregate: "median" } },
       planned_runs: 6,

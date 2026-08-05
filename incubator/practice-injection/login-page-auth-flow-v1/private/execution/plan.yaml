@@ -3,7 +3,7 @@ candidate: login-page-auth-flow-v1
 source_commit: 271dd3fe1ea38b72eaefa8ab6e3beca9a364c09e
 snapshot_manifest: private/snapshot.json
 profile: injection-calibration/v1
-model: deepseek/deepseek-v4-pro
+model: deepseek/deepseek-v4-flash
 pi_version: "0.80.10"
 budget:
   max_duration_minutes: 5
