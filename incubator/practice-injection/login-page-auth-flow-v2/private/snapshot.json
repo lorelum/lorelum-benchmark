@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "5aa9369415d056c88a19b52378c7e84dc0d22393990905cbcd18498c0705359d",
+  "snapshot_id": "809b16ee3ebd1de50cf93eb2ffda1558b50f3531704216cd78c3023e34960ccd",
   "files": {
     "private/calibration.md": "ee59530a10cff0549f0551eab0170bc7a0eb47e9c9e985615560982ea573acc7",
     "private/calibration/run.ts": "dad9179762afcf52f756d6a043cf254111ae0cc82aedd6523cd432463499f80d",
@@ -26,7 +26,7 @@
     "private/calibration/sets/quality-probe/v2/overlays/reference/src/LoginPage.tsx": "5967a1e2ace9579019516cc4dbd4e3326d411507d7db4e8046e49dc62ee6f607",
     "private/calibration/sets/quality-probe/v2/overlays/reference/src/api/session.ts": "dc5372b6271063d8f042cea35fb8b627f2c2c2f434cac6e14e6615848a15d311",
     "private/candidate.yaml": "20b4504a62d2eff814e84761c5a45b7b6e3c1b64723a649b2f04e50b35febbd1",
-    "private/conditions.yaml": "17337f4dc8b487bd34f9f1c79e45f9c4c56aefbc087907052d145b5acae3971b",
+    "private/conditions.yaml": "45307666f08cfe1c3e46564a5194bc091f4d3b2685642ff3407188ed02843d9b",
     "private/evaluator/evaluate.ts": "cd4c4b4ba4a5251efe634661df55201e8b8dad68e7fd5ef5ba1b9a2b9b7d39f5",
     "private/evaluator/runtime-closure.yaml": "be722244c7a9f959e9e1ced7e9597af91c611d98c2acffa4702744f69be3ba36",
     "private/evaluator/runtime-closure/bun.lock": "ef93097b3538fd622f47c96698b78be7ed478a66ea32332aeda08ce388dd4754",

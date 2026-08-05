@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { expansionDecisions, materializeConventionDoc, materializeGitHistory, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary, type RunnerPracticePayload } from "./profile-diagnostic-runner";
+import { expansionDecisions, materializeConventionDoc, materializeGitHistory, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, runJudgeProvider, summarizeJudge, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary, type RunnerPracticePayload } from "./profile-diagnostic-runner";
 import { run } from "./preflight";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 
@@ -157,6 +157,89 @@ test("convention doc is committed into the per-condition git history (oracle), b
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
+});
+
+
+test("runJudgeProvider writes a v2 sidecar for a declared provider and not-run otherwise", async () => {
+  const attempt = await mkdtemp(join(tmpdir(), "lorelum-judge-attempt-"));
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-judge-ws-"));
+  try {
+    const app = join(workspace, "app");
+    await mkdir(join(app, "src", "api"), { recursive: true });
+    await Bun.write(join(workspace, "task.md"), "接通登录页。\n");
+    await Bun.write(join(app, "src", "LoginPage.tsx"), `import { login } from "./api/session";
+export function LoginPage() {
+  async function handleSubmit(e: SubmitEvent) { e.preventDefault(); await login("a", "b"); }
+  return <form onSubmit={handleSubmit}><button type="submit">登录</button></form>;
+}
+`);
+    await Bun.write(join(app, "src", "api", "session.ts"), `import { postSession } from "./http";
+export async function login(email: string, password: string) {
+  const response = await postSession({ email, password });
+  if (response.status === 200) return { ok: true, user: response.body.user };
+  return { ok: false, message: response.body.message };
+}
+`);
+    await Bun.write(join(app, "src", "api", "http.ts"), `export async function postSession(input: unknown) {
+  const response = await fetch("/api/session", { method: "POST", body: JSON.stringify(input) });
+  const body = await response.json();
+  return response.status === 200 ? { status: 200, body } : { status: 401, body };
+}
+`);
+    const shared = { pi_version: "0.80.10", model: { id: "m" }, budget: { max_duration_minutes: 1 }, repetitions: 1, judge: { provider: "practice-layered-api/v2" } };
+    const entry = await runJudgeProvider(attempt, workspace, shared);
+    expect(entry.state).toBe("observed");
+    expect(entry.score).toBe(100);
+    expect(entry.provider_id).toBe("practice-layered-api/v2");
+    expect(entry.rubric_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(await Bun.file(join(attempt, "judge.sidecar.json")).exists()).toBe(true);
+
+    const noProvider = await runJudgeProvider(attempt, workspace, { pi_version: "0.80.10", model: { id: "m" }, budget: { max_duration_minutes: 1 }, repetitions: 1 });
+    expect(noProvider.state).toBe("not-run");
+    const unknown = await runJudgeProvider(attempt, workspace, { pi_version: "0.80.10", model: { id: "m" }, budget: { max_duration_minutes: 1 }, repetitions: 1, judge: { provider: "nope" } });
+    expect(unknown.state).toBe("judge-unavailable");
+  } finally {
+    await rm(attempt, { force: true, recursive: true });
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("summarizeJudge aggregates redacted per-condition counts", () => {
+  const base = { candidate: "c", condition: "baseline", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "baseline" as const, channel: "none" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
+  const entries = [
+    { ...base, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "observed" as const, score: 100, rubric_hash: "r".repeat(64) } },
+    { ...base, condition: "oracle-practice", trace: { condition_id: "oracle-practice" as const, channel: "x" as const, profile_input_hash: "h" }, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+  ];
+  const summary = summarizeJudge(entries);
+  expect(summary.rubric_hash).toBe("r".repeat(64));
+  expect(summary.by_condition.baseline).toMatchObject({ observed: 1, indeterminate: 0 });
+  expect(summary.by_condition.baseline.scores).toEqual([100]);
+  expect(summary.by_condition["oracle-practice"]).toMatchObject({ observed: 0, indeterminate: 1 });
+});
+
+test("summarizeJudge marks a condition diagnostic-only when the indeterminate rate exceeds the budget", () => {
+  const base = { candidate: "c", condition: "oracle-practice", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "oracle-practice" as const, channel: "x" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
+  const entries = [
+    { ...base, repeat: 1, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+    { ...base, repeat: 2, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+  ];
+  const summary = summarizeJudge(entries, { indeterminate_budget: 0.25 });
+  expect(summary.indeterminate_budget).toBe(0.25);
+  expect(summary.by_condition["oracle-practice"].indeterminate_rate).toBe(1);
+  expect(summary.by_condition["oracle-practice"].diagnostic_only).toBe(true);
+  expect(summary.diagnostic_only).toBe(true);
+});
+
+test("summarizeJudge keeps a condition usable when the indeterminate rate is within budget", () => {
+  const base = { candidate: "c", condition: "baseline", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "baseline" as const, channel: "none" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
+  const entries = [
+    { ...base, repeat: 1, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "observed" as const, score: 100 } },
+    { ...base, repeat: 2, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+  ];
+  const summary = summarizeJudge(entries, { indeterminate_budget: 0.5 });
+  expect(summary.by_condition.baseline.indeterminate_rate).toBe(0.5);
+  expect(summary.by_condition.baseline.diagnostic_only).toBeUndefined();
+  expect(summary.diagnostic_only).toBeUndefined();
 });
 
 test("materializeGitHistory builds a realistic commit history with a clean tree", async () => {

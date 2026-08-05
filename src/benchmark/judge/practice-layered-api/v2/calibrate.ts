@@ -2,6 +2,7 @@ import { join, resolve } from "node:path";
 import { buildJudgeInput } from "../../../judge/input";
 import { loadRubric } from "./rubric";
 import { analyzePractice, scoreSourceV2, type SourceMap } from "./score";
+import { sourceMapToDiff } from "../../source-map";
 
 const candidateRoot = resolve(Bun.argv[2] ?? process.env.LORELUM_CALIBRATION_CANDIDATE_PATH ?? ".");
 const setKey = process.env.LORELUM_CALIBRATION_SET_KEY ?? "login-page-judge/v2";
@@ -28,7 +29,7 @@ for (const fixtureName of fixtureOrder) {
   const fixture = set.fixtures[fixtureName];
   if (!fixture) throw new Error(`Missing staged calibration fixture: ${fixtureName}`);
   const files = await readSourceMap(fixture.path);
-  const candidateDiff = Object.entries(files).sort(([a], [b]) => a.localeCompare(b)).map(([path, content]) => `${path}\u0000${content}`).join("\n");
+  const candidateDiff = sourceMapToDiff(files);
   const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric: rubricText });
   const result = await scoreSourceV2({ files, taskMd, candidateDiff, rubricText, doc, inputHash: input.input_hash });
   const analysis = analyzePractice(files);

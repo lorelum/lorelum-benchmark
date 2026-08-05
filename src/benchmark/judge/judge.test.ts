@@ -160,3 +160,50 @@ test("hashes can be derived from rubric text", async () => {
   const hash = await sha256Text(rubric);
   expect(hash).toMatch(/^[a-f0-9]{64}$/);
 });
+
+test("practice-layered-api/v2 provider scores a candidate diff with the v2 rubric", async () => {
+  const { practiceLayeredApiV2Provider } = await import("./providers");
+  const { sourceMapToDiff } = await import("./source-map");
+  const files = {
+    "src/LoginPage.tsx": `import { login } from "./api/session";
+export function LoginPage() {
+  async function handleSubmit(e: SubmitEvent) { e.preventDefault(); await login("a", "b"); }
+  return <form onSubmit={handleSubmit}><button type="submit">登录</button></form>;
+}
+`,
+    "src/api/session.ts": `import { postSession } from "./http";
+export async function login(email: string, password: string) {
+  const response = await postSession({ email, password });
+  if (response.status === 200) return { ok: true, user: response.body.user };
+  return { ok: false, message: response.body.message };
+}
+`,
+    "src/api/http.ts": `export async function postSession(input: unknown) {
+  const response = await fetch("/api/session", { method: "POST", body: JSON.stringify(input) });
+  const body = await response.json();
+  return response.status === 200 ? { status: 200, body } : { status: 401, body };
+}
+`,
+  };
+  const candidateDiff = sourceMapToDiff(files);
+  const rubric = await practiceLayeredApiV2Provider.rubricText();
+  const input = await buildJudgeInput({ task_md: publicTask, candidate_diff: candidateDiff, rubric });
+  const context = { judge: { id: practiceLayeredApiV2Provider.id, version: practiceLayeredApiV2Provider.version }, prompt: "x", prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64) };
+  const result = await practiceLayeredApiV2Provider.score(input, context);
+  expect(result.state).toBe("observed");
+  expect(result.score).toBe(100);
+  expect(result.judge).toEqual({ id: "practice-layered-api", version: "2.0.0" });
+  expect(result.criteria.map((c) => c.id)).toEqual([
+    "component-transport-isolation",
+    "domain-operation-delegation",
+    "boundary-response-translation",
+    "raw-response-containment",
+  ]);
+});
+
+test("resolveJudgeProvider resolves practice-layered-api/v2 and mock", async () => {
+  const { resolveJudgeProvider } = await import("./providers");
+  expect(resolveJudgeProvider("practice-layered-api/v2")?.id).toBe("practice-layered-api");
+  expect(resolveJudgeProvider("mock-judge")?.id).toBe("mock-judge");
+  expect(resolveJudgeProvider("missing")).toBeUndefined();
+});
