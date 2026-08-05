@@ -17,6 +17,9 @@ calibration_roles:
   - id: judge-rubric-calibration
     command: [bun, run, "{{candidate_path}}/private/judge/calibrate.ts"]
     expect: { kind: pass }
+  - id: judge-practice-rubric-v2-calibration
+    command: [bun, run, "{{candidate_path}}/private/judge/v2/calibrate.ts"]
+    expect: { kind: pass }
 calibration_sets:
   manifest: private/calibration/sets.yaml
 runtime:
