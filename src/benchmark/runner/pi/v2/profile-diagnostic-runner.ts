@@ -1,9 +1,26 @@
 import { cp, lstat, mkdir, realpath, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { joinPath, relativePath, sha256Directory, sha256File, workspaceRoot } from "../../../fs";
-import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace, type PracticePayload, type ResolvedInjectionCalibration } from "../../../kernel/profiles/injection-calibration/v1/runtime";
+import * as v1Runtime from "../../../kernel/profiles/injection-calibration/v1/runtime";
+import * as v2Runtime from "../../../kernel/profiles/injection-calibration/v2/runtime";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
+
+export type RunnerPracticePayload = {
+  condition_id: InjectionConditionId;
+  channel: string;
+  practice?: { id: string; version: string; sha256: string; text: string; delivery_template?: string; target_path?: string };
+};
+export type ResolvedProfile = { profile_input_hash: string };
+type RuntimeModule = {
+  resolveInjectionCalibration: (candidatePath: string) => Promise<ResolvedProfile>;
+  resolvePracticePayload: (candidatePath: string, profile: ResolvedProfile, conditionId: InjectionConditionId) => Promise<RunnerPracticePayload>;
+  redactedInjectionTrace: (profile: ResolvedProfile, payload: RunnerPracticePayload) => ReturnType<typeof v1Runtime.redactedInjectionTrace>;
+};
+export const injectionProfiles = ["injection-calibration/v1", "injection-calibration/v2"] as const;
+export function runtimeFor(profile: string): RuntimeModule {
+  return (profile === "injection-calibration/v2" ? v2Runtime : v1Runtime) as unknown as RuntimeModule;
+}
 import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from "./preflight";
 import { allocateFreePort, realWebServerStarter, type WebServerStarter } from "./webserver-supervisor";
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
@@ -133,8 +150,8 @@ export async function verifyCandidateDeclaration(candidatePath: string): Promise
   const manifest = await readYaml<CandidateManifest>(resolve(candidatePath, "private/candidate.yaml"), "private/candidate.yaml");
   if (!isRecord(manifest) || !isRecord(manifest.kernel)) fail(`candidate.yaml must declare kernel: ${relativePath(candidatePath)}`);
   const { core, profile, materializer_kind } = manifest.kernel;
-  if (core !== "v1" || profile !== "injection-calibration/v1" || materializer_kind !== "react-vite") {
-    fail(`Candidate does not declare core/v1 + injection-calibration/v1 + react-vite: ${relativePath(candidatePath)}`);
+  if (core !== "v1" || !injectionProfiles.includes(profile as (typeof injectionProfiles)[number]) || materializer_kind !== "react-vite") {
+    fail(`Candidate does not declare core/v1 + injection-calibration/v1|v2 + react-vite: ${relativePath(candidatePath)}`);
   }
   if (!isRecord(manifest.source) || typeof manifest.source.source_commit !== "string") {
     fail(`candidate.yaml must declare source.source_commit: ${relativePath(candidatePath)}`);
@@ -151,7 +168,7 @@ export async function verifySnapshotIdentity(candidatePath: string, manifest: Ca
   if (typeof resolvedHash !== "string") {
     fail(`snapshot.json must declare resolved.profile_input_hash: ${relativePath(candidatePath)}`);
   }
-  const profile = await resolveInjectionCalibration(candidatePath);
+  const profile = await runtimeFor(manifest.kernel.profile).resolveInjectionCalibration(candidatePath);
   if (profile.profile_input_hash !== resolvedHash) {
     fail(`profile_input_hash mismatch: resolver returned ${profile.profile_input_hash}, snapshot declares ${resolvedHash}`);
   }
@@ -403,7 +420,7 @@ async function replayCandidateHistory(historyRoot: string, candidatePath: string
   }
 }
 
-export function piArgs(modelId: string, payload: PracticePayload): string[] {
+export function piArgs(modelId: string, payload: RunnerPracticePayload): string[] {
   const args = [
     "--print", "--no-session", "--no-context-files", "--no-extensions",
     "--no-skills", "--no-prompt-templates",
@@ -412,10 +429,22 @@ export function piArgs(modelId: string, payload: PracticePayload): string[] {
     "@task.md",
     "Complete the coding task. Work only inside app/."
   ];
-  if (payload.practice) {
+  if (payload.practice && payload.practice.delivery_template !== "project-convention/v1") {
     args.push("--append-system-prompt", `Apply this Practice while completing the task:\n\n${payload.practice.text}`);
   }
   return args;
+}
+
+/** Writes a project-convention Practice into the agent workspace as a doc file (oracle/irrelevant only). */
+export async function materializeConventionDoc(workspace: string, payload: RunnerPracticePayload): Promise<void> {
+  const practice = payload.practice;
+  if (!practice || practice.delivery_template !== "project-convention/v1" || !practice.target_path) return;
+  const appRoot = resolve(workspace, "app");
+  const target = resolve(appRoot, practice.target_path);
+  const fromApp = relative(appRoot, target);
+  if (fromApp === "" || fromApp.startsWith("..") || isAbsolute(fromApp)) fail(`Convention target escapes the app workspace: ${practice.target_path}`);
+  await mkdir(dirname(target), { recursive: true });
+  await Bun.write(target, practice.text);
 }
 
 
@@ -487,7 +516,7 @@ export async function runAttempt(
   manifest: CandidateManifest,
   snapshotId: string,
   profileInputHash: string,
-  profile: ResolvedInjectionCalibration,
+  profile: ResolvedProfile,
   conditionId: InjectionConditionId,
   repeat: number,
   shared: SharedExecution,
@@ -505,8 +534,10 @@ export async function runAttempt(
     fail(`Private material was copied into an agent workspace: ${relativePath(workspace)}`);
   }
 
-  const payload = await resolvePracticePayload(candidatePath, profile, conditionId);
-  const trace = redactedInjectionTrace(profile, payload);
+  const runtime = runtimeFor(manifest.kernel.profile);
+  const payload = await runtime.resolvePracticePayload(candidatePath, profile, conditionId);
+  const trace = runtime.redactedInjectionTrace(profile, payload);
+  await materializeConventionDoc(workspace, payload);
 
   const entry: DiagnosticEntry = {
     candidate: candidateId,
@@ -751,7 +782,7 @@ for (const plannedCandidate of plan.candidates) {
     const identity = await verifySnapshotIdentity(candidatePath, manifest);
     snapshotId = identity.snapshotId;
     profileInputHash = identity.profileInputHash;
-    profile = await resolveInjectionCalibration(candidatePath);
+    profile = await runtimeFor(manifest.kernel.profile).resolveInjectionCalibration(candidatePath);
     conditions = await readYaml<Conditions>(resolve(candidatePath, "private/conditions.yaml"), "private/conditions.yaml");
     if (manifest.id !== plannedCandidate.id || manifest.source.source_commit !== plannedCandidate.source_commit || snapshotId !== plannedCandidate.snapshot_id || profileInputHash !== plannedCandidate.profile_input_hash) fail(`Diagnostic plan identity mismatch for ${plannedCandidate.id}`);
     for (const conditionId of diagnosticConditions) if (!conditions.conditions.some((condition) => condition.id === conditionId && condition.status === "declared")) fail(`Diagnostic plan condition is not declared: ${plannedCandidate.id}/${conditionId}`);
