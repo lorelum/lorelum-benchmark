@@ -14,8 +14,20 @@
   scoring configuration belong in `private/` and must never be copied into an
   agent workspace or model input. A versioned Practice card that is itself the
   declared treatment may be injected through a condition-scoped private runtime
-  channel, but must not be materialized in the workspace or public task prompt;
-  public traces and logs record only its version and hash.
+  channel. Two delivery forms are allowed:
+  - `practice-card`: the treatment is delivered as a runtime-injected card and
+    must not be materialized in the workspace or public task prompt.
+  - `project-convention` (`project-convention/v1`): the treatment text is
+    materialized into the agent workspace as a project-internal convention
+    document (for example `docs/frontend-guide.md`), under strict guardrails:
+    it contains only the declared treatment content and never evaluator,
+    oracle, or scoring material; it is condition-scoped, so the baseline
+    workspace and any condition that does not declare the treatment must not
+    contain it; public traces and logs record only the treatment version and
+    hash.
+  The `project-convention` form is an explicit extension of the original
+  "must not be materialized" intent: the materialized document is
+  agent-visible treatment content, not private benchmark material.
 - Never commit `node_modules/`, run workspaces, logs, or generated diffs.
   Commit dependency manifests and lockfiles needed to reconstruct a starter.
 - Run `bun run validate` after changing a suite, task, schema, or benchmark code.

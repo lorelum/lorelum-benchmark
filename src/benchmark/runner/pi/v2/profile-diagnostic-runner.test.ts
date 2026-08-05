@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { expansionDecisions, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary } from "./profile-diagnostic-runner";
+import { expansionDecisions, materializeConventionDoc, materializeGitHistory, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary, type RunnerPracticePayload } from "./profile-diagnostic-runner";
+import { run } from "./preflight";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 
 const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
@@ -97,6 +98,115 @@ test("redacted trace contains no Practice text or private paths", async () => {
   expect(trace.practice_sha256).toBeDefined();
 });
 
+
+test("verifyCandidateDeclaration accepts an injection-calibration/v2 candidate", async () => {
+  const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
+  const candidate = await mkdtemp(join(tmpdir(), "lorelum-runner-v2-"));
+  try {
+    await cp(fixturePath, candidate, { recursive: true });
+    const manifestPath = join(candidate, "private", "candidate.yaml");
+    const yaml = await Bun.file(manifestPath).text();
+    const patched = yaml
+      .replace("injection-calibration/v1", "injection-calibration/v2")
+      .replace("  public_root: public/starter\n", "  public_root: public/starter\n  source_commit: abc123\n");
+    await Bun.write(manifestPath, patched);
+    const manifest = await verifyCandidateDeclaration(candidate);
+    expect(manifest.kernel).toEqual({ core: "v1", profile: "injection-calibration/v2", materializer_kind: "react-vite" });
+    expect(manifest.source.source_commit).toBe("abc123");
+  } finally {
+    await rm(candidate, { force: true, recursive: true });
+  }
+});
+
+test("project-convention payloads never include --append-system-prompt", async () => {
+  const convention: RunnerPracticePayload = {
+    condition_id: "oracle-practice",
+    channel: "condition-scoped-private-runtime",
+    practice: { id: "x", version: "v1", sha256: "a".repeat(64), text: "frontend conventions", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" },
+  };
+  expect(piArgs("test-model", convention)).not.toContain("--append-system-prompt");
+});
+
+
+
+test("convention doc is committed into the per-condition git history (oracle), baseline has none", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-convention-git-"));
+  try {
+    const app = join(workspace, "app");
+    await mkdir(app, { recursive: true });
+    await Bun.write(join(app, "index.html"), "<html></html>");
+    await Bun.write(join(app, "src", "api", "http.ts"), "export const api = 1;");
+    const oracle: RunnerPracticePayload = { condition_id: "oracle-practice", channel: "condition-scoped-private-runtime", practice: { id: "x", version: "v1", sha256: "a".repeat(64), text: "# 前端分层约定\n", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" } };
+    await materializeConventionDoc(workspace, oracle);
+    await materializeGitHistory(app, { identity: { name: "ops", email: "ops@x.io" }, commits: [{ message: "chore: scaffold", files: ["index.html"] }, { message: "feat: login shell", files: [] }] });
+    const tracked = await run(["git", "-C", app, "ls-files"], app);
+    expect(tracked.stdout).toContain("docs/frontend-guide.md");
+    const status = await run(["git", "-C", app, "status", "--porcelain"], app);
+    expect(status.stdout.trim()).toBe("");
+
+    // baseline: no convention doc written -> no frontend-guide in history
+    const baselineApp = join(workspace, "baseline-app");
+    await mkdir(baselineApp, { recursive: true });
+    await Bun.write(join(baselineApp, "index.html"), "<html></html>");
+    await Bun.write(join(baselineApp, "src", "api", "http.ts"), "export const api = 1;");
+    const baseline: RunnerPracticePayload = { condition_id: "baseline", channel: "none" };
+    await materializeConventionDoc(workspace, baseline);
+    await materializeGitHistory(baselineApp, { identity: { name: "ops", email: "ops@x.io" }, commits: [{ message: "chore: scaffold", files: ["index.html"] }, { message: "feat: login shell", files: [] }] });
+    const baselineTracked = await run(["git", "-C", baselineApp, "ls-files"], baselineApp);
+    expect(baselineTracked.stdout).not.toContain("frontend-guide.md");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("materializeGitHistory builds a realistic commit history with a clean tree", async () => {
+  const app = await mkdtemp(join(tmpdir(), "lorelum-githistory-"));
+  try {
+    await Bun.write(join(app, "index.html"), "<html></html>");
+    await Bun.write(join(app, "src", "api", "http.ts"), "export const api = 1;");
+    await Bun.write(join(app, "src", "LoginPage.tsx"), "export function LoginPage() { return null; }");
+    const history = {
+      identity: { name: "ops-admin", email: "ops@meridian.internal" },
+      commits: [
+        { message: "chore: scaffold", files: ["index.html"] },
+        { message: "feat(api): client", files: ["src/api/http.ts"] },
+        { message: "feat: login shell", files: [] },
+      ],
+    };
+    await materializeGitHistory(app, history);
+    const log = await run(["git", "-C", app, "log", "--format=%s"], app);
+    expect(log.code).toBe(0);
+    expect(log.stdout.trim().split("\n")).toEqual(["feat: login shell", "feat(api): client", "chore: scaffold"]);
+    const status = await run(["git", "-C", app, "status", "--porcelain"], app);
+    expect(status.stdout.trim()).toBe("");
+  } finally {
+    await rm(app, { force: true, recursive: true });
+  }
+});
+
+test("materializeConventionDoc writes the convention into the app workspace and guards escapes", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-convention-ws-"));
+  try {
+    await Bun.write(join(workspace, "task.md"), "task");
+    await mkdir(join(workspace, "app"), { recursive: true });
+    const payload: RunnerPracticePayload = {
+      condition_id: "oracle-practice",
+      channel: "condition-scoped-private-runtime",
+      practice: { id: "x", version: "v1", sha256: "a".repeat(64), text: "# 前端约定\n", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" },
+    };
+    await materializeConventionDoc(workspace, payload);
+    const written = await Bun.file(join(workspace, "app", "docs", "frontend-guide.md")).text();
+    expect(written).toContain("前端约定");
+    const baseline: RunnerPracticePayload = { condition_id: "baseline", channel: "none" };
+    await materializeConventionDoc(workspace, baseline);
+    expect(await Bun.file(join(workspace, "app", "docs", "frontend-guide.md")).exists()).toBe(true);
+    const escaping: RunnerPracticePayload = { ...payload, practice: { ...payload.practice!, target_path: "../escape.md" } };
+    await expect(materializeConventionDoc(workspace, escaping)).rejects.toThrow("escapes the app workspace");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
 test("verifyCandidateDeclaration accepts a valid profile v1 candidate", async () => {
   const path = await withFixture();
   try {
@@ -114,7 +224,7 @@ test("verifyCandidateDeclaration rejects a non-injection-calibration candidate",
     await Bun.write(join(candidate, "private/candidate.yaml"), yaml.replace("injection-calibration/v1", "treatment-comparison/v1"));
   });
   try {
-    await expect(verifyCandidateDeclaration(path)).rejects.toThrow("does not declare core/v1 + injection-calibration/v1 + react-vite");
+    await expect(verifyCandidateDeclaration(path)).rejects.toThrow("does not declare core/v1 + injection-calibration/v1|v2 + react-vite");
   } finally {
     await rm(path, { force: true, recursive: true });
   }

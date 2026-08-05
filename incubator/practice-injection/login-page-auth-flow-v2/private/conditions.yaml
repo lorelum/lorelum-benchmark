@@ -1,0 +1,28 @@
+version: v1
+candidate_snapshot_manifest: private/snapshot.json
+source_commit: 24c99b1582a6909df437e5b2c6b08f2e7650e7e6
+shared_execution:
+  agent: { id: local-pi, version: v2 }
+  pi_version: 0.80.10
+  model: { id: deepseek/deepseek-v4-pro }
+  additional_shared_system_prompt: none
+  additional_shared_system_prompt_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  tool_policy: private/execution/tool-policy.yaml
+  tool_policy_sha256: bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6
+  budget: { max_duration_minutes: 10 }
+  workspace: clean-copy-per-attempt
+  repetitions: 2
+conditions:
+  - { id: baseline, status: declared, practice: none }
+  - id: oracle-practice
+    status: declared
+    practice: { path: private/practices/frontend.layered-design.v1.md, injection_channel: condition-scoped-private-runtime, sha256: 6a90238898a8caed181ffdbe697d8984f6bc8a8d99d6479f7de7baefea4e7fb6 }
+  - id: irrelevant-practice
+    status: declared
+    practice: { path: private/practices/irrelevant.list-rendering.v1.md, injection_channel: condition-scoped-private-runtime, sha256: 62c15bb04e7fad226a049bd1aa5ff53c357669a8f571b65c2fc3a256fb404621 }
+  - { id: lorelum-retrieval, status: unavailable, practice: unavailable }
+decision_rule:
+  metric: joint-pass-count
+  oracle_relation: strictly-greater-than-each-control
+  controls: [baseline, irrelevant-practice]
+  otherwise: diagnostic-only
