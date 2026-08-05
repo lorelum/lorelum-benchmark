@@ -38,7 +38,8 @@ runner 可调用的 v2 judge 通道与明确的 SourceMap / indeterminate 协议
   解析回 SourceMap，加载共享 rubric（`practice-layered-api/v2/rubric-v2.yaml`），
   调 `scoreSourceV2`，返回 `judge-result/v1`（state=observed/indeterminate）。
 - 选择方式：**按 candidate 显式声明**（`conditions.yaml`
-  `shared_execution.judge.provider`），缺失时回退 `mock-judge`（全局默认）。
+  `shared_execution.judge.provider`），缺失时该 attempt 的 judge 记录为 `not-run`
+  并写明原因，不自动回退 `mock-judge`（避免为未声明通道生成无意义的伪分）。
 
 ### SourceMap 构造契约
 
@@ -53,6 +54,8 @@ runner 可调用的 v2 judge 通道与明确的 SourceMap / indeterminate 协议
 - 同一候选无论文件遍历顺序如何，SourceMap 与 diff 完全一致；tsconfig 包含在
   集合中供别名解析；非源码文件（如注入的 `docs/frontend-guide.md`）保留在集合中，
   判分器按源码扩展名过滤、不影响分数。
+  注入文档按条件出现（baseline 无、treatment 有），因此不同条件的
+  candidate_diff / input_hash 不同属预期；规范序列化保证同一条件内确定性。
 
 ### Runner 接线
 
@@ -63,11 +66,16 @@ runner 可调用的 v2 judge 通道与明确的 SourceMap / indeterminate 协议
   - 写 `attemptPath/judge.sidecar.json`；DiagnosticEntry 增 `judge` 字段
     （脱敏：judge id/version、state、score、criteria、rubric_hash、input_hash、
     confidence、reason）。
-- summary 增 `judge` 汇总（按条件的 observed/indeterminate 计数 + criterion 级表）。
+- summary 增 `judge` 汇总（按条件的 observed/indeterminate/judge-unavailable/
+  not-run 计数、scores、indeterminate_rate + criterion 级表），并应用预算门禁：
+  某条件 indeterminate 率（indeterminate ÷ 有 judge 记录的 attempt 数）> 声明预算
+  时，该条件与汇总标记 `diagnostic_only`（不用于方向性结论，只作诊断）。
 
 ### Indeterminate 协议
 
-- indeterminate attempt 的 judge 结果保留在计划分母（不静默剔除）。
+- indeterminate attempt 的 judge 结果保留在 judge 通道分母（不静默剔除）；
+  judge 分母 = 通过语义门槛（evaluated）且产生 judge 记录的 attempt，语义失败
+  attempt 不产生 judge 记录、不在 judge 分母内。
 - 声明预算：`conditions.yaml` 或诊断计划可声明 `judge.indeterminate_budget`
   （默认 0.25）；某候选条件级 indeterminate 率 > 预算时，该候选 judge 通道标记
   `diagnostic-only`（不用于方向性结论，只作诊断）。
@@ -99,6 +107,6 @@ runner 可调用的 v2 judge 通道与明确的 SourceMap / indeterminate 协议
 ## Open Questions（默认已定，待确认）
 
 - provider 声明位置：`conditions.yaml` `shared_execution.judge.provider`
-  （默认 `practice-layered-api/v2`，缺失回退 mock）。
+  （默认 `practice-layered-api/v2`；缺失不自动回退，judge 记录为 `not-run`）。
 - indeterminate 预算：默认 0.25（超过则该候选 judge 通道 diagnostic-only）。
 - SourceMap 集合：app 下全部文件排除生成目录，按键排序（确定性）。

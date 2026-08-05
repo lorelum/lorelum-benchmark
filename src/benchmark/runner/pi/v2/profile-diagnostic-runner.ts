@@ -112,9 +112,34 @@ export async function runJudgeProvider(
   }
 }
 
-/** Aggregates redacted judge results into a per-condition summary section. */
-export function summarizeJudge(entries: DiagnosticEntry[]): { rubric_hash?: string; by_condition: Record<string, { observed: number; indeterminate: number; "judge-unavailable": number; "not-run": number; scores: number[] }> } {
-  const byCondition: Record<string, { observed: number; indeterminate: number; "judge-unavailable": number; "not-run": number; scores: number[] }> = {};
+export type JudgeConditionSummary = {
+  observed: number;
+  indeterminate: number;
+  "judge-unavailable": number;
+  "not-run": number;
+  scores: number[];
+  indeterminate_rate?: number;
+  diagnostic_only?: boolean;
+};
+
+export type JudgeSummary = {
+  rubric_hash?: string;
+  indeterminate_budget: number;
+  by_condition: Record<string, JudgeConditionSummary>;
+  diagnostic_only?: boolean;
+};
+
+/**
+ * Aggregates redacted judge results into a per-condition summary section and
+ * applies the indeterminate budget gate: when a condition's indeterminate rate
+ * (indeterminate divided by the judged attempts that produced a judge record)
+ * exceeds the declared budget (default 0.25), that condition and the summary
+ * are marked diagnostic-only so the channel is not used for directional
+ * conclusions.
+ */
+export function summarizeJudge(entries: DiagnosticEntry[], options?: { indeterminate_budget?: number }): JudgeSummary {
+  const indeterminateBudget = options?.indeterminate_budget ?? 0.25;
+  const byCondition: Record<string, JudgeConditionSummary> = {};
   let rubricHash: string | undefined;
   for (const entry of entries) {
     const judge = entry.judge;
@@ -127,7 +152,24 @@ export function summarizeJudge(entries: DiagnosticEntry[]): { rubric_hash?: stri
     else counts["not-run"] += 1;
     if (typeof judge.score === "number") counts.scores.push(judge.score);
   }
-  return { ...(rubricHash ? { rubric_hash: rubricHash } : {}), by_condition: byCondition };
+  let anyDiagnosticOnly = false;
+  for (const counts of Object.values(byCondition)) {
+    const judged = counts.observed + counts.indeterminate + counts["judge-unavailable"] + counts["not-run"];
+    if (judged > 0) {
+      const rate = counts.indeterminate / judged;
+      counts.indeterminate_rate = rate;
+      if (rate > indeterminateBudget) {
+        counts.diagnostic_only = true;
+        anyDiagnosticOnly = true;
+      }
+    }
+  }
+  return {
+    ...(rubricHash ? { rubric_hash: rubricHash } : {}),
+    indeterminate_budget: indeterminateBudget,
+    ...(anyDiagnosticOnly ? { diagnostic_only: true } : {}),
+    by_condition: byCondition,
+  };
 }
 
 export type DiagnosticEntry = {
@@ -743,14 +785,14 @@ export function diagnosticOutputPath(path: string): string {
   return relative(workspaceRoot, path).replaceAll("\\", "/");
 }
 
-export async function writeSummary(path: string, plan: DiagnosticPlan, schedule: ScheduledAttempt[], entries: DiagnosticEntry[], interrupted: boolean): Promise<void> {
+export async function writeSummary(path: string, plan: DiagnosticPlan, schedule: ScheduledAttempt[], entries: DiagnosticEntry[], interrupted: boolean, judgeOptions?: { indeterminate_budget?: number }): Promise<void> {
   await Bun.write(joinPath(path, "summary.json"), `${JSON.stringify({
     schema_version: "profile-diagnostic-summary/v3",
     generated_at: new Date().toISOString(),
     plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, ...(plan.execution_gate ? { execution_gate: plan.execution_gate } : {}), schedule: redactedSchedule(schedule) },
     entries,
     report: summarizePlan(plan, schedule, entries),
-    judge: summarizeJudge(entries),
+    judge: summarizeJudge(entries, judgeOptions),
     interrupted,
   }, null, 2)}\n`);
 }
@@ -877,6 +919,7 @@ await mkdir(options.outputPath, { recursive: true });
 await Bun.write(joinPath(options.outputPath, "plan.json"), `${JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, ...(plan.execution_gate ? { execution_gate: plan.execution_gate } : {}), schedule: redactedSchedule(schedule) }, null, 2)}\n`);
 
 let actualExecutionPosition = 0;
+let judgeOptions: { indeterminate_budget?: number } | undefined;
 for (const plannedCandidate of plan.candidates) {
   if (interrupted) break;
   const candidatePath = resolve(workspaceRoot, plannedCandidate.path);
@@ -893,6 +936,7 @@ for (const plannedCandidate of plan.candidates) {
     profileInputHash = identity.profileInputHash;
     profile = await runtimeFor(manifest.kernel.profile).resolveInjectionCalibration(candidatePath);
     conditions = await readYaml<Conditions>(resolve(candidatePath, "private/conditions.yaml"), "private/conditions.yaml");
+    judgeOptions = { indeterminate_budget: conditions.shared_execution.judge?.indeterminate_budget };
     if (manifest.id !== plannedCandidate.id || manifest.source.source_commit !== plannedCandidate.source_commit || snapshotId !== plannedCandidate.snapshot_id || profileInputHash !== plannedCandidate.profile_input_hash) fail(`Diagnostic plan identity mismatch for ${plannedCandidate.id}`);
     for (const conditionId of diagnosticConditions) if (!conditions.conditions.some((condition) => condition.id === conditionId && condition.status === "declared")) fail(`Diagnostic plan condition is not declared: ${plannedCandidate.id}/${conditionId}`);
   } catch (error) {
@@ -938,11 +982,11 @@ for (const plannedCandidate of plan.candidates) {
     } catch (error) {
       entries.push({ candidate: manifest.id, condition: scheduledAttempt.condition, repeat: scheduledAttempt.block, block: scheduledAttempt.block, planned_position: scheduledAttempt.planned_position, actual_execution_position: actualExecutionPosition, evaluation_status: "execution-failed", trace: { condition_id: scheduledAttempt.condition, channel: "none", profile_input_hash: profileInputHash }, source_commit: manifest.source.source_commit, snapshot_id: snapshotId, profile_input_hash: profileInputHash, error: error instanceof Error ? error.message : String(error) });
     }
-    await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
+    await writeSummary(options.outputPath, plan, schedule, entries, interrupted, judgeOptions);
   }
 }
 
-await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
+await writeSummary(options.outputPath, plan, schedule, entries, interrupted, judgeOptions);
 console.log(JSON.stringify({ output: diagnosticOutputPath(options.outputPath), entries: entries.length, interrupted }, null, 2));
 process.exit(interrupted || entries.some((entry) => entry.evaluation_status !== "evaluated") ? 1 : 0);
 }

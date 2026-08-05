@@ -217,6 +217,31 @@ test("summarizeJudge aggregates redacted per-condition counts", () => {
   expect(summary.by_condition["oracle-practice"]).toMatchObject({ observed: 0, indeterminate: 1 });
 });
 
+test("summarizeJudge marks a condition diagnostic-only when the indeterminate rate exceeds the budget", () => {
+  const base = { candidate: "c", condition: "oracle-practice", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "oracle-practice" as const, channel: "x" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
+  const entries = [
+    { ...base, repeat: 1, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+    { ...base, repeat: 2, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+  ];
+  const summary = summarizeJudge(entries, { indeterminate_budget: 0.25 });
+  expect(summary.indeterminate_budget).toBe(0.25);
+  expect(summary.by_condition["oracle-practice"].indeterminate_rate).toBe(1);
+  expect(summary.by_condition["oracle-practice"].diagnostic_only).toBe(true);
+  expect(summary.diagnostic_only).toBe(true);
+});
+
+test("summarizeJudge keeps a condition usable when the indeterminate rate is within budget", () => {
+  const base = { candidate: "c", condition: "baseline", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "baseline" as const, channel: "none" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
+  const entries = [
+    { ...base, repeat: 1, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "observed" as const, score: 100 } },
+    { ...base, repeat: 2, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+  ];
+  const summary = summarizeJudge(entries, { indeterminate_budget: 0.5 });
+  expect(summary.by_condition.baseline.indeterminate_rate).toBe(0.5);
+  expect(summary.by_condition.baseline.diagnostic_only).toBeUndefined();
+  expect(summary.diagnostic_only).toBeUndefined();
+});
+
 test("materializeGitHistory builds a realistic commit history with a clean tree", async () => {
   const app = await mkdtemp(join(tmpdir(), "lorelum-githistory-"));
   try {

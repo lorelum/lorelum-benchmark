@@ -1,7 +1,7 @@
 ## 1. OpenSpec and planning gate
 
 - [x] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #146. (`openspec validate login-page-judge-provider --type change --strict` passed)
-- [x] 1.2 Record planning decisions: provider declared in `conditions.yaml` `shared_execution.judge.provider` (default `practice-layered-api/v2`, fallback `mock-judge`); SourceMap = workspace/app files minus generated dirs, sorted; indeterminate budget default 0.25.
+- [x] 1.2 Record planning decisions: provider declared in `conditions.yaml` `shared_execution.judge.provider` (default `practice-layered-api/v2`; no fallback — not-run when absent); SourceMap = workspace/app files minus generated dirs, sorted; indeterminate budget default 0.25.
 
 ## 2. SourceMap contract and provider [write scope: `src/benchmark/judge/`]
 
@@ -16,6 +16,7 @@
 ## 4. Indeterminate protocol and plan template
 
 - [x] 4.1 Document the indeterminate denominator preservation + budget (default 0.25) and the frozen-plan requirements (rubric hash, criterion table, repetitions) in the change docs and runner summary.
+- [x] 4.2 Implement the indeterminate budget gate in the judge summary: per-condition indeterminate rate (indeterminate / judged attempts) exceeding the declared budget marks the condition and summary `diagnostic_only`; unit tests cover exceed/within-budget cases.
 
 ## 5. Tests and validation
 

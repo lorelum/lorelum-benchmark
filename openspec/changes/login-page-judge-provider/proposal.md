@@ -9,7 +9,8 @@ provider：诊断 pilot（#137 及 #145 的 smoke）只有 semantic + practice_o
 ## What Changes
 
 - 在 `src/benchmark/judge/` 增加 `practice-layered-api/v2` judge provider（包装共享
-  v2 scorer），加入 provider 注册表；`mock-judge` 保持默认。
+  v2 scorer），加入 provider 注册表；`mock-judge` 保留为可显式选择的确定性
+  provider（未声明不自动回退）。
 - 定义 SourceMap 构造契约：从候选 workspace/app 收集文件（排除生成目录）、按键
   排序、规范序列化 candidate_diff —— 同一候选无论文件遍历顺序如何结果一致。
 - 接线诊断 runner：评估后运行候选声明的 judge provider，每个 attempt 写
