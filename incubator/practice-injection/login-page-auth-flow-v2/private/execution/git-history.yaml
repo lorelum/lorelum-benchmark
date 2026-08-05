@@ -1,3 +1,9 @@
+# Per-condition git history materialized by the diagnostic runner.
+# The last commit captures every remaining file (add -A), including the
+# condition-injected convention document (docs/frontend-guide.md) for the
+# oracle-practice / irrelevant-practice conditions; the baseline workspace has
+# no convention document and therefore a slightly different (smaller) history.
+# The tree is reproduced by this manifest plus the condition injection payload.
 identity:
   name: ops-admin
   email: ops@meridian.internal

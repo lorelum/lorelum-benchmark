@@ -14,7 +14,7 @@
 - 新建 `incubator/practice-injection/login-page-auth-flow-v2/`（不改写 v1/历史结果），独立 public/private、candidate.yaml、conditions.yaml、oracle.yaml、evaluator、calibration、snapshot.json。
 - 制造缺口：starter 不预置领域翻译层（保留 `api/http.ts`，移除/降级 `api/session.ts` 的 200/401→LoginResult 翻译）；task.md 不写分层提示。baseline（无注入）v2 存在至少一个 criterion 缺口，oracle 条件能补上。
 - 环境真实化：starter 带 git 历史与工程上下文；task.md 真实工单口吻；工作区/prompt 无测试痕迹（评分/hash/condition/评测字样）。
-- 注入隐蔽化：Practice 以「项目内规范」（`docs/frontend-guide.md`「前端分层约定」）**条件注入**，仅 oracle 可见；公开痕迹只记录版本与 hash。
+- 注入隐蔽化：Practice 以「项目内规范」**条件注入**：baseline 不注入任何规范，irrelevant 仅收到无关对照规范，oracle 收到分层规范；公开痕迹只记录版本与 hash。
 - 事后被动真实性审计：运行结束后由评测方读 trace 统计 agent 是否自发识别测试环境；不提问、不暴露、不影响评分。
 - 用 v2 离线验证缺口，校准矩阵、public/private audit、snapshot、`bun run validate`、OpenSpec strict 通过。
 
@@ -41,7 +41,7 @@ v1 已有 pilot 结果，禁止改写。新建 `login-page-auth-flow-v2` 独立 
 ### Practice 注入条件化 + 去卡片化
 
 - Practice 文本以「项目内既有规范」形态呈现（`docs/frontend-guide.md` 的「前端分层约定」小节，措辞像团队约定而非评测材料）。
-- 该文档**条件注入**：仅 oracle-practice 条件经 treatment 通道注入到 agent 可见 workspace；baseline / irrelevant 不可见。不可放入共享 starter，否则缺口被抹平。
+- 该文档**条件注入**：baseline 条件不注入任何规范；irrelevant-practice 注入无关对照规范（`docs/frontend-guide.md`，列表渲染约定）；oracle-practice 注入分层规范（`docs/frontend-guide.md`，前端分层约定）。规范不可放入共享 starter，否则缺口被抹平；规范文档作为该条件项目状态的一部分随最后一条 git commit 进入 oracle/irrelevant 的 git 历史（baseline 无该文件），git 历史由 manifest + 条件注入共同复现。
 - 公开痕迹只记录规范版本与 hash（沿用 practice 注入契约）。
 
 ### 环境真实化

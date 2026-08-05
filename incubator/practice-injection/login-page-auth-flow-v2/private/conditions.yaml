@@ -1,6 +1,6 @@
 version: v1
 candidate_snapshot_manifest: private/snapshot.json
-source_commit: 892f05863fab41f284666c617495a981732285b9
+source_commit: 24c99b1582a6909df437e5b2c6b08f2e7650e7e6
 shared_execution:
   agent: { id: local-pi, version: v2 }
   pi_version: 0.80.10

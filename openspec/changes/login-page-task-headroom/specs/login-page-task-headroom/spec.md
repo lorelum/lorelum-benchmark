@@ -33,14 +33,16 @@ test or reveal test intent at any point.
 ### Requirement: Practice 注入以项目内规范条件呈现
 The Practice MUST be delivered as a project-internal convention (for example a
 「前端分层约定」section in `docs/frontend-guide.md`) and MUST be condition-scoped:
-only the oracle-practice condition receives it through the treatment channel;
-baseline and irrelevant conditions MUST NOT see it, and it MUST NOT be part of the
+the baseline condition receives no convention, the irrelevant-practice condition
+receives only its declared control convention, and the oracle-practice condition
+receives the layering convention. None of the conventions MAY be part of the
 shared starter. Public traces MUST record only the convention version and hash.
 
 #### Scenario: Oracle sees project documentation
 - **WHEN** the oracle condition runs
 - **THEN** the layering guideline is available in the workspace as project
-  documentation, and baseline/irrelevant runs do not contain it
+  documentation; baseline runs contain no convention, and irrelevant runs
+  contain only their own control convention
 
 ### Requirement: 真实性检测为事后被动审计
 Detection of whether the agent recognized the test environment MUST be a

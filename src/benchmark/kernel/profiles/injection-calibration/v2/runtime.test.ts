@@ -50,12 +50,16 @@ test("v2 resolves project-convention payloads with a workspace target path", asy
     const profile = await resolveInjectionCalibration(path);
     const baseline = await resolvePracticePayload(path, profile, "baseline");
     const oracle = await resolvePracticePayload(path, profile, "oracle-practice");
+    const irrelevant = await resolvePracticePayload(path, profile, "irrelevant-practice");
     const trace = redactedInjectionTrace(profile, oracle);
 
     expect(profile.calibration).toMatchObject({ length_metric: "project-convention/v1:utf8-rendered-characters", maximum_relative_difference: 0.1 });
     expect(baseline.practice).toBeUndefined();
     expect(oracle.practice).toMatchObject({ id: "neutral.command-boundary", version: "v1", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" });
     expect(oracle.practice?.text).toContain("Keep user interface state separate");
+    expect(irrelevant.practice).toMatchObject({ id: "neutral.avatar-fallback", version: "v1", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" });
+    expect(irrelevant.practice?.text).toContain("Provide a deterministic avatar fallback");
+    expect(irrelevant.practice?.text).not.toContain("Keep user interface state separate");
     const serializedProfile = JSON.stringify(profile);
     expect(serializedProfile).not.toContain("Keep user interface state separate");
     expect(serializedProfile).not.toContain("private/practices");

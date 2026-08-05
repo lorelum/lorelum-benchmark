@@ -11,14 +11,17 @@ The agent-visible workspace and prompt of a real-development-style candidate MUS
 
 ### Requirement: Practice 注入须条件化并以项目内规范呈现
 Practice content MUST be delivered as a project-internal convention through the
-treatment channel and MUST be condition-scoped (only the declared oracle
-condition receives it); it MUST NOT be part of the shared public starter, and
-public traces MUST record only the convention version and hash.
+treatment channel and MUST be condition-scoped: the baseline condition receives
+no convention, the irrelevant control receives only its declared control
+convention, and the oracle condition receives the layering convention. It MUST
+NOT be part of the shared public starter, and public traces MUST record only
+the convention version and hash.
 
 #### Scenario: Condition-scoped convention injection
 - **WHEN** a Practice is injected for the oracle condition
-- **THEN** it appears as project documentation only in that condition, baseline
-  and irrelevant conditions do not see it, and it is not part of the starter
+- **THEN** it appears as project documentation there, the baseline workspace
+  contains no convention, and the irrelevant control only ever contains its own
+  declared control convention (never the oracle one)
 
 ### Requirement: 真实性检测为事后被动审计
 Detecting whether the agent recognized the test environment MUST be a post-hoc

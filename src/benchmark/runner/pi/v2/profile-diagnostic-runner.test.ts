@@ -128,6 +128,37 @@ test("project-convention payloads never include --append-system-prompt", async (
 });
 
 
+
+test("convention doc is committed into the per-condition git history (oracle), baseline has none", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-convention-git-"));
+  try {
+    const app = join(workspace, "app");
+    await mkdir(app, { recursive: true });
+    await Bun.write(join(app, "index.html"), "<html></html>");
+    await Bun.write(join(app, "src", "api", "http.ts"), "export const api = 1;");
+    const oracle: RunnerPracticePayload = { condition_id: "oracle-practice", channel: "condition-scoped-private-runtime", practice: { id: "x", version: "v1", sha256: "a".repeat(64), text: "# 前端分层约定\n", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" } };
+    await materializeConventionDoc(workspace, oracle);
+    await materializeGitHistory(app, { identity: { name: "ops", email: "ops@x.io" }, commits: [{ message: "chore: scaffold", files: ["index.html"] }, { message: "feat: login shell", files: [] }] });
+    const tracked = await run(["git", "-C", app, "ls-files"], app);
+    expect(tracked.stdout).toContain("docs/frontend-guide.md");
+    const status = await run(["git", "-C", app, "status", "--porcelain"], app);
+    expect(status.stdout.trim()).toBe("");
+
+    // baseline: no convention doc written -> no frontend-guide in history
+    const baselineApp = join(workspace, "baseline-app");
+    await mkdir(baselineApp, { recursive: true });
+    await Bun.write(join(baselineApp, "index.html"), "<html></html>");
+    await Bun.write(join(baselineApp, "src", "api", "http.ts"), "export const api = 1;");
+    const baseline: RunnerPracticePayload = { condition_id: "baseline", channel: "none" };
+    await materializeConventionDoc(workspace, baseline);
+    await materializeGitHistory(baselineApp, { identity: { name: "ops", email: "ops@x.io" }, commits: [{ message: "chore: scaffold", files: ["index.html"] }, { message: "feat: login shell", files: [] }] });
+    const baselineTracked = await run(["git", "-C", baselineApp, "ls-files"], baselineApp);
+    expect(baselineTracked.stdout).not.toContain("frontend-guide.md");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
 test("materializeGitHistory builds a realistic commit history with a clean tree", async () => {
   const app = await mkdtemp(join(tmpdir(), "lorelum-githistory-"));
   try {

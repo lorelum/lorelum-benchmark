@@ -20,7 +20,7 @@ server 上经 `page.route` 拦截 `/api/session`。
 
 ## Judge v2 校准（login-page-judge/v2，focused set）
 
-v2 judge（复用 #144，代码位于 `private/judge/v2/`）在 v2 starter 形态上的
+v2 judge（复用 #144，共享 helper 位于 `src/benchmark/judge/practice-layered-api/v2/`）在 v2 starter 形态上的
 focused 校准：reference（自建领域边界）100/100、equivalent（不同命名/结构的自建
 边界）100/100、anti-pattern（组件直连 transport）0/100，criterion 方向断言通过。
 `bun test private/judge/v2/judge.test.ts` 26 pass / 0 fail。
