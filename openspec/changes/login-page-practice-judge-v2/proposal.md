@@ -23,6 +23,15 @@ Practice being tested and can reward or penalize equivalent implementations.
   rejection of the declared anti-pattern, and fail-closed ambiguity handling
   before any new model comparison.
 
+- Review-driven revision (2026-08-05): replace name/source matching with
+  data-flow evidence for transport and raw reads, accept promise-chain
+  delegation and fail closed on bare external calls, bind boundary translation
+  to auth success and failure paths, make component selection deterministic,
+  treat non-source imports as irrelevant, expand the calibration matrix to the
+  review blind spots with criterion-direction anti-pattern assertions, and add a
+  v2 re-evaluation of the six existing v5/v6 pilot outputs as an evidence gate.
+  Runner judge-provider wiring and task-starter changes remain out of scope.
+
 ## Capabilities
 
 ### New Capabilities
@@ -44,3 +53,6 @@ Practice being tested and can reward or penalize equivalent implementations.
   record, or model run is created by this change.
 - Future pilot plans must explicitly select the v2 rubric and report semantic,
   Practice-specific quality, and execution health as separate dimensions.
+- The re-evaluation of v5/v6 pilot outputs with v2 is recorded as criterion-level
+  evidence; if all conditions score identically, the task lacks headroom and a
+  separate change must adjust the task before another pilot.

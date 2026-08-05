@@ -1,4 +1,4 @@
-﻿import { posix } from "node:path";
+import { posix } from "node:path";
 import * as ts from "typescript";
 import { sha256Text } from "../../../../../../src/benchmark/fs";
 import { assertJudgeResultV1, type JudgeResultV1 } from "../../../../../../src/benchmark/outcome/v1/contract";
@@ -17,7 +17,7 @@ export type Analysis = {
 };
 
 type Parsed = { path: string; source: string; file: ts.SourceFile };
-type ImportBinding = { local: string; imported: string; source: string; resolved?: string; status: "resolved" | "external" | "unresolved" | "ambiguous" };
+type ImportBinding = { local: string; imported: string; source: string; resolved?: string; status: "resolved" | "external" | "unresolved" | "ambiguous" | "irrelevant" };
 type ModuleFacts = {
   parsed: Parsed;
   imports: ImportBinding[];
@@ -26,13 +26,17 @@ type ModuleFacts = {
   transportCalls: number;
   domainTranslations: number;
   rawReturns: number;
+  authSuccess: boolean;
+  authFailure: boolean;
   formSubmitHandlers: ts.Expression[];
 };
 type Resolution = { status: ImportBinding["status"]; path?: string };
 
 const sourceExtensions = [".ts", ".tsx", ".js", ".jsx"];
+const nonSourceExtensions = [".css", ".scss", ".sass", ".less", ".styl", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".otf", ".mp3", ".mp4", ".webm", ".mov", ".wasm"];
 const projectSpecifier = (value: string): boolean => value.startsWith(".") || value.startsWith("@");
 const normalize = (value: string): string => posix.normalize(value.replaceAll("\\", "/")).replace(/^\.\//, "");
+const isNonSourcePath = (value: string): boolean => nonSourceExtensions.some((extension) => value.endsWith(extension));
 
 function scriptKind(path: string): ts.ScriptKind {
   if (path.endsWith(".tsx")) return ts.ScriptKind.TSX;
@@ -49,6 +53,12 @@ function parseFiles(files: SourceMap): Map<string, Parsed> {
     parsed.set(path, { path, source, file: ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, scriptKind(path)) });
   }
   return parsed;
+}
+
+function allPaths(files: SourceMap): Set<string> {
+  const paths = new Set<string>();
+  for (const rawPath of Object.keys(files)) paths.add(normalize(rawPath));
+  return paths;
 }
 
 type AliasRule = { pattern: string; targets: string[]; baseUrl: string };
@@ -74,8 +84,9 @@ function candidatesFor(base: string, files: Map<string, Parsed>): string[] {
   return [...new Set(candidates)].filter((candidate) => files.has(candidate));
 }
 
-function resolveImport(fromPath: string, specifier: string, files: Map<string, Parsed>, aliases: AliasRule[]): Resolution {
+function resolveImport(fromPath: string, specifier: string, files: Map<string, Parsed>, aliases: AliasRule[], paths: Set<string>): Resolution {
   if (!projectSpecifier(specifier)) return { status: "external" };
+  if (isNonSourcePath(specifier)) return { status: "irrelevant" };
   const bases: string[] = [];
   if (specifier.startsWith(".")) bases.push(posix.join(posix.dirname(fromPath), specifier));
   for (const rule of aliases) {
@@ -91,6 +102,7 @@ function resolveImport(fromPath: string, specifier: string, files: Map<string, P
   const matches = [...new Set(bases.flatMap((base) => candidatesFor(base, files)))];
   if (matches.length === 1) return { status: "resolved", path: matches[0] };
   if (matches.length > 1) return { status: "ambiguous" };
+  if (bases.some((base) => paths.has(base) || isNonSourcePath(base))) return { status: "irrelevant" };
   return { status: "unresolved" };
 }
 
@@ -99,15 +111,19 @@ function walk(node: ts.Node, visit: (node: ts.Node) => void): void {
   node.forEachChild((child) => walk(child, visit));
 }
 
-function importBindings(parsed: Parsed, files: Map<string, Parsed>, aliases: AliasRule[]): ImportBinding[] {
+function importBindings(parsed: Parsed, files: Map<string, Parsed>, aliases: AliasRule[], paths: Set<string>): ImportBinding[] {
   const bindings: ImportBinding[] = [];
   walk(parsed.file, (node) => {
     if (!ts.isImportDeclaration(node) || !ts.isStringLiteral(node.moduleSpecifier)) return;
     const source = node.moduleSpecifier.text;
-    const resolution = resolveImport(parsed.path, source, files, aliases);
+    const resolution = resolveImport(parsed.path, source, files, aliases, paths);
     const status = resolution.status;
+    if (status === "irrelevant") return;
     const clause = node.importClause;
-    if (!clause) return;
+    if (!clause) {
+      if (status === "unresolved" || status === "ambiguous") bindings.push({ local: "", imported: "", source, resolved: resolution.path, status });
+      return;
+    }
     if (clause.name) bindings.push({ local: clause.name.text, imported: "default", source, resolved: resolution.path, status });
     const named = clause.namedBindings;
     if (named && ts.isNamespaceImport(named)) bindings.push({ local: named.name.text, imported: "*", source, resolved: resolution.path, status });
@@ -131,6 +147,13 @@ function isRawProperty(node: ts.PropertyAccessExpression): boolean {
 function isDomainObject(node: ts.ObjectLiteralExpression): boolean {
   const names = new Set(["ok", "success", "message", "error", "user", "code"]);
   return node.properties.some((property) => ts.isPropertyAssignment(property) && ts.isIdentifier(property.name) && names.has(property.name.text));
+}
+
+function baseIdentifier(node: ts.Expression): string | undefined {
+  let current = node;
+  while (ts.isPropertyAccessExpression(current)) current = current.expression;
+  if (ts.isIdentifier(current)) return current.text;
+  return undefined;
 }
 
 function callIsImported(node: ts.CallExpression, bindings: ImportBinding[], predicate: (binding: ImportBinding) => boolean): boolean {
@@ -234,55 +257,191 @@ function importedBindingFor(name: string, imports: ImportBinding[], aliases: Map
   return undefined;
 }
 
-function moduleFacts(parsed: Parsed, files: Map<string, Parsed>, aliases: AliasRule): ModuleFacts;
-function moduleFacts(parsed: Parsed, files: Map<string, Parsed>, aliases: AliasRule[]): ModuleFacts;
-function moduleFacts(parsed: Parsed, files: Map<string, Parsed>, aliases: AliasRule | AliasRule[]): ModuleFacts {
-  const imports = importBindings(parsed, files, Array.isArray(aliases) ? aliases : [aliases]);
+function calledImportLocals(file: ts.SourceFile, imports: ImportBinding[]): Set<string> {
+  const locals = new Set(imports.map((binding) => binding.local).filter((local) => local.length > 0));
+  const called = new Set<string>();
+  walk(file, (node) => {
+    if (!ts.isCallExpression(node)) return;
+    const name = expressionName(node.expression);
+    if (!name) return;
+    const local = name.split(".")[0];
+    if (locals.has(local)) called.add(local);
+  });
+  return called;
+}
+
+function returnExpressionIsRaw(expression: ts.Expression, transportResults: Set<string>): boolean {
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    if (ts.isConditionalExpression(node)) {
+      visit(node.whenTrue);
+      visit(node.whenFalse);
+      return;
+    }
+    if (ts.isIdentifier(node)) {
+      if (transportResults.has(node.text) && !(ts.isPropertyAccessExpression(node.parent) && node.parent.expression === node)) {
+        found = true;
+        return;
+      }
+      return;
+    }
+    if (ts.isPropertyAccessExpression(node)) {
+      const isChainTop = !ts.isPropertyAccessExpression(node.parent) || node.parent.expression !== node;
+      if (isChainTop && isRawProperty(node)) {
+        const base = baseIdentifier(node);
+        if (base && transportResults.has(base)) {
+          found = true;
+          return;
+        }
+      }
+    }
+    node.forEachChild(visit);
+  };
+  visit(expression);
+  return found;
+}
+
+function checkedStatus(node: ts.Expression): Map<string, "eq" | "ne"> {
+  const map = new Map<string, "eq" | "ne">();
+  const visit = (n: ts.Node) => {
+    if (ts.isBinaryExpression(n) && (n.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken || n.operatorToken.kind === ts.SyntaxKind.EqualsEqualsToken || n.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken || n.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsToken)) {
+      const eq = n.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken || n.operatorToken.kind === ts.SyntaxKind.EqualsEqualsToken;
+      for (const side of [n.left, n.right]) {
+        if (ts.isNumericLiteral(side)) map.set(side.text, eq ? "eq" : "ne");
+      }
+    }
+    n.forEachChild(visit);
+  };
+  visit(node);
+  return map;
+}
+
+function statementTranslatesToDomain(statement: ts.Statement | undefined, transportResults: Set<string>): boolean {
+  if (!statement) return false;
+  let translated = false;
+  walk(statement, (node) => {
+    if (translated) return;
+    if (ts.isReturnStatement(node)) {
+      if (!node.expression || !returnExpressionIsRaw(node.expression, transportResults)) translated = true;
+      return;
+    }
+    if (ts.isThrowStatement(node)) {
+      translated = true;
+      return;
+    }
+  });
+  return translated;
+}
+
+function expressionTranslatesToDomain(expression: ts.Expression | undefined, transportResults: Set<string>): boolean {
+  if (!expression) return false;
+  return !returnExpressionIsRaw(expression, transportResults);
+}
+
+function followingStatementsTranslate(node: ts.IfStatement, transportResults: Set<string>): boolean {
+  if (!node.parent || !ts.isBlock(node.parent)) return false;
+  const index = node.parent.statements.indexOf(node);
+  if (index < 0) return false;
+  return node.parent.statements.slice(index + 1).some((statement) => statementTranslatesToDomain(statement, transportResults));
+}
+
+function translatesAuthBranching(file: ts.SourceFile, transportResults: Set<string>): { success: boolean; failure: boolean } {
+  let success = false;
+  let failure = false;
+  const note = (s: boolean, f: boolean): void => {
+    if (s) success = true;
+    if (f) failure = true;
+  };
+  walk(file, (node) => {
+    if (success && failure) return;
+    if (ts.isIfStatement(node)) {
+      const statuses = checkedStatus(node.expression);
+      const eq200 = statuses.get("200");
+      const eq401 = statuses.get("401");
+      if (eq200 === "eq") {
+        note(statementTranslatesToDomain(node.thenStatement, transportResults), (node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : false) || followingStatementsTranslate(node, transportResults));
+      } else if (eq200 === "ne") {
+        note(node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : followingStatementsTranslate(node, transportResults), statementTranslatesToDomain(node.thenStatement, transportResults));
+      } else if (eq401 === "eq") {
+        note(node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : followingStatementsTranslate(node, transportResults), statementTranslatesToDomain(node.thenStatement, transportResults));
+      } else if (eq401 === "ne") {
+        note(statementTranslatesToDomain(node.thenStatement, transportResults), node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : false);
+      }
+    }
+    if (ts.isConditionalExpression(node)) {
+      const statuses = checkedStatus(node.condition);
+      const eq200 = statuses.get("200");
+      const eq401 = statuses.get("401");
+      if (eq200 === "eq") note(expressionTranslatesToDomain(node.whenTrue, transportResults), expressionTranslatesToDomain(node.whenFalse, transportResults));
+      else if (eq401 === "eq") note(expressionTranslatesToDomain(node.whenFalse, transportResults), expressionTranslatesToDomain(node.whenTrue, transportResults));
+    }
+  });
+  return { success, failure };
+}
+
+function moduleFacts(parsed: Parsed, files: Map<string, Parsed>, aliases: AliasRule[], paths: Set<string>): ModuleFacts {
+  const imports = importBindings(parsed, files, aliases, paths);
+  const transportResults = new Set<string>();
   let hasFetch = false;
-  let rawReads = 0;
   let transportCalls = 0;
   let domainTranslations = 0;
-  let rawReturns = 0;
-  const transportResults = new Set<string>();
+  const candidates: Array<{ name: string; call: ts.CallExpression }> = [];
   walk(parsed.file, (node) => {
     if (ts.isCallExpression(node)) {
-      if (ts.isIdentifier(node.expression) && node.expression.text === "fetch") {
-        hasFetch = true;
-        if (isAwaited(node) && node.parent.parent && ts.isVariableDeclaration(node.parent.parent) && ts.isIdentifier(node.parent.parent.name)) transportResults.add(node.parent.parent.name.text);
-      }
-      if (callIsImported(node, imports, (binding) => binding.status === "resolved" && Boolean(binding.resolved && files.get(binding.resolved)?.file && files.get(binding.resolved)!.source.includes("fetch(")))) transportCalls++;
-      if (callIsImported(node, imports, (binding) => binding.status === "resolved")) {
-        const parent = node.parent;
-        if (ts.isAwaitExpression(parent) && ts.isVariableDeclaration(parent.parent) && ts.isIdentifier(parent.parent.name)) transportResults.add(parent.parent.name.text);
-      }
+      if (ts.isIdentifier(node.expression) && node.expression.text === "fetch") hasFetch = true;
+      if (callIsImported(node, imports, (binding) => binding.status === "resolved" && Boolean(binding.resolved && files.get(binding.resolved)?.source.includes("fetch(")))) transportCalls++;
     }
-    if (ts.isPropertyAccessExpression(node) && isRawProperty(node)) rawReads++;
-    if (ts.isReturnStatement(node) && node.expression) {
-      if (ts.isObjectLiteralExpression(node.expression) && isDomainObject(node.expression)) domainTranslations++;
-      if (ts.isIdentifier(node.expression) && transportResults.has(node.expression.text)) rawReturns++;
-      if (ts.isPropertyAccessExpression(node.expression) && isRawProperty(node.expression)) rawReturns++;
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && ts.isAwaitExpression(node.initializer) && ts.isCallExpression(node.initializer.expression)) {
+      candidates.push({ name: node.name.text, call: node.initializer.expression });
     }
+    if (ts.isReturnStatement(node) && node.expression && ts.isObjectLiteralExpression(node.expression) && isDomainObject(node.expression)) domainTranslations++;
     if (ts.isThrowStatement(node)) domainTranslations++;
   });
-  // The function above may encounter the return before its declaration in a
-  // source walk. A second pass makes the raw-return check order independent.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const candidate of candidates) {
+      if (transportResults.has(candidate.name)) continue;
+      const call = candidate.call;
+      const callee = call.expression;
+      if (ts.isIdentifier(callee) && callee.text === "fetch") {
+        transportResults.add(candidate.name);
+        changed = true;
+      } else if (callIsImported(call, imports, (binding) => binding.status === "resolved" && Boolean(binding.resolved && files.get(binding.resolved)?.source.includes("fetch(")))) {
+        transportResults.add(candidate.name);
+        changed = true;
+      } else if (ts.isPropertyAccessExpression(callee) && callee.name.text === "json") {
+        const receiver = baseIdentifier(callee);
+        if (receiver && transportResults.has(receiver)) {
+          transportResults.add(candidate.name);
+          changed = true;
+        }
+      }
+    }
+  }
+  let rawReads = 0;
   walk(parsed.file, (node) => {
-    if (!ts.isVariableDeclaration(node) || !node.initializer || !ts.isIdentifier(node.name)) return;
-    if (ts.isAwaitExpression(node.initializer) && ts.isCallExpression(node.initializer.expression) && (ts.isIdentifier(node.initializer.expression.expression) || ts.isPropertyAccessExpression(node.initializer.expression.expression))) {
-      if (node.initializer.expression.expression && (ts.isIdentifier(node.initializer.expression.expression) || ts.isPropertyAccessExpression(node.initializer.expression.expression))) transportResults.add(node.name.text);
+    if (ts.isPropertyAccessExpression(node) && isRawProperty(node)) {
+      const base = baseIdentifier(node);
+      if (base && transportResults.has(base)) rawReads++;
     }
   });
-  if (transportResults.size > 0) {
-    walk(parsed.file, (node) => {
-      if (!ts.isReturnStatement(node) || !node.expression || !ts.isIdentifier(node.expression)) return;
-      if (transportResults.has(node.expression.text)) rawReturns++;
-    });
-  }
-  return { parsed, imports, hasFetch, rawReads, transportCalls, domainTranslations, rawReturns, formSubmitHandlers: formSubmitHandlers(parsed.file) };
+  let rawReturns = 0;
+  walk(parsed.file, (node) => {
+    if (ts.isReturnStatement(node) && node.expression && returnExpressionIsRaw(node.expression, transportResults)) rawReturns++;
+  });
+  const { success: authSuccess, failure: authFailure } = translatesAuthBranching(parsed.file, transportResults);
+  return { parsed, imports, hasFetch, rawReads, transportCalls, domainTranslations, rawReturns, authSuccess, authFailure, formSubmitHandlers: formSubmitHandlers(parsed.file) };
 }
 
 function componentPath(facts: Map<string, ModuleFacts>): string | undefined {
-  return [...facts.values()].find((entry) => entry.formSubmitHandlers.length > 0)?.parsed.path;
+  const candidates = [...facts.values()].filter((entry) => entry.formSubmitHandlers.length > 0);
+  if (candidates.length === 0) return undefined;
+  const loginLike = candidates.filter((entry) => /login/i.test(entry.parsed.path));
+  const pool = loginLike.length > 0 ? loginLike : candidates;
+  pool.sort((a, b) => a.parsed.path.localeCompare(b.parsed.path));
+  return pool[0].parsed.path;
 }
 
 function boundaryFor(component: ModuleFacts, facts: Map<string, ModuleFacts>): { boundary?: ModuleFacts; unresolved: string[] } {
@@ -292,7 +451,7 @@ function boundaryFor(component: ModuleFacts, facts: Map<string, ModuleFacts>): {
     if (binding.status === "unresolved" || binding.status === "ambiguous") unresolved.push(`${component.parsed.path} imports ${binding.source} (${binding.status})`);
     if (binding.status === "resolved" && binding.resolved) {
       const target = facts.get(binding.resolved);
-      if (target && (target.domainTranslations > 0 || target.transportCalls > 0)) candidates.push(target);
+      if (target && (target.domainTranslations > 0 || target.transportCalls > 0) && !candidates.includes(target)) candidates.push(target);
     }
   }
   if (candidates.length === 1) return { boundary: candidates[0], unresolved };
@@ -316,38 +475,61 @@ function delegatedSubmit(component: ModuleFacts, boundary: ModuleFacts | undefin
     }
     return current;
   };
-  const containsDelegatedCall = (root: ts.Node, visitedHelpers: Set<ts.Node>): boolean => {
-    if (visitedHelpers.has(root)) return false;
-    visitedHelpers.add(root);
-    let found = false;
-    walk(root, (node) => {
-      if (found || !ts.isCallExpression(node)) return;
+  const isDomainOperation = (binding: ImportBinding): boolean => {
+    if (binding.status !== "resolved" || !binding.resolved) return false;
+    if (boundaryPath && binding.resolved === boundaryPath) return true;
+    const target = facts.get(binding.resolved);
+    return Boolean(target && target.domainTranslations > 0);
+  };
+  const isPromiseChained = (node: ts.CallExpression): boolean => {
+    if (ts.isPropertyAccessExpression(node.parent) && ["then", "catch", "finally"].includes(node.parent.name.text)) return true;
+    return false;
+  };
+  const analyzeBody = (body: ts.Node, visited: Set<ts.Node>): { delegated: boolean; bare: boolean } => {
+    if (visited.has(body)) return { delegated: false, bare: false };
+    visited.add(body);
+    let delegated = false;
+    let bare = false;
+    walk(body, (node) => {
+      if (delegated) return;
+      if (!ts.isCallExpression(node)) return;
       const name = expressionName(node.expression);
       if (!name) return;
       const local = name.split(".")[0];
       const binding = importedBindingFor(local, component.imports, aliases);
-      if (binding?.status === "resolved" && binding.resolved && binding.resolved !== component.parsed.path && facts.has(binding.resolved)) {
-        if (!boundaryPath || binding.resolved === boundaryPath || facts.get(binding.resolved)?.domainTranslations || facts.get(binding.resolved)?.transportCalls) found = true;
+      if (binding && isDomainOperation(binding)) {
+        if (ts.isAwaitExpression(node.parent) || isPromiseChained(node)) delegated = true;
+        else bare = true;
         return;
       }
       if (binding) return;
       if (ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression)) {
         const method = findObjectMethod(component.parsed.file, resolveLeaf(local), node.expression.name.text);
-        if (method?.body && containsDelegatedCall(method.body, visitedHelpers)) found = true;
+        if (method?.body) {
+          const inner = analyzeBody(method.body, visited);
+          if (inner.delegated) delegated = true;
+          else if (inner.bare) bare = true;
+        }
         return;
       }
-      if (!ts.isIdentifier(node.expression)) return;
-      const helper = findFunction(component.parsed.file, resolveLeaf(local));
-      if (helper?.body && containsDelegatedCall(helper.body, visitedHelpers)) found = true;
+      if (ts.isIdentifier(node.expression)) {
+        const helper = findFunction(component.parsed.file, resolveLeaf(local));
+        if (helper?.body) {
+          const inner = analyzeBody(helper.body, visited);
+          if (inner.delegated) delegated = true;
+          else if (inner.bare) bare = true;
+        }
+      }
     });
-    return found;
+    return { delegated, bare };
   };
   for (const expression of component.formSubmitHandlers) {
     const handler = handlerFunction(component.parsed.file, expression);
     if (!handler || !handler.body) return { value: false, ambiguous: "form submit handler could not be resolved" };
-    let hasAwait = false;
-    walk(handler.body, (node) => { if (ts.isAwaitExpression(node)) hasAwait = true; });
-    if (!hasAwait || !containsDelegatedCall(handler.body, new Set<ts.Node>())) return { value: false };
+    const result = analyzeBody(handler.body, new Set<ts.Node>());
+    if (result.delegated) continue;
+    if (result.bare) return { value: false, ambiguous: "submit handler invokes a resolved external domain operation without await or promise chaining (unsupported analysis)" };
+    return { value: false };
   }
   return { value: true };
 }
@@ -358,9 +540,10 @@ function criterion(id: PracticeDimensionId, points: number, max_points: number, 
 
 export function analyzePractice(files: SourceMap): Analysis {
   const parsed = parseFiles(files);
+  const paths = allPaths(files);
   const aliases = aliasRules(files);
   const facts = new Map<string, ModuleFacts>();
-  for (const entry of parsed.values()) facts.set(entry.path, moduleFacts(entry, parsed, aliases));
+  for (const entry of parsed.values()) facts.set(entry.path, moduleFacts(entry, parsed, aliases, paths));
   const component = componentPath(facts);
   if (!component) return { state: "indeterminate", score: 0, confidence: 0, criteria: [], reason: "no form submit component could be resolved", audit: ["component-not-found"] };
   const page = facts.get(component)!;
@@ -375,17 +558,28 @@ export function analyzePractice(files: SourceMap): Analysis {
   }
   if (unresolved.length > 0) return { state: "indeterminate", score: 0, confidence: 0, criteria: [], reason: [...new Set(unresolved)].join("; "), audit: [...new Set(unresolved)] };
 
-  const importedTransport = page.imports.some((binding) => binding.status === "resolved" && binding.resolved && facts.get(binding.resolved)?.hasFetch);
+  const calledLocals = calledImportLocals(page.parsed.file, page.imports);
+  const importedTransport = page.imports.some((binding) => {
+    if (binding.status !== "resolved" || !binding.resolved) return false;
+    const target = facts.get(binding.resolved);
+    if (!target || !target.hasFetch) return false;
+    if (boundary && target.parsed.path === boundary.parsed.path) return false;
+    if (target.domainTranslations > 0) return false;
+    return calledLocals.has(binding.local);
+  });
   const isolation = page.hasFetch || page.rawReads > 0 || importedTransport
-    ? criterion("component-transport-isolation", 0, 30, page.hasFetch ? "page component performs fetch transport directly" : page.rawReads > 0 ? "page component reads raw status/body response fields" : "page component imports a transport module directly")
+    ? criterion("component-transport-isolation", 0, 30, page.hasFetch ? "page component performs fetch transport directly" : page.rawReads > 0 ? "page component reads raw status/body response fields" : "page component invokes a transport module directly")
     : boundary
       ? criterion("component-transport-isolation", 30, 30, "page component has no transport or raw response access and imports a domain boundary")
       : criterion("component-transport-isolation", 15, 30, "page component does not perform transport, but no domain boundary was resolved");
   const delegation = delegatedSubmit(page, boundary, facts);
-  const delegationCriterion = criterion("domain-operation-delegation", delegation.value ? 25 : 0, 25, delegation.value ? "every form submit handler awaits an imported operation outside the page component" : delegation.ambiguous ?? "form submission does not await a resolved external domain operation");
-  const translation = boundary && boundary.transportCalls + (boundary.hasFetch ? 1 : 0) > 0 && boundary.domainTranslations > 0;
-  const translationCriterion = criterion("boundary-response-translation", translation ? 30 : 0, 30, translation ? "resolved boundary owns transport and returns a domain-shaped success/failure result" : "no resolved boundary was proven to own transport and translate authentication responses");
-  const containment = boundary && boundary.rawReturns === 0 && page.rawReads === 0 && !importedTransport;
+  if (delegation.ambiguous) {
+    return { state: "indeterminate", score: 0, confidence: 0, criteria: [], reason: delegation.ambiguous, audit: [...new Set(unresolved), "delegation-ambiguous"] };
+  }
+  const delegationCriterion = criterion("domain-operation-delegation", delegation.value ? 25 : 0, 25, delegation.value ? "every form submit handler awaits or promise-chains an imported domain operation outside the page component" : "form submission does not await a resolved external domain operation");
+  const translation = boundary && boundary.transportCalls + (boundary.hasFetch ? 1 : 0) > 0 && boundary.domainTranslations > 0 && boundary.authSuccess && boundary.authFailure;
+  const translationCriterion = criterion("boundary-response-translation", translation ? 30 : 0, 30, translation ? "resolved boundary owns transport and translates both success (200) and failure (401) into domain-shaped values" : "no resolved boundary was proven to own transport and translate both authentication success and failure");
+  const containment = boundary && boundary.rawReturns === 0 && page.rawReads === 0 && page.rawReturns === 0 && !importedTransport;
   const containmentCriterion = criterion("raw-response-containment", containment ? 15 : 0, 15, containment ? "raw response values are contained within the boundary" : "raw transport data can flow into the component-facing path");
   const criteria = [isolation, delegationCriterion, translationCriterion, containmentCriterion];
   return { state: "observed", score: criteria.reduce((sum, item) => sum + item.points, 0), confidence: 100, criteria, audit: [...reachable].sort() };

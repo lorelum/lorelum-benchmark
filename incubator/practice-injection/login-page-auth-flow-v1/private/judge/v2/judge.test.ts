@@ -182,4 +182,165 @@ export function LoginPage() {
     expect(input.input_hash).toMatch(/^[a-f0-9]{64}$/);
     expect(input.material).toEqual([]);
   });
+
+  test("two-layer boundary that owns fetch translates identically to the reference", () => {
+    const files = sourceMap();
+    files["src/api/session.ts"] = `export async function login(email: string, password: string) {
+  const response = await fetch('/api/session', { method: 'POST', body: JSON.stringify({ email, password }) });
+  const body = await response.json();
+  if (response.status === 200) return { ok: true, user: body.user };
+  return { ok: false, message: body.message };
+}`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.score).toBe(100);
+    expect(result.criteria.find((c) => c.id === "component-transport-isolation")?.points).toBe(30);
+    expect(result.criteria.find((c) => c.id === "raw-response-containment")?.points).toBe(15);
+  });
+
+  test("document.body DOM access is not a raw response read", () => {
+    const files = sourceMap();
+    files["src/LoginPage.tsx"] = files["src/LoginPage.tsx"].replace(
+      "try { await login('a', 'b'); } finally { setPhase('idle'); }",
+      "document.body.classList.add('busy');\n    try { await login('a', 'b'); } finally { setPhase('idle'); document.body.classList.remove('busy'); }",
+    );
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.score).toBe(100);
+    expect(result.criteria.find((c) => c.id === "component-transport-isolation")?.points).toBe(30);
+  });
+
+  test("uncalled transport util import is not component transport", () => {
+    const files = sourceMap();
+    files["src/LoginPage.tsx"] = files["src/LoginPage.tsx"].replace("import { value } from './unrelated';", "import { track } from './analytics';");
+    files["src/analytics.ts"] = `export async function track(event: string) { await fetch('/api/telemetry', { method: 'POST', body: JSON.stringify({ event }) }); }`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.score).toBe(100);
+    expect(result.criteria.find((c) => c.id === "component-transport-isolation")?.points).toBe(30);
+  });
+
+  test("nested raw leak in a boundary return fails containment and translation", () => {
+    const files = sourceMap();
+    files["src/api/session.ts"] = `import { postSession } from './http';
+export async function login(email: string, password: string) {
+  const response = await postSession({ email, password });
+  if (response.status === 200) return { ok: true, user: response.body.user, payload: response.body };
+  return { ok: false, message: response.body.message };
+}`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.criteria.find((c) => c.id === "raw-response-containment")?.points).toBe(0);
+    expect(result.criteria.find((c) => c.id === "boundary-response-translation")?.points).toBe(0);
+  });
+
+  test("partial translation (failure returns raw response) fails translation and containment", () => {
+    const files = sourceMap();
+    files["src/api/session.ts"] = `import { postSession } from './http';
+export async function login(email: string, password: string) {
+  const response = await postSession({ email, password });
+  if (response.status === 200) return { ok: true, user: response.body.user };
+  return response;
+}`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.criteria.find((c) => c.id === "boundary-response-translation")?.points).toBe(0);
+    expect(result.criteria.find((c) => c.id === "raw-response-containment")?.points).toBe(0);
+  });
+
+  test("promise-chain delegation is equivalent to await", () => {
+    const files = sourceMap();
+    files["src/LoginPage.tsx"] = `import { login } from './api/session';
+export function LoginPage() {
+  function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    login('a', 'b').then(() => {}).catch(() => {});
+  }
+  return <form onSubmit={handleSubmit}><button type="submit">??</button></form>;
+}`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.score).toBe(100);
+    expect(result.criteria.find((c) => c.id === "domain-operation-delegation")?.points).toBe(25);
+  });
+
+  test("bare external domain call without await fails closed as indeterminate", () => {
+    const files = sourceMap();
+    files["src/LoginPage.tsx"] = `import { login } from './api/session';
+export function LoginPage() {
+  function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    login('a', 'b');
+  }
+  return <form onSubmit={handleSubmit}><button type="submit">??</button></form>;
+}`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("indeterminate");
+    expect(result.score).toBe(0);
+    expect(result.reason).toContain("without await or promise chaining");
+  });
+
+  test("component selection is order independent and prefers the login page", () => {
+    const files = sourceMap();
+    files["src/components/Form.tsx"] = `import type { FormEvent } from 'react';
+export function Form({ onSubmit }: { onSubmit: (event: FormEvent) => void }) {
+  return <form onSubmit={onSubmit}><button type="submit">??</button></form>;
+}`;
+    files["src/LoginPage.tsx"] = `import { login } from './api/session';
+import { Form } from './components/Form';
+export function LoginPage() {
+  async function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    await login('a', 'b');
+  }
+  return <Form onSubmit={handleSubmit} />;
+}`;
+    const forward = analyzePractice(files);
+    const reversed: SourceMap = {};
+    for (const key of ["src/components/Form.tsx", "src/LoginPage.tsx", "src/api/session.ts", "src/api/http.ts"]) reversed[key] = files[key];
+    const backward = analyzePractice(reversed);
+    expect(forward.state).toBe("observed");
+    expect(forward.score).toBe(100);
+    expect(backward.state).toBe("observed");
+    expect(backward.score).toBe(forward.score);
+    expect(backward.audit).toContain("src/LoginPage.tsx");
+  });
+
+  test("CSS module and side-effect imports are irrelevant, not unresolved", () => {
+    const files = sourceMap();
+    files["src/LoginPage.tsx"] = `import { login } from './api/session';
+import styles from './LoginPage.module.css';
+import './LoginPage.css';
+export function LoginPage() {
+  async function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    await login('a', 'b');
+  }
+  return <form onSubmit={handleSubmit} className={styles.form}><button type="submit">??</button></form>;
+}`;
+    files["src/LoginPage.module.css"] = ".form { display: grid; }";
+    files["src/LoginPage.css"] = ".login-page { min-height: 100vh; }";
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.score).toBe(100);
+  });
+
+  test("component awaiting a raw transport adapter is not delegation", () => {
+    const antiPattern = analyzePractice(sourceMap({ antiPattern: true }));
+    expect(antiPattern.criteria.find((c) => c.id === "domain-operation-delegation")?.points).toBe(0);
+    expect(antiPattern.criteria.find((c) => c.id === "component-transport-isolation")?.points).toBe(0);
+  });
+
+  test("value and type imports from the same module resolve to one boundary", () => {
+    const files = sourceMap();
+    files["src/LoginPage.tsx"] = files["src/LoginPage.tsx"].replace(
+      "import { login } from './api/session';",
+      "import { login, type LoginResult } from './api/session';",
+    );
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.score).toBe(100);
+    expect(result.audit).not.toContain("src/LoginPage.tsx has multiple candidate boundaries");
+  });
+
 });

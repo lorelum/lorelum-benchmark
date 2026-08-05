@@ -112,6 +112,51 @@ sets:
         overlay:
           path: private/calibration/sets/login-page-judge/v2/overlays/ambiguous
           sha256: 48dcbe98afec0461dff89ea712fc8ae4570413b24c8e95cf4c84898698446784
+      equivalent-two-layer-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-two-layer
+          sha256: 0d3586fcb716e8c2e608e95a53475f2ea34108dc9c24a65cea136df1a276c9e2
+      equivalent-promise-chain-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-promise-chain
+          sha256: 668d3947045d5f4343158288f42044a82e277e98f805fd67c04c8cbf3bb5dcef
+      equivalent-document-body-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-document-body
+          sha256: 6726a1a9a361abdb8c87b21e41b1605eecea6dddc1098fd1c8a323fe15e62fcd
+      equivalent-unused-transport-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-unused-transport
+          sha256: f61ced4a210254194136f68ca3423108a65c749f4c03aacb6d3bd47c1a8f728c
+      equivalent-file-order-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-file-order
+          sha256: b36edc98b177dd2db1749fa86c7ef16892060ca24651a5fa06718de03324c739
+      equivalent-css-import-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-css-import
+          sha256: 1dcd66b559c0ac2799d35235fcbc3d4ab64f21fee9f542412aa67c87fd7357b2
+      anti-pattern-nested-leak-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/anti-pattern-nested-leak
+          sha256: 50831bb142153d1670d63484923778c3369e4a1758bd2e58d72ae961785bfa20
+      anti-pattern-partial-translation-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/anti-pattern-partial-translation
+          sha256: 77e60e426e97e37a45df3c0f91b3f5b89d51be60cc099db4929f36106420c972
+      ambiguous-bare-call-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/ambiguous-bare-call
+          sha256: 7542f01f7bdc8c534e0cf1228230257adbcd693e20b0e2d192409c7534442d48
       unrelated-import-tree:
         extends: candidate-foundation
         overlay:
@@ -122,6 +167,15 @@ sets:
       equivalent-indirect: equivalent-indirect-tree
       equivalent-reducer: equivalent-reducer-tree
       equivalent-helper: equivalent-helper-tree
+      equivalent-two-layer: equivalent-two-layer-tree
+      equivalent-promise-chain: equivalent-promise-chain-tree
+      equivalent-document-body: equivalent-document-body-tree
+      equivalent-unused-transport: equivalent-unused-transport-tree
+      equivalent-file-order: equivalent-file-order-tree
+      equivalent-css-import: equivalent-css-import-tree
       anti-pattern: anti-pattern-tree
+      anti-pattern-nested-leak: anti-pattern-nested-leak-tree
+      anti-pattern-partial-translation: anti-pattern-partial-translation-tree
       ambiguous: ambiguous-tree
+      ambiguous-bare-call: ambiguous-bare-call-tree
       unrelated-import: unrelated-import-tree

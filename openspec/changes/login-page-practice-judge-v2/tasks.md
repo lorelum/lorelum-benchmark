@@ -20,3 +20,14 @@
 
 - [x] 4.1 Run v2 focused tests, input redaction checks, candidate snapshot verification, `bun run validate`, OpenSpec strict validation, and `git diff --check`.
 - [x] 4.2 Document that future pilots must explicitly select v2 and that no model call, formal record, suite revision, or causal conclusion is produced by this change.
+
+## 5. Review-driven revision (2026-08-05)
+
+- [x] 5.1 Record the review decision in design/spec/proposal and on issue #137: data-flow evidence, delegation semantics, translation binding, deterministic component selection, irrelevant non-source imports, calibration blind spots, and the v5/v6 re-evaluation gate.
+- [x] 5.2 Fix score.ts P0: importedTransport data-flow (boundary exclusion + call edge), rawReads data-flow (transport-result receivers only), and recursive raw-response containment in return expressions.
+- [x] 5.3 Fix score.ts P1: promise-chain (.then/.catch/.finally) delegation with bare-call indeterminate, 200/401 translation binding, deterministic LoginPage-first component selection, and irrelevant CSS/asset imports.
+- [x] 5.4 Expand the calibration matrix to cover the review blind spots (two-layer boundary, document.body, uncalled transport util, nested raw leak, partial translation, promise chain, bare call, file ordering, CSS imports, component-direct-transport) and switch anti-pattern separation to criterion-direction assertions; update sets.yaml, calibrate.ts, and calibration.md.
+- [x] 5.5 Extend judge.test.ts with regression tests for each new behavior.
+- [x] 5.6 Run v2 focused tests and the kernel calibration; record criterion-level evidence in the PR.
+- [x] 5.7 Re-evaluate the six v5/v6 pilot outputs with v2; record a criterion-level table and a task headroom conclusion.
+- [x] 5.8 Update the candidate snapshot, run bun run validate, OpenSpec strict validation, and git diff --check; keep v1 artifacts and historical results untouched.
