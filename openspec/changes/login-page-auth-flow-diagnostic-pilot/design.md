@@ -89,6 +89,31 @@ irrelevant-practice）输出 signal / no-obvious-signal；健康样本不足或 
 不可用时只报告 diagnostic/uncertain，不升级结论。judge 分数与执行健康独立记录，
 不作加权总分。
 
+### v2 复测（#145/#146/#148 合并后）
+
+v1 pilot（v5/v6）在 `login-page-auth-flow-v1` 上跑出 no-obvious-signal，暴露两个
+叠加问题：v1 starter 已预置完整三层结构（无 headroom，天花板效应），且 judge 通道
+用的是 v1 本地 mock 判分器。复测改用已合入 main 的优化栈：
+
+- **目标候选**：`login-page-auth-flow-v2`（#145：starter 去掉 session.ts、任务题面
+  无分层提示，制造 Practice 可观测缺口；Practice 以 project-convention/v1 形式按
+  条件注入 `docs/frontend-guide.md`，基线 workspace 不含该文档）。
+- **执行器**：共享诊断 runner（`src/benchmark/runner/pi/v2/profile-diagnostic-runner.ts`，
+  含 #148 合入的 judge provider 接线），不再使用 v1 私有 `run-local.ts`。
+- **judge 通道**：候选声明的 `practice-layered-api/v2` provider（确定性本地 AST
+  判分、不调用模型），逐 attempt 写 `judge.sidecar.json`；summary 含脱敏
+  rubric_hash / criterion 级字段与 indeterminate 预算门禁（预算 0.25，超预算 →
+  diagnostic_only，保留在分母）。
+- **冻结计划**：`incubator/practice-injection-plans/login-page-auth-flow-v2-three-condition-retest.yaml`
+  （`profile-diagnostic-plan/v2`；repetitions=6 = 3 条件×2；schedule
+  cyclic-latin-square；身份绑定 v2 snapshot/profile hash；模型 deepseek-v4-pro 与
+  10min/次预算取自 v2 conditions.yaml）。
+- **v1 处理**：v1 已有 v5/v6 记录，保持冻结；本分支把 v1 恢复到 main 提交态，
+  移除分支私有执行器（历史保留在提交记录中）。
+- **结果口径**：按 decision_rule（joint-pass-count，oracle 严格高于 baseline 与
+  irrelevant-practice）输出 signal / no-obvious-signal；健康样本不足或 indeterminate
+  超预算 → diagnostic/uncertain；只写 ignored scratch，不创建正式 record。
+
 ## Risks / Trade-offs
 
 - [本机 Pi/模型凭据缺失] → dry-run 与 preflight 通过即可冻结计划；实际运行明确
