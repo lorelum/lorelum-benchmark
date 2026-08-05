@@ -1,6 +1,6 @@
 ## 1. OpenSpec and planning gate
 
-- [ ] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #145. (`openspec validate login-page-task-headroom --type change --strict` passed)
+- [x] 1.1 Strictly validate this change and create the initial PR containing only OpenSpec artifacts, linked to #145. (`openspec validate login-page-task-headroom --type change --strict` passed; PR #147)
 - [ ] 1.2 Confirm with the requirements owner: gap strategy (default: keep `api/http.ts`, remove the `api/session.ts` translation layer), Practice convention injection form (`docs/frontend-guide.md` section, condition-scoped), whether existing capabilities stay, and scope (login page only). Record answers in this change's design.
 
 ## 2. Candidate revision scaffold [write scope: `incubator/practice-injection/login-page-auth-flow-v2/`]
