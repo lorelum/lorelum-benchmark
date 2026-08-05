@@ -331,6 +331,109 @@ export function LoginPage() {
     expect(antiPattern.criteria.find((c) => c.id === "component-transport-isolation")?.points).toBe(0);
   });
 
+  test("ok-shaped adapter and if (response.ok) branching is equivalent to status 200/401", () => {
+    const files = sourceMap();
+    files["src/api/http.ts"] = `export async function postSession(input: unknown) {
+  const response = await fetch('/api/session', { method: 'POST', body: JSON.stringify(input) });
+  const body = await response.json();
+  return { ok: response.status === 200, body };
+}`;
+    files["src/api/session.ts"] = `import { postSession } from './http';
+export async function login(email: string, password: string) {
+  const response = await postSession({ email, password });
+  if (response.ok) return { ok: true, user: response.body.user };
+  return { ok: false, message: response.body.message };
+}`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.score).toBe(100);
+    expect(result.criteria.find((c) => c.id === "boundary-response-translation")?.points).toBe(30);
+  });
+
+  test("LoginForm-named shared form forwarding onSubmit does not hijack the page", () => {
+    const files = sourceMap();
+    files["src/LoginForm.tsx"] = `import type { FormEvent } from 'react';
+export function LoginForm({ onSubmit }: { onSubmit: (event: FormEvent) => void }) {
+  return <form onSubmit={onSubmit}><button type="submit">登录</button></form>;
+}`;
+    files["src/LoginPage.tsx"] = `import { login } from './api/session';
+import { LoginForm } from './LoginForm';
+export function LoginPage() {
+  async function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    await login('a', 'b');
+  }
+  return <LoginForm onSubmit={handleSubmit} />;
+}`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.score).toBe(100);
+    expect(result.audit).toContain("src/LoginPage.tsx");
+  });
+
+  test("translation is scoped to the submit-path operation, not the whole boundary module", () => {
+    const files = sourceMap();
+    files["src/api/session.ts"] = `import { postSession } from './http';
+export type LoginResult = { ok: true; user: { id: string; display_name: string; role: string } } | { ok: false; message: string };
+export async function login(email: string, password: string): Promise<LoginResult> {
+  const response = await postSession({ email, password });
+  return response as unknown as LoginResult;
+}
+export async function logout(): Promise<LoginResult> {
+  const response = await postSession({ email: 'logout', password: '' });
+  if (response.status === 200) return { ok: true, user: response.body.user };
+  return { ok: false, message: '登出失败' };
+}`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.criteria.find((c) => c.id === "boundary-response-translation")?.points).toBe(0);
+    expect(result.criteria.find((c) => c.id === "raw-response-containment")?.points).toBe(0);
+  });
+
+  test("two candidate boundary modules fail closed with the ambiguity reason", () => {
+    const files = sourceMap();
+    files["src/api/session-admin.ts"] = `import { postSession } from './http';
+export async function logout() {
+  const response = await postSession({ email: 'logout', password: '' });
+  if (response.status === 200) return { ok: true };
+  return { ok: false, message: '登出失败' };
+}`;
+    files["src/LoginPage.tsx"] = `import { login } from './api/session';
+import { logout } from './api/session-admin';
+export function LoginPage() {
+  async function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    await login('a', 'b');
+  }
+  async function handleLogout(event: SubmitEvent) {
+    event.preventDefault();
+    await logout();
+  }
+  return <div><form onSubmit={handleSubmit}><button type="submit">登录</button></form><form onSubmit={handleLogout}><button type="submit">登出</button></form></div>;
+}`;
+    const result = analyzePractice(files);
+    expect(result.state).toBe("indeterminate");
+    expect(result.reason).toContain("multiple candidate boundaries");
+  });
+
+  test("CSS imports with Vite query suffixes remain irrelevant", () => {
+    const files = sourceMap();
+    files["src/LoginPage.tsx"] = `import { login } from './api/session';
+import styles from './LoginPage.module.css';
+import stylesRaw from './LoginPage.module.css?inline';
+export function LoginPage() {
+  async function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    await login('a', 'b');
+  }
+  return <form onSubmit={handleSubmit} className={styles.form} data-css={stylesRaw}><button type="submit">登录</button></form>;
+}`;
+    files["src/LoginPage.module.css"] = ".form { display: grid; }";
+    const result = analyzePractice(files);
+    expect(result.state).toBe("observed");
+    expect(result.score).toBe(100);
+  });
+
   test("value and type imports from the same module resolve to one boundary", () => {
     const files = sourceMap();
     files["src/LoginPage.tsx"] = files["src/LoginPage.tsx"].replace(

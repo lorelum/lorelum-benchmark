@@ -36,7 +36,15 @@ const sourceExtensions = [".ts", ".tsx", ".js", ".jsx"];
 const nonSourceExtensions = [".css", ".scss", ".sass", ".less", ".styl", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".ico", ".woff", ".woff2", ".ttf", ".eot", ".otf", ".mp3", ".mp4", ".webm", ".mov", ".wasm"];
 const projectSpecifier = (value: string): boolean => value.startsWith(".") || value.startsWith("@");
 const normalize = (value: string): string => posix.normalize(value.replaceAll("\\", "/")).replace(/^\.\//, "");
-const isNonSourcePath = (value: string): boolean => nonSourceExtensions.some((extension) => value.endsWith(extension));
+const stripSuffix = (value: string): string => {
+  const query = value.indexOf("?");
+  const hash = value.indexOf("#");
+  let cut = value.length;
+  if (query >= 0) cut = Math.min(cut, query);
+  if (hash >= 0) cut = Math.min(cut, hash);
+  return cut < value.length ? value.slice(0, cut) : value;
+};
+const isNonSourcePath = (value: string): boolean => nonSourceExtensions.some((extension) => stripSuffix(value).endsWith(extension));
 
 function scriptKind(path: string): ts.ScriptKind {
   if (path.endsWith(".tsx")) return ts.ScriptKind.TSX;
@@ -346,37 +354,70 @@ function followingStatementsTranslate(node: ts.IfStatement, transportResults: Se
   return node.parent.statements.slice(index + 1).some((statement) => statementTranslatesToDomain(statement, transportResults));
 }
 
-function translatesAuthBranching(file: ts.SourceFile, transportResults: Set<string>): { success: boolean; failure: boolean } {
+/** Recognizes `if (response.ok)` / `!response.ok` boolean checks on transport results as auth success/failure branching. */
+function okCondition(node: ts.Expression, transportResults: Set<string>): "ok" | "not-ok" | undefined {
+  const negated = ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.ExclamationToken;
+  const target = negated ? node.operand : node;
+  let hasOk = false;
+  walk(target, (n) => {
+    if (hasOk) return;
+    if (ts.isPropertyAccessExpression(n) && n.name.text === "ok") {
+      const base = baseIdentifier(n);
+      if (base && transportResults.has(base)) hasOk = true;
+    }
+  });
+  if (!hasOk) return undefined;
+  return negated ? "not-ok" : "ok";
+}
+
+function translatesAuthBranching(roots: ts.Node | ts.Node[], transportResults: Set<string>): { success: boolean; failure: boolean } {
+  const list = Array.isArray(roots) ? roots : [roots];
   let success = false;
   let failure = false;
   const note = (s: boolean, f: boolean): void => {
     if (s) success = true;
     if (f) failure = true;
   };
-  walk(file, (node) => {
-    if (success && failure) return;
-    if (ts.isIfStatement(node)) {
-      const statuses = checkedStatus(node.expression);
-      const eq200 = statuses.get("200");
-      const eq401 = statuses.get("401");
-      if (eq200 === "eq") {
-        note(statementTranslatesToDomain(node.thenStatement, transportResults), (node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : false) || followingStatementsTranslate(node, transportResults));
-      } else if (eq200 === "ne") {
-        note(node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : followingStatementsTranslate(node, transportResults), statementTranslatesToDomain(node.thenStatement, transportResults));
-      } else if (eq401 === "eq") {
-        note(node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : followingStatementsTranslate(node, transportResults), statementTranslatesToDomain(node.thenStatement, transportResults));
-      } else if (eq401 === "ne") {
-        note(statementTranslatesToDomain(node.thenStatement, transportResults), node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : false);
+  for (const root of list) {
+    walk(root, (node) => {
+      if (success && failure) return;
+      if (ts.isIfStatement(node)) {
+        const ok = okCondition(node.expression, transportResults);
+        if (ok === "ok") {
+          note(statementTranslatesToDomain(node.thenStatement, transportResults), (node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : false) || followingStatementsTranslate(node, transportResults));
+        } else if (ok === "not-ok") {
+          note(node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : followingStatementsTranslate(node, transportResults), statementTranslatesToDomain(node.thenStatement, transportResults));
+        } else {
+          const statuses = checkedStatus(node.expression);
+          const eq200 = statuses.get("200");
+          const eq401 = statuses.get("401");
+          if (eq200 === "eq") {
+            note(statementTranslatesToDomain(node.thenStatement, transportResults), (node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : false) || followingStatementsTranslate(node, transportResults));
+          } else if (eq200 === "ne") {
+            note(node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : followingStatementsTranslate(node, transportResults), statementTranslatesToDomain(node.thenStatement, transportResults));
+          } else if (eq401 === "eq") {
+            note(node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : followingStatementsTranslate(node, transportResults), statementTranslatesToDomain(node.thenStatement, transportResults));
+          } else if (eq401 === "ne") {
+            note(statementTranslatesToDomain(node.thenStatement, transportResults), node.elseStatement ? statementTranslatesToDomain(node.elseStatement, transportResults) : false);
+          }
+        }
       }
-    }
-    if (ts.isConditionalExpression(node)) {
-      const statuses = checkedStatus(node.condition);
-      const eq200 = statuses.get("200");
-      const eq401 = statuses.get("401");
-      if (eq200 === "eq") note(expressionTranslatesToDomain(node.whenTrue, transportResults), expressionTranslatesToDomain(node.whenFalse, transportResults));
-      else if (eq401 === "eq") note(expressionTranslatesToDomain(node.whenFalse, transportResults), expressionTranslatesToDomain(node.whenTrue, transportResults));
-    }
-  });
+      if (ts.isConditionalExpression(node)) {
+        const ok = okCondition(node.condition, transportResults);
+        if (ok === "ok") {
+          note(expressionTranslatesToDomain(node.whenTrue, transportResults), expressionTranslatesToDomain(node.whenFalse, transportResults));
+        } else if (ok === "not-ok") {
+          note(expressionTranslatesToDomain(node.whenFalse, transportResults), expressionTranslatesToDomain(node.whenTrue, transportResults));
+        } else {
+          const statuses = checkedStatus(node.condition);
+          const eq200 = statuses.get("200");
+          const eq401 = statuses.get("401");
+          if (eq200 === "eq") note(expressionTranslatesToDomain(node.whenTrue, transportResults), expressionTranslatesToDomain(node.whenFalse, transportResults));
+          else if (eq401 === "eq") note(expressionTranslatesToDomain(node.whenFalse, transportResults), expressionTranslatesToDomain(node.whenTrue, transportResults));
+        }
+      }
+    });
+  }
   return { success, failure };
 }
 
@@ -438,8 +479,12 @@ function moduleFacts(parsed: Parsed, files: Map<string, Parsed>, aliases: AliasR
 function componentPath(facts: Map<string, ModuleFacts>): string | undefined {
   const candidates = [...facts.values()].filter((entry) => entry.formSubmitHandlers.length > 0);
   if (candidates.length === 0) return undefined;
-  const loginLike = candidates.filter((entry) => /login/i.test(entry.parsed.path));
-  const pool = loginLike.length > 0 ? loginLike : candidates;
+  const resolvable = (entry: ModuleFacts): boolean => entry.formSubmitHandlers.every((handler) => Boolean(handlerFunction(entry.parsed.file, handler)));
+  const loginLike = (entry: ModuleFacts): boolean => /login/i.test(entry.parsed.path);
+  let pool = candidates.filter(resolvable);
+  if (pool.length === 0) pool = candidates;
+  const loginPool = pool.filter(loginLike);
+  if (loginPool.length > 0) pool = loginPool;
   pool.sort((a, b) => a.parsed.path.localeCompare(b.parsed.path));
   return pool[0].parsed.path;
 }
@@ -459,8 +504,8 @@ function boundaryFor(component: ModuleFacts, facts: Map<string, ModuleFacts>): {
   return { unresolved };
 }
 
-function delegatedSubmit(component: ModuleFacts, boundary: ModuleFacts | undefined, facts: Map<string, ModuleFacts>): { value: boolean; ambiguous?: string } {
-  if (component.formSubmitHandlers.length === 0) return { value: false };
+function delegatedSubmit(component: ModuleFacts, boundary: ModuleFacts | undefined, facts: Map<string, ModuleFacts>): { value: boolean; ambiguous?: string; operations: Array<{ resolved: string; imported: string }> } {
+  if (component.formSubmitHandlers.length === 0) return { value: false, operations: [] };
   const boundaryPath = boundary?.parsed.path;
   const moduleNames = moduleLevelNames(component.parsed.file);
   const aliases = localAliases(component.parsed.file, component.imports, moduleNames);
@@ -485,7 +530,7 @@ function delegatedSubmit(component: ModuleFacts, boundary: ModuleFacts | undefin
     if (ts.isPropertyAccessExpression(node.parent) && ["then", "catch", "finally"].includes(node.parent.name.text)) return true;
     return false;
   };
-  const analyzeBody = (body: ts.Node, visited: Set<ts.Node>): { delegated: boolean; bare: boolean } => {
+  const analyzeBody = (body: ts.Node, visited: Set<ts.Node>, calls: Map<string, { resolved: string; imported: string }>): { delegated: boolean; bare: boolean } => {
     if (visited.has(body)) return { delegated: false, bare: false };
     visited.add(body);
     let delegated = false;
@@ -498,15 +543,18 @@ function delegatedSubmit(component: ModuleFacts, boundary: ModuleFacts | undefin
       const local = name.split(".")[0];
       const binding = importedBindingFor(local, component.imports, aliases);
       if (binding && isDomainOperation(binding)) {
-        if (ts.isAwaitExpression(node.parent) || isPromiseChained(node)) delegated = true;
-        else bare = true;
+        if (ts.isAwaitExpression(node.parent) || isPromiseChained(node)) {
+          delegated = true;
+          const opName = ts.isPropertyAccessExpression(node.expression) ? node.expression.name.text : binding.imported;
+          if (binding.resolved && opName && opName !== "*") calls.set(`${binding.resolved}\u0000${opName}`, { resolved: binding.resolved, imported: opName });
+        } else bare = true;
         return;
       }
       if (binding) return;
       if (ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression)) {
         const method = findObjectMethod(component.parsed.file, resolveLeaf(local), node.expression.name.text);
         if (method?.body) {
-          const inner = analyzeBody(method.body, visited);
+          const inner = analyzeBody(method.body, visited, calls);
           if (inner.delegated) delegated = true;
           else if (inner.bare) bare = true;
         }
@@ -515,7 +563,7 @@ function delegatedSubmit(component: ModuleFacts, boundary: ModuleFacts | undefin
       if (ts.isIdentifier(node.expression)) {
         const helper = findFunction(component.parsed.file, resolveLeaf(local));
         if (helper?.body) {
-          const inner = analyzeBody(helper.body, visited);
+          const inner = analyzeBody(helper.body, visited, calls);
           if (inner.delegated) delegated = true;
           else if (inner.bare) bare = true;
         }
@@ -523,15 +571,79 @@ function delegatedSubmit(component: ModuleFacts, boundary: ModuleFacts | undefin
     });
     return { delegated, bare };
   };
+  const calls = new Map<string, { resolved: string; imported: string }>();
   for (const expression of component.formSubmitHandlers) {
     const handler = handlerFunction(component.parsed.file, expression);
-    if (!handler || !handler.body) return { value: false, ambiguous: "form submit handler could not be resolved" };
-    const result = analyzeBody(handler.body, new Set<ts.Node>());
+    if (!handler || !handler.body) return { value: false, ambiguous: "form submit handler could not be resolved", operations: [...calls.values()] };
+    const result = analyzeBody(handler.body, new Set<ts.Node>(), calls);
     if (result.delegated) continue;
-    if (result.bare) return { value: false, ambiguous: "submit handler invokes a resolved external domain operation without await or promise chaining (unsupported analysis)" };
-    return { value: false };
+    if (result.bare) return { value: false, ambiguous: "submit handler invokes a resolved external domain operation without await or promise chaining (unsupported analysis)", operations: [...calls.values()] };
+    return { value: false, operations: [...calls.values()] };
   }
-  return { value: true };
+  return { value: true, operations: [...calls.values()] };
+}
+
+/** Analyzes the exported operation called by the submit path (plus its in-file helpers) for auth translation. */
+function operationTranslates(boundary: ModuleFacts, imported: string, parsed: Map<string, Parsed>): { ownsTransport: boolean; domainTranslations: number; authSuccess: boolean; authFailure: boolean } | undefined {
+  const file = boundary.parsed.file;
+  const root = findFunction(file, imported);
+  if (!root || !root.body) return undefined;
+  const bodies: ts.Node[] = [];
+  const visited = new Set<ts.Node>();
+  const queue: ts.Node[] = [root.body];
+  while (queue.length > 0) {
+    const body = queue.pop()!;
+    if (visited.has(body)) continue;
+    visited.add(body);
+    bodies.push(body);
+    walk(body, (node) => {
+      if (!ts.isCallExpression(node)) return;
+      const name = expressionName(node.expression);
+      if (!name) return;
+      const helper = findFunction(file, name.split(".")[0]);
+      if (helper?.body && !visited.has(helper.body)) queue.push(helper.body);
+    });
+  }
+  const transportResults = new Set<string>();
+  const candidates: Array<{ name: string; call: ts.CallExpression }> = [];
+  let ownsTransport = false;
+  let domainTranslations = 0;
+  for (const body of bodies) {
+    walk(body, (node) => {
+      if (ts.isCallExpression(node)) {
+        if (ts.isIdentifier(node.expression) && node.expression.text === "fetch") ownsTransport = true;
+        if (callIsImported(node, boundary.imports, (binding) => binding.status === "resolved" && Boolean(binding.resolved && parsed.get(binding.resolved)?.source.includes("fetch(")))) ownsTransport = true;
+      }
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && ts.isAwaitExpression(node.initializer) && ts.isCallExpression(node.initializer.expression)) {
+        candidates.push({ name: node.name.text, call: node.initializer.expression });
+      }
+      if (ts.isReturnStatement(node) && node.expression && ts.isObjectLiteralExpression(node.expression) && isDomainObject(node.expression)) domainTranslations++;
+      if (ts.isThrowStatement(node)) domainTranslations++;
+    });
+  }
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const candidate of candidates) {
+      if (transportResults.has(candidate.name)) continue;
+      const callee = candidate.call.expression;
+      if (ts.isIdentifier(callee) && callee.text === "fetch") {
+        transportResults.add(candidate.name);
+        changed = true;
+      } else if (callIsImported(candidate.call, boundary.imports, (binding) => binding.status === "resolved" && Boolean(binding.resolved && parsed.get(binding.resolved)?.source.includes("fetch(")))) {
+        transportResults.add(candidate.name);
+        changed = true;
+      } else if (ts.isPropertyAccessExpression(callee) && callee.name.text === "json") {
+        const receiver = baseIdentifier(callee);
+        if (receiver && transportResults.has(receiver)) {
+          transportResults.add(candidate.name);
+          changed = true;
+        }
+      }
+    }
+  }
+  const { success: authSuccess, failure: authFailure } = translatesAuthBranching(bodies, transportResults);
+  return { ownsTransport, domainTranslations, authSuccess, authFailure };
 }
 
 function criterion(id: PracticeDimensionId, points: number, max_points: number, rationale: string): PracticeCriterion {
@@ -577,8 +689,16 @@ export function analyzePractice(files: SourceMap): Analysis {
     return { state: "indeterminate", score: 0, confidence: 0, criteria: [], reason: delegation.ambiguous, audit: [...new Set(unresolved), "delegation-ambiguous"] };
   }
   const delegationCriterion = criterion("domain-operation-delegation", delegation.value ? 25 : 0, 25, delegation.value ? "every form submit handler awaits or promise-chains an imported domain operation outside the page component" : "form submission does not await a resolved external domain operation");
-  const translation = boundary && boundary.transportCalls + (boundary.hasFetch ? 1 : 0) > 0 && boundary.domainTranslations > 0 && boundary.authSuccess && boundary.authFailure;
-  const translationCriterion = criterion("boundary-response-translation", translation ? 30 : 0, 30, translation ? "resolved boundary owns transport and translates both success (200) and failure (401) into domain-shaped values" : "no resolved boundary was proven to own transport and translate both authentication success and failure");
+  const operations = delegation.operations;
+  const translation = boundary && operations.length > 0 && operations.every((op) => {
+    if (op.resolved !== boundary.parsed.path) return false;
+    const perOp = operationTranslates(boundary, op.imported, parsed);
+    if (!perOp) {
+      return boundary.transportCalls + (boundary.hasFetch ? 1 : 0) > 0 && boundary.domainTranslations > 0 && boundary.authSuccess && boundary.authFailure;
+    }
+    return perOp.ownsTransport && perOp.domainTranslations > 0 && perOp.authSuccess && perOp.authFailure;
+  });
+  const translationCriterion = criterion("boundary-response-translation", translation ? 30 : 0, 30, translation ? "each submit-path operation in the resolved boundary owns transport and translates both success (200/ok) and failure (401/!ok) into domain-shaped values" : "no submit-path operation in the resolved boundary was proven to own transport and translate both authentication success and failure");
   const containment = boundary && boundary.rawReturns === 0 && page.rawReads === 0 && page.rawReturns === 0 && !importedTransport;
   const containmentCriterion = criterion("raw-response-containment", containment ? 15 : 0, 15, containment ? "raw response values are contained within the boundary" : "raw transport data can flow into the component-facing path");
   const criteria = [isolation, delegationCriterion, translationCriterion, containmentCriterion];

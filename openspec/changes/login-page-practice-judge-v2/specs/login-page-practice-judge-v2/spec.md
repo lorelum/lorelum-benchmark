@@ -117,6 +117,13 @@ not leakage.
 - **THEN** the judge fails raw-response-containment and does not award the raw
   value to the component-facing contract
 
+#### Scenario: Field extraction is translation, not leakage
+- **WHEN** a boundary returns `{ ok: true, user: response.body.user }` and
+  extracts a single domain field through the raw body
+- **THEN** the judge treats the intermediate navigation as translation and does
+  not fail containment (extracting one field is an intentional boundary; only
+  returning the whole response or the whole raw body is leakage)
+
 ### Requirement: Promise-chain delegation and bare-call fail-closed
 The v2 judge MUST accept `.then`/`.catch`/`.finally` promise chains as equivalent
 to `await` delegation. A submit handler that invokes a resolved external domain
@@ -139,27 +146,51 @@ domain-operation delegation.
   does not translate into a domain shape
 - **THEN** the judge does not award domain-operation-delegation for that path
 
-### Requirement: Translation binds to auth success and failure
-The v2 judge MUST require the resolved boundary to translate both expected
-authentication success (200) and failure (401) into domain-shaped values. A
-boundary that translates only the success path and returns raw transport on the
-failure path MUST NOT receive full translation evidence.
+### Requirement: Translation binds to the auth success and failure of the submit-path operation
+The v2 judge MUST require each exported operation actually called by a submit
+path within the resolved boundary to own transport and translate both expected
+authentication success (200 or `ok`) and failure (401 or `!ok`) into
+domain-shaped values. Evidence is scoped to the called operation (and its
+in-file helpers), not the whole boundary file. A boundary that translates only
+the success path and returns raw transport on the failure path MUST NOT receive
+full translation evidence.
 
 #### Scenario: Partial translation
-- **WHEN** a boundary translates the 200 branch into a domain result but returns
-  the raw response on the 401/failure branch
+- **WHEN** the submit-path operation translates the 200 branch into a domain
+  result but returns the raw response on the 401/failure branch
 - **THEN** boundary-response-translation fails and raw-response-containment also
   records the raw return
 
-### Requirement: Component selection is deterministic
+#### Scenario: Ok-shaped adapter
+- **WHEN** the adapter returns `{ ok, body }` and the boundary branches on
+  `if (response.ok)` to translate success and failure
+- **THEN** the judge awards the same translation evidence as a `status === 200`
+  implementation
+
+#### Scenario: Unrelated boundary function translates
+- **WHEN** one function in the boundary module (for example `logout`) translates
+  auth responses but the submit-path operation (for example `login`) returns raw
+  transport
+- **THEN** boundary-response-translation fails because the called operation does
+  not translate
+
+### Requirement: Component selection is deterministic and resistant to shared form modules
 The v2 judge MUST select the page component deterministically independent of
-SourceMap key order, preferring a `LoginPage`-named module and falling back to
-lexicographic path order among modules with form submit handlers.
+SourceMap key order, preferring modules whose submit handlers resolve to local
+functions, then `LoginPage`-named modules, then lexicographic path order among
+modules with form submit handlers.
 
 #### Scenario: File ordering does not change the score
 - **WHEN** a shared form component file precedes the login page in the SourceMap
 - **THEN** the judge still scores the login page and returns the same criterion
   evidence
+
+#### Scenario: Login-named shared form forwards onSubmit
+- **WHEN** a shared `LoginForm.tsx` renders `<form onSubmit={props.onSubmit}>`
+  and the real page renders `<LoginForm onSubmit={handleSubmit}/>` where
+  `handleSubmit` delegates to a domain operation
+- **THEN** the judge selects the real page module and returns an observed result
+  with the page in the audit
 
 ### Requirement: Non-source imports are irrelevant
 The v2 judge MUST treat CSS/asset (non-source) imports as irrelevant regardless
@@ -177,11 +208,19 @@ source imports fail closed.
 - **THEN** the judge treats it the same as other non-source imports and returns
   the same criterion evidence
 
+#### Scenario: CSS import with a Vite query suffix
+- **WHEN** the page imports `styles from './LoginPage.module.css?inline'` or
+  another query/hash-suffixed asset path
+- **THEN** the judge treats it as irrelevant and returns an observed result
+  instead of unresolved
+
 ### Requirement: Calibration covers review blind spots with criterion-direction assertions
 The v2 calibration matrix MUST include fixtures for two-layer boundaries, nested
 raw leakage, partial translation, promise chains, bare calls, file ordering, CSS
-imports, and uncalled transport utils. Anti-pattern separation MUST assert
-criterion directions (which criteria must be zero), not only total-score gaps.
+imports, uncalled transport utils, ok-shaped adapters, login-named shared forms,
+multi-function boundaries, and two-boundary pages. Anti-pattern separation MUST
+assert criterion directions (which criteria must be zero), not only total-score
+gaps, and the multi-function and two-boundary expectations MUST be explicit.
 
 #### Scenario: Anti-pattern criterion directions
 - **WHEN** a declared component-transport anti-pattern receives zero points on

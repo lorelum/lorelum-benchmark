@@ -64,25 +64,30 @@ v2 校准矩阵除 reference、两种等价状态机制、反模式与歧义图�
 
 外部评审确认标准方向正确但实现有缺陷。本次修订把 transport/rawReads 证据改为
 数据流判定、containment 对 return 递归检查、delegation 支持 `.then/.catch/.finally`
-且裸调用 fail-closed、translation 绑定 200/401 两条路径、组件选择确定性化
-（优先 LoginPage、回退字典序）、CSS/非源码导入视为不相关。校准矩阵扩充到 16 个
-夹具：
+且裸调用 fail-closed、translation 绑定认证成功与失败路径、组件选择确定性化
+（优先 handler 可解析、再 LoginPage、回退字典序）、CSS/非源码导入（含 `?inline`
+查询后缀）视为不相关。校准矩阵扩充到 20 个夹具：
 
 - 等价类（与 reference criterion-level 完全一致，均 100/100）：reference、
   equivalent-indirect、equivalent-reducer、equivalent-helper、
   equivalent-two-layer（session 自持 fetch）、equivalent-promise-chain、
   equivalent-document-body、equivalent-unused-transport（未调用的 fetch 工具）、
-  equivalent-file-order（共享 Form 文件）、equivalent-css-import（CSS 具名+副作用）。
+  equivalent-file-order（共享 Form 文件）、equivalent-css-import（CSS 具名+副作用+
+  `?inline`）、equivalent-ok-adapter（`{ ok, body }` adapter + `if (response.ok)`）、
+  equivalent-login-named-form（LoginForm 转发 onSubmit，不被劫持）。
 - 反模式类（criterion 方向断言）：anti-pattern（组件直连 transport，四项全 0）、
   anti-pattern-nested-leak（`{ ok, payload: response.body }`，translation 0 +
   containment 0）、anti-pattern-partial-translation（失败路径返回原始 response，
-  translation 0 + containment 0）。
+  translation 0 + containment 0）、multi-function-boundary（login 泄漏、logout
+  正常翻译 → translation 0 + containment 0，translation 按 submit 路径调用的
+  操作限定作用域）。
 - 歧义类（indeterminate）：ambiguous（模块图歧义）、ambiguous-bare-call（裸调用
-  外部领域操作无 await/链）。
+  外部领域操作无 await/链）、two-boundary-page（页面导入两个领域模块 → 多边界
+  排除，原因保留；决策挂 #146）。
 - unrelated-import 保持 observed 且与 reference 同分。
 
 `calibrate.ts` 的 anti-pattern 分离改为 criterion 方向断言（指定 criterion 必须为
-0），不再只比较总分。
+0），不再只比较总分；multi-function 与 two-boundary 的期望也显式断言。
 
 ### v2 重评 #137 pilot 输出（上线前置门禁）
 

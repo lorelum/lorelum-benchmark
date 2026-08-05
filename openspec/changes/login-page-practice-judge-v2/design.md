@@ -174,3 +174,46 @@ its calibration); it does not change the task, starter, or runner wiring.
   work tracked separately; this change does not wire v2 into the runner.
 - Changing the task starter to create headroom is a separate change if the
   re-evaluation confirms a ceiling.
+
+## Second review round (F1-F5, 2026-08-05)
+
+A follow-up review found additional equivalent-form and scoping defects. This
+round stays within the same change.
+
+### Ok-shaped adapters (F1)
+
+`if (response.ok)` / `!response.ok` on a transport-result receiver is now
+recognized as auth success/failure branching, equivalent to `status === 200/401`.
+A fully layered `{ ok, body }` adapter with `if (response.ok)` translation scores
+the same as the status-based reference (`equivalent-ok-adapter` fixture).
+
+### Component selection robustness (F2)
+
+Component selection now prefers modules whose submit handlers resolve to local
+functions, then login-named modules, then lexicographic order. A shared
+`LoginForm.tsx` that forwards `onSubmit` via props can no longer hijack the page
+(`equivalent-login-named-form` fixture).
+
+### Per-operation translation scoping (F3)
+
+`boundary-response-translation` is now scoped to the exported operation actually
+called by the submit path (plus its in-file helpers) within the resolved
+boundary, instead of the whole boundary file. A multi-function boundary where
+the login operation returns raw while logout translates now fails translation
+(`multi-function-boundary` fixture). If the called export cannot be located
+(for example a re-export), the judge falls back to module-level evidence.
+
+### Multi-boundary exclusion is explicit (F4)
+
+A page that imports two distinct domain modules remains fail-closed
+(`indeterminate` with "multiple candidate boundaries"); the decision on
+per-operation boundary resolution is deferred to the runner/protocol issue
+(#146), and the fixture makes the exclusion rate observable.
+
+### Non-source imports with query suffixes (F5)
+
+Vite-style query suffixes (`?inline`, `?raw`, `?url`) and hashes are stripped
+before the non-source extension check, so `./X.module.css?inline` stays
+irrelevant instead of unresolved. Field extraction such as
+`return { ok: true, user: response.body.user }` remains translation (an
+intentional boundary between extracting one field and leaking the whole body).

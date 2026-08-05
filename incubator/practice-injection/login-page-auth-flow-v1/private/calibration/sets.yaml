@@ -141,7 +141,7 @@ sets:
         extends: candidate-foundation
         overlay:
           path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-css-import
-          sha256: 1dcd66b559c0ac2799d35235fcbc3d4ab64f21fee9f542412aa67c87fd7357b2
+          sha256: abd589242f3ccd1df75885f7366d2cdc8e0198ec4d5bb5523cd81521f3d8a081
       anti-pattern-nested-leak-tree:
         extends: candidate-foundation
         overlay:
@@ -157,6 +157,26 @@ sets:
         overlay:
           path: private/calibration/sets/login-page-judge/v2/overlays/ambiguous-bare-call
           sha256: 7542f01f7bdc8c534e0cf1228230257adbcd693e20b0e2d192409c7534442d48
+      equivalent-ok-adapter-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-ok-adapter
+          sha256: 1c250876cfdfa98f795dfcf0068a40727b25405344b27d2e474ea26784871b83
+      equivalent-login-named-form-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-login-named-form
+          sha256: 5ee91983bdc808158cd541622580028ea61e0bc8c11e782b77d97163a030caf7
+      multi-function-boundary-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/multi-function-boundary
+          sha256: 73083224158376bf77dec64a0fb040278bcdd4f816e5ccf17d8b4288771725c5
+      two-boundary-page-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/two-boundary-page
+          sha256: 2e180354725d896a6d05b76258f2b32fa33943c127d280dd68cfc6fbaec056a7
       unrelated-import-tree:
         extends: candidate-foundation
         overlay:
@@ -173,9 +193,13 @@ sets:
       equivalent-unused-transport: equivalent-unused-transport-tree
       equivalent-file-order: equivalent-file-order-tree
       equivalent-css-import: equivalent-css-import-tree
+      equivalent-ok-adapter: equivalent-ok-adapter-tree
+      equivalent-login-named-form: equivalent-login-named-form-tree
       anti-pattern: anti-pattern-tree
       anti-pattern-nested-leak: anti-pattern-nested-leak-tree
       anti-pattern-partial-translation: anti-pattern-partial-translation-tree
+      multi-function-boundary: multi-function-boundary-tree
       ambiguous: ambiguous-tree
       ambiguous-bare-call: ambiguous-bare-call-tree
+      two-boundary-page: two-boundary-page-tree
       unrelated-import: unrelated-import-tree

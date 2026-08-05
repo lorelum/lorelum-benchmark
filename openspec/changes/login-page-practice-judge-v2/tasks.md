@@ -31,3 +31,5 @@
 - [x] 5.6 Run v2 focused tests and the kernel calibration; record criterion-level evidence in the PR.
 - [x] 5.7 Re-evaluate the six v5/v6 pilot outputs with v2; record a criterion-level table and a task headroom conclusion.
 - [x] 5.8 Update the candidate snapshot, run bun run validate, OpenSpec strict validation, and git diff --check; keep v1 artifacts and historical results untouched.
+
+- [x] 5.9 Second review round: accept ok-shaped adapters, harden component selection against LoginForm-named shared components, scope translation to the submit-path operation, make multi/two-boundary behavior explicit in calibration, and treat CSS query-suffix imports as irrelevant; update spec/design/calibration and re-run all gates.
