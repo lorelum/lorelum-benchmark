@@ -11,5 +11,7 @@ export type JudgeContext = {
 export type JudgeProvider = {
   id: string;
   version: string;
+  /** The rubric text this provider scores against (used for input hashing). */
+  rubricText(): Promise<string>;
   score(input: JudgeInput, context: JudgeContext): Promise<JudgeResultV1>;
 };

@@ -12,6 +12,7 @@ shared_execution:
   budget: { max_duration_minutes: 10 }
   workspace: clean-copy-per-attempt
   repetitions: 2
+  judge: { provider: practice-layered-api/v2, indeterminate_budget: 0.25 }
 conditions:
   - { id: baseline, status: declared, practice: none }
   - id: oracle-practice

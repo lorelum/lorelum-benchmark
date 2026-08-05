@@ -24,6 +24,11 @@ export function runtimeFor(profile: string): RuntimeModule {
 import { fail, piCommand, preflightPiAndModel, run, type CommandResult, type CommandRunner } from "./preflight";
 import { allocateFreePort, realWebServerStarter, type WebServerStarter } from "./webserver-supervisor";
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
+import { buildJudgeInput } from "../../../judge/input";
+import { sha256Text } from "../../../fs";
+import { classifyProviderResult } from "../../../judge/classify";
+import { resolveJudgeProvider } from "../../../judge/providers";
+import { sourceMapFromWorkspace, sourceMapToDiff } from "../../../judge/source-map";
 
 const scratchRoot = resolve(workspaceRoot, "scratch");
 const publicDependencyProvisioningTimeoutMs = 120_000;
@@ -33,6 +38,7 @@ export type SharedExecution = {
   model: { id: string };
   budget: { max_duration_minutes: number };
   repetitions: number;
+  judge?: { provider?: string; indeterminate_budget?: number };
 };
 type Condition = { id: string; status: string; practice: unknown };
 export type Conditions = { shared_execution: SharedExecution; conditions: Condition[] };
@@ -51,6 +57,79 @@ export type ProfileDiagnosticEvaluatorResult = {
   observation_reason?: string;
 };
 
+export type JudgeEntry = {
+  provider_id: string;
+  provider_version: string;
+  state: "observed" | "indeterminate" | "judge-unavailable" | "not-run";
+  score?: number;
+  criteria?: Array<{ id: string; points: number; max_points: number; rationale?: string }>;
+  rubric_hash?: string;
+  input_hash?: string;
+  confidence?: number;
+  reason?: string;
+};
+
+/** Runs the candidate-declared judge provider on an evaluated attempt and writes judge.sidecar.json. */
+export async function runJudgeProvider(
+  attemptPath: string,
+  workspace: string,
+  shared: SharedExecution,
+): Promise<JudgeEntry> {
+  const providerId = shared.judge?.provider;
+  if (!providerId) return { provider_id: "none", provider_version: "", state: "not-run", reason: "no judge provider declared" };
+  const provider = resolveJudgeProvider(providerId);
+  if (!provider) return { provider_id: providerId, provider_version: "", state: "judge-unavailable", reason: `unknown judge provider: ${providerId}` };
+  try {
+    const files = await sourceMapFromWorkspace(resolve(workspace, "app"));
+    const candidateDiff = sourceMapToDiff(files);
+    const taskMd = await Bun.file(resolve(workspace, "task.md")).text();
+    const rubric = await provider.rubricText();
+    const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric });
+    const prompt = "Score candidate quality against the rubric. Return structured results only.";
+    const context = {
+      judge: { id: provider.id, version: provider.version },
+      prompt,
+      prompt_hash: await sha256Text(prompt),
+      rubric_hash: await sha256Text(rubric),
+    };
+    const outcome = classifyProviderResult(await provider.score(input, context));
+    if (!outcome.ok) return { provider_id: providerId, provider_version: provider.version, state: outcome.state, reason: outcome.reason };
+    const result = outcome.result;
+    await Bun.write(resolve(attemptPath, "judge.sidecar.json"), `${JSON.stringify(result, null, 2)}\n`);
+    return {
+      provider_id: providerId,
+      provider_version: provider.version,
+      state: result.state,
+      ...(typeof result.score === "number" ? { score: result.score } : {}),
+      ...(result.criteria.length > 0 ? { criteria: result.criteria } : {}),
+      ...(result.rubric_hash ? { rubric_hash: result.rubric_hash } : {}),
+      ...(result.input_hash ? { input_hash: result.input_hash } : {}),
+      ...(typeof result.confidence === "number" ? { confidence: result.confidence } : {}),
+      ...(result.reason ? { reason: result.reason } : {}),
+    };
+  } catch (error) {
+    return { provider_id: providerId, provider_version: provider.version, state: "judge-unavailable", reason: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/** Aggregates redacted judge results into a per-condition summary section. */
+export function summarizeJudge(entries: DiagnosticEntry[]): { rubric_hash?: string; by_condition: Record<string, { observed: number; indeterminate: number; "judge-unavailable": number; "not-run": number; scores: number[] }> } {
+  const byCondition: Record<string, { observed: number; indeterminate: number; "judge-unavailable": number; "not-run": number; scores: number[] }> = {};
+  let rubricHash: string | undefined;
+  for (const entry of entries) {
+    const judge = entry.judge;
+    if (!judge) continue;
+    if (judge.rubric_hash) rubricHash = judge.rubric_hash;
+    const counts = byCondition[entry.condition] ??= { observed: 0, indeterminate: 0, "judge-unavailable": 0, "not-run": 0, scores: [] };
+    if (judge.state === "observed") counts.observed += 1;
+    else if (judge.state === "indeterminate") counts.indeterminate += 1;
+    else if (judge.state === "judge-unavailable") counts["judge-unavailable"] += 1;
+    else counts["not-run"] += 1;
+    if (typeof judge.score === "number") counts.scores.push(judge.score);
+  }
+  return { ...(rubricHash ? { rubric_hash: rubricHash } : {}), by_condition: byCondition };
+}
+
 export type DiagnosticEntry = {
   candidate: string;
   condition: string;
@@ -68,6 +147,7 @@ export type DiagnosticEntry = {
   planned_position?: number;
   actual_execution_position?: number;
   error?: string;
+  judge?: JudgeEntry;
 };
 
 type ReplayReason =
@@ -649,6 +729,9 @@ export async function runAttempt(
     return entry;
   }
   Object.assign(entry, classifyEvaluatorResult(evaluation));
+  if (entry.evaluation_status === "evaluated") {
+    entry.judge = await runJudgeProvider(attemptPath, workspace, shared);
+  }
   return entry;
 }
 
@@ -667,6 +750,7 @@ export async function writeSummary(path: string, plan: DiagnosticPlan, schedule:
     plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, ...(plan.execution_gate ? { execution_gate: plan.execution_gate } : {}), schedule: redactedSchedule(schedule) },
     entries,
     report: summarizePlan(plan, schedule, entries),
+    judge: summarizeJudge(entries),
     interrupted,
   }, null, 2)}\n`);
 }
