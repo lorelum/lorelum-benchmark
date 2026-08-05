@@ -1,0 +1,65 @@
+:root {
+  color: #1f2937;
+  font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f3f4f6;
+}
+
+main {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+}
+
+section {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+  padding: 28px;
+  width: min(380px, calc(100vw - 48px));
+}
+
+form,
+label {
+  display: grid;
+  gap: 8px;
+}
+
+form {
+  margin-top: 20px;
+}
+
+input,
+button {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+input {
+  border: 1px solid #d1d5db;
+}
+
+button {
+  border: 1px solid transparent;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+[role="alert"] {
+  color: #b91c1c;
+}
+
+[role="status"] {
+  color: #15803d;
+}

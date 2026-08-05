@@ -21,7 +21,7 @@ export const injectionProfiles = ["injection-calibration/v1", "injection-calibra
 export function runtimeFor(profile: string): RuntimeModule {
   return (profile === "injection-calibration/v2" ? v2Runtime : v1Runtime) as unknown as RuntimeModule;
 }
-import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from "./preflight";
+import { fail, piCommand, preflightPiAndModel, run, type CommandResult, type CommandRunner } from "./preflight";
 import { allocateFreePort, realWebServerStarter, type WebServerStarter } from "./webserver-supervisor";
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
 
@@ -447,6 +447,27 @@ export async function materializeConventionDoc(workspace: string, payload: Runne
   await Bun.write(target, practice.text);
 }
 
+export type GitHistory = { identity: { name: string; email: string }; commits: Array<{ message: string; files: string[] }> };
+
+/** Builds a deterministic realistic git history in the app workspace (init + staged commits). */
+export async function materializeGitHistory(appRoot: string, history: GitHistory, commandRunner: CommandRunner = run): Promise<void> {
+  const git = (args: string[]): Promise<CommandResult> => commandRunner(["git", "-C", appRoot, ...args], appRoot, 60_000);
+  await git(["-c", "init.defaultBranch=main", "init", "-q"]);
+  await git(["config", "user.name", history.identity.name]);
+  await git(["config", "user.email", history.identity.email]);
+  await git(["config", "commit.gpgsign", "false"]);
+  for (let i = 0; i < history.commits.length; i += 1) {
+    const commit = history.commits[i];
+    if (i === history.commits.length - 1) {
+      await git(["add", "-A"]);
+    } else {
+      await git(["add", "--", ...commit.files]);
+    }
+    const result = await git(["commit", "-q", "-m", commit.message]);
+    if (result.code !== 0) throw new Error(`Git history commit failed for ${commit.message}: ${result.stderr.trim()}`);
+  }
+}
+
 
 async function evaluatorClosureEnv(candidatePath: string, manifestId: string): Promise<{ env: Record<string, string>; error: null } | { env: null; error: "evaluator-runtime-closure-unverified" }> {
   try {
@@ -538,6 +559,10 @@ export async function runAttempt(
   const payload = await runtime.resolvePracticePayload(candidatePath, profile, conditionId);
   const trace = runtime.redactedInjectionTrace(profile, payload);
   await materializeConventionDoc(workspace, payload);
+  const gitHistoryPath = resolve(candidatePath, "private", "execution", "git-history.yaml");
+  if (await Bun.file(gitHistoryPath).exists()) {
+    await materializeGitHistory(resolve(workspace, "app"), Bun.YAML.parse(await Bun.file(gitHistoryPath).text()) as GitHistory);
+  }
 
   const entry: DiagnosticEntry = {
     candidate: candidateId,

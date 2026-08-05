@@ -1,0 +1,26 @@
+identity:
+  name: ops-admin
+  email: ops@meridian.internal
+commits:
+  - message: "chore: scaffold Vite React admin console"
+    files:
+      - index.html
+      - package.json
+      - bun.lock
+      - tsconfig.json
+      - tsconfig.app.json
+      - tsconfig.node.json
+      - vite.config.ts
+      - playwright.config.ts
+      - .gitignore
+      - src/main.tsx
+      - src/styles.css
+  - message: "feat(api): add session endpoint client and API docs"
+    files:
+      - src/api/http.ts
+      - docs/auth-api.md
+  - message: "test: cover the login flow with Playwright"
+    files:
+      - tests/login.spec.ts
+  - message: "feat: login page shell awaiting wiring"
+    files: []

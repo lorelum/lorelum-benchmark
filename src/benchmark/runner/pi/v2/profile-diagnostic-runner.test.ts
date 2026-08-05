@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { expansionDecisions, materializeConventionDoc, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary, type RunnerPracticePayload } from "./profile-diagnostic-runner";
+import { expansionDecisions, materializeConventionDoc, materializeGitHistory, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary, type RunnerPracticePayload } from "./profile-diagnostic-runner";
+import { run } from "./preflight";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 
 const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
@@ -124,6 +125,32 @@ test("project-convention payloads never include --append-system-prompt", async (
     practice: { id: "x", version: "v1", sha256: "a".repeat(64), text: "frontend conventions", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" },
   };
   expect(piArgs("test-model", convention)).not.toContain("--append-system-prompt");
+});
+
+
+test("materializeGitHistory builds a realistic commit history with a clean tree", async () => {
+  const app = await mkdtemp(join(tmpdir(), "lorelum-githistory-"));
+  try {
+    await Bun.write(join(app, "index.html"), "<html></html>");
+    await Bun.write(join(app, "src", "api", "http.ts"), "export const api = 1;");
+    await Bun.write(join(app, "src", "LoginPage.tsx"), "export function LoginPage() { return null; }");
+    const history = {
+      identity: { name: "ops-admin", email: "ops@meridian.internal" },
+      commits: [
+        { message: "chore: scaffold", files: ["index.html"] },
+        { message: "feat(api): client", files: ["src/api/http.ts"] },
+        { message: "feat: login shell", files: [] },
+      ],
+    };
+    await materializeGitHistory(app, history);
+    const log = await run(["git", "-C", app, "log", "--format=%s"], app);
+    expect(log.code).toBe(0);
+    expect(log.stdout.trim().split("\n")).toEqual(["feat: login shell", "feat(api): client", "chore: scaffold"]);
+    const status = await run(["git", "-C", app, "status", "--porcelain"], app);
+    expect(status.stdout.trim()).toBe("");
+  } finally {
+    await rm(app, { force: true, recursive: true });
+  }
 });
 
 test("materializeConventionDoc writes the convention into the app workspace and guards escapes", async () => {
