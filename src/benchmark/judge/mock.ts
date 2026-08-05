@@ -22,6 +22,9 @@ function stableScore(input: JudgeInput, rubric: string): { points: number; max_p
 export const mockJudgeProvider: JudgeProvider = {
   id: "mock-judge",
   version: "0.1.0",
+  async rubricText(): Promise<string> {
+    return "Score candidate quality against the rubric. Return structured results only.\n";
+  },
   async score(input: JudgeInput, context: JudgeContext): Promise<JudgeResultV1> {
     const criteria = stableScore(input, input.rubric);
     const score = criteria.reduce((sum, criterion) => sum + criterion.points, 0);
