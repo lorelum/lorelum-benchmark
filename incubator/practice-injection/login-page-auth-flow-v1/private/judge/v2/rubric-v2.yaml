@@ -1,0 +1,40 @@
+id: login-page-practice-judge-rubric
+version: v2
+judge:
+  id: practice-layered-api
+  version: "2.0.0"
+prompt: >-
+  Score only the observable layered API Practice in the candidate login page.
+  Ignore visual polish, form completeness, and general product quality; those
+  are reported independently. Accept equivalent source structure and names.
+dimensions:
+  - id: component-transport-isolation
+    max_points: 30
+    description: >-
+      The page component does not own HTTP transport or inspect raw response
+      status/body values; those responsibilities remain outside the component.
+  - id: domain-operation-delegation
+    max_points: 25
+    description: >-
+      Every form submission path awaits an operation delegated to a module
+      outside the page component.
+  - id: boundary-response-translation
+    max_points: 30
+    description: >-
+      The invoked boundary owns transport and translates expected authentication
+      success and failure responses into a domain-shaped result or error.
+  - id: raw-response-containment
+    max_points: 15
+    description: >-
+      Raw transport response/body values do not flow back into page state,
+      return values, or the component-facing operation contract.
+repetition:
+  count: 1
+  aggregate: single
+thresholds:
+  reference_min: 90
+  equivalent_tolerance: 0
+  anti_pattern_max: 45
+  anti_pattern_gap: 45
+  low_confidence: 65
+  disagreement_spread: 0
