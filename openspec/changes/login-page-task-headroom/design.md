@@ -83,3 +83,21 @@ v1 已有 pilot 结果，禁止改写。新建 `login-page-auth-flow-v2` 独立 
 - 规范注入具体形态与措辞（`docs/frontend-guide.md` 小节 vs AGENTS.md 约定）。
 - 是否保留 http.ts 作为「已给出能力」。
 - 修订范围是否仅限登录页 candidate。
+
+## Planning Confirmation (2026-08-05, confirmed on #145)
+
+1. **Gap strategy**: keep `api/http.ts` (transport + DTO); remove the
+   `api/session.ts` 200/401→LoginResult translation layer; `task.md` states
+   product behavior only and drops the v1 layering hint 「接口调用和错误处理放 api
+   那边」.
+2. **Injection presentation (de-card)**: add `injection-calibration/v2` profile
+   with delivery template `project-convention/v1` that writes the practice text
+   into the agent workspace at `docs/frontend-guide.md` (oracle/irrelevant
+   conditions only), replacing the practice-card + `--append-system-prompt`
+   ("Apply this Practice…") channel; `injection-calibration/v1` stays frozen.
+   The convention document MUST NOT enter the shared starter or git history.
+3. **Scope**: only the login-page candidate, as a new
+   `incubator/practice-injection/login-page-auth-flow-v2/` directory.
+4. **Starter realism**: add 3-5 realistic git commits (scaffold → API wrapper →
+   tests → pending login wiring); medium-fidelity context (keep the current app
+   shell + `docs/auth-api.md`).
