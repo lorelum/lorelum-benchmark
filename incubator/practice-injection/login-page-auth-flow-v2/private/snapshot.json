@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "f354bf315c084f7f1a8db7843dbd9d4273bfc8b4c99afbe842cece4c584d4ce2",
+  "snapshot_id": "e62d91ba4ca5ec269421526f1d1d2cc43b618ef703682a29fe27bb75ce9013ca",
   "files": {
     "private/calibration.md": "80578b5744649451fac7f86dbd8a1c97e2a9e0b369f2d909acff799f3ca35d6a",
     "private/calibration/run.ts": "dad9179762afcf52f756d6a043cf254111ae0cc82aedd6523cd432463499f80d",
@@ -25,8 +25,8 @@
     "private/calibration/sets/quality-probe/v2/overlays/equivalent/src/api/auth.ts": "777bd0eeb92b9f551da693c0eb38019fec766f45397ac9d7f453b35cfddfe9f7",
     "private/calibration/sets/quality-probe/v2/overlays/reference/src/LoginPage.tsx": "5967a1e2ace9579019516cc4dbd4e3326d411507d7db4e8046e49dc62ee6f607",
     "private/calibration/sets/quality-probe/v2/overlays/reference/src/api/session.ts": "dc5372b6271063d8f042cea35fb8b627f2c2c2f434cac6e14e6615848a15d311",
-    "private/candidate.yaml": "3325897ca07e2e29d1ea197e8c87973e29c14ad59e15c854673635aad9a9ccac",
-    "private/conditions.yaml": "fadd91c75cb2962ed68568993ca4568ae31bd3a5a8a6f2ebd75c8c76281379ad",
+    "private/candidate.yaml": "76c79e0780eead780d7737ccd40b608fb6ab43a37ad4f10e41a30cd6dc6eab21",
+    "private/conditions.yaml": "7af4b825d5fede416778e24b9992b1f3c10620e81ca1ab3ceca2649e8ea4e7cd",
     "private/evaluator/evaluate.ts": "cd4c4b4ba4a5251efe634661df55201e8b8dad68e7fd5ef5ba1b9a2b9b7d39f5",
     "private/evaluator/runtime-closure.yaml": "be722244c7a9f959e9e1ced7e9597af91c611d98c2acffa4702744f69be3ba36",
     "private/evaluator/runtime-closure/bun.lock": "ef93097b3538fd622f47c96698b78be7ed478a66ea32332aeda08ce388dd4754",
@@ -62,7 +62,7 @@
     "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "injection-calibration/v2",
     "materializer_kind": "react-vite",
-    "input_hash": "aea83425259fe44bd2ac22c27763f0cb3830f57dd2a3c8999eeee28079b04c88",
+    "input_hash": "b6cf73a8fbae434a5418b91c1c745d027e01d3ffb0ff6bf2748de2524b17dd19",
     "materialized_output_hash": "63c76147fca2e7fa4fc3537462ee7653c7d15befb6c09f3bb9b4b8f323ffc06a",
     "profile_input_hash": "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
     "calibration_sets_hash": "32cbabf1ed61cce6b4f458c2a6a68218e7b822dcf135926d8a35967253282509"
