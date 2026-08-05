@@ -24,3 +24,5 @@
 - [x] 5.1 Add `injection-calibration/v2` profile (types + runtime) supporting delivery template `project-convention/v1`: metadata declares `target_path` (e.g., `docs/frontend-guide.md`), hash and oracle/irrelevant length calibration preserved; `v1` unchanged.
 - [x] 5.2 Wire the runner (`profile-diagnostic-runner.ts`) to dispatch by profile version: accept `injection-calibration/v2`, resolve payload/trace via v2, write the convention text into the workspace `app/docs/frontend-guide.md` before Pi for oracle/irrelevant, and keep `--append-system-prompt` only for practice-card delivery.
 - [x] 5.3 Update `snapshot.ts` profile handling for v2 and add contract tests for v2 parsing/validation/materialization; keep v1 tests green.
+
+- [x] 5.4 Move the login Practice judge v2 to a shared versioned helper at `src/benchmark/judge/practice-layered-api/v2/` and reference it from candidate calibration roles instead of copying per candidate; keep `login-page-auth-flow-v1`'s local copy frozen.

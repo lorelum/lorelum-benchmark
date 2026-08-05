@@ -101,3 +101,14 @@ v1 已有 pilot 结果，禁止改写。新建 `login-page-auth-flow-v2` 独立 
 4. **Starter realism**: add 3-5 realistic git commits (scaffold → API wrapper →
    tests → pending login wiring); medium-fidelity context (keep the current app
    shell + `docs/auth-api.md`).
+
+## Judge sharing (2026-08-05)
+
+To avoid per-candidate duplication (the v2 judge previously lived inside each
+candidate's `private/judge/v2/`, ~1357 lines per candidate), the login Practice
+judge v2 is now a shared versioned helper at
+`src/benchmark/judge/practice-layered-api/v2/` (score, rubric, rubric-v2.yaml,
+genericized calibrate, unit tests). Candidates reference it from their
+`calibration_roles` command instead of copying; `login-page-auth-flow-v1` keeps
+its local copy frozen. The rubric text is byte-identical, so the rubric hash
+(`3d4d719b…`) is unchanged.

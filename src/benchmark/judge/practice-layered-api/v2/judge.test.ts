@@ -1,6 +1,6 @@
-﻿import { describe, expect, test } from "bun:test";
-import { buildJudgeInput } from "../../../../../../src/benchmark/judge/input";
-import { assertJudgeResultV1 } from "../../../../../../src/benchmark/outcome/v1/contract";
+import { describe, expect, test } from "bun:test";
+import { buildJudgeInput } from "../../../judge/input";
+import { assertJudgeResultV1 } from "../../../outcome/v1/contract";
 import { analyzePractice, scoreSourceV2, type SourceMap } from "./score";
 import { assertRubric, loadRubric, rubricHash } from "./rubric";
 

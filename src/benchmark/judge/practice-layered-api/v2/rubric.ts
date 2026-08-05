@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { sha256Text } from "../../../../../../src/benchmark/fs";
+import { sha256Text } from "../../../fs";
 
 export type PracticeDimensionId =
   | "component-transport-isolation"

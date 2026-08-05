@@ -1,11 +1,11 @@
 import { join, resolve } from "node:path";
-import { buildJudgeInput } from "../../../../../../src/benchmark/judge/input";
+import { buildJudgeInput } from "../../../judge/input";
 import { loadRubric } from "./rubric";
 import { analyzePractice, scoreSourceV2, type SourceMap } from "./score";
 
-const candidateRoot = resolve(import.meta.dirname, "..", "..", "..");
-const setKey = "login-page-judge/v2";
-const fixtureOrder = ["reference", "equivalent", "anti-pattern"];
+const candidateRoot = resolve(Bun.argv[2] ?? process.env.LORELUM_CALIBRATION_CANDIDATE_PATH ?? ".");
+const setKey = process.env.LORELUM_CALIBRATION_SET_KEY ?? "login-page-judge/v2";
+const fixtureOrder = (process.env.LORELUM_CALIBRATION_FIXTURES ?? "reference,equivalent,anti-pattern").split(",").map((value) => value.trim()).filter(Boolean);
 
 async function readSourceMap(fixturePath: string): Promise<SourceMap> {
   const files: SourceMap = {};

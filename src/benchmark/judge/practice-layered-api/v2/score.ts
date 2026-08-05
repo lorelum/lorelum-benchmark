@@ -1,7 +1,7 @@
 import { posix } from "node:path";
 import * as ts from "typescript";
-import { sha256Text } from "../../../../../../src/benchmark/fs";
-import { assertJudgeResultV1, type JudgeResultV1 } from "../../../../../../src/benchmark/outcome/v1/contract";
+import { sha256Text } from "../../../fs";
+import { assertJudgeResultV1, type JudgeResultV1 } from "../../../outcome/v1/contract";
 import { rubricHash, type PracticeDimensionId, type PracticeRubric } from "./rubric";
 
 export type SourceMap = Record<string, string>;
