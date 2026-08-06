@@ -1,0 +1,107 @@
+import { sha256Text } from "../../../../fs";
+import { assertJudgeResultV1, type JudgeResultV1 } from "../../../../outcome/v1/contract";
+import type { GeneratedRubric } from "./rubric";
+import type { JudgeCompletion } from "./llm";
+
+export type ScoredCriterion = { id: string; points: number; rationale: string };
+export type ScoredCandidate =
+  | { state: "observed"; criteria: ScoredCriterion[]; confidence: number }
+  | { state: "indeterminate"; reason: string; confidence: number };
+
+function fail(message: string): never {
+  throw new Error(`Invalid judge score output: ${message}`);
+}
+
+export function assertScoredCandidate(value: unknown): ScoredCandidate {
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail("root must be an object");
+  const root = value as Record<string, unknown>;
+  const state = root.state === undefined ? "observed" : root.state;
+  if (state !== "observed" && state !== "indeterminate") fail(`state must be observed or indeterminate, got ${String(state)}`);
+  if (!Number.isInteger(root.confidence) || (root.confidence as number) < 0 || (root.confidence as number) > 100) fail("confidence must be an integer 0-100");
+  if (state === "indeterminate") {
+    if (typeof root.reason !== "string" || !root.reason) fail("indeterminate requires a non-empty reason");
+    return { state, reason: root.reason, confidence: root.confidence as number };
+  }
+  if (!Array.isArray(root.criteria) || root.criteria.length < 1) fail("observed requires at least one criterion");
+  const criteria: ScoredCriterion[] = [];
+  for (const raw of root.criteria) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) fail("criterion must be an object");
+    const c = raw as Record<string, unknown>;
+    if (typeof c.id !== "string" || !/^[a-z0-9-]+$/.test(c.id)) fail(`criterion id must be kebab-case: ${String(c.id)}`);
+    if (!Number.isInteger(c.points) || (c.points as number) < 0) fail(`criterion ${String(c.id)} points must be a non-negative integer`);
+    if (typeof c.rationale !== "string" || !c.rationale) fail(`criterion ${String(c.id)} rationale is required`);
+    criteria.push({ id: c.id, points: c.points as number, rationale: c.rationale });
+  }
+  return { state, criteria, confidence: root.confidence as number };
+}
+
+export function scoreSystemPrompt(): string {
+  return [
+    "You are a strict, fair code reviewer. Score the candidate implementation against the rubric.",
+    "Return ONLY a JSON object with one of these exact shapes:",
+    '{"criteria":[{"id":"dimension-id","points":0,"rationale":"one or two sentences of evidence from the candidate code"}],"confidence":85}',
+    '{"state":"indeterminate","reason":"short reason","confidence":50}',
+    "Rules: score EVERY rubric dimension exactly once; points are integers between 0 and the dimension's max_points; confidence is 0-100; rationale cites concrete candidate code.",
+    "If you cannot judge because required files are missing or the candidate is incomplete, return the indeterminate shape with a reason.",
+  ].join("\n");
+}
+
+export function scorePromptText(taskMd: string, candidateDiff: string, rubricText: string): string {
+  return `Coding task:\n\n${taskMd}\n\nRubric:\n\n${rubricText}\n\nCandidate source (canonical diff):\n\n${candidateDiff}`;
+}
+
+export async function scoreCandidate(input: {
+  taskMd: string;
+  candidateDiff: string;
+  rubric: GeneratedRubric;
+  rubricText: string;
+  rubricHash: string;
+  inputHash: string;
+  judge: { id: string; version: string };
+  complete: JudgeCompletion;
+}): Promise<JudgeResultV1> {
+  const prompt = scorePromptText(input.taskMd, input.candidateDiff, input.rubricText);
+  const parsed = (await input.complete(scoreSystemPrompt(), prompt)) as unknown;
+  const scored = assertScoredCandidate(parsed);
+  const promptHash = await sha256Text(prompt);
+  if (scored.state === "indeterminate") {
+    return assertJudgeResultV1({
+      schema_version: "judge-result/v1",
+      judge_version: 1,
+      judge: input.judge,
+      state: "indeterminate",
+      score: 0,
+      criteria: [],
+      prompt_hash: promptHash,
+      rubric_hash: input.rubricHash,
+      input_hash: input.inputHash,
+      confidence: scored.confidence,
+      reason: scored.reason,
+    });
+  }
+  const maxByDim = new Map(input.rubric.dimensions.map((d) => [d.id, d.max_points]));
+  const required = new Set(input.rubric.dimensions.map((d) => d.id));
+  const seen = new Set<string>();
+  const criteria = scored.criteria.map((c) => {
+    const max = maxByDim.get(c.id);
+    if (max === undefined) fail(`unknown criterion ${c.id} not declared in the rubric`);
+    if (seen.has(c.id)) fail(`duplicate criterion ${c.id}`);
+    seen.add(c.id);
+    if (c.points > max) fail(`criterion ${c.id} points exceed max_points ${max}`);
+    return { id: c.id, points: c.points, max_points: max, rationale: c.rationale };
+  });
+  if (required.size !== seen.size || [...required].some((id) => !seen.has(id))) fail("scoring must cover every rubric dimension exactly once");
+  const score = criteria.reduce((sum, c) => sum + c.points, 0);
+  return assertJudgeResultV1({
+    schema_version: "judge-result/v1",
+    judge_version: 1,
+    judge: input.judge,
+    state: "observed",
+    score,
+    criteria,
+    prompt_hash: promptHash,
+    rubric_hash: input.rubricHash,
+    input_hash: input.inputHash,
+    confidence: scored.confidence,
+  });
+}

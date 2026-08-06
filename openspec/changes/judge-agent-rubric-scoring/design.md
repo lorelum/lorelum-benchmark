@@ -57,7 +57,24 @@
 
 ## Open Questions
 
-- rubric ?????per-task LLM ??????vs ???????
-- ?? judge ???/???? opt-in ???env flag / ????
-- per-candidate ????????? candidate ?? pilot ??????
-- ???????? + ??????? #151 candidate ???
+??????? Planning Confirmation??
+
+
+## Planning Confirmation (2026-08-06, confirmed on #153)
+
+1. **Rubric generation**: per-task LLM generation from `task.md` + declared public
+   material (dimensions/weights/criteria, 100-point scale); validated and bound by
+   rubric hash; cached per task.
+2. **Model invocation**: lightweight OpenAI-compatible HTTP client (env-configured
+   base_url/api_key/model), single structured call, no agent loop.
+3. **Calibration gate**: per-candidate discrimination calibration is mandatory
+   before a candidate uses the real judge for directional conclusions
+   (oracle high, anti-pattern low and separated, equivalent close to reference).
+4. **API address/key**: repo-root `.env` (Bun auto-loads) with
+   `LORELUM_JUDGE_REAL=1`, `LORELUM_JUDGE_BASE_URL`, `LORELUM_JUDGE_API_KEY`,
+   `LORELUM_JUDGE_MODEL`; `.env` added to .gitignore, `.env.example` committed.
+5. **Interface extension**: `JudgeProvider.rubricText` gains an optional task
+   context argument; providers may add optional `promptFor(input)`; backward
+   compatible, existing providers/`outcome/v1` unchanged.
+6. **Scope**: generic capability + calibration path only; #151 candidates consume
+   it afterwards.
