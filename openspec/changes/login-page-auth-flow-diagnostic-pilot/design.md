@@ -153,6 +153,26 @@ irrelevant（对照），而非「是否分层」的 0/1。
   （candidate source_commit `f10d672`、snapshot `1519423…`，repetitions=6 块 = 每条件
   6 次）；judge 通道、indeterminate 预算 0.25、模型 deepseek-v4-pro 不变。
 
+#### v2 复测（修正版）结果（2026-08-06，`scratch/profile-diagnostics/login-v2-three-condition-retest-v2`）
+
+- 18 attempts（每条件 6，plan `login-page-auth-flow-v2-three-condition-retest-v2`），
+  `interrupted=false`；judge 全部 observed（rubric_hash `3d4d719b…`），
+  indeterminate_rate=0。
+- joint_pass / judge 分：
+  - baseline：1/5（20%）/ [0,45,0,100,0]（1 次 Pi 超时）。
+  - oracle-practice：3/5（60%）/ [100,100,100,0,0]（1 次 evaluator-cleanup 失败）。
+  - irrelevant-practice：2/6（33%）/ [0,45,0,100,100,45]。
+- decision_rule（joint-pass-count，oracle 严格高于每个 control）：oracle 3 > baseline 1
+  且 3 > irrelevant 2 → **方向性信号**；但 `overall_conclusion_grade = diagnostic-only`
+  （单候选 + baseline/oracle 健康样本不足 + 样本小/方差大）。
+- 解读：task 含分层要求时 baseline 也会偶尔分层（1/5 满分、1/5 部分）；oracle 注入
+  分层约定后满分率升到 3/5（judge 中位数 100 vs baseline 0）；irrelevant 对照 2/6
+  偏高、噪声大。oracle 有 2/5 未遵循注入约定（文档在但被忽略，代码直接在组件内解析
+  status/body）——practice 提升分层规范度但遵循不稳定。
+- 与 headroom 验证跑（2026-08-05，task 无提示）对比：无提示 baseline 全 0、oracle
+  2/6；有提示后 baseline 1/5 满分、oracle 3/5 满分——task 提示与 practice 叠加提升
+  遵循率。
+
 ## Risks / Trade-offs
 
 - [本机 Pi/模型凭据缺失] → dry-run 与 preflight 通过即可冻结计划；实际运行明确
