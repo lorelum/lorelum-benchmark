@@ -6,16 +6,19 @@ TBD - created by archiving change login-page-task-headroom. Update Purpose after
 ### Requirement: 新 candidate revision 制造 Practice 可观测缺口
 The next login-page candidate revision MUST NOT pre-supply the domain translation
 layer: the starter SHALL keep the transport adapter (`api/http.ts`) but MUST NOT
-pre-load a 200/401→LoginResult boundary, and the task statement MUST NOT include
-layering hints such as 「接口调用和错误处理放 api 那边」. With no injection, the
-baseline MUST show at least one missing Practice criterion under the v2 judge
-(score < 100 or practice_observation=not-observed), and the oracle/injected
-condition MUST be able to close that gap.
+pre-load a 200/401→LoginResult boundary. The task statement MUST state the basic
+layering requirement in natural language (for example 「接口调用和错误处理放 api
+那边，组件里别堆太多逻辑」) so the baseline can produce the behavior; the detailed
+convention (response translation, raw-response isolation) is delivered by the
+Practice. The candidate design MUST record the expected baseline compliance level
+(partial compliance is acceptable) and the Practice's incremental contribution;
+the oracle/injected condition MUST be able to close the remaining gap.
 
-#### Scenario: Baseline has a Practice gap
+#### Scenario: Baseline shows the recorded level
 - **WHEN** the baseline candidate (no injection) completes the revised task
-- **THEN** the v2 judge records at least one criterion gap and the semantic hard
-  gate still passes
+- **THEN** the v2 judge records the expected baseline level (which may be partial
+  or full per the recorded design expectation) and the semantic hard gate still
+  passes
 
 #### Scenario: Injection closes the gap
 - **WHEN** the oracle condition receives the project-internal layering guideline

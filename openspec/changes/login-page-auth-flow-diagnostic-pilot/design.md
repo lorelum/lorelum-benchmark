@@ -147,9 +147,11 @@ irrelevant（对照），而非「是否分层」的 0/1。
 - 第一轮运行（`scratch/profile-diagnostics/login-v2-three-condition-retest`）标注为
   **headroom 验证跑**（task 无分层提示）：证实基线存在 Practice 缺口、oracle 可闭合，
   不作为正式复测结论。
-- **#145 stable spec 覆盖**：`openspec/specs/login-page-task-headroom/spec.md` 的
-  「task 不得含分层提示（如『接口调用和错误处理放 api 那边』）」条款与本次需求方决策冲突，
-  本 change 记录该决策，需后续独立 OpenSpec change 修订该 stable spec。
+- **#145 stable spec 修订（并入本 PR）**：`openspec/specs/login-page-task-headroom/spec.md`
+  的「task 不得含分层提示」条款已修订为「task 须给出被测行为的基本要求（基线预期可产出），
+  细化约定由 Practice 提供」；`openspec/specs/practice-benchmark-boundaries/spec.md` 新增
+  「任务须声明被测 Practice 基本行为要求 + 评分公平性（低分须可解释）」requirement。
+  需求方 2026-08-06 决定：这两条 stable spec 修改直接并入本 PR（#143），不另建 issue/change。
 - 第二轮复测（2026-08-06）：plan `login-page-auth-flow-v2-three-condition-retest-v2`
   （candidate source_commit `f10d672`、snapshot `1519423…`，repetitions=6 块 = 每条件
   6 次）；judge 通道、indeterminate 预算 0.25、模型 deepseek-v4-pro 不变。
