@@ -27,12 +27,13 @@ export type JudgeCompletion = (system: string, user: string) => Promise<unknown>
 /** Lightweight OpenAI-compatible chat completions client (single call, no agent loop). */
 export function httpJudgeCompletion(
   env: Record<string, string | undefined> = Bun.env,
-  timeoutMs = 120_000,
+  timeoutMs?: number,
 ): JudgeCompletion {
+  const resolvedTimeout = timeoutMs ?? (Number(env.LORELUM_JUDGE_TIMEOUT_MS) || 300_000);
   const { baseUrl, apiKey, model } = requireJudgeLlmEnv(judgeLlmEnv(env));
   return async (system, user) => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = setTimeout(() => controller.abort(), resolvedTimeout);
     try {
       const response = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",

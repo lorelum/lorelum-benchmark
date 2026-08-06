@@ -47,7 +47,7 @@ v1 已有 #91 scratch 诊断结果与执行计划，禁止改写。新建 v2 独
 
 - 两个 v2 candidate 的 `conditions.yaml` 声明 `judge.provider: judge-agent/generic/v1`（仓库级通用 LLM JudgeAgent，由独立 issue #153 实现），不再 per-candidate 手写静态 judge。
 - 通用 judge 由 LLM 读 `task.md` 与公开材料生成评分标准（rubric：维度/权重/判据），再按 rubric 对 candidate diff 打分，产出 `judge-result/v1`（criterion 分数、rationale、confidence、provenance hash）；复用 #133 的 provider 接口、输入 allowlist/脱敏、mock-for-CI 与真实 provider 显式 opt-in。
-- 每个 candidate 保留 reference / equivalent / anti-pattern 校准夹具，用通用 judge 验证判别力（oracle 高分、anti-pattern 低分且与 reference 拉开差距）；judge 分数作为软质量信号逐条件报告；方向性决策仍按 joint-pass（semantic + practice_observation）。
+- 每个 candidate 保留 reference / equivalent / anti-pattern 校准夹具，用通用 judge 验证判别力（oracle 高分、anti-pattern 低分且与 reference 拉开差距）；judge 分数作为软质量信号逐条件报告；方向性决策仍按 joint-pass（semantic + practice_observation）。\n- 消费期 judge 增强（记录于本 change）：rubric 生成注入「工程质量规范」（transport-isolation / domain-delegation / boundary-translation / raw-response-containment / state-and-feedback / correctness）；打分提示要求严格证据化（明确检查组件是否直读原始 status/body、边界是否翻译状态码）；校准支持每夹具重复取样取中位数（默认 3）；阈值按 LLM 分数分布重校准（reference_min 50 / anti_pattern_max 70 / gap 10）。实测两 v2 夹具 passed=true。
 
 ### 职责可解释探针（v2）
 

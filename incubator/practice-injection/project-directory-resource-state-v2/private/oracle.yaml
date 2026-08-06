@@ -1,0 +1,18 @@
+id: project-directory-resource-state-v2
+semantic_oracle:
+  command: bun run test
+  assertions:
+    - 进入页面加载项目列表
+    - 按关键词搜索并显示结果
+    - 无匹配时显示空结果状态
+    - 加载失败显示提示并可重试恢复
+practice_observation:
+  command: bun run private/evaluator/verify-resource-state.ts public/starter/app
+  signal_only: true
+  responsibilities:
+    - 组件不得直接导入 HTTP adapter、直接调用 transport 或读取传输响应（名称无关的结构检查，不限于 response 命名）
+    - 每个查询路径 await 一个组件外的查询/领域操作
+    - 边界模块负责实际 transport 请求
+    - 成功/空结果/失败在边界模块内转换为显式资源状态（如 ready/empty/failed）
+    - 边界模块不把原始 response 或 response.body 返回给组件（名称无关）
+baseline_expected_result: { semantic: fail, practice_observation: not-observed }

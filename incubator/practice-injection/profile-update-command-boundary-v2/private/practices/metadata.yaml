@@ -1,0 +1,17 @@
+delivery_template: project-convention/v1
+length_metric: project-convention/v1:utf8-rendered-characters
+cards:
+  - id: profile-update.command-domain-boundary
+    version: v1
+    path: profile.command-domain-boundary.v1.md
+    rendered_characters: 297
+    target_path: docs/frontend-guide.md
+  - id: profile-update.modal-focus
+    version: v1
+    path: irrelevant.modal-focus.v1.md
+    rendered_characters: 292
+    target_path: docs/frontend-guide.md
+comparison:
+  maximum_relative_difference: 0.10
+  actual_relative_difference: 0.016835
+  independently_reviewed: true

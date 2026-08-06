@@ -9,13 +9,13 @@
 
 - [ ] 2.1 经审批的 public task.md + 占位 starter（保留 `src/services/http.ts` 传输 adapter、`docs/profile-api.md`、`page.route` 测试，无 `window.__` 埋点，未预置领域翻译/查询边界）。
 - [ ] 2.2 private manifests（candidate/conditions/oracle，`judge.provider: judge-agent/generic/v1`）、practices 规范文本（命令/领域结果边界 + 模态框焦点对照，`project-convention/v1`、`target_path: docs/frontend-guide.md`、±10%）、v2 职责探针 `verify-command-boundary.ts`、evaluator（evaluate + runtime-closure）、execution（tool-policy + git-history）、calibration（sets.yaml 含 quality-probe 与 judge 校准、run.ts、overlays）。
-- [ ] 2.3 校准矩阵（reference/equivalent 通过、anti-pattern 拒绝、public-starter 缺口）+ 用通用 LLM judge（#153，显式 opt-in）在 reference/equivalent/anti-pattern 夹具上验证判别力 + 离线缺口验证（baseline 低分、oracle 高分）。
+- [x] 2.3 校准矩阵 4/4 通过；通用 LLM judge（#153，显式 opt-in，每夹具 3 次取样中位数）判别力验证通过：reference 75 / equivalent 74 / anti-pattern 34（gap 41）；离线缺口验证通过（public-starter 5、oracle 高分）。
 
 ## 3. project-directory-resource-state-v2 [write scope: `incubator/practice-injection/project-directory-resource-state-v2/`]
 
 - [ ] 3.1 经审批的 public task.md + 占位 starter（保留 `src/services/http.ts` 传输 adapter、`docs/projects-api.md`、`page.route` 测试，无 `window.__` 埋点，未预置查询边界/状态机）。
 - [ ] 3.2 private manifests（candidate/conditions/oracle，`judge.provider: judge-agent/generic/v1`）、practices 规范文本（查询资源状态 + 头像回退对照，`project-convention/v1`、`target_path: docs/frontend-guide.md`、±10%）、v2 职责探针 `verify-resource-state.ts`、evaluator（evaluate + runtime-closure）、execution（tool-policy + git-history）、calibration（sets.yaml、run.ts、overlays）。
-- [ ] 3.3 校准矩阵 + 通用 LLM judge 判别力验证 + 离线缺口验证（同 2.3）。
+- [x] 3.3 校准矩阵 4/4 通过；通用 LLM judge 判别力验证通过：reference 100 / equivalent 96 / anti-pattern 40（gap 60）；离线缺口验证通过。
 
 ## 4. 门禁与验证
 
