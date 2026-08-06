@@ -130,6 +130,29 @@ v1 pilot（v5/v6）在 `login-page-auth-flow-v1` 上跑出 no-obvious-signal，�
   分层 → judge 0，oracle 出现 2 次完整分层 → judge 100（v1 时三条件全部 90+ 无区分）。
   无正式 record / suite revision。
 
+### 实验设计修正（2026-08-06，需求方确认）
+
+第一轮 v2 复测（2026-08-05，task 无分层提示）测的是「不提示 agent 是否会自己分层」：
+baseline judge 全 0、oracle 100×2/0×4，双峰结果证实了 headroom 缺口存在，但不是需求方要测的问题。
+
+需求方确认的修正口径：**task 必须告知 agent 分层要求（恢复 v1 式提示，真实口吻），
+pilot 测量的是「注入 practice 后，分层代码规范度是否提升」**，预期 oracle > baseline ≈
+irrelevant（对照），而非「是否分层」的 0/1。
+
+对应改动：
+- v2 `public/task.md` 改为真实工单口吻：现状一句 + 「docs 里有接口说明」「前端已封装请求」
+  （不点名文件）+ 分层要求（接口调用和错误处理放 api 那边，组件里别堆太多逻辑）+ 跑测试；
+  功能行为（成功/失败/禁重复提交）不写出，由 starter 测试兜底。
+- 第一轮运行（`scratch/profile-diagnostics/login-v2-three-condition-retest`）标注为
+  **headroom 验证跑**（task 无分层提示）：证实基线存在 Practice 缺口、oracle 可闭合，
+  不作为正式复测结论。
+- **#145 stable spec 覆盖**：`openspec/specs/login-page-task-headroom/spec.md` 的
+  「task 不得含分层提示（如『接口调用和错误处理放 api 那边』）」条款与本次需求方决策冲突，
+  本 change 记录该决策，需后续独立 OpenSpec change 修订该 stable spec。
+- 第二轮复测（2026-08-06）：plan `login-page-auth-flow-v2-three-condition-retest-v2`
+  （candidate source_commit `f10d672`、snapshot `1519423…`，repetitions=6 块 = 每条件
+  6 次）；judge 通道、indeterminate 预算 0.25、模型 deepseek-v4-pro 不变。
+
 ## Risks / Trade-offs
 
 - [本机 Pi/模型凭据缺失] → dry-run 与 preflight 通过即可冻结计划；实际运行明确
