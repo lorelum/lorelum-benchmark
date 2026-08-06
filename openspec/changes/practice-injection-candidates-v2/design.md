@@ -43,12 +43,11 @@ v1 已有 #91 scratch 诊断结果与执行计划，禁止改写。新建 v2 独
 - 经 `injection-calibration/v2`（delivery template `project-convention/v1`）条件写入 workspace 的 `docs/frontend-guide.md`：oracle-practice 收到被测规范，irrelevant-practice 收到无关对照规范，baseline 不收到任何规范；规范不得进入共享 starter。
 - 公开痕迹只记录规范版本与 hash；规范随最后一条 git commit 进入 oracle/irrelevant 条件的 git 历史（baseline 无该文件），由 git-history.yaml manifest + 条件注入共同复现。
 
-### 打分制 rubric judge（确定性静态分析，已确认）
+### 打分制 rubric 评分（仓库级通用 LLM JudgeAgent，依赖 #153）
 
-- 为每个 candidate 建立独立 judge（`src/benchmark/judge/practice-command-boundary/v2/`、`src/benchmark/judge/practice-query-resource-state/v2/`），仿照登录页 `practice-layered-api/v2`：`rubric-v2.yaml`（维度 + 阈值）、`rubric.ts`、`score.ts`、`calibrate.ts`、`judge.test.ts`，并在 `src/benchmark/judge/providers.ts` 注册 provider。
-- rubric 维度各 100 分：`component-transport-isolation` 30、`domain/query-operation-delegation` 25、`boundary-response-translation`（命令边界翻译成功+409 冲突 / 查询边界翻译 ready/empty/failed 显式资源状态）30、`raw-response-containment` 15；阈值沿用登录页模式（reference_min 90、equivalent_tolerance 0、anti_pattern_max 45、anti_pattern_gap 45、low_confidence 65）。
-- `score.ts` 为确定性静态分析（组件不直连 transport、不读原始 status/body；提交/查询路径 await 组件外领域操作；边界负责实际 transport 并翻译领域结果/资源状态；边界不返回原始 response），复用 `source-map.ts`、`input.ts`、`outcome/v1` 契约；不调用 LLM。
-- judge 分数作为软质量信号逐条件报告；方向性决策仍按 joint-pass（semantic + practice_observation），与 `login-page-auth-flow-diagnostic-pilot` spec 一致。
+- 两个 v2 candidate 的 `conditions.yaml` 声明 `judge.provider: judge-agent/generic/v1`（仓库级通用 LLM JudgeAgent，由独立 issue #153 实现），不再 per-candidate 手写静态 judge。
+- 通用 judge 由 LLM 读 `task.md` 与公开材料生成评分标准（rubric：维度/权重/判据），再按 rubric 对 candidate diff 打分，产出 `judge-result/v1`（criterion 分数、rationale、confidence、provenance hash）；复用 #133 的 provider 接口、输入 allowlist/脱敏、mock-for-CI 与真实 provider 显式 opt-in。
+- 每个 candidate 保留 reference / equivalent / anti-pattern 校准夹具，用通用 judge 验证判别力（oracle 高分、anti-pattern 低分且与 reference 拉开差距）；judge 分数作为软质量信号逐条件报告；方向性决策仍按 joint-pass（semantic + practice_observation）。
 
 ### 职责可解释探针（v2）
 
@@ -70,7 +69,7 @@ v1 已有 #91 scratch 诊断结果与执行计划，禁止改写。新建 v2 独
 ## Risks / Trade-offs
 
 - [去掉预置实现后 baseline 可能仍被模型「自然」补上] → 离线缺口验证：构造 baseline 直接处理原始响应的样例应 judge 0/100 + not-observed，oracle 自建边界样例应 judge 100/100 + observed；不足则调整 starter。
-- [打分制 judge 误伤等价实现] → 先构造 equivalent 样例校准（与 reference 同分同 criterion）；无法构造等价通过样例的断言不得作为失败条件。
+- [通用 LLM judge 判别力不稳定] → per-candidate reference/equivalent/anti-pattern 夹具上用真实 judge（显式 opt-in）验证判别力，indeterminate 超预算时按诊断性处理；judge 仅软信号，不改变语义硬门槛。
 - [项目内规范仍可能被识破] → 措辞贴近团队约定 + 独立 agent 事后被动审计；结论按诊断定位。
 - [两个 candidate 并行增大实现量] → 共享校准基座（`injection-calibration/v2` react-vite app-shell）与 judge 解析工具，按 tasks 依赖顺序推进。
 
@@ -79,7 +78,7 @@ v1 已有 #91 scratch 诊断结果与执行计划，禁止改写。新建 v2 独
 1. 已创建 OpenSpec-only 初始 PR（#152，仅 artifacts），引用 #151，通过 strict validation。
 2. 规划澄清已确认（缺口方式、规范注入形态、分层提示强度、修订范围、打分制 judge、task.md 审批门禁、独立 agent 验证），写回 issue #151 与本 design 的 Planning Confirmation。
 3. 草拟两个 v2 candidate 的 task.md 并提交需求方审批；审批通过后进入实现。
-4. 实现打分制 judge 基础设施与两个 v2 candidate（public/private、starter + git-history、conditions/oracle/evaluator、practices 规范文本、calibration、snapshot），持续提交到 PR #152。
+4. 依赖 #153 的仓库级通用 LLM JudgeAgent 落地后，实现两个 v2 candidate（public/private、starter + git-history、conditions/oracle/evaluator、practices 规范文本、calibration、snapshot），`conditions.yaml` 声明 `judge-agent/generic/v1`，持续提交到 PR #152。
 5. 每个 candidate 跑校准矩阵、judge 校准、离线缺口验证、public/private audit、`bun run validate`、OpenSpec strict、`git diff --check`；真实环境验证由独立 agent 执行并留证。
 6. 不执行正式 benchmark、不创建 record；v1 与 #91 历史保持不动。
 
@@ -108,3 +107,5 @@ v1 已有 #91 scratch 诊断结果与执行计划，禁止改写。新建 v2 独
    approval before snapshot/calibration.
 7. **Independent real-environment verification**: performed by a separate agent
    (starter semantic tests, kernel calibration, agent-perspective authenticity audit).
+
+

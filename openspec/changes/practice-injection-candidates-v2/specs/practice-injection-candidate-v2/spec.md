@@ -50,15 +50,19 @@ v2 私有质量探针 MUST 按职责断言（required responsibilities / forbidd
 
 ### Requirement: 打分制 rubric 评分与校准
 
-每个 v2 candidate MUST 提供确定性打分制 rubric judge（纯静态分析、非 LLM）：按职责维度给出 criterion 级分数（如 30/25/30/15 共 100 分）与 rationale，并在模型运行前离线校准——reference 达到最低分、equivalent 与 reference 同分同 criterion、anti-pattern 不超过上限且与 reference 分差达到门槛。judge 分数 MUST 作为软质量信号与语义结果分开逐条件报告，MUST NOT 改变语义完成判定，且 MUST NOT 作为唯一 oracle。
+每个 v2 candidate MUST 声明仓库级通用 LLM JudgeAgent（`judge-agent/generic/v1`，由独立 issue #153 实现）作为打分制评分：judge 由 LLM 读 `task.md` 与公开材料生成评分标准（rubric：维度/权重/判据），再按 rubric 对 candidate diff 打分，产出 `judge-result/v1`（criterion 分数、rationale、confidence、provenance hash）。candidate MUST 保留 reference / equivalent / anti-pattern 校准夹具，在模型比较前用真实 judge（显式 opt-in）验证判别力：oracle 高分、anti-pattern 低分且与 reference 拉开差距。judge 分数 MUST 作为软质量信号与语义结果分开逐条件报告，MUST NOT 改变语义完成判定，且 MUST NOT 作为唯一 oracle。
 
 #### Scenario: criterion 级缺口表
-- **WHEN** 离线重评 baseline/oracle 构造样例
-- **THEN** 产出 criterion 级表格：baseline 直连 transport 样例 0/100，oracle 自建边界样例 100/100，证明缺口存在且可补上
+- **WHEN** 用通用 judge 重评 baseline/oracle 构造样例
+- **THEN** 产出 criterion 级表格：baseline 直连 transport 样例显著低分，oracle 自建边界样例高分，证明缺口存在且可补上
 
 #### Scenario: anti-pattern 分离
-- **WHEN** judge 校准跑 reference/equivalent/anti-pattern 样例
-- **THEN** reference 与 equivalent 达到阈值且同分，anti-pattern 低于上限且与 reference 分差满足门槛，各维度方向正确
+- **WHEN** 通用 judge 在 reference/equivalent/anti-pattern 夹具上校准
+- **THEN** reference 与 equivalent 高分且接近，anti-pattern 低分且与 reference 拉开差距，各维度方向正确
+
+#### Scenario: 独立能力先行
+- **WHEN** 本 change 实现两个 v2 candidate
+- **THEN** candidate 声明 `judge-agent/generic/v1` 且不新建 per-candidate 静态 judge；该 provider 由 #153 提供
 
 ### Requirement: 真实环境独立验证
 
@@ -83,3 +87,4 @@ v2 candidate MUST 作为独立修订存在（独立 source/snapshot/profile 身�
 #### Scenario: 不创建正式产物
 - **WHEN** v2 candidate 完成校准与验证
 - **THEN** 未执行模型调用、未创建正式 record、未进入默认 suite
+
