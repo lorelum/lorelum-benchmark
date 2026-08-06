@@ -6,11 +6,11 @@
 
 #### Scenario: baseline 存在残余缺口
 - **WHEN** baseline 条件（无注入）基于占位 starter 完成 v2 task
-- **THEN** 职责探针记录 baseline 存在至少一个被测职责缺口，且语义硬门槛仍可判定
+- **THEN** 打分制 judge 与职责探针记录 baseline 存在至少一个被测职责缺口，且语义硬门槛仍可判定
 
 #### Scenario: 注入能补上缺口
 - **WHEN** oracle-practice 条件收到被测规范并完成同一 task
-- **THEN** 职责探针记录缺失职责被满足
+- **THEN** 打分制 judge 与职责探针记录缺失职责被满足
 
 ### Requirement: 产品代码无测试埋点
 
@@ -47,6 +47,30 @@ v2 私有质量探针 MUST 按职责断言（required responsibilities / forbidd
 #### Scenario: 校准未通过
 - **WHEN** 探针拒绝职责等价样例或接受声明绕过
 - **THEN** 该 candidate 不得进入模型比较，直到探针/断言修正并重新校准
+
+### Requirement: 打分制 rubric 评分与校准
+
+每个 v2 candidate MUST 提供确定性打分制 rubric judge（纯静态分析、非 LLM）：按职责维度给出 criterion 级分数（如 30/25/30/15 共 100 分）与 rationale，并在模型运行前离线校准——reference 达到最低分、equivalent 与 reference 同分同 criterion、anti-pattern 不超过上限且与 reference 分差达到门槛。judge 分数 MUST 作为软质量信号与语义结果分开逐条件报告，MUST NOT 改变语义完成判定，且 MUST NOT 作为唯一 oracle。
+
+#### Scenario: criterion 级缺口表
+- **WHEN** 离线重评 baseline/oracle 构造样例
+- **THEN** 产出 criterion 级表格：baseline 直连 transport 样例 0/100，oracle 自建边界样例 100/100，证明缺口存在且可补上
+
+#### Scenario: anti-pattern 分离
+- **WHEN** judge 校准跑 reference/equivalent/anti-pattern 样例
+- **THEN** reference 与 equivalent 达到阈值且同分，anti-pattern 低于上限且与 reference 分差满足门槛，各维度方向正确
+
+### Requirement: 真实环境独立验证
+
+v2 candidate 的真实环境验证 MUST 由独立 agent 执行并留证：在真实运行环境跑 starter 语义测试（Vite dev + Playwright、`page.route` 拦截）、经 kernel 真实跑校准矩阵与 judge 校准、以全新 agent 视角审计暂存 workspace/prompt（无评分/condition/hash/评测字样、git 历史真实、starter 可运行），输出独立验证报告；主实现 agent MUST 集成该结果到实现 PR，不得以自评代替独立验证。
+
+#### Scenario: 独立验证报告
+- **WHEN** 实现完成两个 v2 candidate
+- **THEN** 独立 agent 输出真实环境验证报告，覆盖语义测试、校准执行与真实性审计，并被集成到 PR #152
+
+#### Scenario: 独立性保持
+- **WHEN** 独立 agent 执行验证
+- **THEN** 验证不依赖实现 agent 的结论，且不涉及模型调用
 
 ### Requirement: 新 revision 身份与历史保留
 
