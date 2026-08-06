@@ -30,7 +30,12 @@ Issue #137：新登录页 candidate（#135）、仓库级 JudgeAgent（#133）�
 
 ### Modified Capabilities
 
-- 无（不修改仓库级 runner、schema、`judge-result/v1` 或既有 stable spec）。
+- `practice-benchmark-boundaries`：新增「任务须声明被测 Practice 的基本行为要求 +
+  评分公平性（低分须可解释）」requirement。
+- `login-page-task-headroom`：修订「task 不得含分层提示」条款为「task 须给出被测
+  行为的基本要求（基线预期可产出），细化约定由 Practice 提供」。
+- 需求方 2026-08-06 决定：两条 stable spec 修改并入本 PR（design.md 已记录，不另建
+  issue/change）。
 
 ## Impact
 

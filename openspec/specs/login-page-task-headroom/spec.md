@@ -11,14 +11,16 @@ layering requirement in natural language (for example 「接口调用和错误�
 那边，组件里别堆太多逻辑」) so the baseline can produce the behavior; the detailed
 convention (response translation, raw-response isolation) is delivered by the
 Practice. The candidate design MUST record the expected baseline compliance level
-(partial compliance is acceptable) and the Practice's incremental contribution;
-the oracle/injected condition MUST be able to close the remaining gap.
+and MUST expect at least one measured rubric dimension to remain below full for
+the baseline (a residual Practice gap), so the Practice keeps a measurable
+incremental contribution; the oracle/injected condition MUST be able to close the
+gap, and a candidate MUST NOT be advanced if a pilot shows no oracle increment
+(oracle not greater than controls on the measured dimension).
 
-#### Scenario: Baseline shows the recorded level
+#### Scenario: Baseline shows the recorded level with a residual gap
 - **WHEN** the baseline candidate (no injection) completes the revised task
-- **THEN** the v2 judge records the expected baseline level (which may be partial
-  or full per the recorded design expectation) and the semantic hard gate still
-  passes
+- **THEN** the v2 judge records the expected baseline level with at least one
+  criterion below full (residual gap) and the semantic hard gate still passes
 
 #### Scenario: Injection closes the gap
 - **WHEN** the oracle condition receives the project-internal layering guideline

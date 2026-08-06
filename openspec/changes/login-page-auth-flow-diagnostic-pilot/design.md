@@ -32,7 +32,8 @@ judge 分数和执行健康分开记录；结果只写入 ignored scratch，不�
 - 不修改已有运行计划或历史结果；不创建正式 suite revision、正式 record 或发布
   报告；不归档/合并 #125。
 - 不做跨 candidate、因果、产品效果或 #92 结论。
-- 不修改仓库级 runner、schema、`judge-result/v1` 或既有 stable spec。
+- 不修改仓库级 runner、schema 与 `judge-result/v1`；既有 stable spec 的修订见
+  「实验设计修正（2026-08-06）」小节。
 - 不在未通过 preflight 与 review 前执行模型调用。
 
 ## Decisions
@@ -104,13 +105,14 @@ v1 pilot（v5/v6）在 `login-page-auth-flow-v1` 上跑出 no-obvious-signal，�
   判分、不调用模型），逐 attempt 写 `judge.sidecar.json`；summary 含脱敏
   rubric_hash / criterion 级字段与 indeterminate 预算门禁（预算 0.25，超预算 →
   diagnostic_only，保留在分母）。
-- **冻结计划**：`incubator/practice-injection-plans/login-page-auth-flow-v2-three-condition-retest.yaml`
-  （`profile-diagnostic-plan/v2`；`repetitions: 3` 为 cyclic-latin-square 块数，每块
-  覆盖三条件各一次 → 每条件 3 次、共 9 attempts；身份绑定 v2 snapshot/profile hash；
-  模型 deepseek-v4-pro 与 10min/次预算取自 v2 conditions.yaml）。说明：runner 的 plan
-  `repetitions` 单位是「方阵块」（每块三条件各一次）。2026-08-06 已执行的验证跑使用
-  repetitions=6（每条件 6 次、18 attempts，样本更足但成本高）；需求方 2026-08-06
-  决定后续执行按 3 次/条件（repetitions=3）。
+- **冻结计划（已执行）**：`incubator/practice-injection-plans/login-page-auth-flow-v2-three-condition-retest.yaml`
+  （`profile-diagnostic-plan/v2`，id `login-page-auth-flow-v2-three-condition-retest-v2`；
+  `repetitions: 6` 为 cyclic-latin-square 块数，每块覆盖三条件各一次 → 每条件 6 次、
+  共 18 attempts；身份绑定 v2 snapshot/profile hash；模型 deepseek-v4-pro 与
+  10min/次预算取自 v2 conditions.yaml）。2026-08-06 修正版验证跑即使用该计划。
+- **成本缩减变体（未执行）**：`incubator/practice-injection-plans/login-page-auth-flow-v2-three-condition-retest-v3.yaml`
+  （id `login-page-auth-flow-v2-three-condition-retest-v3`，`repetitions: 3` → 每条件
+  3 次、共 9 attempts）；需求方 2026-08-06 决定后续执行按此，尚未运行。
 - **v1 处理**：v1 已有 v5/v6 记录，保持冻结；本分支把 v1 恢复到 main 提交态，
   移除分支私有执行器（历史保留在提交记录中）。
 - **结果口径**：按 decision_rule（joint-pass-count，oracle 严格高于 baseline 与
@@ -154,13 +156,22 @@ irrelevant（对照），而非「是否分层」的 0/1。
   需求方 2026-08-06 决定：这两条 stable spec 修改直接并入本 PR（#143），不另建 issue/change。
 - 第二轮复测（2026-08-06）：plan `login-page-auth-flow-v2-three-condition-retest-v2`
   （candidate source_commit `f10d672`、snapshot `1519423…`，repetitions=6 块 = 每条件
-  6 次）；judge 通道、indeterminate 预算 0.25、模型 deepseek-v4-pro 不变。
+  6 次）；judge 通道、indeterminate 预算 0.25、模型 deepseek-v4-pro 不变。后续成本
+  缩减变体 `...-v3`（repetitions=3）未执行。
+- **版本归因**：v2 早期 headroom 验证跑（2026-08-05，task 无分层提示）绑定
+  source_commit `24c99b1` / snapshot `809b16…`，为历史证据；当前 v2 状态（task 含
+  分层提示）绑定 `f10d672` / snapshot `1519423…`，修正版结果为当前状态。两套结果按
+  各自 plan/snapshot 归因，不混淆「v2 结果」。
+- **F5 说明（conditions.yaml source_commit 残留）**：`private/conditions.yaml` 的
+  `source_commit` 字段为历史残留（runner 身份绑定使用 candidate.yaml，不读该字段）；
+  为保持已执行验证跑的 snapshot 绑定（`1519423…`）不变，未改动该字段；移除留待后续
+  candidate 修订。
 
 #### v2 复测（修正版）结果（2026-08-06，`scratch/profile-diagnostics/login-v2-three-condition-retest-v2`）
 
-- 已执行验证跑：18 attempts（每条件 6，执行时 plan repetitions=6），
-  `interrupted=false`；judge 全部 observed（rubric_hash `3d4d719b…`），
-  indeterminate_rate=0。冻结 plan 现为 repetitions=3（每条件 3 次）。
+- 已执行验证跑：18 attempts（每条件 6，plan `login-page-auth-flow-v2-three-condition-retest-v2`、
+  repetitions=6），`interrupted=false`；judge 全部 observed（rubric_hash `3d4d719b…`），
+  indeterminate_rate=0。成本缩减变体 `...-v3`（repetitions=3）未执行。
 - joint_pass / judge 分：
   - baseline：1/5（20%）/ [0,45,0,100,0]（1 次 Pi 超时）。
   - oracle-practice：3/5（60%）/ [100,100,100,0,0]（1 次 evaluator-cleanup 失败）。

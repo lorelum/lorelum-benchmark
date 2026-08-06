@@ -1,8 +1,10 @@
+# 未执行：成本缩减变体（每条件 3 次、共 9 attempts）。已执行的修正版验证跑使用
+# login-page-auth-flow-v2-three-condition-retest.yaml（id ...-v2，repetitions=6）。
 schema_version: profile-diagnostic-plan/v2
-id: login-page-auth-flow-v2-three-condition-retest-v2
-schedule_seed: login-page-auth-flow-v2-retest-2026-08-06
+id: login-page-auth-flow-v2-three-condition-retest-v3
+schedule_seed: login-page-auth-flow-v2-retest-v3-2026-08-06
 schedule_algorithm: cyclic-latin-square/v1
-repetitions: 6
+repetitions: 3
 independent_candidate_threshold: 1
 conditions: [baseline, oracle-practice, irrelevant-practice]
 candidates:
