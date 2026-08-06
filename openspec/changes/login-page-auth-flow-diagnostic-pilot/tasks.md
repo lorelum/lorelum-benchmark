@@ -28,7 +28,7 @@
 
 ## 6. v2 复测（#145/#146/#148 合并后）
 
-- [ ] 6.1 将分支同步到 main（含 #145 候选 v2、#146/#148 judge provider），把冻结的 v1 候选恢复到 main 状态；`bun run validate` 与 OpenSpec strict 全绿。
-- [ ] 6.2 创建冻结复测计划 `incubator/practice-injection-plans/login-page-auth-flow-v2-three-condition-retest.yaml`；通过 plan dry-run、候选校准（calibration-matrix + judge-practice-rubric-v2-calibration）、leakage audit（materialize 基线无 private 材料）与 judge rubric 加载。
-- [ ] 6.3 执行三条件复测 pilot（2 次/条件，deepseek-v4-pro，10min/次预算，indeterminate 预算 0.25）到 ignored scratch；只读取脱敏 summary，输出 signal / no-obvious-signal / uncertain，不创建正式 record。
+- [x] 6.1 将分支同步到 main（含 #145 候选 v2、#146/#148 judge provider），把冻结的 v1 候选恢复到 main 状态；`bun run validate` 与 OpenSpec strict 全绿（26/26）。
+- [x] 6.2 创建冻结复测计划 `incubator/practice-injection-plans/login-page-auth-flow-v2-three-condition-retest.yaml`（`repetitions: 6` = cyclic-latin-square 6 块 → 每条件 6 次、共 18 attempts）；plan dry-run 通过、候选校准两项（calibration-matrix + judge-practice-rubric-v2-calibration）通过、leakage audit（materialize 基线无 private 材料）通过、judge rubric 加载通过。
+- [x] 6.3 执行三条件复测 pilot（6 次/条件，deepseek-v4-pro，10min/次预算，indeterminate 预算 0.25）到 ignored scratch（`scratch/profile-diagnostics/login-v2-three-condition-retest`，18 attempts，interrupted=false）。结果：baseline joint_pass 0/4（2 次执行失败：1× Pi 超时、1× evaluator 非零退出），oracle-practice joint_pass 2/6（judge 100×2/0×4），irrelevant-practice joint_pass 0/6（judge 全 0）；judge 全部 observed、indeterminate_rate 0、无 diagnostic_only。decision_rule 下 oracle 严格高于两个 control → 方向性信号，但 `overall_conclusion_grade=diagnostic-only`（单候选 + baseline 健康样本不足）。不创建正式 record / suite revision。
 - [ ] 6.4 更新 PR #143 证据链与结论（含 judge sidecar、indeterminate 预算门禁结果与生命周期边界）。

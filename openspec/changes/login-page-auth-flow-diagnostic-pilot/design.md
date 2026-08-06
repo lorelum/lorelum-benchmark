@@ -105,14 +105,30 @@ v1 pilot（v5/v6）在 `login-page-auth-flow-v1` 上跑出 no-obvious-signal，�
   rubric_hash / criterion 级字段与 indeterminate 预算门禁（预算 0.25，超预算 →
   diagnostic_only，保留在分母）。
 - **冻结计划**：`incubator/practice-injection-plans/login-page-auth-flow-v2-three-condition-retest.yaml`
-  （`profile-diagnostic-plan/v2`；repetitions=6 = 3 条件×2；schedule
-  cyclic-latin-square；身份绑定 v2 snapshot/profile hash；模型 deepseek-v4-pro 与
-  10min/次预算取自 v2 conditions.yaml）。
+  （`profile-diagnostic-plan/v2`；`repetitions: 6` 为 cyclic-latin-square 块数，每块
+  覆盖三条件各一次 → 每条件 6 次、共 18 attempts；身份绑定 v2 snapshot/profile hash；
+  模型 deepseek-v4-pro 与 10min/次预算取自 v2 conditions.yaml）。说明：runner 的 plan
+  `repetitions` 单位是「方阵块」（每块三条件各一次），因此 6 块 = 每条件 6 次，高于
+  v1 pilot 的 2 次/条件——样本更足，非计划变更。
 - **v1 处理**：v1 已有 v5/v6 记录，保持冻结；本分支把 v1 恢复到 main 提交态，
   移除分支私有执行器（历史保留在提交记录中）。
 - **结果口径**：按 decision_rule（joint-pass-count，oracle 严格高于 baseline 与
   irrelevant-practice）输出 signal / no-obvious-signal；健康样本不足或 indeterminate
   超预算 → diagnostic/uncertain；只写 ignored scratch，不创建正式 record。
+
+#### v2 复测结果（2026-08-05，`scratch/profile-diagnostics/login-v2-three-condition-retest`）
+
+- 18 attempts（每条件 6），`interrupted=false`；judge 全部 observed（rubric_hash
+  `3d4d719b89dcd83f…` = v2 rubric），indeterminate_rate=0，无 diagnostic_only。
+- baseline：4/6 evaluated，joint_pass 0，judge 全 0；2 次执行失败（1× Pi 超时、
+  1× evaluator 非零退出）。oracle-practice：6/6 evaluated，joint_pass 2，judge
+  100×2 / 0×4。irrelevant-practice：6/6 evaluated，joint_pass 0，judge 全 0。
+- decision_rule（joint-pass-count，oracle 严格高于每个 control）：oracle 2 > baseline 0
+  且 2 > irrelevant 0 → 方向性信号；但 `overall_conclusion_grade = diagnostic-only`
+  （单候选 + baseline 健康样本不足，不满足 reproducible-direction）。
+- 与 v1 pilot（v5/v6）对比：v2 judge 通道现在能区分——baseline/irrelevant 未实现
+  分层 → judge 0，oracle 出现 2 次完整分层 → judge 100（v1 时三条件全部 90+ 无区分）。
+  无正式 record / suite revision。
 
 ## Risks / Trade-offs
 
