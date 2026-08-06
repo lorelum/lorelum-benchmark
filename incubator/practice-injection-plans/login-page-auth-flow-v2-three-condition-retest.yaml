@@ -1,0 +1,13 @@
+schema_version: profile-diagnostic-plan/v2
+id: login-page-auth-flow-v2-three-condition-retest-v2
+schedule_seed: login-page-auth-flow-v2-retest-2026-08-06
+schedule_algorithm: cyclic-latin-square/v1
+repetitions: 6
+independent_candidate_threshold: 1
+conditions: [baseline, oracle-practice, irrelevant-practice]
+candidates:
+  - id: login-page-auth-flow-v2
+    path: incubator/practice-injection/login-page-auth-flow-v2
+    source_commit: f10d672394402a819efe3ca0cdd1d5c4eab93f55
+    snapshot_id: 1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f
+    profile_input_hash: c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083
