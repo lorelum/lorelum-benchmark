@@ -7,7 +7,7 @@ kernel:
 source:
   kind: repository-local-starter
   repository: lorelum/lorelum-benchmark
-  source_commit: 24c99b1582a6909df437e5b2c6b08f2e7650e7e6
+  source_commit: f10d672394402a819efe3ca0cdd1d5c4eab93f55
   public_root: public/starter/app
   immutable_by: private/snapshot.json
 calibration_roles:
