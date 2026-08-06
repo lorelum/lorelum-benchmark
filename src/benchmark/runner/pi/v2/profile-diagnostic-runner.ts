@@ -83,9 +83,11 @@ export async function runJudgeProvider(
     const files = await sourceMapFromWorkspace(resolve(workspace, "app"));
     const candidateDiff = sourceMapToDiff(files);
     const taskMd = await Bun.file(resolve(workspace, "task.md")).text();
-    const rubric = await provider.rubricText();
+    const rubric = await provider.rubricText({ task_md: taskMd });
     const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric });
-    const prompt = "Score candidate quality against the rubric. Return structured results only.";
+    const prompt = provider.promptFor
+      ? await provider.promptFor(input, rubric)
+      : "Score candidate quality against the rubric. Return structured results only.";
     const context = {
       judge: { id: provider.id, version: provider.version },
       prompt,

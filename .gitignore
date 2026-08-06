@@ -4,3 +4,7 @@ artifacts/
 scratch/
 .lorelum-cache/
 .practice-runtime/
+
+.env
+.env.*
+!.env.example

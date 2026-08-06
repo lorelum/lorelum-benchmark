@@ -2,6 +2,7 @@ import type { JudgeResultV1 } from "../outcome/v1/contract";
 import type { JudgeContext, JudgeProvider } from "./provider";
 import type { JudgeInput } from "./input";
 import { mockJudgeProvider } from "./mock";
+import { judgeAgentGenericV1Provider } from "./judge-agent/generic/v1/provider";
 import { loadRubric } from "./practice-layered-api/v2/rubric";
 import { scoreSourceV2 } from "./practice-layered-api/v2/score";
 import { sourceMapFromDiff } from "./source-map";
@@ -30,6 +31,7 @@ export const practiceLayeredApiV2Provider: JudgeProvider = {
 export const judgeProviders: Record<string, JudgeProvider> = {
   "mock-judge": mockJudgeProvider,
   "practice-layered-api/v2": practiceLayeredApiV2Provider,
+  "judge-agent/generic/v1": judgeAgentGenericV1Provider,
 };
 
 export function resolveJudgeProvider(id: string): JudgeProvider | undefined {
