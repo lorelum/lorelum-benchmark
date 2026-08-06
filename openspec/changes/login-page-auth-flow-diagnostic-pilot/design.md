@@ -105,11 +105,12 @@ v1 pilot（v5/v6）在 `login-page-auth-flow-v1` 上跑出 no-obvious-signal，�
   rubric_hash / criterion 级字段与 indeterminate 预算门禁（预算 0.25，超预算 →
   diagnostic_only，保留在分母）。
 - **冻结计划**：`incubator/practice-injection-plans/login-page-auth-flow-v2-three-condition-retest.yaml`
-  （`profile-diagnostic-plan/v2`；`repetitions: 6` 为 cyclic-latin-square 块数，每块
-  覆盖三条件各一次 → 每条件 6 次、共 18 attempts；身份绑定 v2 snapshot/profile hash；
+  （`profile-diagnostic-plan/v2`；`repetitions: 3` 为 cyclic-latin-square 块数，每块
+  覆盖三条件各一次 → 每条件 3 次、共 9 attempts；身份绑定 v2 snapshot/profile hash；
   模型 deepseek-v4-pro 与 10min/次预算取自 v2 conditions.yaml）。说明：runner 的 plan
-  `repetitions` 单位是「方阵块」（每块三条件各一次），因此 6 块 = 每条件 6 次，高于
-  v1 pilot 的 2 次/条件——样本更足，非计划变更。
+  `repetitions` 单位是「方阵块」（每块三条件各一次）。2026-08-06 已执行的验证跑使用
+  repetitions=6（每条件 6 次、18 attempts，样本更足但成本高）；需求方 2026-08-06
+  决定后续执行按 3 次/条件（repetitions=3）。
 - **v1 处理**：v1 已有 v5/v6 记录，保持冻结；本分支把 v1 恢复到 main 提交态，
   移除分支私有执行器（历史保留在提交记录中）。
 - **结果口径**：按 decision_rule（joint-pass-count，oracle 严格高于 baseline 与
@@ -155,9 +156,9 @@ irrelevant（对照），而非「是否分层」的 0/1。
 
 #### v2 复测（修正版）结果（2026-08-06，`scratch/profile-diagnostics/login-v2-three-condition-retest-v2`）
 
-- 18 attempts（每条件 6，plan `login-page-auth-flow-v2-three-condition-retest-v2`），
+- 已执行验证跑：18 attempts（每条件 6，执行时 plan repetitions=6），
   `interrupted=false`；judge 全部 observed（rubric_hash `3d4d719b…`），
-  indeterminate_rate=0。
+  indeterminate_rate=0。冻结 plan 现为 repetitions=3（每条件 3 次）。
 - joint_pass / judge 分：
   - baseline：1/5（20%）/ [0,45,0,100,0]（1 次 Pi 超时）。
   - oracle-practice：3/5（60%）/ [100,100,100,0,0]（1 次 evaluator-cleanup 失败）。
