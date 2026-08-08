@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "ef02d174076d01a81d4795945d191b12391b4b10b512f728e38a43a0563610d9",
+  "snapshot_id": "1fe3a62a14227aad39ffe3b688cc7fdb821db0d39966b284dfd048a9c1601685",
   "files": {
     "private/calibration.md": "a3b54834498c14b9f81308d320dc168d2dc2272ecfc1f7c539a921026ad39392",
     "private/calibration/run.ts": "9326dc212ec3804a267cfc1446cda6732d5863154fcb452d7ee37b3ba5aa8f54",
@@ -18,8 +18,8 @@
     "private/calibration/sets/quality-probe/v1/overlays/equivalent/src/services/profileCommand.ts": "9471d05ef0dc0fa015220982be8d978cb88754ce44b67b5b9c27d33f31acdf1e",
     "private/calibration/sets/quality-probe/v1/overlays/reference/src/LoginPage.tsx": "2493b12d3935815aa9b54a5d9cd69418b8a6ff4480aaeeb98e2f9c9bcfa82421",
     "private/calibration/sets/quality-probe/v1/overlays/reference/src/profileGateway.ts": "3b990463bb2f722db95f2a002b1ed5307a401cb9df22190a06f39de5bcc86f9e",
-    "private/candidate.yaml": "981190fb57c8bfd32caec7672e1126ae637826bd81faf55b6f22c63c949e7a2b",
-    "private/conditions.yaml": "9459978df5c82b5429816214164508e0aea4e50d3267b52db4c559981bf62621",
+    "private/candidate.yaml": "15f78cd233f612b2a68f30957abae99a9e56ca2f1d285ce88862299cc0d32630",
+    "private/conditions.yaml": "6bda419dc86182a2089de4ed11d41c18e7bf6395871ec677c90aed82f88ca63f",
     "private/evaluator/evaluate.ts": "59c95b5b13513726f6b0f4bc0076e3c064928ed5198bd06f0d9ce6ee80152bc1",
     "private/evaluator/runtime-closure.yaml": "be722244c7a9f959e9e1ced7e9597af91c611d98c2acffa4702744f69be3ba36",
     "private/evaluator/runtime-closure/bun.lock": "ef93097b3538fd622f47c96698b78be7ed478a66ea32332aeda08ce388dd4754",
@@ -50,7 +50,7 @@
     "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "injection-calibration/v2",
     "materializer_kind": "react-vite",
-    "input_hash": "d18682f24ac9d1953dec5941f254dc3056546b40bf6585032a4f901c4116946f",
+    "input_hash": "fe7aa658f718bbab35096f64098c82a359281e0e6432215382df217750a5199d",
     "materialized_output_hash": "bb60b713c6e037e918d40892ec1dcaf3723c9273864dcf2f665a5a81b6572f30",
     "profile_input_hash": "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
     "calibration_sets_hash": "ff0c93ce40dc803677653e838b713f01271256ab48a7cfbbbf37b94e0f81db46"

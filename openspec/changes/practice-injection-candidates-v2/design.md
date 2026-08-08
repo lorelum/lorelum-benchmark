@@ -1,6 +1,6 @@
 ## Context
 
-#91 建立的两个 Practice-injection candidate（`profile-update-command-boundary-v1`、`project-directory-resource-state-v1`）用于扩大样本，但沿用早期设计：starter 已把任务全部做完（无 Practice 可观测缺口，baseline 无注入即全过）、公开测试依赖产品内 `window.__` 埋点、task 为验收腔、Practice 以 practice-card 注入。登录页 pilot（#137/#143/#145/#149）已把「真实题面 + 占位 starter + 项目内规范条件注入 + 公平可解释评分」沉淀为主线与模板（`login-page-auth-flow-v2`）。本 change 将同样的 v2 模式落地到这两个 candidate，并采用登录页同款的确定性打分制 rubric judge 作为质量评分。
+#91 建立的两个 Practice-injection candidate（`profile-update-command-boundary-v1`、`project-directory-resource-state-v1`）用于扩大样本，但沿用早期设计：starter 已把任务全部做完（无 Practice 可观测缺口，baseline 无注入即全过）、公开测试依赖产品内 `window.__` 埋点、task 为验收腔、Practice 以 practice-card 注入。登录页 pilot（#137/#143/#145/#149）已把「真实题面 + 占位 starter + 项目内规范条件注入 + 公平可解释评分」沉淀为主线与模板（`login-page-auth-flow-v2`）。本 change 将同样的 v2 模式落地到这两个 candidate，并采用仓库级通用 LLM JudgeAgent（#153，judge-agent/generic/v1）作为打分制质量评分。
 
 ## Goals / Non-Goals
 
@@ -8,7 +8,7 @@
 
 - 新建 `incubator/practice-injection/profile-update-command-boundary-v2/` 与 `incubator/practice-injection/project-directory-resource-state-v2/`（不改写 v1 与 #91/#125 历史身份）。
 - 每个 v2 candidate：真实工单口吻 task（声明可观察行为 + 自然语言基本分层要求）、占位 starter（保留传输 adapter，移除预置领域翻译/查询边界，无 `window.__` 埋点）、公开测试经 `page.route` 拦截 API、Practice 以项目内规范条件化注入。
-- 质量评分：登录页同款**确定性打分制 rubric judge**（criterion 级分数 + 阈值校准，纯静态分析、非 LLM）与升级后的职责探针并存；judge 分数作为软质量信号逐条件报告。
+- 质量评分：两个 v2 candidate 的 conditions.yaml 声明仓库级通用 LLM JudgeAgent（judge-agent/generic/v1，由 #153 实现——LLM 读需求生成评分标准再按标准打分），与升级后的职责探针并存；judge 分数作为软质量信号逐条件报告，判别力校准为强制门禁。
 - 生成并校验 snapshot，通过 public/private 泄露审计、`bun run validate`、OpenSpec strict；task.md 先提交需求方审批，真实环境验证由独立 agent 执行。
 
 **Non-Goals:**
@@ -16,7 +16,7 @@
 - 不修改两个 v1 candidate、#91/#125 执行计划与 scratch 结果；不执行模型调用、不创建正式 record、不升级 suite revision。
 - 不改写 `injection-calibration/v1` / `practice-card/v1`（保持冻结），仅复用已合并的 `injection-calibration/v2` + `project-convention/v1`。
 - 不新增 Practice 卡内容（沿用 `react.command-domain-boundary` / `react.query-resource-state` 语义，改写为项目内规范措辞）。
-- 不引入 LLM judge；不覆盖 runner、检索或正式执行。
+- 不引入 per-candidate 手写静态 judge（评分复用 #153 的通用 LLM judge）；不覆盖 runner、检索或正式执行。
 
 ## Decisions
 
@@ -109,3 +109,13 @@ v1 已有 #91 scratch 诊断结果与执行计划，禁止改写。新建 v2 独
    (starter semantic tests, kernel calibration, agent-perspective authenticity audit).
 
 
+
+## 评审补充记录（2026-08-06，PR #152 review）
+
+- **judge v1 行为冻结（N1）**：judge-agent/generic/v1 在本 change 消费期完成增强（rubric 生成注入六维工程质量规范、打分提示严格证据化、超时 300s、校准重复取样中位数 + 阈值 reference_min 50 / anti_pattern_max 70 / gap 10）并冻结于本 PR；此后任何行为变更须新建版本（judge-agent/generic/v2）或触发版本评审。
+- **校准阈值（N2）**：阈值为在两个 v2 candidate 夹具上按 LLM 分数分布观察后校准（reference_min 50 / anti_pattern_max 70 / gap 10），属验证集后拟合；后续新增 candidate 时须回归校准，避免阈值过松。
+- **工程质量规范先验（N3）**：rubric 生成的六维规范（transport-isolation / domain-delegation / boundary-translation / raw-response-containment / state-and-feedback / correctness）带有「分层架构」先验，对非分层任务（如检索、modal-focus 类 Practice）可能挤压被测维度；当前两个任务均为分层，先验适用；未来是否改为 candidate 可选声明待评估。
+- **职责探针词汇面（N5）**：verify-command-boundary.ts / verify-resource-state.ts 的领域翻译词表（name-taken/duplicate/conflict 等）与 response|reply 返回检查为词法耦合，等价实现若用 taken/nameInUse/occupied 等词可能误判；document.body 等 DOM 引用可能误报。已用 reference/equiv 夹具校准通过；扩大词表或改结构化断言列为后续公平性改进。
+esponse|reply 返回检查为词法耦合，等价实现若用 taken/nameInUse/occupied 等词可能误判；document.body 等 DOM 引用可能误报。已用 reference/equiv 夹具校准通过；扩大词表或改结构化断言列为后续公平性改进。
+- **defer（D1）**：oracle 条件注入的 docs/frontend-guide.md 会进入 candidate diff，judge 可能因「文档在场」而非「代码遵守」给分；方向性使用前补「文档在场但代码不遵守」负例。
+- **defer（D2）**：judge 校准原始 JSON（samples/checks/rubric hash）未入库，calibration.md 记录 env + 重放命令 + 中位数结果，可重放；提交原始输出可增强证据链。

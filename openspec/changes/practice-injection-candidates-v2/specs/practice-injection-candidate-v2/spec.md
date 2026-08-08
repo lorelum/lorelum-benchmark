@@ -87,4 +87,3 @@ v2 candidate MUST 作为独立修订存在（独立 source/snapshot/profile 身�
 #### Scenario: 不创建正式产物
 - **WHEN** v2 candidate 完成校准与验证
 - **THEN** 未执行模型调用、未创建正式 record、未进入默认 suite
-

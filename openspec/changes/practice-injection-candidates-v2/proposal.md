@@ -31,4 +31,3 @@
 - 复用：`injection-calibration/v2` profile 与 `project-convention/v1` 交付模板（#147 已合并）、`verify-command-boundary.ts` / `verify-resource-state.ts` 探针思路（按职责升级为 v2）、`source-map.ts` / `input.ts` / `outcome/v1` 契约。
 - 不改写：`profile-update-command-boundary-v1`、`project-directory-resource-state-v1`、#91/#125 执行计划与 scratch 结果。
 - 不进入默认 suite，不创建正式 record。
-
