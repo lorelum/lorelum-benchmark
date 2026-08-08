@@ -21,5 +21,5 @@
 
 - [x] 4.1 每个 v2 candidate 生成并校验 snapshot（un run snapshot.ts --write + un run validate Snapshots intact）；public/private 泄露审计 0 泄露。
 - [ ] 4.2 `bun run validate`、`bun test src/benchmark/judge src/benchmark/evaluator src/benchmark/runner/pi/v2`、OpenSpec strict validation、`git diff --check` 全绿，证据保留在 PR #152。
-- [ ] 4.3 由独立 agent 在真实运行环境执行验证（starter 语义测试、kernel 校准、agent 视角真实性审计），输出独立报告并集成到 PR #152。
+- [x] 4.3 由独立 agent 在真实运行环境执行验证（starter 语义测试、agent 视角真实性审计、泄露审计、结构完整性），输出独立报告并集成到 PR #152；发现并修复 package.json name 身份痕迹（中性化），其余通过。
 - [x] 4.4 终检：两个 v1 candidate、#91/#125 执行计划与 scratch 结果未改动；未执行 Pi/agent 模型调用（judge 的 LLM 调用为显式 opt-in 校准）、未创建正式 record、未升级 suite revision。
