@@ -1,16 +1,16 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "54f0dce8e4128969821a012691d498fbce2591362c3033fbd9e466adb3d96572",
+  "snapshot_id": "ef02d174076d01a81d4795945d191b12391b4b10b512f728e38a43a0563610d9",
   "files": {
     "private/calibration.md": "a3b54834498c14b9f81308d320dc168d2dc2272ecfc1f7c539a921026ad39392",
     "private/calibration/run.ts": "9326dc212ec3804a267cfc1446cda6732d5863154fcb452d7ee37b3ba5aa8f54",
-    "private/calibration/sets.yaml": "58beb43411e0df5039ee89db1fbca6535df3c4020f14791f030f46e5bb4ba403",
+    "private/calibration/sets.yaml": "32cb4403bdeb02780e1a7fe892d07885afce91fa2eaa259519e7862301a7a5f8",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/LoginPage.tsx": "43c4b50bfd6d8f5ac5a0043b4c6016d588ba7265847d25b1f40ade0d83912af1",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/profileClient.ts": "d75afe66343cfca18daa52985a0239e2c1c3ade8c990dee9d856a52f7fee9edd",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/bun.lock": "2411ef1e129227bbbf76d8b91cff5972ced4ce495bbe7e04f12ecdb37869c5bd",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/docs/profile-api.md": "db9319a000f6af2022e54c7425e599b13eae718a471bbda06b35f0954bd36037",
-    "private/calibration/sets/quality-probe/v1/overlays/candidate/package.json": "c4e460b847756e610bd06b35bdb64df4e9f0e4ee17979478ac76c265fd6f8865",
+    "private/calibration/sets/quality-probe/v1/overlays/candidate/package.json": "4470609a66f1f8b1af17d7df3d039b79f69be70b4f0b2aff13257e1c9004f233",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/src/LoginPage.tsx": "502b2bf288d56d32ef64f7e2bd9179b4fafc39b44b24f424b1ff79bf29f4c940",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/src/services/http.ts": "0987698c159e9c27d7d934d53813dff07fc4c9676f9de68d8d7e164ad01a653f",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/tests/profile.spec.ts": "664f78fd1972b5c0b3cd282aaeb5b49e356aefcfa90101dab97f5aefb493a78f",
@@ -32,7 +32,7 @@
     "public/starter/app/bun.lock": "2411ef1e129227bbbf76d8b91cff5972ced4ce495bbe7e04f12ecdb37869c5bd",
     "public/starter/app/docs/profile-api.md": "db9319a000f6af2022e54c7425e599b13eae718a471bbda06b35f0954bd36037",
     "public/starter/app/index.html": "b36af49da83924a85a52cd1994397b59329991d54907bd66c030881cc8001cd8",
-    "public/starter/app/package.json": "c4e460b847756e610bd06b35bdb64df4e9f0e4ee17979478ac76c265fd6f8865",
+    "public/starter/app/package.json": "4470609a66f1f8b1af17d7df3d039b79f69be70b4f0b2aff13257e1c9004f233",
     "public/starter/app/playwright.config.ts": "a2578cba0cfeecf802469c452ab9fae390e55cde7f52f3b5d2b0e57d0d591920",
     "public/starter/app/src/LoginPage.tsx": "502b2bf288d56d32ef64f7e2bd9179b4fafc39b44b24f424b1ff79bf29f4c940",
     "public/starter/app/src/main.tsx": "b9176417abcba0cc78ffa3ae0f21f93a99aadd715192777219bb0cbb3e972b99",
@@ -50,9 +50,9 @@
     "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "injection-calibration/v2",
     "materializer_kind": "react-vite",
-    "input_hash": "2556b99b41c97140a2ad4b2ef46bd848fb25012f86b7c0154698da2e19f77a89",
-    "materialized_output_hash": "88d9320dcfb360d88843b0728dd52ae508c6f7aa3050d2331ff5fd2f0bb01c9d",
+    "input_hash": "d18682f24ac9d1953dec5941f254dc3056546b40bf6585032a4f901c4116946f",
+    "materialized_output_hash": "bb60b713c6e037e918d40892ec1dcaf3723c9273864dcf2f665a5a81b6572f30",
     "profile_input_hash": "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
-    "calibration_sets_hash": "6e1e9ac7c1260b52bd03c6eb58edda7eddb1acd731455d5b1af7299a41206c9e"
+    "calibration_sets_hash": "ff0c93ce40dc803677653e838b713f01271256ab48a7cfbbbf37b94e0f81db46"
   }
 }

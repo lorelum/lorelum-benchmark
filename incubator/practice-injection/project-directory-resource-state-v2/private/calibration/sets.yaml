@@ -11,7 +11,7 @@ sets:
         extends: shared-react-vite
         overlay:
           path: private/calibration/sets/quality-probe/v1/overlays/candidate
-          sha256: 726572b27bf98815ce731f4232ec1ab65fb486a8571700df3e5ad41227b21f7e
+          sha256: 820842295a29b61caecfc184ddd71cfb9ef3feaedd819d938edb76729b11c879
       reference-tree:
         extends: candidate-foundation
         overlay:

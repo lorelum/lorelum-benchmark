@@ -1,16 +1,16 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "7b918a00ba04fe096bd929ec6188c72116208a74c50b9475daab1709e461f3dc",
+  "snapshot_id": "9733d5f6cf7e04415e90eab64796a21860d25175902854a3a5a15b8321242b05",
   "files": {
     "private/calibration.md": "10d93ce45d956b421425b261c692c0cba1bb67be8d6df256f58d0abd3d679912",
     "private/calibration/run.ts": "c7236ce4d117e1091d53ab37ceca5af54ca42da8b3c9ec2da70b3f86aa7feb05",
-    "private/calibration/sets.yaml": "0bb174d5739e00c4d43dbcdfd66e5f838fdb2f3931b7389a7f3d80d44b19740e",
+    "private/calibration/sets.yaml": "eada9a13cf2c6c5d12ac801edd94f3b27ffd79744add80a3caab0f0377608f74",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/LoginPage.tsx": "ad635009135f85f164099eee892270401621f5923fa030b0c7f2ec0cf2dc4708",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/directoryClient.ts": "421d00233f0b6f20e2aafd2701615f139361130a8c2af9cb34d5ebc9c29724d3",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/bun.lock": "2411ef1e129227bbbf76d8b91cff5972ced4ce495bbe7e04f12ecdb37869c5bd",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/docs/projects-api.md": "dacce5c156fcb1b1d146113c5244c6c03ccb45b7dba64330cd8100c60535f21a",
-    "private/calibration/sets/quality-probe/v1/overlays/candidate/package.json": "95db8ffc4937de7b8386933a9d19cc0aa34310b71c70c097a4e6de906490c6df",
+    "private/calibration/sets/quality-probe/v1/overlays/candidate/package.json": "4a9d5ba53ade373a0a5cab9a9201b33e24e9724abd1bb76bfb1373c8d0f9de30",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/src/LoginPage.tsx": "470b0521466050e592144424d5c2393641524f961b51c5eb344fab39e55da790",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/src/services/http.ts": "cdd1983ab2744b0495ab7b316fbf8bf1c03bb203e720a903b29c9285d4cbb7de",
     "private/calibration/sets/quality-probe/v1/overlays/candidate/tests/directory.spec.ts": "8e1fd896f00387a63ab328a79a0514c77e7e03427ab7b2ed9275deb1cbe16e25",
@@ -32,7 +32,7 @@
     "public/starter/app/bun.lock": "2411ef1e129227bbbf76d8b91cff5972ced4ce495bbe7e04f12ecdb37869c5bd",
     "public/starter/app/docs/projects-api.md": "dacce5c156fcb1b1d146113c5244c6c03ccb45b7dba64330cd8100c60535f21a",
     "public/starter/app/index.html": "b36af49da83924a85a52cd1994397b59329991d54907bd66c030881cc8001cd8",
-    "public/starter/app/package.json": "95db8ffc4937de7b8386933a9d19cc0aa34310b71c70c097a4e6de906490c6df",
+    "public/starter/app/package.json": "4a9d5ba53ade373a0a5cab9a9201b33e24e9724abd1bb76bfb1373c8d0f9de30",
     "public/starter/app/playwright.config.ts": "a2578cba0cfeecf802469c452ab9fae390e55cde7f52f3b5d2b0e57d0d591920",
     "public/starter/app/src/LoginPage.tsx": "470b0521466050e592144424d5c2393641524f961b51c5eb344fab39e55da790",
     "public/starter/app/src/main.tsx": "b9176417abcba0cc78ffa3ae0f21f93a99aadd715192777219bb0cbb3e972b99",
@@ -50,9 +50,9 @@
     "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "injection-calibration/v2",
     "materializer_kind": "react-vite",
-    "input_hash": "5ced2359d2704f0cac63d95ba3dfca00eae08dbac8e81d6ddc432f69cfbbee52",
-    "materialized_output_hash": "a6ff70bfd529906b2daa7ffd7ebae86a6b7a5c6e1e6647f47654803c1d0825a1",
+    "input_hash": "a1972d71ac2c0162e307dd8102c643606efe5d5937455183d05b34dfb66f157e",
+    "materialized_output_hash": "951b75da1eb33887884153fea74536c44b54ef128a81eba8f31c06516c0e0823",
     "profile_input_hash": "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
-    "calibration_sets_hash": "66d239193180e5efe64dd0b52bba20c4432c78ed65312cd90f7a3c78b422bdec"
+    "calibration_sets_hash": "463128bdfb36cc3cf88c67b51c0815875d4976807ac82a2c77dc9e5b0c91541f"
   }
 }
