@@ -1,0 +1,34 @@
+{
+  "schema_version": "practice-diagnostic-corpus/v1",
+  "sources": {
+    "v2-full-run": "v2-full-run/summary.json",
+    "v2-rerun-pdir": "v2-rerun-pdir/summary.json",
+    "login-retest-v2": "profile-diagnostics/login-v2-three-condition-retest-v2/summary.json"
+  },
+  "units": [
+    {
+      "candidate": "profile-update-command-boundary-v2",
+      "profile_input_hash": "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+      "primary": "v2-full-run",
+      "replacements": []
+    },
+    {
+      "candidate": "project-directory-resource-state-v2",
+      "profile_input_hash": "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+      "primary": "v2-full-run",
+      "replacements": [
+        { "condition_id": "oracle-practice", "repeat": 3, "source": "v2-rerun-pdir" }
+      ]
+    },
+    {
+      "candidate": "login-page-auth-flow-v2",
+      "profile_input_hash": "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+      "primary": "login-retest-v2",
+      "replacements": []
+    }
+  ],
+  "historical": {
+    "label": "history-75",
+    "note": "#75 非-kernel 历史候选（登录页旧 pilot），非 profile v1 结果，不可比较；仅作历史背景，不参与判定与分母。"
+  }
+}
