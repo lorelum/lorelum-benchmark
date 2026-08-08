@@ -79,5 +79,14 @@ Rollback leaves runner and outcome contracts untouched; the new helper is additi
 
 ## Planning Confirmation
 
-（规划澄清后回填：#155 的可观察行为、decision rule 语义、channel 中立验证范围、
-私有/脱敏边界与版本化确认。）
+需求方已确认以下口径（2026-08-08，plan-mode 提问）：
+
+- 判定口径：`signal` 要求 active_condition 的 joint-pass 严格多于每个 control；
+  相等或更低只算诊断性结论（与 #91/#92 strict rule 一致）。
+- channel 中立性验证：仅合成数据（practice 三条件 + skill 两条件 fixture），
+  不跑真实 skill、不调用模型。
+- 汇总输出：逐单元 verdict + 证据链 + 原始计数；跨 unit 只给判定分布与执行缺口，
+  不加权总分、不产出聚合 signal。
+- 命名/落点：`result-interpreter/v1`（避免与正式 record 的 `outcome/v1` 混淆）。
+- 版本化：新增共享 helper，不改 `outcome/v1`，不迁移 `profile-diagnostic-runner.ts`
+  现有总结逻辑。
