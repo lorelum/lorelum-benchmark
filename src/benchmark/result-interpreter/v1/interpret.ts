@@ -31,6 +31,13 @@ const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const traceKeyPattern = /^[a-z][a-z0-9_]*$/;
 const traceKeySuffixes = ["_id", "_version", "_sha256", "_hash"];
 
+/** Exact allowed key sets; any other field is treated as potential private content. */
+const sampleUnitKeys = ["candidate", "source_commit", "snapshot_id", "input_hash"] as const;
+const plannedAttemptKeys = ["condition_id", "repeat"] as const;
+const planKeys = ["sample_unit", "planned"] as const;
+const outcomeKeys = ["health", "semantic", "quality"] as const;
+const entryKeys = ["sample_unit", "condition_id", "repeat", "outcome", "trace"] as const;
+
 function fail(message: string): never {
   throw new Error(`Invalid result-interpreter/v1 input: ${message}`);
 }
@@ -43,6 +50,10 @@ function requiredString(value: Record<string, unknown>, field: string): string {
   const candidate = value[field];
   if (typeof candidate !== "string" || candidate.length === 0) fail(`${field} must be a non-empty string`);
   return candidate;
+}
+
+function unknownKeys(value: Record<string, unknown>, allowed: readonly string[]): string[] {
+  return Object.keys(value).filter((key) => !allowed.includes(key));
 }
 
 function plannedKey(conditionId: string, repeat: number): string {
@@ -240,6 +251,8 @@ function interpretUnit(plan: UnitPlan, entries: AttemptEntry[], rule: DecisionRu
  * Interprets normalized attempt entries into an audited summary. Fails closed
  * on malformed contracts; per-unit gates (identity, denominator, redaction,
  * health, quality) turn into `uncertain` verdicts with reasons instead.
+ * Unknown/private fields anywhere in a unit (entry, sample_unit, outcome, plan,
+ * trace) are treated as a redaction failure rather than silently accepted.
  */
 export function interpret(input: InterpretationInput): InterpreterSummary {
   if (!Array.isArray(input.units) || input.units.length === 0) fail("units must be a non-empty array");
@@ -250,6 +263,15 @@ export function interpret(input: InterpretationInput): InterpreterSummary {
 
   for (const unit of input.units) {
     if (!isRecord(unit)) fail("unit must be an object");
+    let planRedactionFailed = false;
+    if (isRecord(unit.plan)) {
+      const planUnknown = unknownKeys(unit.plan, planKeys);
+      const sampleUnknown = isRecord(unit.plan.sample_unit) ? unknownKeys(unit.plan.sample_unit, sampleUnitKeys) : [];
+      const plannedUnknown = Array.isArray(unit.plan.planned)
+        ? unit.plan.planned.flatMap((raw) => (isRecord(raw) ? unknownKeys(raw, plannedAttemptKeys) : []))
+        : [];
+      planRedactionFailed = planUnknown.length + sampleUnknown.length + plannedUnknown.length > 0;
+    }
     const plan = validatePlan(unit.plan);
     const rule = validateDecisionRule(unit.decision_rule);
     const entries = unit.entries;
@@ -259,9 +281,20 @@ export function interpret(input: InterpretationInput): InterpreterSummary {
     unitKeys.add(key);
 
     const validatedEntries: AttemptEntry[] = [];
-    let redactionFailed = false;
+    let redactionFailed = planRedactionFailed;
     for (const raw of entries) {
       if (!isRecord(raw)) fail("entry must be an object");
+      const sampleUnitRecord = isRecord(raw.sample_unit) ? raw.sample_unit : undefined;
+      const outcomeRecord = isRecord(raw.outcome) ? raw.outcome : undefined;
+      const unknown = [
+        ...unknownKeys(raw, entryKeys),
+        ...(sampleUnitRecord ? unknownKeys(sampleUnitRecord, sampleUnitKeys) : []),
+        ...(outcomeRecord ? unknownKeys(outcomeRecord, outcomeKeys) : []),
+      ];
+      if (unknown.length > 0) {
+        redactionFailed = true;
+        continue;
+      }
       const sampleUnit = validateSampleUnit(raw.sample_unit);
       const conditionId = requiredString(raw, "condition_id");
       const repeat = raw.repeat;
@@ -273,15 +306,12 @@ export function interpret(input: InterpretationInput): InterpreterSummary {
         redactionFailed = true;
         continue;
       }
-      const exceptions = raw.exceptions;
-      if (exceptions !== undefined && (!Array.isArray(exceptions) || !exceptions.every((item) => typeof item === "string"))) fail("entry.exceptions must be an array of strings");
       validatedEntries.push({
         sample_unit: sampleUnit,
         condition_id: conditionId,
         repeat: repeat as number,
         outcome,
         trace: traceResult.trace,
-        ...(exceptions !== undefined ? { exceptions } : {}),
       });
     }
 

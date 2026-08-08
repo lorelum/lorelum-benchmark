@@ -235,3 +235,26 @@ test("duplicate units are rejected", () => {
     ],
   })).toThrow(/duplicate unit/);
 });
+test("unknown private fields on entry, sample_unit, or outcome are rejected fail-closed", () => {
+  const badEntries: Array<Record<string, unknown>> = [
+    { ...entry("baseline", 1), practice_text: "the login page must show the current user name" },
+    { ...entry("baseline", 1), sample_unit: { ...unit(), private_path: "private/practices/login-card.md" } },
+    { ...entry("baseline", 1), outcome: { health: "evaluated", semantic: "pass", quality: "observed", raw_body: "..." } },
+  ];
+  for (const bad of badEntries) {
+    const entries = practiceEntries({ baseline: 1, "oracle-practice": 3, "irrelevant-practice": 0 });
+    entries[0] = bad as unknown as AttemptEntry;
+    const summary = interpret(input(practiceRule, [{ plan: practicePlan(), entries }]));
+    expect(summary.units[0].verdict).toBe("uncertain");
+    expect(summary.units[0].reasons).toContain("redaction-failed");
+  }
+});
+
+test("unknown private fields on the plan are rejected fail-closed", () => {
+  const plan = practicePlan() as unknown as Record<string, unknown>;
+  plan.workspace_path = "C:/private/path";
+  const entries = practiceEntries({ baseline: 1, "oracle-practice": 3, "irrelevant-practice": 0 });
+  const summary = interpret(input(practiceRule, [{ plan: plan as unknown as UnitPlan, entries }]));
+  expect(summary.units[0].verdict).toBe("uncertain");
+  expect(summary.units[0].reasons).toContain("redaction-failed");
+});

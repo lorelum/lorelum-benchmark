@@ -20,7 +20,11 @@ export type SampleUnit = {
   input_hash: string;
 };
 
-/** One planned attempt slot inside a unit. */
+/**
+ * One planned attempt slot inside a unit. `repeat` is a 1-based positive
+ * integer; each `condition_id × repeat` slot must be unique within a unit
+ * (runner-side `block`/`repeat` numbering must be mapped to this by adapters).
+ */
 export type PlannedAttempt = {
   condition_id: string;
   repeat: number;
@@ -49,7 +53,6 @@ export type AttemptEntry = {
   repeat: number;
   outcome: OutcomeEntry;
   trace: RedactedTrace;
-  exceptions?: string[];
 };
 
 /**
@@ -94,6 +97,11 @@ export type InterpreterSummary = {
   generated_at: string;
   units: UnitVerdict[];
   cross_unit: CrossUnitSummary;
+  /**
+   * Indicates only whether any unit is `uncertain`; it is never `signal` and is
+   * not an aggregate conclusion. Cross-unit output is intentionally
+   * diagnostic-only per #155 (no weighted scores, no aggregate signal).
+   */
   overall: "diagnostic-only" | "uncertain";
 };
 

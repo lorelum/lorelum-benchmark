@@ -5,7 +5,7 @@
 The interpreter MUST accept normalized attempt entries that carry only channel-neutral
 fields: sample-unit identity (candidate, source_commit, snapshot_id, input_hash),
 condition id, repeat, outcome expressed with the `outcome/v1` vocabulary, a redacted
-injection trace, and optional exceptions. The interpreter MUST NOT require or emit
+injection trace. The interpreter MUST NOT require or emit
 practice- or skill-specific fields, and MUST apply a decision rule supplied as data
 by the caller rather than hardcoded condition names.
 

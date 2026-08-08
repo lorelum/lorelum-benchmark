@@ -14,7 +14,7 @@ practice adapter 并用登录页 Practice 验证，#92 据此汇总扩大样本�
 - 新增版本化共享 helper `src/benchmark/result-interpreter/v1/`，核心与注入通道无关。
 - 中立 attempt 契约复用 `outcome/v1`（execution health、semantic、quality、
   `joint_pass`），并补充 sample unit 身份（candidate、source_commit、snapshot_id、
-  input_hash）、`condition_id`、`repeat`、脱敏注入 trace、异常与计划分母。
+  input_hash）、`condition_id`、`repeat`、脱敏注入 trace 与计划分母。
 - decision rule 由调用方以数据声明（`metric`、`active_condition`、`controls`、
   `relation`、`otherwise`），核心不硬编码任一通道的条件集合。
 - 三层验收 gate：输入身份一致性 + 分母完整性、脱敏/泄露 fail-closed、

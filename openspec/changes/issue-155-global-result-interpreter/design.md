@@ -55,6 +55,19 @@ quality indeterminate、身份漂移或泄露字段 → 该 unit 记为 `uncerta
 evaluated；否则 `diagnostic-only`；有缺口 / 身份 / 泄露问题 → `uncertain`。汇总的
 跨 unit 部分只报告判定分布与执行缺口，不产出聚合 signal。
 
+### Quality gap definition (v1)
+
+v1 只把 quality `indeterminate` 视为执行缺口 → `uncertain`；`not-run` 与
+`judge-unavailable` 按“非 observed”处理（joint_pass=false），不触发 uncertain。
+该口径在 #155 规划确认时锁定，代码中以 `gapQualityStates` 集中表示；#156/#92
+接入真实 judge 结果时再决定是否将 `not-run`/`judge-unavailable` 升级为缺口。
+
+### overall 语义
+
+`InterpreterSummary.overall` 只表示“是否存在 uncertain 单元”，取值仅为
+`diagnostic-only` 或 `uncertain`，永远不是 `signal`，也不代表聚合结论；跨 unit
+聚合是刻意保持诊断性的（#155 确认，禁止加权总分与聚合 signal）。
+
 ### Additive versioning
 
 `result-interpreter/v1` 是新增共享 helper；不改 outcome/v1，不迁移 runner 现有
