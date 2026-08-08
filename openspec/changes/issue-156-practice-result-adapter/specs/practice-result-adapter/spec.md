@@ -42,12 +42,19 @@ The login-page replay MUST run the adapter and interpreter over the existing
 login-v2-three-condition-retest-v2 scratch summary and produce a redacted
 `result-interpreter-summary/v1` with per-unit verdicts. The strict decision rule MUST be
 applied: oracle joint-pass strictly above both baseline and irrelevant-practice yields
-`signal`; execution gaps or indeterminate quality yield `uncertain`.
+`signal` only when every planned attempt is evaluated; any execution gap (missing attempt,
+non-evaluated, or indeterminate quality) yields `uncertain`.
 
-#### Scenario: Oracle strictly leads both controls
-- **WHEN** all planned attempts are evaluated and oracle joint-pass is 3 vs baseline 1 and
+#### Scenario: Oracle strictly leads both controls with all attempts evaluated
+- **WHEN** every planned attempt is evaluated and oracle joint-pass is 3 vs baseline 1 and
   irrelevant-practice 2
 - **THEN** the unit verdict is `signal` with the per-unit evidence
+
+#### Scenario: Real replay reports execution gaps as uncertain
+- **WHEN** the login-v2-three-condition-retest-v2 corpus contains an execution-failed
+  oracle and baseline attempt
+- **THEN** the unit verdict is `uncertain` with an unhealthy-attempt reason and the
+  cross-unit output lists the execution gap
 
 #### Scenario: Gap path stays uncertain
 - **WHEN** a planned attempt is missing or a quality state is indeterminate

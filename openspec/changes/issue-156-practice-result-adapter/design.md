@@ -49,11 +49,14 @@ adapter 直接消费 v3 的 `entries` 与 `plan.schedule`，不解析 per-attemp
 
 ### 登录页验证与口径差异
 
-对 `login-v2-three-condition-retest-v2`（6 重复，18/18 completed）回放：
-oracle joint-pass=3、baseline=1、irrelevant=2 → 解释器 strict verdict = `signal`。
-既有 `report.conclusion_grade` 为 `diagnostic-or-uncertain`——旧口径更保守；差异作为
-解释器口径说明记录，不视为错误。缺口路径（缺失 attempt / 非 evaluated / indeterminate
-quality）必须输出 `uncertain`。
+对 `login-v2-three-condition-retest-v2`（6 重复）回放：oracle joint-pass=3、
+baseline=1、irrelevant=2，但其中 oracle#3（evaluator-cleanup-unverified）与
+baseline#5（Pi timed out）为 `execution-failed`。解释器严格 gate 将单元判为
+`uncertain`（unhealthy-attempt），overall=uncertain——即使 oracle 在已评估 attempt
+中领先，任何执行异常都阻止 signal。旧 `report.conclusion_grade` 为
+`diagnostic-or-uncertain`；解释器口径更严格且逐 attempt 可审计，差异作为口径说明
+记录。合成 fixture（全部 evaluated）验证 strict lead → signal；缺口路径（缺失
+attempt / 非 evaluated / indeterminate quality）必须输出 `uncertain`。
 
 ### Quality gap 集合
 
@@ -77,4 +80,10 @@ Rollback leaves `result-interpreter/v1` and the runner untouched; the adapter is
 
 ## Planning Confirmation
 
-（规划澄清后回填：#156 输入源、登录页验证范围、quality gap 口径。）
+需求方已确认以下口径（2026-08-08，全部按推荐）：
+
+- adapter 输入源：直接消费 `profile-diagnostic-summary/v3`（`entries` + `plan.schedule`，
+  `block`=1 起 repeat），不解析 per-attempt 目录。
+- 登录页验证范围：仅回放现有 scratch（`login-v2-three-condition-retest-v2`），不补跑模型。
+- quality gap 口径：维持 #155 v1（仅 `indeterminate` 视为缺口 → uncertain；
+  `not-run` / judge 不可用按“非 observed”处理），留待 #92 按真实数据复核。
