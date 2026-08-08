@@ -88,6 +88,6 @@ for (const binding of bindings.filter((binding) => calls.has(binding.name) && bi
 
 const boundary = boundaries.find((text) => /\.status/.test(text));
 if (!boundary) emit("not-observed", "no-transport-boundary");
-if (!/(name-taken|duplicate|conflict)/.test(boundary)) emit("not-observed", "missing-domain-translation");
-if (/return\s+(response|reply)\s*[;}]/.test(boundary)) emit("not-observed", "returns-transport-response");
+if (!/(name[-_]?taken|name[-_]?in[-_]?use|duplicate|conflict|occupied)/i.test(boundary)) emit("not-observed", "missing-domain-translation");
+if (/return\s+(response|reply|res)\s*[;}]/.test(boundary)) emit("not-observed", "returns-transport-response");
 emit("observed");
