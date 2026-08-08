@@ -1,0 +1,18 @@
+id: profile-update-command-boundary-v2
+semantic_oracle:
+  command: bun run test
+  assertions:
+    - 页面加载后显示当前显示名
+    - 显示名非空且最多 20 个字符的校验
+    - 保存期间输入与按钮禁用且只发起一次保存请求
+    - 保存成功显示“资料已保存”，名称冲突显示“名称已被使用”
+practice_observation:
+  command: bun run private/evaluator/verify-command-boundary.ts public/starter/app
+  signal_only: true
+  responsibilities:
+    - 组件不得直接导入 HTTP adapter、直接调用 transport 或读取传输响应（名称无关的结构检查，不限于 response 命名）
+    - 每个提交路径 await 一个组件外的命令/领域操作
+    - 边界模块负责实际 transport 请求
+    - 冲突（409）在边界模块内转换为领域结果（如 name-taken/duplicate/conflict）
+    - 边界模块不把原始 response 或 response.body 返回给组件（名称无关）
+baseline_expected_result: { semantic: fail, practice_observation: not-observed }

@@ -19,7 +19,7 @@ function fail(message: string): never {
 export function assertGeneratedRubric(value: unknown): GeneratedRubric {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("root must be an object");
   const root = value as Record<string, unknown>;
-  if (!Array.isArray(root.dimensions) || root.dimensions.length < 1 || root.dimensions.length > 5) fail("dimensions must be an array of 1-5 entries");
+  if (!Array.isArray(root.dimensions) || root.dimensions.length < 1 || root.dimensions.length > 6) fail("dimensions must be an array of 1-6 entries");
   const seen = new Set<string>();
   let total = 0;
   const dimensions: GeneratedRubricDimension[] = [];
@@ -50,12 +50,31 @@ export function parseRubricText(text: string): GeneratedRubric {
   return assertGeneratedRubric(JSON.parse(text) as unknown);
 }
 
+/**
+ * Engineering-quality guideline the rubric designer must reason with.
+ * This encodes the same careful review standards the repository previously
+ * hand-wrote per candidate (transport isolation, domain delegation, boundary
+ * translation, raw-response containment), so the LLM generates rubrics with
+ * the same discrimination power for any task.
+ */
+export const rubricQualityGuideline = `Scoring guideline - reason carefully with these engineering quality dimensions and select the ones that matter for THIS task (not all apply to every task):
+
+1. transport-isolation: the UI/component layer must not directly call HTTP clients (fetch/axios/adapters), read raw HTTP status codes, or consume raw response bodies; request/response handling belongs in a boundary (api/service) module.
+2. domain-delegation: event handlers and page logic await operations delegated to a module outside the component; the component does not implement request/response plumbing inline.
+3. boundary-translation: the boundary module owns the actual transport call and translates expected transport outcomes (success, auth/conflict/not-found/unavailable failures) into domain-shaped results or explicit resource states (e.g. ready/empty/failed); components consume domain results, not status codes.
+4. raw-response-containment: raw transport response/body values must not flow back into component state, return values, or the component-facing contract.
+5. state-and-feedback: loading, empty, error, success, and retry states are handled explicitly and correctly; duplicate submissions are prevented; validation is correct and reflected in the UI.
+6. correctness: the task's stated observable behaviors are all implemented.
+
+For each dimension you select, write a description that names concrete observable evidence a reviewer can check in code (for example "the component reads response.status directly" or "a boundary module translates 409 into a domain conflict result").`;
+
 export function rubricSystemPrompt(): string {
   return [
     "You are a benchmark rubric designer. Read the coding task and produce a scoring rubric.",
+    rubricQualityGuideline,
     "Return ONLY a JSON object with this exact shape:",
-    '{"dimensions":[{"id":"kebab-case-id","name":"short name","description":"what quality this dimension measures and what observable behavior satisfies it","max_points":30}]}',
-    "Rules: 1 to 5 dimensions; max_points are positive integers summing to 100; ids are kebab-case [a-z0-9-]; descriptions are concrete and observable, not tied to file names or private details.",
+    '{"dimensions":[{"id":"kebab-case-id","name":"short name","description":"what quality this dimension measures and what concrete observable evidence satisfies it","max_points":30}]}',
+    "Rules: 1 to 6 dimensions; max_points are positive integers summing to 100; ids are kebab-case [a-z0-9-]; descriptions are concrete and evidence-based, not tied to file names or private details; do not copy the guideline verbatim - adapt it to this task.",
   ].join("\n");
 }
 

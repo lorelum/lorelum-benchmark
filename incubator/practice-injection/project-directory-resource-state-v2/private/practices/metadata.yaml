@@ -1,0 +1,17 @@
+delivery_template: project-convention/v1
+length_metric: project-convention/v1:utf8-rendered-characters
+cards:
+  - id: project-directory.query-resource-state
+    version: v1
+    path: directory.query-resource-state.v1.md
+    rendered_characters: 303
+    target_path: docs/frontend-guide.md
+  - id: project-directory.avatar-fallback
+    version: v1
+    path: irrelevant.avatar-fallback.v1.md
+    rendered_characters: 294
+    target_path: docs/frontend-guide.md
+comparison:
+  maximum_relative_difference: 0.10
+  actual_relative_difference: 0.029703
+  independently_reviewed: true
