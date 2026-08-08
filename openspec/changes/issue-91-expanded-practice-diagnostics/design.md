@@ -100,3 +100,24 @@ was produced, so task 5.2 remains incomplete and this timeout is not candidate
 evidence. The kernel isolate check's known same-name dependency false positive
 remains outside #91; the retained evidence is the runner public-only test and
 the materialized public-path audit.
+
+## v2 范围扩展（2026-08-08，需求方确认：v2 只是优化，未改条件）
+
+### 范围
+
+#151 交付的两个 v2 candidate（`profile-update-command-boundary-v2`、`project-directory-resource-state-v2`）在本 change 下完成执行前小幅修订与三条件诊断执行。条件集（baseline/oracle-practice/irrelevant-practice）、Practice 注入通道、公开题面不变；仅执行 v2 候选 + 修订执行参数/探针。
+
+### 决策：预算与探针修订
+
+- 每 attempt 预算 10 → 25 分钟（deepseek-v4-pro 较慢，v1 曾 10 分钟未收束）。
+- 探针领域翻译检查改为结构化（接受 taken/409/type-kind-outcome 判别词），修复 review N5 词法误判；重校准矩阵 4/4 通过；snapshot 重生成；两个候选的 `private/calibration.md` 已同步记录。
+
+### 执行状态（scratch，2026-08-08）
+
+- `practice-injection-candidates-v2-three-condition-diagnostics-v1`：2 candidate × 3 条件 × 3 重复 = 18 attempts（deepseek-v4-pro，25min/attempt；judge `judge-agent/generic/v1`，deepseek-v4-flash，真实 opt-in）。
+- smoke：`practice-injection-profile-update-v2-one-repeat-smoke`（1 次验证管线与模型行为）。
+- 补跑：`practice-injection-project-directory-v2-one-repeat-rerun`（project-directory oracle block-3 Pi 超时后补跑 1 次）。
+- 结果：profile-update oracle 3/3 > baseline 1/3、irrelevant 1/3；project-directory oracle 3/3 > baseline 0/3、irrelevant 0/3（含补跑）→ 两候选方向性信号；judge 聚合 oracle 更高。
+- 结论：仅方向性/诊断；条件 C（真实检索）未实现；扩样需等真实 lorelum practice；#91 完成后 #92 汇总。
+- N2 分母规则：re-admission 补跑槽位只替换失败槽位、不新增分母、不跨 plan 合并计数（不同 plan id/repetitions 不得相加）。
+- 未创建正式 record、未升级 suite revision；v1 候选与历史不动。

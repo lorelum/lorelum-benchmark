@@ -9,7 +9,7 @@ candidates:
   - id: profile-update-command-boundary-v2
     path: incubator/practice-injection/profile-update-command-boundary-v2
     source_commit: 50fdd8b939e5b4271888e1e1293dd23fd7e62540
-    snapshot_id: 7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf
+    snapshot_id: f2bad59e14a26543af4c043189fe0519906065df68eca40224d141a148be4286
     profile_input_hash: cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570
 execution_gate:
   kind: one-repeat-re-admission

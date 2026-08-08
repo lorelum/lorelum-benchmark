@@ -9,10 +9,10 @@ candidates:
   - id: profile-update-command-boundary-v2
     path: incubator/practice-injection/profile-update-command-boundary-v2
     source_commit: 50fdd8b939e5b4271888e1e1293dd23fd7e62540
-    snapshot_id: 7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf
+    snapshot_id: f2bad59e14a26543af4c043189fe0519906065df68eca40224d141a148be4286
     profile_input_hash: cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570
   - id: project-directory-resource-state-v2
     path: incubator/practice-injection/project-directory-resource-state-v2
     source_commit: 50fdd8b939e5b4271888e1e1293dd23fd7e62540
-    snapshot_id: 239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8
+    snapshot_id: bc5ed0fb419bf43357d953718d56e9f1368147fbb3f02d03403c59bc64472e5b
     profile_input_hash: c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53

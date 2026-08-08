@@ -25,3 +25,12 @@
 
 - [x] 5.1 Execute the first declared candidate's fixed three-repeat screen from `balanced-diagnostics-v2`; retain only redacted scratch evidence and bind it to the active runner source. (9/9 attempts completed; candidate result is `directional-screen`.)
 - [ ] 5.2 Execute the second declared candidate's fixed three-repeat screen only after an explicit continuation decision; do not combine incomplete candidate denominators or emit an aggregate conclusion. (Continuation plan and prerequisites passed; first attempt timed out before evaluation, so no candidate result or aggregate conclusion was emitted.)
+
+## 6. v2 candidate 三条件诊断执行（需求方确认扩展，2026-08-08）
+
+- [x] 6.1 完成 v2 执行前小幅修订：两个 v2 candidate 每 attempt 预算 10→25 分钟；探针领域翻译检查改为结构化（接受 taken/409/type-kind-outcome 判别词，N5）；探针矩阵重校准 4/4；snapshot 重生成；`private/calibration.md` 同步记录。
+- [x] 6.2 新增 v2 执行计划并 dry-run：`practice-injection-candidates-v2-three-condition-diagnostics-v1`（2 candidate × 3 条件 × 3 重复）、`practice-injection-profile-update-v2-one-repeat-smoke`（smoke）、`practice-injection-project-directory-v2-one-repeat-rerun`（补跑）。
+- [x] 6.3 执行 smoke（3 attempts）验证模型行为与管线；确认 oracle 遵循 Practice、baseline 偶发自建边界。
+- [x] 6.4 执行全量 18 attempts（2 candidate × 3 条件 × 3 重复）并补跑 project-directory oracle block-3（re-admission，替换失败槽位，不新增分母）。
+- [x] 6.5 汇总 scratch 结果：profile-update oracle 3/3 > baseline 1/3、irrelevant 1/3；project-directory oracle 3/3 > baseline 0/3、irrelevant 0/3 → 两候选方向性信号；judge 聚合 oracle 更高。
+- [x] 6.6 记录 #92 聚合分母规则（N2）：re-admission 补跑槽位替换失败槽位、不跨 plan 合并计数；结论仅方向性/诊断，不宣称精准注入；条件 C 未实现。

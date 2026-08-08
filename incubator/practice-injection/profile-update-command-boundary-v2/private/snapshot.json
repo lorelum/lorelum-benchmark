@@ -1,9 +1,9 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+  "snapshot_id": "f2bad59e14a26543af4c043189fe0519906065df68eca40224d141a148be4286",
   "files": {
-    "private/calibration.md": "a3b54834498c14b9f81308d320dc168d2dc2272ecfc1f7c539a921026ad39392",
+    "private/calibration.md": "f0dd7533215fba7faff7556f5c93d4f5b1b3ea3896d7f12eb935354a8e12f3fe",
     "private/calibration/run.ts": "9326dc212ec3804a267cfc1446cda6732d5863154fcb452d7ee37b3ba5aa8f54",
     "private/calibration/sets.yaml": "32cb4403bdeb02780e1a7fe892d07885afce91fa2eaa259519e7862301a7a5f8",
     "private/calibration/sets/quality-probe/v1/overlays/anti-pattern/src/LoginPage.tsx": "43c4b50bfd6d8f5ac5a0043b4c6016d588ba7265847d25b1f40ade0d83912af1",

@@ -22,4 +22,4 @@ None. The runner must conform to its existing published requirements; this chang
 
 - Extends `src/benchmark/runner/pi/v2/` and focused tests with a redacted, plan-derived one-repeat gate.
 - Uses existing private calibration/runtime inputs only in isolated workspaces; summaries exclude Practice text, evaluator/oracle material, private paths, and workspace paths.
-- Creates no formal manifest, record, suite revision, or candidate-source change. Related issue: #91.
+- Creates no formal manifest, record, suite revision, or candidate-source change. Related issue: #91.\n- v2 范围：#151 交付的两个 v2 candidate 在本 change 中完成执行前小幅修订（预算/探针/snapshot，属 candidate 阶段修订，已同步 private/calibration.md）与三条件诊断执行；不升级 suite revision、不创建正式 record。
