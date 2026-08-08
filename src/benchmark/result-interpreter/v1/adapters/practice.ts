@@ -61,13 +61,25 @@ function traceKeyAllowed(key: string): boolean {
   return key === "channel" || traceKeySuffixes.some((suffix) => key.endsWith(suffix));
 }
 
+const identifierPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+/**
+ * Validates that a trace contains only opaque identifiers/hashes. Value-level
+ * checks mirror the interpreter core's redaction gate so private content is
+ * rejected at the adapter (clearer error); the core still re-validates on
+ * interpretation as a defense-in-depth backstop.
+ */
 function parseTrace(value: unknown): RedactedTrace {
   if (!isRecord(value)) fail("entry.trace must be an object");
   const trace: RedactedTrace = {};
   for (const [key, raw] of Object.entries(value)) {
     if (typeof raw !== "string") fail(`entry.trace.${key} must be a string`);
     if (!traceKeyAllowed(key)) fail(`entry.trace.${key} is not a redacted id/hash field`);
-    trace[key] = raw;
+    const field = raw;
+    if (field.length === 0 || field.length > 128 || field === "." || field === "..") fail(`entry.trace.${key} is not a valid identifier/hash`);
+    if (field.includes("/") || field.includes("\\") || field.includes(":")) fail(`entry.trace.${key} must not contain a path`);
+    if (!identifierPattern.test(field)) fail(`entry.trace.${key} is not a valid identifier/hash`);
+    trace[key] = field;
   }
   return trace;
 }
@@ -120,6 +132,9 @@ function sampleUnitFrom(value: { candidate: string; source_commit: string; snaps
 }
 
 function planFromSchedule(schedule: ScheduleEntry[]): UnitPlan {
+  // Unit identity comes from the first schedule entry; any drift among entries
+  // within the same candidate x profile_input_hash is surfaced by the core's
+  // identity gate as an uncertain unit (fail-closed backstop).
   const first = schedule[0];
   return {
     sample_unit: { candidate: first.id, source_commit: first.source_commit, snapshot_id: first.snapshot_id, input_hash: first.profile_input_hash },

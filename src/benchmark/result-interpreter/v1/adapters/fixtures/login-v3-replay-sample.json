@@ -1,0 +1,570 @@
+{
+    "schema_version":  "profile-diagnostic-summary/v3",
+    "generated_at":  "2026-08-06T03:15:50.958Z",
+    "plan":  {
+                 "id":  "login-page-auth-flow-v2-three-condition-retest-v2",
+                 "schedule_seed":  "login-page-auth-flow-v2-retest-2026-08-06",
+                 "schedule_algorithm":  "cyclic-latin-square/v1",
+                 "repetitions":  6,
+                 "schedule":  [
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  1,
+                                      "planned_position":  1,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  1,
+                                      "planned_position":  2,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  1,
+                                      "planned_position":  3,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  2,
+                                      "planned_position":  1,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  2,
+                                      "planned_position":  2,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  2,
+                                      "planned_position":  3,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  3,
+                                      "planned_position":  1,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  3,
+                                      "planned_position":  2,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  3,
+                                      "planned_position":  3,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  4,
+                                      "planned_position":  1,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  4,
+                                      "planned_position":  2,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  4,
+                                      "planned_position":  3,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  5,
+                                      "planned_position":  1,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  5,
+                                      "planned_position":  2,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  5,
+                                      "planned_position":  3,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  6,
+                                      "planned_position":  1,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  6,
+                                      "planned_position":  2,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "login-page-auth-flow-v2",
+                                      "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                                      "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "block":  6,
+                                      "planned_position":  3,
+                                      "condition":  "irrelevant-practice"
+                                  }
+                              ]
+             },
+    "entries":  [
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  1,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.frontend-layering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "6a90238898a8caed181ffdbe697d8984f6bc8a8d99d6479f7de7baefea4e7fb6"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  true,
+                        "block":  1,
+                        "planned_position":  1,
+                        "actual_execution_position":  1,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  1,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.list-rendering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "62c15bb04e7fad226a049bd1aa5ff53c357669a8f571b65c2fc3a256fb404621"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  1,
+                        "planned_position":  2,
+                        "actual_execution_position":  2,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "baseline",
+                        "repeat":  1,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  1,
+                        "planned_position":  3,
+                        "actual_execution_position":  3,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  2,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.list-rendering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "62c15bb04e7fad226a049bd1aa5ff53c357669a8f571b65c2fc3a256fb404621"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  2,
+                        "planned_position":  1,
+                        "actual_execution_position":  4,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "baseline",
+                        "repeat":  2,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  2,
+                        "planned_position":  2,
+                        "actual_execution_position":  5,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  2,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.frontend-layering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "6a90238898a8caed181ffdbe697d8984f6bc8a8d99d6479f7de7baefea4e7fb6"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  true,
+                        "block":  2,
+                        "planned_position":  3,
+                        "actual_execution_position":  6,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "baseline",
+                        "repeat":  3,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  3,
+                        "planned_position":  1,
+                        "actual_execution_position":  7,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  3,
+                        "evaluation_status":  "execution-failed",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.frontend-layering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "6a90238898a8caed181ffdbe697d8984f6bc8a8d99d6479f7de7baefea4e7fb6"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  null,
+                        "block":  3,
+                        "planned_position":  2,
+                        "actual_execution_position":  8,
+                        "error":  "evaluator-cleanup-unverified"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  3,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.list-rendering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "62c15bb04e7fad226a049bd1aa5ff53c357669a8f571b65c2fc3a256fb404621"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  3,
+                        "planned_position":  3,
+                        "actual_execution_position":  9,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  4,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.frontend-layering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "6a90238898a8caed181ffdbe697d8984f6bc8a8d99d6479f7de7baefea4e7fb6"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  true,
+                        "block":  4,
+                        "planned_position":  1,
+                        "actual_execution_position":  10,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  4,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.list-rendering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "62c15bb04e7fad226a049bd1aa5ff53c357669a8f571b65c2fc3a256fb404621"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  true,
+                        "block":  4,
+                        "planned_position":  2,
+                        "actual_execution_position":  11,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "baseline",
+                        "repeat":  4,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  true,
+                        "block":  4,
+                        "planned_position":  3,
+                        "actual_execution_position":  12,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  5,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.list-rendering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "62c15bb04e7fad226a049bd1aa5ff53c357669a8f571b65c2fc3a256fb404621"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  true,
+                        "block":  5,
+                        "planned_position":  1,
+                        "actual_execution_position":  13,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "baseline",
+                        "repeat":  5,
+                        "evaluation_status":  "execution-failed",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  null,
+                        "block":  5,
+                        "planned_position":  2,
+                        "actual_execution_position":  14,
+                        "error":  "Pi timed out"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  5,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.frontend-layering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "6a90238898a8caed181ffdbe697d8984f6bc8a8d99d6479f7de7baefea4e7fb6"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  5,
+                        "planned_position":  3,
+                        "actual_execution_position":  15,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "baseline",
+                        "repeat":  6,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  6,
+                        "planned_position":  1,
+                        "actual_execution_position":  16,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  6,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.frontend-layering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "6a90238898a8caed181ffdbe697d8984f6bc8a8d99d6479f7de7baefea4e7fb6"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  6,
+                        "planned_position":  2,
+                        "actual_execution_position":  17,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "login-page-auth-flow-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  6,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                                      "practice_id":  "login-page.list-rendering",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "62c15bb04e7fad226a049bd1aa5ff53c357669a8f571b65c2fc3a256fb404621"
+                                  },
+                        "source_commit":  "f10d672394402a819efe3ca0cdd1d5c4eab93f55",
+                        "snapshot_id":  "1519423103dfcb0ecb9e10314345c0098bb39e532c9a086d59631cc0d06b524f",
+                        "profile_input_hash":  "c9d38b6c90604796f97421cb79453730146eca73aa6fb1eab7a81a664ac1d083",
+                        "joint_pass":  false,
+                        "block":  6,
+                        "planned_position":  3,
+                        "actual_execution_position":  18,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    }
+                ]
+}

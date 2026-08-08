@@ -10,7 +10,7 @@
 
 ## 3. Login-page replay validation
 
-- [x] 3.1 Replay `scratch/profile-diagnostics/login-v2-three-condition-retest-v2/summary.json` through adapter + interpreter; write a redacted `result-interpreter-summary/v1` under `scratch/`; assert verdicts and gap paths. (Replay output: `scratch/result-interpreter/login-v2-three-condition-retest-v2/result-interpreter-summary.json`; unit verdict `uncertain` due to two execution-failed attempts, overall `uncertain`.)
+- [x] 3.1 Replay `scratch/profile-diagnostics/login-v2-three-condition-retest-v2/summary.json` through adapter + interpreter; write a redacted `result-interpreter-summary/v1` under `scratch/`; assert verdicts and gap paths. (Replay output: `scratch/result-interpreter/login-v2-three-condition-retest-v2/result-interpreter-summary.json`; unit verdict `uncertain` due to two execution-failed attempts, overall `uncertain`. Reproducible redacted fixture committed at `src/benchmark/result-interpreter/v1/adapters/fixtures/login-v3-replay-sample.json` and covered by tests.)
 - [x] 3.2 Compare against the existing `report.conclusion_grade` and record the interpretation-difference note (old conservative grade vs strict verdict). (Recorded in design.md: old `diagnostic-or-uncertain` vs interpreter strict `uncertain` due to unhealthy attempts; strict per-attempt audit.)
 
 ## 4. Verification

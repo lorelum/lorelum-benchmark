@@ -174,3 +174,25 @@ test("execution-failed attempt yields uncertain", () => {
   expect(result.units[0].verdict).toBe("uncertain");
   expect(result.units[0].reasons).toContain("unhealthy-attempt");
 });
+test("path-like trace value fails closed at the adapter", () => {
+  const summary = loginPageSummary({ baseline: 1, "oracle-practice": 3, "irrelevant-practice": 2 });
+  const entries = summary.entries as Array<Record<string, unknown>>;
+  (entries[0].trace as Record<string, unknown>).practice_sha256 = "private/practices/login-card.md";
+  expect(() => practiceToInterpretationInput(summary)).toThrow(/must not contain a path/);
+});
+
+test("committed redacted login-page fixture replays to uncertain without private material", async () => {
+  const summary = await Bun.file(`${import.meta.dir}/fixtures/login-v3-replay-sample.json`).json();
+  const result = interpretPracticeSummary(summary);
+  expect(result.units).toHaveLength(1);
+  expect(result.units[0].sample_unit.candidate).toBe("login-page-auth-flow-v2");
+  expect(result.units[0].verdict).toBe("uncertain");
+  expect(result.units[0].reasons).toContain("unhealthy-attempt");
+  expect(result.units[0].conditions["oracle-practice"].joint_pass).toBe(3);
+  expect(result.units[0].conditions.baseline.joint_pass).toBe(1);
+  expect(result.units[0].conditions["irrelevant-practice"].joint_pass).toBe(2);
+  expect(result.overall).toBe("uncertain");
+  const serialized = JSON.stringify(result);
+  expect(serialized).not.toContain("the login page must show");
+  expect(serialized).not.toMatch(/private|C:\\\\|workspace_path|evaluator-cleanup/i);
+});
