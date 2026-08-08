@@ -23,7 +23,7 @@
 
 ### 1. 公开任务行为
 
-题面只描述目标产品行为与任何不可替代的公共接口；不得泄露私有验收或 reference 结构。
+题面只描述目标产品行为与任何不可替代的公共接口；不得泄露私有验收或 reference 结构。题面 MUST 用真实产品语境书写（真实产品/领域场景、自然的需求表述），不得一眼看出是测试环境样板；任务完成判定只跟题面声明的功能行为走。
 
 - 正例（#75）：题面要求"登录成功显示欢迎、失败显示通用错误、提交期间禁用并防重复提交"，由公开浏览器测试验证。
 - 反例：题面写明"必须在 `src/features/auth/loginService.ts` 中实现请求"--这是 reference 布局，属于实现偏好，不应进入公开题面。
@@ -214,12 +214,13 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 - **Practice 已观察**：该次运行的私有 probe 在其声明能力范围内观察到对应职责。
 - **Practice 未观察**：该次运行有已校准的负面证据；它不表示任务失败。
 - **Practice 不确定**：probe 不能可靠分类，必须保留审计原因；它不表示 Agent 未遵循 Practice。
-- **两者同时通过**：该次运行同时满足语义与质量信号--这是判断 Practice 是否带来方向性改善的依据。
-- **`evaluated` / 非健康评测**：前者是产生有效结构化结果的次数；后者分别列出 `invalid-output`、`execution-failed` 与 `not-executable` 的次数和原因。所有 `x/y` 的分母保留计划运行次数；非健康评测不得静默从分母剔除、改记为 `not-observed`，或计作任何通过/观测分子。
+- **JudgeAgent 不可用**：判分资源未产出信号，与 `not-observed` 严格区分；它不表示候选质量缺失，也不改变任务完成。
+- **两者同时通过（`joint_pass`）**：该次运行同时满足语义与质量信号--这是判断 Practice 是否带来方向性改善的依据。`joint_pass` 只是派生报告字段，不是任务完成、execution health 或加权总分。
+- **`evaluated` / 非健康评测 / 不确定**：`evaluated` 是产生有效结构化结果的次数；非健康分别列出 `invalid-output`、`execution-failed` 与 `not-executable` 的次数和原因；完成状态无法可靠判定时显式记录为 `indeterminate` 并保留审计原因。所有 `x/y` 的分母保留计划运行次数；非健康与 `indeterminate` 评测不得静默从分母剔除、改记为 `not-observed`，或计作任何通过/观测分子。
 
 ### 报告要求
 
-- 分别呈现语义通过、Practice 已观察、Practice 未观察、Practice 不确定、evaluator/execution health 与两者同时通过，不合并为总分。
+- 分别呈现语义通过、Practice 已观察、Practice 未观察、Practice 不确定、JudgeAgent 不可用、evaluator/execution health（含 `indeterminate`）与派生两者同时通过，不合并为总分；原始分数、probe 分值、计划分母与失败原因必须保留。
 - 结论只能描述已执行的 candidate、Practice、模型与条件；每个条件都必须同时报告计划次数、`evaluated` 次数和全部非健康状态，不能选择性排除运行。
 - 只有当所有条件均完成预先声明的重复次数、全部运行均为 `evaluated`、probe 校准通过、且相关 Practice 的语义通过次数不低于 baseline 与无关对照并且其“两者同时通过”次数严格领先二者时，才可称为**该 candidate 在该执行条件下的方向性信号**。
 - 即使满足上述条件，结论也只能说明该条件下的原始结果差异；它不证明 retrieval 有效、Practice 的因果效果、正式 benchmark 结果、产品效果或普遍模型能力。任一条件出现非健康评测、未完成计划次数或未通过校准时，只能报告诊断结果，不得作条件比较结论。
@@ -268,3 +269,50 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 ## 八、人工审阅
 
 本指南不强制人工审阅。各 candidate 自行决定哪些信号需要人工补充而非自动 probe；人工审阅不是当前小试的前置条件。若某 candidate 引入人工审阅，须在 candidate 设计中声明审阅范围、标准与记录方式，且不得用人工审阅把实现偏好升级为硬门槛。
+
+
+## 九、真实开发风格 candidate 环境规范
+
+candidate 的公开面（`public/task.md` 与 `public/starter/`）是 agent 在干净
+workspace 里看到的全部内容，也是真实性审查的唯一对象。以下规范来自 #135
+（`login-page-auth-flow-v1`）round 1 外部 AI 真实性审查的修复结论；后续
+candidate 的公开面必须满足，审查清单见
+`openspec/changes/login-page-realistic-practice-candidate/authenticity-review-guide.md`。
+
+### 1. 题面与代码状态一致（基线是真占位）
+
+- 任务描述的"未完成/占位"必须是代码的真实状态：表单未接通、接口未调用、无禁用
+  与反馈时，公开测试必须红；agent 打开代码要有真活可干，不能出现"任务说没做、
+  代码已做完、测试全绿"的矛盾。
+- 占位状态下公开语义测试红是正常基线；calibration 矩阵据此声明
+  `public-starter semantic=fail`，reference/anti-pattern 等完整实现才要求
+  `semantic=pass`。
+
+### 2. 真实网络与无埋点
+
+- API 模块必须真实调用网络（如 `fetch("/api/session")`）并做类型化解析；
+  不得使用 `window.__xxx` 计数器、setTimeout 假延迟，或把凭据写进产品代码。
+- 后端响应由测试内 `page.route` 拦截或 runner 提供；测试可以声明测试账号，
+  产品代码不得包含 demo 凭据或保留占位域名（如 example.com）。
+
+### 3. 测试断言产品行为
+
+- 公开测试只断言用户可观察行为（成功/失败文案、禁用态、防重复提交）；
+  网络请求计数使用 `page.waitForRequest` 等真实请求观测，不得依赖产品内部埋点。
+
+### 4. 题面口语化
+
+- 题面用真实工单口语，可含来龙去脉（谁报的、后端是否已上线、为什么现在做）；
+  不写反引号钉死的文件路径、bullet 式逐条验收、"确认全部通过"等验收腔。
+- 接口文档只写请求/响应/错误码契约；不写前端分层、DTO 翻译等内部架构规范。
+
+### 5. 无运行产物
+
+- starter 不得包含 `node_modules/`、`test-results/`、`dist/`、trace 截图等
+  运行产物；物化与快照必须排除生成目录；`bun run validate` 必须通过。
+
+### 6. 真实性审查门禁
+
+- task.md 与 starter 完成后、calibration 之前，由独立 AI（非实现方）按审查指南
+  执行 pass-or-fix 审查；fix 项清零后才进入 calibration/pilot。
+- 审查记录写入对应 change 与 PR 证据链。

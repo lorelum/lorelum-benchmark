@@ -1,0 +1,29 @@
+version: v1
+candidate_snapshot_manifest: private/snapshot.json
+source_commit: 50fdd8b939e5b4271888e1e1293dd23fd7e62540
+shared_execution:
+  agent: { id: local-pi, version: v2 }
+  pi_version: 0.80.10
+  model: { id: deepseek/deepseek-v4-pro }
+  additional_shared_system_prompt: none
+  additional_shared_system_prompt_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  tool_policy: private/execution/tool-policy.yaml
+  tool_policy_sha256: bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6
+  budget: { max_duration_minutes: 10 }
+  workspace: clean-copy-per-attempt
+  repetitions: 2
+  judge: { provider: judge-agent/generic/v1, indeterminate_budget: 0.25 }
+conditions:
+  - { id: baseline, status: declared, practice: none }
+  - id: oracle-practice
+    status: declared
+    practice: { path: private/practices/profile.command-domain-boundary.v1.md, injection_channel: condition-scoped-private-runtime, sha256: b3b1b80acdb0bb6437375996a48222aeb7afc01e8afb90713f93f3b5c5ecb616 }
+  - id: irrelevant-practice
+    status: declared
+    practice: { path: private/practices/irrelevant.modal-focus.v1.md, injection_channel: condition-scoped-private-runtime, sha256: 9fb5b76268a5f5614805c0a6b38e3173d4702097c3462b11a33aaee6416e9005 }
+  - { id: lorelum-retrieval, status: unavailable, practice: unavailable }
+decision_rule:
+  metric: joint-pass-count
+  oracle_relation: strictly-greater-than-each-control
+  controls: [baseline, irrelevant-practice]
+  otherwise: diagnostic-only

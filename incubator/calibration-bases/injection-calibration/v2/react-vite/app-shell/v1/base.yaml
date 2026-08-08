@@ -1,0 +1,6 @@
+# Profile-path hygiene: this base is byte-identical to the injection-calibration/v1
+# app-shell base; it exists so injection-calibration/v2 candidates resolve a base
+# that declares the matching profile.
+profile: injection-calibration/v2
+materializer_kind: react-vite
+source: source

@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { expansionDecisions, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary } from "./profile-diagnostic-runner";
+import { expansionDecisions, materializeConventionDoc, materializeGitHistory, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, runJudgeProvider, summarizeJudge, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary, type RunnerPracticePayload } from "./profile-diagnostic-runner";
+import { run } from "./preflight";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 
 const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
@@ -97,6 +98,198 @@ test("redacted trace contains no Practice text or private paths", async () => {
   expect(trace.practice_sha256).toBeDefined();
 });
 
+
+test("verifyCandidateDeclaration accepts an injection-calibration/v2 candidate", async () => {
+  const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
+  const candidate = await mkdtemp(join(tmpdir(), "lorelum-runner-v2-"));
+  try {
+    await cp(fixturePath, candidate, { recursive: true });
+    const manifestPath = join(candidate, "private", "candidate.yaml");
+    const yaml = await Bun.file(manifestPath).text();
+    const patched = yaml
+      .replace("injection-calibration/v1", "injection-calibration/v2")
+      .replace("  public_root: public/starter\n", "  public_root: public/starter\n  source_commit: abc123\n");
+    await Bun.write(manifestPath, patched);
+    const manifest = await verifyCandidateDeclaration(candidate);
+    expect(manifest.kernel).toEqual({ core: "v1", profile: "injection-calibration/v2", materializer_kind: "react-vite" });
+    expect(manifest.source.source_commit).toBe("abc123");
+  } finally {
+    await rm(candidate, { force: true, recursive: true });
+  }
+});
+
+test("project-convention payloads never include --append-system-prompt", async () => {
+  const convention: RunnerPracticePayload = {
+    condition_id: "oracle-practice",
+    channel: "condition-scoped-private-runtime",
+    practice: { id: "x", version: "v1", sha256: "a".repeat(64), text: "frontend conventions", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" },
+  };
+  expect(piArgs("test-model", convention)).not.toContain("--append-system-prompt");
+});
+
+
+
+test("convention doc is committed into the per-condition git history (oracle), baseline has none", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-convention-git-"));
+  try {
+    const app = join(workspace, "app");
+    await mkdir(app, { recursive: true });
+    await Bun.write(join(app, "index.html"), "<html></html>");
+    await Bun.write(join(app, "src", "api", "http.ts"), "export const api = 1;");
+    const oracle: RunnerPracticePayload = { condition_id: "oracle-practice", channel: "condition-scoped-private-runtime", practice: { id: "x", version: "v1", sha256: "a".repeat(64), text: "# 前端分层约定\n", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" } };
+    await materializeConventionDoc(workspace, oracle);
+    await materializeGitHistory(app, { identity: { name: "ops", email: "ops@x.io" }, commits: [{ message: "chore: scaffold", files: ["index.html"] }, { message: "feat: login shell", files: [] }] });
+    const tracked = await run(["git", "-C", app, "ls-files"], app);
+    expect(tracked.stdout).toContain("docs/frontend-guide.md");
+    const status = await run(["git", "-C", app, "status", "--porcelain"], app);
+    expect(status.stdout.trim()).toBe("");
+
+    // baseline: no convention doc written -> no frontend-guide in history
+    const baselineApp = join(workspace, "baseline-app");
+    await mkdir(baselineApp, { recursive: true });
+    await Bun.write(join(baselineApp, "index.html"), "<html></html>");
+    await Bun.write(join(baselineApp, "src", "api", "http.ts"), "export const api = 1;");
+    const baseline: RunnerPracticePayload = { condition_id: "baseline", channel: "none" };
+    await materializeConventionDoc(workspace, baseline);
+    await materializeGitHistory(baselineApp, { identity: { name: "ops", email: "ops@x.io" }, commits: [{ message: "chore: scaffold", files: ["index.html"] }, { message: "feat: login shell", files: [] }] });
+    const baselineTracked = await run(["git", "-C", baselineApp, "ls-files"], baselineApp);
+    expect(baselineTracked.stdout).not.toContain("frontend-guide.md");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+
+test("runJudgeProvider writes a v2 sidecar for a declared provider and not-run otherwise", async () => {
+  const attempt = await mkdtemp(join(tmpdir(), "lorelum-judge-attempt-"));
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-judge-ws-"));
+  try {
+    const app = join(workspace, "app");
+    await mkdir(join(app, "src", "api"), { recursive: true });
+    await Bun.write(join(workspace, "task.md"), "接通登录页。\n");
+    await Bun.write(join(app, "src", "LoginPage.tsx"), `import { login } from "./api/session";
+export function LoginPage() {
+  async function handleSubmit(e: SubmitEvent) { e.preventDefault(); await login("a", "b"); }
+  return <form onSubmit={handleSubmit}><button type="submit">登录</button></form>;
+}
+`);
+    await Bun.write(join(app, "src", "api", "session.ts"), `import { postSession } from "./http";
+export async function login(email: string, password: string) {
+  const response = await postSession({ email, password });
+  if (response.status === 200) return { ok: true, user: response.body.user };
+  return { ok: false, message: response.body.message };
+}
+`);
+    await Bun.write(join(app, "src", "api", "http.ts"), `export async function postSession(input: unknown) {
+  const response = await fetch("/api/session", { method: "POST", body: JSON.stringify(input) });
+  const body = await response.json();
+  return response.status === 200 ? { status: 200, body } : { status: 401, body };
+}
+`);
+    const shared = { pi_version: "0.80.10", model: { id: "m" }, budget: { max_duration_minutes: 1 }, repetitions: 1, judge: { provider: "practice-layered-api/v2" } };
+    const entry = await runJudgeProvider(attempt, workspace, shared);
+    expect(entry.state).toBe("observed");
+    expect(entry.score).toBe(100);
+    expect(entry.provider_id).toBe("practice-layered-api/v2");
+    expect(entry.rubric_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(await Bun.file(join(attempt, "judge.sidecar.json")).exists()).toBe(true);
+
+    const noProvider = await runJudgeProvider(attempt, workspace, { pi_version: "0.80.10", model: { id: "m" }, budget: { max_duration_minutes: 1 }, repetitions: 1 });
+    expect(noProvider.state).toBe("not-run");
+    const unknown = await runJudgeProvider(attempt, workspace, { pi_version: "0.80.10", model: { id: "m" }, budget: { max_duration_minutes: 1 }, repetitions: 1, judge: { provider: "nope" } });
+    expect(unknown.state).toBe("judge-unavailable");
+  } finally {
+    await rm(attempt, { force: true, recursive: true });
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("summarizeJudge aggregates redacted per-condition counts", () => {
+  const base = { candidate: "c", condition: "baseline", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "baseline" as const, channel: "none" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
+  const entries = [
+    { ...base, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "observed" as const, score: 100, rubric_hash: "r".repeat(64) } },
+    { ...base, condition: "oracle-practice", trace: { condition_id: "oracle-practice" as const, channel: "x" as const, profile_input_hash: "h" }, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+  ];
+  const summary = summarizeJudge(entries);
+  expect(summary.rubric_hash).toBe("r".repeat(64));
+  expect(summary.by_condition.baseline).toMatchObject({ observed: 1, indeterminate: 0 });
+  expect(summary.by_condition.baseline.scores).toEqual([100]);
+  expect(summary.by_condition["oracle-practice"]).toMatchObject({ observed: 0, indeterminate: 1 });
+});
+
+test("summarizeJudge marks a condition diagnostic-only when the indeterminate rate exceeds the budget", () => {
+  const base = { candidate: "c", condition: "oracle-practice", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "oracle-practice" as const, channel: "x" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
+  const entries = [
+    { ...base, repeat: 1, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+    { ...base, repeat: 2, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+  ];
+  const summary = summarizeJudge(entries, { indeterminate_budget: 0.25 });
+  expect(summary.indeterminate_budget).toBe(0.25);
+  expect(summary.by_condition["oracle-practice"].indeterminate_rate).toBe(1);
+  expect(summary.by_condition["oracle-practice"].diagnostic_only).toBe(true);
+  expect(summary.diagnostic_only).toBe(true);
+});
+
+test("summarizeJudge keeps a condition usable when the indeterminate rate is within budget", () => {
+  const base = { candidate: "c", condition: "baseline", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "baseline" as const, channel: "none" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
+  const entries = [
+    { ...base, repeat: 1, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "observed" as const, score: 100 } },
+    { ...base, repeat: 2, judge: { provider_id: "practice-layered-api", provider_version: "2.0.0", state: "indeterminate" as const, reason: "unresolved" } },
+  ];
+  const summary = summarizeJudge(entries, { indeterminate_budget: 0.5 });
+  expect(summary.by_condition.baseline.indeterminate_rate).toBe(0.5);
+  expect(summary.by_condition.baseline.diagnostic_only).toBeUndefined();
+  expect(summary.diagnostic_only).toBeUndefined();
+});
+
+test("materializeGitHistory builds a realistic commit history with a clean tree", async () => {
+  const app = await mkdtemp(join(tmpdir(), "lorelum-githistory-"));
+  try {
+    await Bun.write(join(app, "index.html"), "<html></html>");
+    await Bun.write(join(app, "src", "api", "http.ts"), "export const api = 1;");
+    await Bun.write(join(app, "src", "LoginPage.tsx"), "export function LoginPage() { return null; }");
+    const history = {
+      identity: { name: "ops-admin", email: "ops@meridian.internal" },
+      commits: [
+        { message: "chore: scaffold", files: ["index.html"] },
+        { message: "feat(api): client", files: ["src/api/http.ts"] },
+        { message: "feat: login shell", files: [] },
+      ],
+    };
+    await materializeGitHistory(app, history);
+    const log = await run(["git", "-C", app, "log", "--format=%s"], app);
+    expect(log.code).toBe(0);
+    expect(log.stdout.trim().split("\n")).toEqual(["feat: login shell", "feat(api): client", "chore: scaffold"]);
+    const status = await run(["git", "-C", app, "status", "--porcelain"], app);
+    expect(status.stdout.trim()).toBe("");
+  } finally {
+    await rm(app, { force: true, recursive: true });
+  }
+});
+
+test("materializeConventionDoc writes the convention into the app workspace and guards escapes", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-convention-ws-"));
+  try {
+    await Bun.write(join(workspace, "task.md"), "task");
+    await mkdir(join(workspace, "app"), { recursive: true });
+    const payload: RunnerPracticePayload = {
+      condition_id: "oracle-practice",
+      channel: "condition-scoped-private-runtime",
+      practice: { id: "x", version: "v1", sha256: "a".repeat(64), text: "# 前端约定\n", delivery_template: "project-convention/v1", target_path: "docs/frontend-guide.md" },
+    };
+    await materializeConventionDoc(workspace, payload);
+    const written = await Bun.file(join(workspace, "app", "docs", "frontend-guide.md")).text();
+    expect(written).toContain("前端约定");
+    const baseline: RunnerPracticePayload = { condition_id: "baseline", channel: "none" };
+    await materializeConventionDoc(workspace, baseline);
+    expect(await Bun.file(join(workspace, "app", "docs", "frontend-guide.md")).exists()).toBe(true);
+    const escaping: RunnerPracticePayload = { ...payload, practice: { ...payload.practice!, target_path: "../escape.md" } };
+    await expect(materializeConventionDoc(workspace, escaping)).rejects.toThrow("escapes the app workspace");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
 test("verifyCandidateDeclaration accepts a valid profile v1 candidate", async () => {
   const path = await withFixture();
   try {
@@ -114,7 +307,7 @@ test("verifyCandidateDeclaration rejects a non-injection-calibration candidate",
     await Bun.write(join(candidate, "private/candidate.yaml"), yaml.replace("injection-calibration/v1", "treatment-comparison/v1"));
   });
   try {
-    await expect(verifyCandidateDeclaration(path)).rejects.toThrow("does not declare core/v1 + injection-calibration/v1 + react-vite");
+    await expect(verifyCandidateDeclaration(path)).rejects.toThrow("does not declare core/v1 + injection-calibration/v1|v2 + react-vite");
   } finally {
     await rm(path, { force: true, recursive: true });
   }
@@ -221,6 +414,7 @@ test("zero-exit semantic failure remains a healthy evaluator result", () => {
 test("provisions the public app after Pi and before private evaluation", async () => {
   const fixture = await withAttemptFixture();
   const phases: string[] = [];
+  let serverStopped = false;
   try {
     const profile = await resolveInjectionCalibration(fixture.candidate);
     const entry = await runAttempt(
@@ -255,16 +449,84 @@ test("provisions the public app after Pi and before private evaluation", async (
         phases.push("evaluator");
         expect(command[1]).toBe("run");
         return { code: 0, stdout: '{"semantic":"pass","practice_observation":"observed"}', stderr: "", timedOut: false, durationMs: 1 };
+      },
+      async (_cwd, port) => {
+        phases.push("server");
+        return { ok: true, handle: { pid: 42, port, stop: async () => { serverStopped = true; return true; } } };
       }
     );
     expect(entry.error).toBeUndefined();
-    expect(phases).toEqual(["pi", "provision", "evaluator"]);
+    expect(phases).toEqual(["pi", "provision", "server", "evaluator"]);
+    expect(serverStopped).toBe(true);
     expect(entry).toMatchObject({ evaluation_status: "evaluated", semantic: "pass", practice_observation: "observed", joint_pass: true });
   } finally {
     await fixture.cleanup();
   }
 });
 
+test("server launch failure records execution-failed without semantic fields", async () => {
+  const fixture = await withAttemptFixture();
+  try {
+    const profile = await resolveInjectionCalibration(fixture.candidate);
+    const entry = await runAttempt(
+      fixture.output,
+      fixture.candidate,
+      "neutral-contract-fixture-v1",
+      { id: "neutral-contract-fixture-v1", kernel: { core: "v1", profile: "injection-calibration/v1", materializer_kind: "react-vite" }, source: { source_commit: "abc123" } },
+      "snapshot",
+      profile.profile_input_hash,
+      profile,
+      "baseline",
+      1,
+      { pi_version: "test", model: { id: "test-model" }, budget: { max_duration_minutes: 1 }, repetitions: 1 },
+      "fake-pi",
+      async (command, cwd) => {
+        if (command[0] === "fake-pi") return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
+        if (command[1] === "install") { await mkdir(join(cwd, "node_modules"), { recursive: true }); return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 }; }
+        throw new Error("evaluator must not run after server launch failure");
+      },
+      async () => ({ ok: false as const, category: "evaluator-server-launch-failed" })
+    );
+    expect(entry).toEqual(expect.objectContaining({ evaluation_status: "execution-failed", error: "evaluator-server-launch-failed" }));
+    expect(entry.semantic).toBeUndefined();
+    expect(entry.practice_observation).toBeUndefined();
+    expect(entry.joint_pass).toBeUndefined();
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("unconfirmed server cleanup blocks comparison with execution-failed", async () => {
+  const fixture = await withAttemptFixture();
+  try {
+    const profile = await resolveInjectionCalibration(fixture.candidate);
+    const entry = await runAttempt(
+      fixture.output,
+      fixture.candidate,
+      "neutral-contract-fixture-v1",
+      { id: "neutral-contract-fixture-v1", kernel: { core: "v1", profile: "injection-calibration/v1", materializer_kind: "react-vite" }, source: { source_commit: "abc123" } },
+      "snapshot",
+      profile.profile_input_hash,
+      profile,
+      "baseline",
+      1,
+      { pi_version: "test", model: { id: "test-model" }, budget: { max_duration_minutes: 1 }, repetitions: 1 },
+      "fake-pi",
+      async (command, cwd) => {
+        if (command[0] === "fake-pi") return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
+        if (command[1] === "install") { await mkdir(join(cwd, "node_modules"), { recursive: true }); return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 }; }
+        return { code: 0, stdout: '{"semantic":"pass","practice_observation":"observed"}', stderr: "", timedOut: false, durationMs: 1 };
+      },
+      async (_cwd, port) => ({ ok: true, handle: { pid: 42, port, stop: async () => false } })
+    );
+    expect(entry).toEqual(expect.objectContaining({ evaluation_status: "execution-failed", error: "evaluator-cleanup-unverified" }));
+    expect(entry.semantic).toBeUndefined();
+    expect(entry.practice_observation).toBeUndefined();
+    expect(entry.joint_pass).toBeUndefined();
+  } finally {
+    await fixture.cleanup();
+  }
+});
 test("failed public dependency provisioning skips evaluator with a redacted execution failure", async () => {
   const fixture = await withAttemptFixture();
   const phases: string[] = [];

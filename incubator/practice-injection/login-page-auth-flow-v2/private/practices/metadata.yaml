@@ -1,0 +1,17 @@
+delivery_template: project-convention/v1
+length_metric: project-convention/v1:utf8-rendered-characters
+cards:
+  - id: login-page.frontend-layering
+    version: v1
+    path: frontend.layered-design.v1.md
+    rendered_characters: 297
+    target_path: docs/frontend-guide.md
+  - id: login-page.list-rendering
+    version: v1
+    path: irrelevant.list-rendering.v1.md
+    rendered_characters: 290
+    target_path: docs/frontend-guide.md
+comparison:
+  maximum_relative_difference: 0.10
+  actual_relative_difference: 0.023569
+  independently_reviewed: true

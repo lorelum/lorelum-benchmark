@@ -17,7 +17,7 @@
     "test:local-sandbox": "bun run src/benchmark/runner/pi/v2/local-sandbox-preflight.ts",
     "test:realistic-repo": "bun run src/benchmark/calibrate-realistic-suite.ts",
     "calibrate:realistic-repo": "bun run src/benchmark/calibrate-realistic-suite.ts",
-    "test:contracts": "bun test src/benchmark/validate.test.ts src/benchmark/evaluator/v2/harness.test.ts src/benchmark/runner/pi/v2",
+    "test:contracts": "bun test src/benchmark/validate.test.ts src/benchmark/evaluator/v2/harness.test.ts src/benchmark/judge src/benchmark/outcome/v1 src/benchmark/runner/pi/v2",
     "practice:login-local": "bun run incubator/practice-injection/login-page-layered-api-v1/private/execution/run-local.ts"
   },
   "dependencies": {
@@ -28,6 +28,7 @@
     "node": ">=22.19.0"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "0.80.10"
+    "@earendil-works/pi-coding-agent": "0.80.10",
+    "typescript": "5.9.3"
   }
 }

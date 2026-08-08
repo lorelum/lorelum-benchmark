@@ -1,0 +1,27 @@
+id: profile-update-command-boundary-v2
+lifecycle_stage: candidate
+kernel:
+  core: v1
+  profile: injection-calibration/v2
+  materializer_kind: react-vite
+source:
+  kind: repository-local-starter
+  repository: lorelum/lorelum-benchmark
+  source_commit: 50fdd8b939e5b4271888e1e1293dd23fd7e62540
+  public_root: public/starter/app
+  immutable_by: private/snapshot.json
+calibration_roles:
+  - id: calibration-matrix
+    command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
+    expect: { kind: pass }
+  - id: judge-agent-generic-calibration
+    command: [bun, run, "{{candidate_path}}/../../../src/benchmark/judge/judge-agent/generic/v1/calibrate.ts", "{{candidate_path}}"]
+    expect: { kind: pass }
+calibration_sets:
+  manifest: private/calibration/sets.yaml
+runtime:
+  package_manager: bun
+  node: 22.19.x
+  frontend: { vite: 7.1.7, react: 19.2.3, typescript: 5.9.3 }
+  browser_test: { playwright: 1.61.1 }
+baseline_expectation: { functional: false, practice_adherence: false, reason: 账户资料页为真占位：未接加载/提交、无校验/禁用/成功/冲突反馈，公开测试未通过；starter 不预置领域翻译层，接通后若组件直接处理原始响应则命令边界不足。 }

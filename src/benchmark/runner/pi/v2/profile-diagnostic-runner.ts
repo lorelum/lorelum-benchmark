@@ -1,11 +1,34 @@
 import { cp, lstat, mkdir, realpath, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { joinPath, relativePath, sha256Directory, sha256File, workspaceRoot } from "../../../fs";
-import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace, type PracticePayload, type ResolvedInjectionCalibration } from "../../../kernel/profiles/injection-calibration/v1/runtime";
+import * as v1Runtime from "../../../kernel/profiles/injection-calibration/v1/runtime";
+import * as v2Runtime from "../../../kernel/profiles/injection-calibration/v2/runtime";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { fail, piCommand, preflightPiAndModel, run, type CommandResult } from "./preflight";
+
+export type RunnerPracticePayload = {
+  condition_id: InjectionConditionId;
+  channel: string;
+  practice?: { id: string; version: string; sha256: string; text: string; delivery_template?: string; target_path?: string };
+};
+export type ResolvedProfile = { profile_input_hash: string };
+type RuntimeModule = {
+  resolveInjectionCalibration: (candidatePath: string) => Promise<ResolvedProfile>;
+  resolvePracticePayload: (candidatePath: string, profile: ResolvedProfile, conditionId: InjectionConditionId) => Promise<RunnerPracticePayload>;
+  redactedInjectionTrace: (profile: ResolvedProfile, payload: RunnerPracticePayload) => ReturnType<typeof v1Runtime.redactedInjectionTrace>;
+};
+export const injectionProfiles = ["injection-calibration/v1", "injection-calibration/v2"] as const;
+export function runtimeFor(profile: string): RuntimeModule {
+  return (profile === "injection-calibration/v2" ? v2Runtime : v1Runtime) as unknown as RuntimeModule;
+}
+import { fail, piCommand, preflightPiAndModel, run, type CommandResult, type CommandRunner } from "./preflight";
+import { allocateFreePort, realWebServerStarter, type WebServerStarter } from "./webserver-supervisor";
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
+import { buildJudgeInput } from "../../../judge/input";
+import { sha256Text } from "../../../fs";
+import { classifyProviderResult } from "../../../judge/classify";
+import { resolveJudgeProvider } from "../../../judge/providers";
+import { sourceMapFromWorkspace, sourceMapToDiff } from "../../../judge/source-map";
 
 const scratchRoot = resolve(workspaceRoot, "scratch");
 const publicDependencyProvisioningTimeoutMs = 120_000;
@@ -15,6 +38,7 @@ export type SharedExecution = {
   model: { id: string };
   budget: { max_duration_minutes: number };
   repetitions: number;
+  judge?: { provider?: string; indeterminate_budget?: number };
 };
 type Condition = { id: string; status: string; practice: unknown };
 export type Conditions = { shared_execution: SharedExecution; conditions: Condition[] };
@@ -33,6 +57,123 @@ export type ProfileDiagnosticEvaluatorResult = {
   observation_reason?: string;
 };
 
+export type JudgeEntry = {
+  provider_id: string;
+  provider_version: string;
+  state: "observed" | "indeterminate" | "judge-unavailable" | "not-run";
+  score?: number;
+  criteria?: Array<{ id: string; points: number; max_points: number; rationale?: string }>;
+  rubric_hash?: string;
+  input_hash?: string;
+  confidence?: number;
+  reason?: string;
+};
+
+/** Runs the candidate-declared judge provider on an evaluated attempt and writes judge.sidecar.json. */
+export async function runJudgeProvider(
+  attemptPath: string,
+  workspace: string,
+  shared: SharedExecution,
+): Promise<JudgeEntry> {
+  const providerId = shared.judge?.provider;
+  if (!providerId) return { provider_id: "none", provider_version: "", state: "not-run", reason: "no judge provider declared" };
+  const provider = resolveJudgeProvider(providerId);
+  if (!provider) return { provider_id: providerId, provider_version: "", state: "judge-unavailable", reason: `unknown judge provider: ${providerId}` };
+  try {
+    const files = await sourceMapFromWorkspace(resolve(workspace, "app"));
+    const candidateDiff = sourceMapToDiff(files);
+    const taskMd = await Bun.file(resolve(workspace, "task.md")).text();
+    const rubric = await provider.rubricText({ task_md: taskMd });
+    const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric });
+    const prompt = provider.promptFor
+      ? await provider.promptFor(input, rubric)
+      : "Score candidate quality against the rubric. Return structured results only.";
+    const context = {
+      judge: { id: provider.id, version: provider.version },
+      prompt,
+      prompt_hash: await sha256Text(prompt),
+      rubric_hash: await sha256Text(rubric),
+    };
+    const outcome = classifyProviderResult(await provider.score(input, context));
+    if (!outcome.ok) return { provider_id: providerId, provider_version: provider.version, state: outcome.state, reason: outcome.reason };
+    const result = outcome.result;
+    await Bun.write(resolve(attemptPath, "judge.sidecar.json"), `${JSON.stringify(result, null, 2)}\n`);
+    return {
+      provider_id: providerId,
+      provider_version: provider.version,
+      state: result.state,
+      ...(typeof result.score === "number" ? { score: result.score } : {}),
+      ...(result.criteria.length > 0 ? { criteria: result.criteria } : {}),
+      ...(result.rubric_hash ? { rubric_hash: result.rubric_hash } : {}),
+      ...(result.input_hash ? { input_hash: result.input_hash } : {}),
+      ...(typeof result.confidence === "number" ? { confidence: result.confidence } : {}),
+      ...(result.reason ? { reason: result.reason } : {}),
+    };
+  } catch (error) {
+    return { provider_id: providerId, provider_version: provider.version, state: "judge-unavailable", reason: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export type JudgeConditionSummary = {
+  observed: number;
+  indeterminate: number;
+  "judge-unavailable": number;
+  "not-run": number;
+  scores: number[];
+  indeterminate_rate?: number;
+  diagnostic_only?: boolean;
+};
+
+export type JudgeSummary = {
+  rubric_hash?: string;
+  indeterminate_budget: number;
+  by_condition: Record<string, JudgeConditionSummary>;
+  diagnostic_only?: boolean;
+};
+
+/**
+ * Aggregates redacted judge results into a per-condition summary section and
+ * applies the indeterminate budget gate: when a condition's indeterminate rate
+ * (indeterminate divided by the judged attempts that produced a judge record)
+ * exceeds the declared budget (default 0.25), that condition and the summary
+ * are marked diagnostic-only so the channel is not used for directional
+ * conclusions.
+ */
+export function summarizeJudge(entries: DiagnosticEntry[], options?: { indeterminate_budget?: number }): JudgeSummary {
+  const indeterminateBudget = options?.indeterminate_budget ?? 0.25;
+  const byCondition: Record<string, JudgeConditionSummary> = {};
+  let rubricHash: string | undefined;
+  for (const entry of entries) {
+    const judge = entry.judge;
+    if (!judge) continue;
+    if (judge.rubric_hash) rubricHash = judge.rubric_hash;
+    const counts = byCondition[entry.condition] ??= { observed: 0, indeterminate: 0, "judge-unavailable": 0, "not-run": 0, scores: [] };
+    if (judge.state === "observed") counts.observed += 1;
+    else if (judge.state === "indeterminate") counts.indeterminate += 1;
+    else if (judge.state === "judge-unavailable") counts["judge-unavailable"] += 1;
+    else counts["not-run"] += 1;
+    if (typeof judge.score === "number") counts.scores.push(judge.score);
+  }
+  let anyDiagnosticOnly = false;
+  for (const counts of Object.values(byCondition)) {
+    const judged = counts.observed + counts.indeterminate + counts["judge-unavailable"] + counts["not-run"];
+    if (judged > 0) {
+      const rate = counts.indeterminate / judged;
+      counts.indeterminate_rate = rate;
+      if (rate > indeterminateBudget) {
+        counts.diagnostic_only = true;
+        anyDiagnosticOnly = true;
+      }
+    }
+  }
+  return {
+    ...(rubricHash ? { rubric_hash: rubricHash } : {}),
+    indeterminate_budget: indeterminateBudget,
+    ...(anyDiagnosticOnly ? { diagnostic_only: true } : {}),
+    by_condition: byCondition,
+  };
+}
+
 export type DiagnosticEntry = {
   candidate: string;
   condition: string;
@@ -50,6 +191,7 @@ export type DiagnosticEntry = {
   planned_position?: number;
   actual_execution_position?: number;
   error?: string;
+  judge?: JudgeEntry;
 };
 
 type ReplayReason =
@@ -132,8 +274,8 @@ export async function verifyCandidateDeclaration(candidatePath: string): Promise
   const manifest = await readYaml<CandidateManifest>(resolve(candidatePath, "private/candidate.yaml"), "private/candidate.yaml");
   if (!isRecord(manifest) || !isRecord(manifest.kernel)) fail(`candidate.yaml must declare kernel: ${relativePath(candidatePath)}`);
   const { core, profile, materializer_kind } = manifest.kernel;
-  if (core !== "v1" || profile !== "injection-calibration/v1" || materializer_kind !== "react-vite") {
-    fail(`Candidate does not declare core/v1 + injection-calibration/v1 + react-vite: ${relativePath(candidatePath)}`);
+  if (core !== "v1" || !injectionProfiles.includes(profile as (typeof injectionProfiles)[number]) || materializer_kind !== "react-vite") {
+    fail(`Candidate does not declare core/v1 + injection-calibration/v1|v2 + react-vite: ${relativePath(candidatePath)}`);
   }
   if (!isRecord(manifest.source) || typeof manifest.source.source_commit !== "string") {
     fail(`candidate.yaml must declare source.source_commit: ${relativePath(candidatePath)}`);
@@ -150,7 +292,7 @@ export async function verifySnapshotIdentity(candidatePath: string, manifest: Ca
   if (typeof resolvedHash !== "string") {
     fail(`snapshot.json must declare resolved.profile_input_hash: ${relativePath(candidatePath)}`);
   }
-  const profile = await resolveInjectionCalibration(candidatePath);
+  const profile = await runtimeFor(manifest.kernel.profile).resolveInjectionCalibration(candidatePath);
   if (profile.profile_input_hash !== resolvedHash) {
     fail(`profile_input_hash mismatch: resolver returned ${profile.profile_input_hash}, snapshot declares ${resolvedHash}`);
   }
@@ -402,7 +544,7 @@ async function replayCandidateHistory(historyRoot: string, candidatePath: string
   }
 }
 
-export function piArgs(modelId: string, payload: PracticePayload): string[] {
+export function piArgs(modelId: string, payload: RunnerPracticePayload): string[] {
   const args = [
     "--print", "--no-session", "--no-context-files", "--no-extensions",
     "--no-skills", "--no-prompt-templates",
@@ -411,10 +553,43 @@ export function piArgs(modelId: string, payload: PracticePayload): string[] {
     "@task.md",
     "Complete the coding task. Work only inside app/."
   ];
-  if (payload.practice) {
+  if (payload.practice && payload.practice.delivery_template !== "project-convention/v1") {
     args.push("--append-system-prompt", `Apply this Practice while completing the task:\n\n${payload.practice.text}`);
   }
   return args;
+}
+
+/** Writes a project-convention Practice into the agent workspace as a doc file (oracle/irrelevant only). */
+export async function materializeConventionDoc(workspace: string, payload: RunnerPracticePayload): Promise<void> {
+  const practice = payload.practice;
+  if (!practice || practice.delivery_template !== "project-convention/v1" || !practice.target_path) return;
+  const appRoot = resolve(workspace, "app");
+  const target = resolve(appRoot, practice.target_path);
+  const fromApp = relative(appRoot, target);
+  if (fromApp === "" || fromApp.startsWith("..") || isAbsolute(fromApp)) fail(`Convention target escapes the app workspace: ${practice.target_path}`);
+  await mkdir(dirname(target), { recursive: true });
+  await Bun.write(target, practice.text);
+}
+
+export type GitHistory = { identity: { name: string; email: string }; commits: Array<{ message: string; files: string[] }> };
+
+/** Builds a deterministic realistic git history in the app workspace (init + staged commits). */
+export async function materializeGitHistory(appRoot: string, history: GitHistory, commandRunner: CommandRunner = run): Promise<void> {
+  const git = (args: string[]): Promise<CommandResult> => commandRunner(["git", "-C", appRoot, ...args], appRoot, 60_000);
+  await git(["-c", "init.defaultBranch=main", "init", "-q"]);
+  await git(["config", "user.name", history.identity.name]);
+  await git(["config", "user.email", history.identity.email]);
+  await git(["config", "commit.gpgsign", "false"]);
+  for (let i = 0; i < history.commits.length; i += 1) {
+    const commit = history.commits[i];
+    if (i === history.commits.length - 1) {
+      await git(["add", "-A"]);
+    } else {
+      await git(["add", "--", ...commit.files]);
+    }
+    const result = await git(["commit", "-q", "-m", commit.message]);
+    if (result.code !== 0) throw new Error(`Git history commit failed for ${commit.message}: ${result.stderr.trim()}`);
+  }
 }
 
 
@@ -486,12 +661,13 @@ export async function runAttempt(
   manifest: CandidateManifest,
   snapshotId: string,
   profileInputHash: string,
-  profile: ResolvedInjectionCalibration,
+  profile: ResolvedProfile,
   conditionId: InjectionConditionId,
   repeat: number,
   shared: SharedExecution,
   command: string,
-  commandRunner: AttemptCommandRunner = run
+  commandRunner: AttemptCommandRunner = run,
+  serverStarter: WebServerStarter = realWebServerStarter
 ): Promise<DiagnosticEntry> {
   const attemptPath = resolve(outputPath, candidateId, conditionId, `attempt-${repeat}`);
   const workspace = resolve(attemptPath, "workspace");
@@ -503,8 +679,14 @@ export async function runAttempt(
     fail(`Private material was copied into an agent workspace: ${relativePath(workspace)}`);
   }
 
-  const payload = await resolvePracticePayload(candidatePath, profile, conditionId);
-  const trace = redactedInjectionTrace(profile, payload);
+  const runtime = runtimeFor(manifest.kernel.profile);
+  const payload = await runtime.resolvePracticePayload(candidatePath, profile, conditionId);
+  const trace = runtime.redactedInjectionTrace(profile, payload);
+  await materializeConventionDoc(workspace, payload);
+  const gitHistoryPath = resolve(candidatePath, "private", "execution", "git-history.yaml");
+  if (await Bun.file(gitHistoryPath).exists()) {
+    await materializeGitHistory(resolve(workspace, "app"), Bun.YAML.parse(await Bun.file(gitHistoryPath).text()) as GitHistory);
+  }
 
   const entry: DiagnosticEntry = {
     candidate: candidateId,
@@ -545,21 +727,55 @@ export async function runAttempt(
     entry.error = closureEnv.error;
     return entry;
   }
+  let port: number;
+  try {
+    port = await allocateFreePort();
+  } catch {
+    entry.error = "evaluator-server-port-unavailable";
+    return entry;
+  }
+  // TOCTOU mitigation: the free port can be taken between allocation and
+  // bind, so retry once with a fresh port before failing closed.
+  let server = await serverStarter(resolve(workspace, "app"), port);
+  if (!server.ok) {
+    try {
+      port = await allocateFreePort();
+    } catch {
+      entry.error = "evaluator-server-port-unavailable";
+      return entry;
+    }
+    server = await serverStarter(resolve(workspace, "app"), port);
+    if (!server.ok) {
+      entry.error = server.category;
+      return entry;
+    }
+  }
   let evaluation: CommandResult;
+  let cleanupConfirmed = false;
   try {
     evaluation = await commandRunner(
       [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
       candidatePath,
       shared.budget.max_duration_minutes * 60_000,
-      closureEnv.env
+      { ...closureEnv.env, PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${server.handle.port}` }
     );
   } catch {
-    entry.error = "evaluator-launch-failed";
+    cleanupConfirmed = await server.handle.stop();
+    entry.error = cleanupConfirmed ? "evaluator-launch-failed" : "evaluator-launch-failed; evaluator-cleanup-unverified";
     return entry;
+  } finally {
+    if (!cleanupConfirmed) cleanupConfirmed = await server.handle.stop();
   }
   await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluation.stdout);
   await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluation.stderr);
+  if (!cleanupConfirmed) {
+    entry.error = "evaluator-cleanup-unverified";
+    return entry;
+  }
   Object.assign(entry, classifyEvaluatorResult(evaluation));
+  if (entry.evaluation_status === "evaluated") {
+    entry.judge = await runJudgeProvider(attemptPath, workspace, shared);
+  }
   return entry;
 }
 
@@ -571,13 +787,14 @@ export function diagnosticOutputPath(path: string): string {
   return relative(workspaceRoot, path).replaceAll("\\", "/");
 }
 
-export async function writeSummary(path: string, plan: DiagnosticPlan, schedule: ScheduledAttempt[], entries: DiagnosticEntry[], interrupted: boolean): Promise<void> {
+export async function writeSummary(path: string, plan: DiagnosticPlan, schedule: ScheduledAttempt[], entries: DiagnosticEntry[], interrupted: boolean, judgeOptions?: { indeterminate_budget?: number }): Promise<void> {
   await Bun.write(joinPath(path, "summary.json"), `${JSON.stringify({
     schema_version: "profile-diagnostic-summary/v3",
     generated_at: new Date().toISOString(),
     plan: { id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, ...(plan.execution_gate ? { execution_gate: plan.execution_gate } : {}), schedule: redactedSchedule(schedule) },
     entries,
     report: summarizePlan(plan, schedule, entries),
+    judge: summarizeJudge(entries, judgeOptions),
     interrupted,
   }, null, 2)}\n`);
 }
@@ -704,6 +921,7 @@ await mkdir(options.outputPath, { recursive: true });
 await Bun.write(joinPath(options.outputPath, "plan.json"), `${JSON.stringify({ schema_version: "profile-diagnostic-plan/v2", id: plan.id, schedule_seed: plan.schedule_seed, schedule_algorithm: plan.schedule_algorithm, repetitions: plan.repetitions, ...(plan.execution_gate ? { execution_gate: plan.execution_gate } : {}), schedule: redactedSchedule(schedule) }, null, 2)}\n`);
 
 let actualExecutionPosition = 0;
+let judgeOptions: { indeterminate_budget?: number } | undefined;
 for (const plannedCandidate of plan.candidates) {
   if (interrupted) break;
   const candidatePath = resolve(workspaceRoot, plannedCandidate.path);
@@ -718,8 +936,9 @@ for (const plannedCandidate of plan.candidates) {
     const identity = await verifySnapshotIdentity(candidatePath, manifest);
     snapshotId = identity.snapshotId;
     profileInputHash = identity.profileInputHash;
-    profile = await resolveInjectionCalibration(candidatePath);
+    profile = await runtimeFor(manifest.kernel.profile).resolveInjectionCalibration(candidatePath);
     conditions = await readYaml<Conditions>(resolve(candidatePath, "private/conditions.yaml"), "private/conditions.yaml");
+    judgeOptions = { indeterminate_budget: conditions.shared_execution.judge?.indeterminate_budget };
     if (manifest.id !== plannedCandidate.id || manifest.source.source_commit !== plannedCandidate.source_commit || snapshotId !== plannedCandidate.snapshot_id || profileInputHash !== plannedCandidate.profile_input_hash) fail(`Diagnostic plan identity mismatch for ${plannedCandidate.id}`);
     for (const conditionId of diagnosticConditions) if (!conditions.conditions.some((condition) => condition.id === conditionId && condition.status === "declared")) fail(`Diagnostic plan condition is not declared: ${plannedCandidate.id}/${conditionId}`);
   } catch (error) {
@@ -765,11 +984,11 @@ for (const plannedCandidate of plan.candidates) {
     } catch (error) {
       entries.push({ candidate: manifest.id, condition: scheduledAttempt.condition, repeat: scheduledAttempt.block, block: scheduledAttempt.block, planned_position: scheduledAttempt.planned_position, actual_execution_position: actualExecutionPosition, evaluation_status: "execution-failed", trace: { condition_id: scheduledAttempt.condition, channel: "none", profile_input_hash: profileInputHash }, source_commit: manifest.source.source_commit, snapshot_id: snapshotId, profile_input_hash: profileInputHash, error: error instanceof Error ? error.message : String(error) });
     }
-    await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
+    await writeSummary(options.outputPath, plan, schedule, entries, interrupted, judgeOptions);
   }
 }
 
-await writeSummary(options.outputPath, plan, schedule, entries, interrupted);
+await writeSummary(options.outputPath, plan, schedule, entries, interrupted, judgeOptions);
 console.log(JSON.stringify({ output: diagnosticOutputPath(options.outputPath), entries: entries.length, interrupted }, null, 2));
 process.exit(interrupted || entries.some((entry) => entry.evaluation_status !== "evaluated") ? 1 : 0);
 }

@@ -1,0 +1,12 @@
+version: v1
+workspace_policy:
+  mode: clean-copy-per-attempt
+  agent_visible:
+    - public/task.md
+    - public/starter/
+  prohibited:
+    - private/
+    - evaluator/oracle 注入模型输入
+practice_injection:
+  channel: condition-scoped-private-runtime
+  trace_policy: 只记录版本与 SHA-256，不记录卡文本。

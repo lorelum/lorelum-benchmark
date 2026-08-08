@@ -1,0 +1,205 @@
+﻿version: 1
+sets:
+  - id: quality-probe
+    version: v1
+    trees:
+      shared-react-vite:
+        base:
+          ref: incubator/calibration-bases/injection-calibration/v1/react-vite/app-shell/v1/source
+          sha256: 397390fe7b0c18f635aec3a4c195a4ec3779851c2b0e95c1fd48ba440ce16bdc
+      candidate-foundation:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/candidate
+          sha256: 6bde8912265241da97686074b7b279bab5cf7b361578cbd6d269363b81d8643b
+      reference-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/reference
+          sha256: 55387f34eda5178900e2a46ae149d537f425e652a5960383aa81dad627b0bc7d
+      equivalent-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/equivalent
+          sha256: c20aabd0550e0a2d1d46b10d51921ce5a05747c7ce4a3bc0aba36218230498e3
+      anti-pattern-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/anti-pattern
+          sha256: 8feb4a29ef79da2fe02bd9e6043e0c15fb28556b23b63734d7ba81ee74e80b5f
+    fixtures:
+      reference: reference-tree
+      equivalent: equivalent-tree
+      anti-pattern: anti-pattern-tree
+
+  - id: login-page-judge
+    version: v1
+    trees:
+      shared-react-vite:
+        base:
+          ref: incubator/calibration-bases/injection-calibration/v1/react-vite/app-shell/v1/source
+          sha256: 397390fe7b0c18f635aec3a4c195a4ec3779851c2b0e95c1fd48ba440ce16bdc
+      candidate-foundation:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/candidate
+          sha256: 6bde8912265241da97686074b7b279bab5cf7b361578cbd6d269363b81d8643b
+      reference-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/reference
+          sha256: 55387f34eda5178900e2a46ae149d537f425e652a5960383aa81dad627b0bc7d
+      equivalent-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v1/overlays/equivalent
+          sha256: 94fb633aaac636cc9fe2b777b6a3af74510f557c4c03d69a39ab72a7b7900390
+      anti-pattern-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v1/overlays/anti-pattern
+          sha256: 5ca6dbc02304e27ffc569869728f97cb001bcc0f8bd72b5d4195489277314cbd
+      boundary-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v1/overlays/boundary
+          sha256: d81250ac81e7d1592adae602c581457e9a49cf459af0bcf05ca264ef9aecb3e2
+    fixtures:
+      reference: reference-tree
+      equivalent: equivalent-tree
+      anti-pattern: anti-pattern-tree
+      boundary: boundary-tree
+
+  - id: login-page-judge
+    version: v2
+    trees:
+      shared-react-vite:
+        base:
+          ref: incubator/calibration-bases/injection-calibration/v1/react-vite/app-shell/v1/source
+          sha256: 397390fe7b0c18f635aec3a4c195a4ec3779851c2b0e95c1fd48ba440ce16bdc
+      candidate-foundation:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/quality-probe/v1/overlays/candidate
+          sha256: 6bde8912265241da97686074b7b279bab5cf7b361578cbd6d269363b81d8643b
+      reference-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/reference
+          sha256: aadb5e79b3419aeff7f37474e1af38e99a08925412245d37af396192fe5b4ba0
+      equivalent-indirect-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-indirect
+          sha256: e223281f6433322737cf31b2182b8813e785ccd7b972f166c835981923119e62
+      equivalent-reducer-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-reducer
+          sha256: d8db4426f71d3584b9344bb995c2ca38b90bd39ddc5d36a25e237618ffc92727
+      equivalent-helper-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-helper
+          sha256: ec26b11fc7f58272799be816fc987701eca23eaeb232b205616b80acc3f5e3a3
+      anti-pattern-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/anti-pattern
+          sha256: 54fd76fe232801bf4be2ff840984e2414882684960c522774b9c5478daa39203
+      ambiguous-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/ambiguous
+          sha256: 48dcbe98afec0461dff89ea712fc8ae4570413b24c8e95cf4c84898698446784
+      equivalent-two-layer-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-two-layer
+          sha256: 0d3586fcb716e8c2e608e95a53475f2ea34108dc9c24a65cea136df1a276c9e2
+      equivalent-promise-chain-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-promise-chain
+          sha256: 668d3947045d5f4343158288f42044a82e277e98f805fd67c04c8cbf3bb5dcef
+      equivalent-document-body-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-document-body
+          sha256: 6726a1a9a361abdb8c87b21e41b1605eecea6dddc1098fd1c8a323fe15e62fcd
+      equivalent-unused-transport-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-unused-transport
+          sha256: f61ced4a210254194136f68ca3423108a65c749f4c03aacb6d3bd47c1a8f728c
+      equivalent-file-order-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-file-order
+          sha256: b36edc98b177dd2db1749fa86c7ef16892060ca24651a5fa06718de03324c739
+      equivalent-css-import-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-css-import
+          sha256: abd589242f3ccd1df75885f7366d2cdc8e0198ec4d5bb5523cd81521f3d8a081
+      anti-pattern-nested-leak-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/anti-pattern-nested-leak
+          sha256: 50831bb142153d1670d63484923778c3369e4a1758bd2e58d72ae961785bfa20
+      anti-pattern-partial-translation-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/anti-pattern-partial-translation
+          sha256: 77e60e426e97e37a45df3c0f91b3f5b89d51be60cc099db4929f36106420c972
+      ambiguous-bare-call-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/ambiguous-bare-call
+          sha256: 7542f01f7bdc8c534e0cf1228230257adbcd693e20b0e2d192409c7534442d48
+      equivalent-ok-adapter-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-ok-adapter
+          sha256: 1c250876cfdfa98f795dfcf0068a40727b25405344b27d2e474ea26784871b83
+      equivalent-login-named-form-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/equivalent-login-named-form
+          sha256: 5ee91983bdc808158cd541622580028ea61e0bc8c11e782b77d97163a030caf7
+      multi-function-boundary-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/multi-function-boundary
+          sha256: 73083224158376bf77dec64a0fb040278bcdd4f816e5ccf17d8b4288771725c5
+      two-boundary-page-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/two-boundary-page
+          sha256: 2e180354725d896a6d05b76258f2b32fa33943c127d280dd68cfc6fbaec056a7
+      unrelated-import-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/login-page-judge/v2/overlays/unrelated-import
+          sha256: 09328d85265deff019cccde94ce917f310f486282f9cb706212d2c6659d10e31
+    fixtures:
+      reference: reference-tree
+      equivalent-indirect: equivalent-indirect-tree
+      equivalent-reducer: equivalent-reducer-tree
+      equivalent-helper: equivalent-helper-tree
+      equivalent-two-layer: equivalent-two-layer-tree
+      equivalent-promise-chain: equivalent-promise-chain-tree
+      equivalent-document-body: equivalent-document-body-tree
+      equivalent-unused-transport: equivalent-unused-transport-tree
+      equivalent-file-order: equivalent-file-order-tree
+      equivalent-css-import: equivalent-css-import-tree
+      equivalent-ok-adapter: equivalent-ok-adapter-tree
+      equivalent-login-named-form: equivalent-login-named-form-tree
+      anti-pattern: anti-pattern-tree
+      anti-pattern-nested-leak: anti-pattern-nested-leak-tree
+      anti-pattern-partial-translation: anti-pattern-partial-translation-tree
+      multi-function-boundary: multi-function-boundary-tree
+      ambiguous: ambiguous-tree
+      ambiguous-bare-call: ambiguous-bare-call-tree
+      two-boundary-page: two-boundary-page-tree
+      unrelated-import: unrelated-import-tree
