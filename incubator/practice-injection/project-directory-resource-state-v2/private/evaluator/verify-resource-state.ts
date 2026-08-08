@@ -88,5 +88,5 @@ for (const binding of bindings.filter((binding) => calls.has(binding.name) && bi
 
 const boundary = boundaries.find((text) => /\.status/.test(text));
 if (!boundary) emit("not-observed", "no-transport-boundary");
-if (!/\b(kind|state):\s*["'](ready|empty|failed)["']/.test(boundary)) emit("not-observed", "missing-resource-state");
+if (!/\b(kind|state|type):\s*["'](ready|empty|failed|loading|error|success|ok)["']/i.test(boundary)) emit("not-observed", "missing-resource-state");
 emit("observed");

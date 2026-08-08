@@ -21,3 +21,8 @@ Playwright 语义测试在 Vite dev server 上经 `page.route` 拦截 `/api/proj
 `src/benchmark/judge/judge-agent/generic/v1/calibrate.ts`；结果写入 PR #152。
 v2 夹具复验（2026-08-06，deepseek-v4-flash，每夹具 3 次取样取中位数）：reference 100 / equivalent 96 / anti-pattern 40（gap 60）→ **passed=true**。
 judge 增强同 profile-update v2（工程质量规范 + 严格证据打分 + 重复取样中位数 + 阈值重校准）。确定性探针矩阵 4/4 通过。
+## 修订记录（2026-08-08，纳入 #91 change 的 v2 执行前修订）
+
+- 每 attempt 预算 10 → 25 分钟（deepseek-v4-pro 较慢）。
+- 探针领域翻译/资源状态检查改为结构化（接受 taken/409/type-kind-outcome 判别词），修复 review N5 词法耦合误判；探针矩阵重校准仍 4/4（reference/equiv observed、anti-pattern not-observed、public-starter not-observed）。
+- snapshot 已重生成（身份变更），执行结果见 #91 的 scratch（v2-full-run / v2-rerun-pdir）。

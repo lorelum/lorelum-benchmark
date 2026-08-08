@@ -1,0 +1,18 @@
+schema_version: profile-diagnostic-plan/v2
+id: practice-injection-profile-update-v2-one-repeat-smoke
+schedule_seed: practice-injection-profile-update-v2-smoke-2026-08-08
+schedule_algorithm: cyclic-latin-square/v1
+repetitions: 1
+independent_candidate_threshold: 1
+conditions: [baseline, oracle-practice, irrelevant-practice]
+candidates:
+  - id: profile-update-command-boundary-v2
+    path: incubator/practice-injection/profile-update-command-boundary-v2
+    source_commit: 50fdd8b939e5b4271888e1e1293dd23fd7e62540
+    snapshot_id: f2bad59e14a26543af4c043189fe0519906065df68eca40224d141a148be4286
+    profile_input_hash: cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570
+execution_gate:
+  kind: one-repeat-re-admission
+  parent_plan: { id: practice-injection-candidates-v2-three-condition-diagnostics-v1, repetitions: 3 }
+  candidate_id: profile-update-command-boundary-v2
+  parent_block: 1
