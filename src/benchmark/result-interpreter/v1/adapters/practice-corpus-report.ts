@@ -19,8 +19,11 @@ const sourcesRecord = (manifest as { sources: Record<string, string> }).sources;
 const summaries: Record<string, unknown> = {};
 for (const [name, rel] of Object.entries(sourcesRecord)) {
   const path = `${rootDir}/${rel}`;
-  if (!(await Bun.file(path).exists())) throw new Error(`missing source file: ${path}`);
-  summaries[name] = JSON.parse(await Bun.file(path).text()) as unknown;
+  // Missing source files stay undefined so the report records a missing-summary gap
+  // instead of crashing; units depending on them flip the aggregate to uncertain.
+  if (await Bun.file(path).exists()) {
+    summaries[name] = JSON.parse(await Bun.file(path).text()) as unknown;
+  }
 }
 const report = practiceCorpusReport(manifest, summaries);
 await mkdir(`${outDir}/units`, { recursive: true });

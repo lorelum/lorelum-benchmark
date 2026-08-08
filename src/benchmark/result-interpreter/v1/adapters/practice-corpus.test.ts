@@ -116,9 +116,16 @@ test("non-evaluated replacement entry fails closed", () => {
   expect(() => practiceCorpusReport(m, { primary, rerun })).toThrow(/no evaluated entry/);
 });
 
-test("missing primary source fails closed", () => {
+test("missing primary source fails closed in the builder and becomes a gap in the report", () => {
   const m = manifest([{ candidate: "project-directory-resource-state-v2", profile_input_hash: hashPdir, primary: "primary" }]);
-  expect(() => practiceCorpusReport(m, {})).toThrow(/missing primary source/);
+  expect(() => practiceCorpusToInterpretationInput(m, {})).toThrow(/missing primary source/);
+  const report = practiceCorpusReport(m, {});
+  expect(report.units).toHaveLength(1);
+  expect(report.units[0].verdict).toBe("uncertain");
+  expect(report.units[0].reasons).toContain("missing-summary");
+  expect(report.units[0].evidence).toBeUndefined();
+  expect(report.aggregate.execution_gaps.some((gap) => gap.includes("missing-summary"))).toBe(true);
+  expect(report.aggregate.overall).toBe("uncertain");
 });
 
 test("unfilled failed slot yields uncertain", () => {
@@ -165,4 +172,48 @@ test("markdown report is redacted, evidence-linked, and separates history", () =
   expect(md).toContain("历史背景");
   expect(md).toContain("signal");
   expect(md).not.toMatch(/score|weight|C:\\\\|private|workspace_path/i);
+});
+test("one missing primary keeps other units reported and flips overall to uncertain", () => {
+  const update = threeRepeatSummary("profile-update-command-boundary-v2", snapUpdate, hashUpdate, { baseline: 1, "oracle-practice": 3, "irrelevant-practice": 1 });
+  const m = manifest([
+    { candidate: "profile-update-command-boundary-v2", profile_input_hash: hashUpdate, primary: "primary" },
+    { candidate: "project-directory-resource-state-v2", profile_input_hash: hashPdir, primary: "rerun" },
+  ]);
+  const report = practiceCorpusReport(m, { primary: update });
+  expect(report.units).toHaveLength(2);
+  const ok = report.units.find((u) => u.candidate === "profile-update-command-boundary-v2")!;
+  const gap = report.units.find((u) => u.candidate === "project-directory-resource-state-v2")!;
+  expect(ok.verdict).toBe("signal");
+  expect(ok.evidence).toBeDefined();
+  expect(gap.verdict).toBe("uncertain");
+  expect(gap.reasons).toContain("missing-summary");
+  expect(report.aggregate.verdict_distribution).toEqual({ signal: 1, "diagnostic-only": 0, uncertain: 1 });
+  expect(report.aggregate.overall).toBe("uncertain");
+});
+
+test("replacement source with multiple evaluated entries fails closed", () => {
+  const primary = threeRepeatSummary("project-directory-resource-state-v2", snapPdir, hashPdir, { baseline: 0, "oracle-practice": 2, "irrelevant-practice": 0 }, { condition: "oracle-practice", repeat: 3 });
+  const rerun = v3Summary("project-directory-resource-state-v2", snapPdir, hashPdir, [
+    entryFor("project-directory-resource-state-v2", "oracle-practice", 1, snapPdir, hashPdir),
+    entryFor("project-directory-resource-state-v2", "oracle-practice", 2, snapPdir, hashPdir),
+  ], 2);
+  const m = manifest([{ candidate: "project-directory-resource-state-v2", profile_input_hash: hashPdir, primary: "primary", replacements: [{ condition_id: "oracle-practice", repeat: 3, source: "rerun" }] }]);
+  expect(() => practiceCorpusReport(m, { primary, rerun })).toThrow(/exactly one evaluated entry/);
+});
+
+test("committed redacted v2 corpus fixtures replay to signal for both units", async () => {
+  const full = await Bun.file(`${import.meta.dir}/fixtures/issue-91-v2-full-run-sample.json`).json();
+  const rerun = await Bun.file(`${import.meta.dir}/fixtures/issue-91-v2-rerun-pdir-sample.json`).json();
+  const m = manifest([
+    { candidate: "profile-update-command-boundary-v2", profile_input_hash: hashUpdate, primary: "primary" },
+    { candidate: "project-directory-resource-state-v2", profile_input_hash: hashPdir, primary: "primary", replacements: [{ condition_id: "oracle-practice", repeat: 3, source: "rerun" }] },
+  ]);
+  const report = practiceCorpusReport(m, { primary: full, rerun });
+  expect(report.units).toHaveLength(2);
+  expect(report.units.map((u) => u.verdict)).toEqual(["signal", "signal"]);
+  expect(report.units[0].conditions["oracle-practice"].joint_pass).toBe(3);
+  expect(report.units[1].conditions["oracle-practice"].joint_pass).toBe(3);
+  expect(report.aggregate.overall).toBe("diagnostic-only");
+  const md = practiceCorpusReportMarkdown(report);
+  expect(md).not.toMatch(/score|weight|private|C:\\\\/i);
 });

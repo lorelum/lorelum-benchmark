@@ -5,8 +5,12 @@
  *
  * Slot-replacement follows the #91 N2 denominator rule: a re-admission rerun replaces
  * only the failed/missing slot it targets, never adds a denominator, and counts are
- * never merged across plans. Replacing an already-evaluated slot or using a
- * non-evaluated replacement entry fails closed.
+ * never merged across plans. Replacing an already-evaluated slot, using a
+ * non-evaluated or ambiguous replacement entry, or a malformed manifest fails closed.
+ *
+ * Missing corpus entries (a declared source file/unit that cannot be resolved) become
+ * `missing-summary` gap units in the report: they are listed in execution_gaps and flip
+ * the aggregate to `uncertain`, while other units are still reported.
  */
 
 import { interpret } from "../interpret";
@@ -32,8 +36,10 @@ export type CorpusReportUnit = {
   profile_input_hash: string;
   verdict: Verdict;
   reasons: string[];
-  evidence: SampleUnit;
-  conditions: Record<string, ConditionOutcomeCounts>;
+  /** Absent for missing-summary gap units whose identity could not be rebuilt. */
+  evidence?: SampleUnit;
+  /** Absent for missing-summary gap units. */
+  conditions?: Record<string, ConditionOutcomeCounts>;
 };
 
 export type CorpusReport = {
@@ -47,6 +53,14 @@ export type CorpusReport = {
   };
   historical?: { label: string; note: string };
 };
+
+/** A corpus entry that cannot be resolved is a gap, not a crash. */
+class MissingCorpusError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MissingCorpusError";
+  }
+}
 
 const hashPattern = /^[a-f0-9]{64}$/;
 
@@ -107,65 +121,90 @@ function findUnit(input: InterpretationInput, candidate: string, inputHash: stri
   return input.units.find((unit) => unit.plan.sample_unit.candidate === candidate && unit.plan.sample_unit.input_hash === inputHash);
 }
 
-/** Consolidates the corpus into a single result-interpreter/v1 InterpretationInput. */
-export function practiceCorpusToInterpretationInput(manifestValue: unknown, summaries: Record<string, unknown>): InterpretationInput {
-  const manifest = validateManifest(manifestValue);
-  const units: InterpretationInput["units"] = [];
-  for (const spec of manifest.units) {
-    const primary = summaries[spec.primary];
-    if (primary === undefined) fail(`missing primary source: ${spec.primary}`);
-    const input = practiceToInterpretationInput(primary);
-    const unit = findUnit(input, spec.candidate, spec.profile_input_hash);
-    if (!unit) fail(`no unit ${spec.candidate}/${spec.profile_input_hash} in primary source ${spec.primary}`);
+/** Builds one unit; throws MissingCorpusError for unresolvable corpus entries and plain errors for manifest/operator mistakes. */
+function buildCorpusUnit(spec: CorpusUnitSpec, summaries: Record<string, unknown>): InterpretationInput["units"][number] {
+  const primary = summaries[spec.primary];
+  if (primary === undefined) throw new MissingCorpusError(`missing primary source: ${spec.primary}`);
+  const input = practiceToInterpretationInput(primary);
+  const unit = findUnit(input, spec.candidate, spec.profile_input_hash);
+  if (!unit) throw new MissingCorpusError(`no unit ${spec.candidate}/${spec.profile_input_hash} in primary source ${spec.primary}`);
 
-    let entries = [...unit.entries];
-    const byKey = new Map(entries.map((entry) => [plannedKey(entry.condition_id, entry.repeat), entry]));
-    for (const replacement of spec.replacements ?? []) {
-      const key = plannedKey(replacement.condition_id, replacement.repeat);
-      const target = byKey.get(key);
-      if (target && target.outcome.health === "evaluated") fail(`replacement targets already-evaluated slot ${replacement.condition_id}#${replacement.repeat}`);
-      const sourceSummary = summaries[replacement.source];
-      if (sourceSummary === undefined) fail(`missing replacement source: ${replacement.source}`);
-      const replacementInput = practiceToInterpretationInput(sourceSummary);
-      const replacementUnit = findUnit(replacementInput, spec.candidate, spec.profile_input_hash);
-      if (!replacementUnit) fail(`no unit ${spec.candidate}/${spec.profile_input_hash} in replacement source ${replacement.source}`);
-      const picks = replacementUnit.entries.filter((entry) => entry.condition_id === replacement.condition_id && entry.outcome.health === "evaluated");
-      if (picks.length === 0) fail(`replacement source has no evaluated entry for ${replacement.condition_id}`);
-      const pick: AttemptEntry = {
-        ...picks[0],
-        sample_unit: unit.plan.sample_unit,
-        condition_id: replacement.condition_id,
-        repeat: replacement.repeat,
-      };
-      entries = entries.map((entry) => (plannedKey(entry.condition_id, entry.repeat) === key ? pick : entry));
-      byKey.set(key, pick);
-    }
-    units.push({ plan: unit.plan, entries, decision_rule: practiceDecisionRule });
+  let entries = [...unit.entries];
+  const byKey = new Map(entries.map((entry) => [plannedKey(entry.condition_id, entry.repeat), entry]));
+  for (const replacement of spec.replacements ?? []) {
+    const key = plannedKey(replacement.condition_id, replacement.repeat);
+    const target = byKey.get(key);
+    if (target && target.outcome.health === "evaluated") fail(`replacement targets already-evaluated slot ${replacement.condition_id}#${replacement.repeat}`);
+    const sourceSummary = summaries[replacement.source];
+    if (sourceSummary === undefined) throw new MissingCorpusError(`missing replacement source: ${replacement.source}`);
+    const replacementInput = practiceToInterpretationInput(sourceSummary);
+    const replacementUnit = findUnit(replacementInput, spec.candidate, spec.profile_input_hash);
+    if (!replacementUnit) throw new MissingCorpusError(`no unit ${spec.candidate}/${spec.profile_input_hash} in replacement source ${replacement.source}`);
+    const picks = replacementUnit.entries.filter((entry) => entry.condition_id === replacement.condition_id && entry.outcome.health === "evaluated");
+    if (picks.length === 0) fail(`replacement source has no evaluated entry for ${replacement.condition_id}`);
+    if (picks.length !== 1) fail(`replacement source must contain exactly one evaluated entry for ${replacement.condition_id}, got ${picks.length}`);
+    const pick: AttemptEntry = {
+      ...picks[0],
+      sample_unit: unit.plan.sample_unit,
+      condition_id: replacement.condition_id,
+      repeat: replacement.repeat,
+    };
+    entries = entries.map((entry) => (plannedKey(entry.condition_id, entry.repeat) === key ? pick : entry));
+    byKey.set(key, pick);
   }
-  return { units };
+  return { plan: unit.plan, entries, decision_rule: practiceDecisionRule };
 }
 
-/** Builds the redacted machine-readable corpus report. */
+/** Consolidates the corpus into a single result-interpreter/v1 InterpretationInput (fails closed on any missing entry). */
+export function practiceCorpusToInterpretationInput(manifestValue: unknown, summaries: Record<string, unknown>): InterpretationInput {
+  const manifest = validateManifest(manifestValue);
+  return { units: manifest.units.map((spec) => buildCorpusUnit(spec, summaries)) };
+}
+
+/** Builds the redacted machine-readable corpus report; missing entries become gap units instead of crashing. */
 export function practiceCorpusReport(manifestValue: unknown, summaries: Record<string, unknown>): CorpusReport {
   const manifest = validateManifest(manifestValue);
-  const input = practiceCorpusToInterpretationInput(manifest, summaries);
-  const summary = interpret(input);
-  const units: CorpusReportUnit[] = summary.units.map((unit) => ({
-    candidate: unit.sample_unit.candidate,
-    profile_input_hash: unit.sample_unit.input_hash,
-    verdict: unit.verdict,
-    reasons: unit.reasons,
-    evidence: unit.sample_unit,
-    conditions: unit.conditions,
-  }));
+  const units: CorpusReportUnit[] = [];
+  const verdictDistribution: Record<Verdict, number> = { signal: 0, "diagnostic-only": 0, uncertain: 0 };
+  const executionGaps: string[] = [];
+  const successful: InterpretationInput["units"] = [];
+
+  for (const spec of manifest.units) {
+    try {
+      successful.push(buildCorpusUnit(spec, summaries));
+    } catch (error) {
+      if (!(error instanceof MissingCorpusError)) throw error;
+      const reason = error.message;
+      verdictDistribution.uncertain += 1;
+      executionGaps.push(`${spec.candidate}/${spec.profile_input_hash}: missing-summary (${reason})`);
+      units.push({ candidate: spec.candidate, profile_input_hash: spec.profile_input_hash, verdict: "uncertain", reasons: ["missing-summary"] });
+    }
+  }
+
+  if (successful.length > 0) {
+    const summary = interpret({ units: successful });
+    for (const unit of summary.units) {
+      units.push({
+        candidate: unit.sample_unit.candidate,
+        profile_input_hash: unit.sample_unit.input_hash,
+        verdict: unit.verdict,
+        reasons: unit.reasons,
+        evidence: unit.sample_unit,
+        conditions: unit.conditions,
+      });
+      verdictDistribution[unit.verdict] += 1;
+    }
+    executionGaps.push(...summary.cross_unit.execution_gaps);
+  }
+
   return {
     schema_version: "practice-diagnostic-corpus-report/v1",
     generated_at: new Date().toISOString(),
     units,
     aggregate: {
-      verdict_distribution: summary.cross_unit.verdict_distribution,
-      execution_gaps: summary.cross_unit.execution_gaps,
-      overall: summary.overall,
+      verdict_distribution: verdictDistribution,
+      execution_gaps: executionGaps,
+      overall: verdictDistribution.uncertain > 0 ? "uncertain" : "diagnostic-only",
     },
     ...(manifest.historical ? { historical: manifest.historical } : {}),
   };
@@ -184,13 +223,21 @@ export function practiceCorpusReportMarkdown(report: CorpusReport): string {
     lines.push(`### ${unit.candidate}`);
     lines.push("");
     lines.push(`- verdict: \`${unit.verdict}\``);
-    lines.push(`- 证据：source_commit=\`${unit.evidence.source_commit}\`、snapshot_id=\`${unit.evidence.snapshot_id}\`、profile_input_hash=\`${unit.evidence.input_hash}\``);
+    if (unit.evidence) {
+      lines.push(`- 证据：source_commit=\`${unit.evidence.source_commit}\`、snapshot_id=\`${unit.evidence.snapshot_id}\`、profile_input_hash=\`${unit.evidence.input_hash}\``);
+    } else {
+      lines.push("- 证据：未知（语料缺失，无法从 primary 重建身份）");
+    }
     if (unit.reasons.length > 0) lines.push(`- reasons: ${unit.reasons.join(", ")}`);
     lines.push("");
-    lines.push("| 条件 | planned | evaluated | joint_pass |");
-    lines.push("| --- | --- | --- | --- |");
-    for (const [condition, counts] of Object.entries(unit.conditions)) {
-      lines.push(`| ${condition} | ${counts.planned} | ${counts.evaluated} | ${counts.joint_pass} |`);
+    if (unit.conditions) {
+      lines.push("| 条件 | planned | evaluated | joint_pass |");
+      lines.push("| --- | --- | --- | --- |");
+      for (const [condition, counts] of Object.entries(unit.conditions)) {
+        lines.push(`| ${condition} | ${counts.planned} | ${counts.evaluated} | ${counts.joint_pass} |`);
+      }
+    } else {
+      lines.push("（语料缺失，无逐条件计数）");
     }
     lines.push("");
   }

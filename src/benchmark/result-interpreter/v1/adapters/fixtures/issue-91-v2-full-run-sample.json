@@ -1,0 +1,571 @@
+{
+    "schema_version":  "profile-diagnostic-summary/v3",
+    "generated_at":  "2026-08-08T08:11:14.139Z",
+    "plan":  {
+                 "id":  "practice-injection-candidates-v2-three-condition-diagnostics-v1",
+                 "schedule_seed":  "practice-injection-candidates-v2-diagnostics-2026-08-08",
+                 "schedule_algorithm":  "cyclic-latin-square/v1",
+                 "repetitions":  3,
+                 "schedule":  [
+                                  {
+                                      "id":  "profile-update-command-boundary-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "block":  1,
+                                      "planned_position":  1,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "profile-update-command-boundary-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "block":  1,
+                                      "planned_position":  2,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "profile-update-command-boundary-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "block":  1,
+                                      "planned_position":  3,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "profile-update-command-boundary-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "block":  2,
+                                      "planned_position":  1,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "profile-update-command-boundary-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "block":  2,
+                                      "planned_position":  2,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "profile-update-command-boundary-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "block":  2,
+                                      "planned_position":  3,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "profile-update-command-boundary-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "block":  3,
+                                      "planned_position":  1,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "profile-update-command-boundary-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "block":  3,
+                                      "planned_position":  2,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "profile-update-command-boundary-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "block":  3,
+                                      "planned_position":  3,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "project-directory-resource-state-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "block":  1,
+                                      "planned_position":  1,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "project-directory-resource-state-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "block":  1,
+                                      "planned_position":  2,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "project-directory-resource-state-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "block":  1,
+                                      "planned_position":  3,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "project-directory-resource-state-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "block":  2,
+                                      "planned_position":  1,
+                                      "condition":  "oracle-practice"
+                                  },
+                                  {
+                                      "id":  "project-directory-resource-state-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "block":  2,
+                                      "planned_position":  2,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "project-directory-resource-state-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "block":  2,
+                                      "planned_position":  3,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "project-directory-resource-state-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "block":  3,
+                                      "planned_position":  1,
+                                      "condition":  "irrelevant-practice"
+                                  },
+                                  {
+                                      "id":  "project-directory-resource-state-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "block":  3,
+                                      "planned_position":  2,
+                                      "condition":  "baseline"
+                                  },
+                                  {
+                                      "id":  "project-directory-resource-state-v2",
+                                      "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                                      "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "block":  3,
+                                      "planned_position":  3,
+                                      "condition":  "oracle-practice"
+                                  }
+                              ]
+             },
+    "entries":  [
+                    {
+                        "candidate":  "profile-update-command-boundary-v2",
+                        "condition":  "baseline",
+                        "repeat":  1,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                        "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                        "joint_pass":  false,
+                        "block":  1,
+                        "planned_position":  1,
+                        "actual_execution_position":  1,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "profile-update-command-boundary-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  1,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "practice_id":  "profile-update.modal-focus",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "9fb5b76268a5f5614805c0a6b38e3173d4702097c3462b11a33aaee6416e9005"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                        "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                        "joint_pass":  false,
+                        "block":  1,
+                        "planned_position":  2,
+                        "actual_execution_position":  2,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "profile-update-command-boundary-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  1,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "practice_id":  "profile-update.command-domain-boundary",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "b3b1b80acdb0bb6437375996a48222aeb7afc01e8afb90713f93f3b5c5ecb616"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                        "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                        "joint_pass":  true,
+                        "block":  1,
+                        "planned_position":  3,
+                        "actual_execution_position":  3,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "profile-update-command-boundary-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  2,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "practice_id":  "profile-update.modal-focus",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "9fb5b76268a5f5614805c0a6b38e3173d4702097c3462b11a33aaee6416e9005"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                        "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                        "joint_pass":  false,
+                        "block":  2,
+                        "planned_position":  1,
+                        "actual_execution_position":  4,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "profile-update-command-boundary-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  2,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "practice_id":  "profile-update.command-domain-boundary",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "b3b1b80acdb0bb6437375996a48222aeb7afc01e8afb90713f93f3b5c5ecb616"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                        "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                        "joint_pass":  true,
+                        "block":  2,
+                        "planned_position":  2,
+                        "actual_execution_position":  5,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "profile-update-command-boundary-v2",
+                        "condition":  "baseline",
+                        "repeat":  2,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                        "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                        "joint_pass":  true,
+                        "block":  2,
+                        "planned_position":  3,
+                        "actual_execution_position":  6,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "profile-update-command-boundary-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  3,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "practice_id":  "profile-update.command-domain-boundary",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "b3b1b80acdb0bb6437375996a48222aeb7afc01e8afb90713f93f3b5c5ecb616"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                        "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                        "joint_pass":  true,
+                        "block":  3,
+                        "planned_position":  1,
+                        "actual_execution_position":  7,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "profile-update-command-boundary-v2",
+                        "condition":  "baseline",
+                        "repeat":  3,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                        "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                        "joint_pass":  false,
+                        "block":  3,
+                        "planned_position":  2,
+                        "actual_execution_position":  8,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "profile-update-command-boundary-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  3,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                                      "practice_id":  "profile-update.modal-focus",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "9fb5b76268a5f5614805c0a6b38e3173d4702097c3462b11a33aaee6416e9005"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
+                        "profile_input_hash":  "cd6d58d9507a4fbe33e3d414cd1f9c5d600827857793223034bb4dcebd0ed570",
+                        "joint_pass":  true,
+                        "block":  3,
+                        "planned_position":  3,
+                        "actual_execution_position":  9,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "project-directory-resource-state-v2",
+                        "condition":  "baseline",
+                        "repeat":  1,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                        "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                        "joint_pass":  false,
+                        "block":  1,
+                        "planned_position":  1,
+                        "actual_execution_position":  10,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "project-directory-resource-state-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  1,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "practice_id":  "project-directory.query-resource-state",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "2fad75363d54a7b506af467c21304377059b788f8a7fa4c41e72755968b8061c"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                        "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                        "joint_pass":  true,
+                        "block":  1,
+                        "planned_position":  2,
+                        "actual_execution_position":  11,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "project-directory-resource-state-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  1,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "practice_id":  "project-directory.avatar-fallback",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "0e7a231835f4312cbba6df4504a45fa1848026cc6196bf98f4d591ea17aa8869"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                        "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                        "joint_pass":  false,
+                        "block":  1,
+                        "planned_position":  3,
+                        "actual_execution_position":  12,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "project-directory-resource-state-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  2,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "practice_id":  "project-directory.query-resource-state",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "2fad75363d54a7b506af467c21304377059b788f8a7fa4c41e72755968b8061c"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                        "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                        "joint_pass":  true,
+                        "block":  2,
+                        "planned_position":  1,
+                        "actual_execution_position":  13,
+                        "semantic":  "pass",
+                        "practice_observation":  "observed"
+                    },
+                    {
+                        "candidate":  "project-directory-resource-state-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  2,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "practice_id":  "project-directory.avatar-fallback",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "0e7a231835f4312cbba6df4504a45fa1848026cc6196bf98f4d591ea17aa8869"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                        "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                        "joint_pass":  false,
+                        "block":  2,
+                        "planned_position":  2,
+                        "actual_execution_position":  14,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "project-directory-resource-state-v2",
+                        "condition":  "baseline",
+                        "repeat":  2,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                        "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                        "joint_pass":  false,
+                        "block":  2,
+                        "planned_position":  3,
+                        "actual_execution_position":  15,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "project-directory-resource-state-v2",
+                        "condition":  "irrelevant-practice",
+                        "repeat":  3,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "irrelevant-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "practice_id":  "project-directory.avatar-fallback",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "0e7a231835f4312cbba6df4504a45fa1848026cc6196bf98f4d591ea17aa8869"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                        "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                        "joint_pass":  false,
+                        "block":  3,
+                        "planned_position":  1,
+                        "actual_execution_position":  16,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "project-directory-resource-state-v2",
+                        "condition":  "baseline",
+                        "repeat":  3,
+                        "evaluation_status":  "evaluated",
+                        "trace":  {
+                                      "condition_id":  "baseline",
+                                      "channel":  "none",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                        "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                        "joint_pass":  false,
+                        "block":  3,
+                        "planned_position":  2,
+                        "actual_execution_position":  17,
+                        "semantic":  "pass",
+                        "practice_observation":  "not-observed"
+                    },
+                    {
+                        "candidate":  "project-directory-resource-state-v2",
+                        "condition":  "oracle-practice",
+                        "repeat":  3,
+                        "evaluation_status":  "execution-failed",
+                        "trace":  {
+                                      "condition_id":  "oracle-practice",
+                                      "channel":  "condition-scoped-private-runtime",
+                                      "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                                      "practice_id":  "project-directory.query-resource-state",
+                                      "practice_version":  "v1",
+                                      "practice_sha256":  "2fad75363d54a7b506af467c21304377059b788f8a7fa4c41e72755968b8061c"
+                                  },
+                        "source_commit":  "50fdd8b939e5b4271888e1e1293dd23fd7e62540",
+                        "snapshot_id":  "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
+                        "profile_input_hash":  "c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53",
+                        "joint_pass":  null,
+                        "block":  3,
+                        "planned_position":  3,
+                        "actual_execution_position":  18,
+                        "error":  "Pi timed out"
+                    }
+                ]
+}
