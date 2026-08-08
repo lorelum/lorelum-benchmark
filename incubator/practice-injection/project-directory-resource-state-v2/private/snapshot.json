@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "ba8cf636a283f740a231aa77b343344982caaf332d28bfdc4cdd408e34f8138d",
+  "snapshot_id": "239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8",
   "files": {
     "private/calibration.md": "10d93ce45d956b421425b261c692c0cba1bb67be8d6df256f58d0abd3d679912",
     "private/calibration/run.ts": "c7236ce4d117e1091d53ab37ceca5af54ca42da8b3c9ec2da70b3f86aa7feb05",
@@ -24,7 +24,7 @@
     "private/evaluator/runtime-closure.yaml": "be722244c7a9f959e9e1ced7e9597af91c611d98c2acffa4702744f69be3ba36",
     "private/evaluator/runtime-closure/bun.lock": "ef93097b3538fd622f47c96698b78be7ed478a66ea32332aeda08ce388dd4754",
     "private/evaluator/runtime-closure/package.json": "228711f7fe3b45c7e49689b9deda0cf7510ef9f8d4b5ad0b69f5711fba1e3f4a",
-    "private/evaluator/verify-resource-state.ts": "00f6e2d14dcb8b112b093405c6d474436f8d83173dfc9b716d3c1022c93bc800",
+    "private/evaluator/verify-resource-state.ts": "988d83137abd17d4911987f423f3b9b66b1c90cd3a8bd6e8340191b4dd762d7c",
     "private/execution/git-history.yaml": "81ffa159186e1ef3c0d417e60dbd3a4b3529a3db59d32fb1d789996e9a328204",
     "private/execution/tool-policy.yaml": "bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6",
     "private/oracle.yaml": "4afe609febd260e8dfc1c844c233f8ea48f10025ee4d5cec5b78801d4e7db101",

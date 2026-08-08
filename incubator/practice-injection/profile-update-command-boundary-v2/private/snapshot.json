@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "982ae1b556777aedc8d8ec727a539fd6f1de49277f79db27cb5110992b73038f",
+  "snapshot_id": "7539b26c7f825db4ff485aa0868f2bbf8343d8cc6e9903f1b4d70b3b519a06cf",
   "files": {
     "private/calibration.md": "a3b54834498c14b9f81308d320dc168d2dc2272ecfc1f7c539a921026ad39392",
     "private/calibration/run.ts": "9326dc212ec3804a267cfc1446cda6732d5863154fcb452d7ee37b3ba5aa8f54",
@@ -24,7 +24,7 @@
     "private/evaluator/runtime-closure.yaml": "be722244c7a9f959e9e1ced7e9597af91c611d98c2acffa4702744f69be3ba36",
     "private/evaluator/runtime-closure/bun.lock": "ef93097b3538fd622f47c96698b78be7ed478a66ea32332aeda08ce388dd4754",
     "private/evaluator/runtime-closure/package.json": "228711f7fe3b45c7e49689b9deda0cf7510ef9f8d4b5ad0b69f5711fba1e3f4a",
-    "private/evaluator/verify-command-boundary.ts": "5d5123029d4cbcc30933a6a015e1f1b10665f08d29b47c0f5b899726727d7ca5",
+    "private/evaluator/verify-command-boundary.ts": "02b1b9c2f390351d1d51c7cc0c09e6f49ff562ec6f8310ba2e3d6f90495c4b30",
     "private/execution/git-history.yaml": "a97b2ea36d9f5b32cff375b8a625e1ff997ba1d3a08c96ecac51ca95a0c9a46e",
     "private/execution/tool-policy.yaml": "bef564a5ea7ba4d9f3e462375eb843c13431b607be96e3ec3b6dfb40dfbcf5b6",
     "private/oracle.yaml": "6347e8ce155bf02908754f82c6919546408ae7b99b4458a4464c470db9aeecda",
