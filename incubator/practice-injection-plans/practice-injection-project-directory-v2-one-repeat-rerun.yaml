@@ -1,0 +1,18 @@
+schema_version: profile-diagnostic-plan/v2
+id: practice-injection-project-directory-v2-one-repeat-rerun
+schedule_seed: practice-injection-project-directory-v2-rerun-2026-08-08
+schedule_algorithm: cyclic-latin-square/v1
+repetitions: 1
+independent_candidate_threshold: 1
+conditions: [baseline, oracle-practice, irrelevant-practice]
+candidates:
+  - id: project-directory-resource-state-v2
+    path: incubator/practice-injection/project-directory-resource-state-v2
+    source_commit: 50fdd8b939e5b4271888e1e1293dd23fd7e62540
+    snapshot_id: 239ca46eb7c4538421f920428001e059faff7384a984f35550d15d43ad3be5e8
+    profile_input_hash: c32065a647e7b3a24ce174fe587efb447b2f6e7201907133cc59be7a528eed53
+execution_gate:
+  kind: one-repeat-re-admission
+  parent_plan: { id: practice-injection-candidates-v2-three-condition-diagnostics-v1, repetitions: 3 }
+  candidate_id: project-directory-resource-state-v2
+  parent_block: 3
