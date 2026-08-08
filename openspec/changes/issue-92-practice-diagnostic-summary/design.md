@@ -65,4 +65,14 @@ driver 接受一个语料清单（JSON 或目录约定），每项指向一份 `
 
 ## Planning Confirmation
 
-（规划澄清后回填：#92 语料范围、quality-gap 口径、输出格式。）
+需求方已确认以下口径（2026-08-08，plan-mode 提问，全部按推荐）：
+
+- 语料范围：两个 v2 candidate 的三重复（`v2-full-run` 18 attempts；pdir 的 oracle block-3
+  超时用 `v2-rerun-pdir` 按槽位替换）+ 登录页 `login-v2-three-condition-retest-v2`；
+  v1 gate/one-repeat 不纳入判定。
+- quality-gap 口径：维持 #155/#156 v1（仅 `indeterminate` 视为缺口 → uncertain；
+  not-run / judge-unavailable 按“非 observed”处理；本语料无这两类状态，不影响结果）。
+- 输出格式：机器可读 JSON（corpus-report + 逐单元）+ 人读脱敏 markdown 报告。
+
+补跑合并遵循 #91 N2 分母规则：补跑只替换失败/缺失槽位、不新增分母、不跨 plan 合并计数；
+目标槽位已 evaluated 或替换条目非 evaluated → fail-closed。
