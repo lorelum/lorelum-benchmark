@@ -18,4 +18,4 @@
 - [x] 3.1 决策：
   - v4-pro：oracle joint_pass 1/3 > baseline 0/3 且 > irrelevant 0/3，但 baseline 健康不足（1/3）→ `diagnostic-or-uncertain` → `diagnostic-only`。
   - flash：oracle joint_pass 3/3 > baseline 1/3 且 > irrelevant 1/3，9/9 健康，judge 中位 oracle 100 最高 → `conclusion_grade: directional-screen`、`overall_conclusion_grade: reproducible-direction`（单候选方向性信号，不扩大解释）。
-- [x] 3.2 终检：题面/starter/evaluator/practices 未改动（仅 runner 适配、model-tier 配置 conditions.yaml+snapshot、plan 属 pilot change 范围）；未创建正式 record、未升级 suite revision、未合并/关闭 #162；模型调用仅限诊断执行与 judge opt-in。
+- [x] 3.2 终检：题面/starter/evaluator/practices 未改动（仅 runner 适配、model-tier 配置 conditions.yaml+snapshot、plan 属 pilot change 范围）；未创建正式 record、未升级 suite revision、#162 已于 2026-08-10 合并（本 change 不关闭/归档 candidate change）；模型调用仅限诊断执行与 judge opt-in。

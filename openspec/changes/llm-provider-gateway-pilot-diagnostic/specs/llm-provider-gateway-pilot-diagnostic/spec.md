@@ -2,11 +2,11 @@
 
 ### Requirement: 三条件诊断对照执行
 
-对 `llm-provider-gateway-v1` 的本地诊断 MUST 使用冻结 candidate 的 `private/conditions.yaml`（baseline / oracle-practice / irrelevant-practice）与 snapshot 作为唯一输入，MUST 使用本地 Pi diagnostic runner 执行，每条件按确认的重复次数与预算（默认 max_duration_minutes: 10）运行；执行 MUST NOT 修改 candidate 的 public/private 任何文件。
+对 `llm-provider-gateway-v1` 的本地诊断 MUST 使用冻结 candidate 的 `private/conditions.yaml`（baseline / oracle-practice / irrelevant-practice）与 snapshot 作为唯一输入，MUST 使用本地 Pi diagnostic runner 执行，每条件按确认的重复次数与预算（默认 max_duration_minutes: 10）运行；执行本身 MUST NOT 修改 candidate 的题面/starter/evaluator/practices；model-tier 配置变更（conditions.yaml model + snapshot 重建，profile_input_hash 不变）作为 pilot 显式声明范围，需在本 change 中记录。
 
 #### Scenario: 冻结输入
 - **WHEN** 本地诊断运行
-- **THEN** 使用 conditions.yaml 声明的三条件与 shared_execution；candidate 文件在运行前后 hash/snapshot 不变
+- **THEN** 使用 conditions.yaml 声明的三条件与 shared_execution；candidate 的题面/starter/evaluator/practices 在运行前后不变；model-tier 配置变更作为本 change 显式范围记录
 
 #### Scenario: 评估器盲评
 - **WHEN** Pi agent 在任意条件运行
@@ -30,7 +30,7 @@ judge（`judge-agent/generic/v1`）MUST 仅在 `LORELUM_JUDGE_REAL=1` 显式 opt
 
 ### Requirement: 决策口径与边界
 
-决策 MUST 按 `strictly-greater-than-each-control`：oracle 的 joint-pass 严格高于 baseline 与 irrelevant-practice 才支持方向性结论，否则记 diagnostic-only；本 change MUST NOT 创建正式 record、MUST NOT 升级 suite revision、MUST NOT 合并/关闭 #162，结论不扩展到产品效果或模型泛化。
+决策 MUST 按 `strictly-greater-than-each-control`：oracle 的 joint-pass 严格高于 baseline 与 irrelevant-practice 才支持方向性结论，否则记 diagnostic-only；本 change MUST NOT 创建正式 record、MUST NOT 升级 suite revision，且 MUST NOT 关闭/归档 candidate change（#162 已于 2026-08-10 合并，属既成事实，不作为可执行门禁）；结论不扩展到产品效果或模型泛化。
 
 #### Scenario: 判别力成立
 - **WHEN** oracle joint-pass 严格高于每个对照

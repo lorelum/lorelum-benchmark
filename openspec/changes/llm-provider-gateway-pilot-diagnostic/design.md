@@ -14,7 +14,7 @@
 **Non-Goals:**
 
 - 不改写 candidate（题面/夹具/evaluator 冻结）；不创建正式 record、不升级 suite revision。
-- 不合并/关闭 #162（candidate 交付 PR 保持开放至归档）；不扩大结论到产品效果或模型泛化。
+- #162 已于 2026-08-10 合并；本 change 不关闭/归档 candidate change（llm-provider-gateway-practice-candidate）；不扩大结论到产品效果或模型泛化。
 
 ## Decisions
 
@@ -43,12 +43,17 @@
 2. 规划澄清：确认重复次数、模型、judge opt-in、预算、DeepSeek Key 可用性；写回 issue #163 与 design。
 3. 实现：以本地 Pi diagnostic runner 执行三条件对照（持续提交到同一 PR）。
 4. 汇总结果表 + 决策（oracle 严格领先 → 方向性结论；否则 diagnostic-only）；独立核对结果呈现。
-5. 终检：candidate 未改动；未建 record、未升级 suite、未合并 #162。
+5. 终检：candidate 题面/starter/evaluator/practices 未改动；未建 record、未升级 suite；#162 已于 2026-08-10 合并（本 change 不关闭/归档 candidate change）。
 
 ### Runner 适配（node-ts candidate）
 
 - `profile-diagnostic-runner.ts` 原仅接受 `react-vite` materializer 并为每个 attempt 启动前端 web server（`bun run dev -- --port`）。本 pilot 的后端 candidate 使用 `node-ts` materializer，且其 evaluator 为 `bun run test`（自起 stub，无需外置 web server）。
 - 适配：`verifyCandidateDeclaration` 接受 `react-vite|node-ts`；`runAttempt` 对 `node-ts` 跳过 web server（无 PLAYWRIGHT_BASE_URL）。runner 测试同步更新（38 pass）。
+
+### model-tier 配置变更边界（D2 明确）
+
+- 运行本身不修改 candidate 的题面/starter/evaluator/practices；flash model-tier rerun 作为 pilot 显式范围，改写了 `private/conditions.yaml`（`shared_execution.model.id`）并重建 snapshot（snapshot_id `7d01aa79…` → `c3af28…`），`profile_input_hash` 保持不变（runtime.ts 只哈希 conditions 数组/decision_rule/practices，不含 model.id）。
+- 后续按字面审阅 spec「冻结输入」时，应把 model-tier 配置变更视为本 change 显式声明范围，而非运行副作用违规。
 
 ## Open Questions
 

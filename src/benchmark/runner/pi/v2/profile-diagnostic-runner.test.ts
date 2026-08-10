@@ -742,3 +742,62 @@ test("resolveRuntimeClosureIfDeclared returns null for a candidate without a clo
     await rm(path, { force: true, recursive: true });
   }
 });
+
+
+test("materializeGitHistory allows a truly empty final catch-all commit", async () => {
+  const app = await mkdtemp(join(tmpdir(), "lorelum-githistory-empty-"));
+  try {
+    await Bun.write(join(app, "index.html"), "<html></html>");
+    const history = {
+      identity: { name: "ops", email: "ops@x.io" },
+      commits: [
+        { message: "chore: scaffold", files: ["index.html"] },
+        { message: "feat: shell awaiting wiring", files: [] },
+      ],
+    };
+    await materializeGitHistory(app, history);
+    const log = await run(["git", "-C", app, "log", "--format=%s"], app);
+    expect(log.code).toBe(0);
+    expect(log.stdout.trim().split("\n")).toEqual(["feat: shell awaiting wiring", "chore: scaffold"]);
+    const status = await run(["git", "-C", app, "status", "--porcelain"], app);
+    expect(status.stdout.trim()).toBe("");
+  } finally {
+    await rm(app, { force: true, recursive: true });
+  }
+});
+
+test("runAttempt for node-ts candidates skips the web server and does not inject PLAYWRIGHT_BASE_URL", async () => {
+  const fixture = await withAttemptFixture();
+  const phases: string[] = [];
+  let evaluatorEnv: Record<string, string> | undefined;
+  try {
+    const profile = await resolveInjectionCalibration(fixture.candidate);
+    const entry = await runAttempt(
+      fixture.output,
+      fixture.candidate,
+      "neutral-contract-fixture-v1",
+      { id: "neutral-contract-fixture-v1", kernel: { core: "v1", profile: "injection-calibration/v1", materializer_kind: "node-ts" }, source: { source_commit: "abc123" } },
+      "snapshot",
+      profile.profile_input_hash,
+      profile,
+      "baseline",
+      1,
+      { pi_version: "test", model: { id: "test-model" }, budget: { max_duration_minutes: 1 }, repetitions: 1 },
+      "fake-pi",
+      async (command, cwd, _timeout, env) => {
+        if (command[0] === "fake-pi") { phases.push("pi"); return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 }; }
+        if (command[1] === "install") { phases.push("provision"); await mkdir(join(cwd, "node_modules"), { recursive: true }); return { code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 }; }
+        phases.push("evaluator");
+        evaluatorEnv = env ?? {};
+        expect(Object.keys(evaluatorEnv)).not.toContain("PLAYWRIGHT_BASE_URL");
+        return { code: 0, stdout: '{"semantic":"pass","practice_observation":"observed"}', stderr: "", timedOut: false, durationMs: 1 };
+      },
+      async () => { phases.push("server"); return { ok: true, handle: { pid: 42, port: 1, stop: async () => true } }; }
+    );
+    expect(entry.error).toBeUndefined();
+    expect(phases).toEqual(["pi", "provision", "evaluator"]);
+    expect(entry).toMatchObject({ evaluation_status: "evaluated", semantic: "pass", practice_observation: "observed", joint_pass: true });
+  } finally {
+    await fixture.cleanup();
+  }
+});

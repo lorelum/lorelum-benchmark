@@ -8,7 +8,7 @@
 - 结果按 `docs/PRACTICE_BENCHMARK_GUIDE.md` 人可读原始结果表呈现（evaluated / semantic pass / practice observed / joint_pass，非健康评测与 indeterminate 单独计数）。
 - judge（`judge-agent/generic/v1`）软分：需要 `LORELUM_JUDGE_REAL=1` 显式 opt-in + DeepSeek API Key；无 key 时 judge 记 not-run，方向性结论只依据 semantic + practice_observation。
 - 决策：oracle joint-pass 严格高于 baseline 与 irrelevant-practice → 支持方向性结论；否则 diagnostic-only。
-- 不改写 candidate（题面/夹具/evaluator 已冻结）；不创建正式 record、不升级 suite revision；#162 保持开放直至 candidate change 归档。
+- 不改写 candidate（题面/夹具/evaluator 已冻结）；不创建正式 record、不升级 suite revision；#162 已于 2026-08-10 合并，candidate change（llm-provider-gateway-practice-candidate）尚未归档，本 change 不关闭/归档该 change。
 
 ## Capabilities
 
