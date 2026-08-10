@@ -1,11 +1,7 @@
-# 网关接 Anthropic，用量和费用要能查
+# 网关加个 Anthropic
 
-网关现在就 OpenAI 一家，直连写死的。把 Anthropic 也接进来——它鉴权、消息格式、流式都跟 OpenAI 不一样，接完两家都得能对话、能流式。
-
-DeepSeek 这种 OpenAI 兼容的，走配置注册表就能切，别给它单开一套请求。
-
-每个请求记下 token 用量、耗时和估算费用，能按模型查汇总（接口看 docs/gateway-api.md）。
-
-Key 无效、限流这种，统一给个正常错误，别把上游的原始报文甩给调用方。
-
-改完跑下测试。
+把 Anthropic 接进来，OpenAI 和 Anthropic 两家都得能对话，流式（SSE）也要支持。
+每个请求记下 token 用量和费用，能按模型查汇总。
+之后 DeepSeek 也要加，希望到时候不用改代码。
+Key 不对、限流这种，报错给个正常提示。
+接口契约看 docs/gateway-api.md。改完跑下测试。
