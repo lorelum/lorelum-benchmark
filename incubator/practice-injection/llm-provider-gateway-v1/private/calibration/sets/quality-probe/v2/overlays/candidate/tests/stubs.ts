@@ -27,8 +27,9 @@ function writeEvent(res: import("node:http").ServerResponse, data: string): void
 /**
  * Local provider stub used by the public test suite. It serves the two wire
  * protocols (OpenAI-compatible chat.completions and Anthropic messages) with
- * fixed deterministic responses, SSE included, so the tests never touch a real
- * vendor endpoint.
+ * fixed deterministic responses, SSE included. The stubs also validate the
+ * request side (path, auth, headers, body shape) so a candidate really has to
+ * speak each vendor protocol, not just parse its response.
  */
 export async function createStub(kind: StubKind): Promise<Stub> {
   const validKey = kind === "anthropic" ? "test-anthropic-key" : kind === "deepseek" ? "test-deepseek-key" : "test-openai-key";
@@ -43,6 +44,23 @@ export async function createStub(kind: StubKind): Promise<Stub> {
       send(res, 422, { error: "invalid request" });
       return;
     }
+    const path = (req.url ?? "").split("?")[0];
+
+    // Request-side wire validation: the candidate must really speak the vendor protocol.
+    if (kind === "anthropic") {
+      if (path !== "/v1/messages") return send(res, 400, { error: "wrong path" });
+      if (typeof req.headers["x-api-key"] !== "string") return send(res, 400, { error: "missing x-api-key" });
+      if (typeof req.headers["anthropic-version"] !== "string") return send(res, 400, { error: "missing anthropic-version" });
+      if (typeof body.model !== "string" || !Array.isArray(body.messages) || typeof body.max_tokens !== "number") {
+        return send(res, 400, { error: "malformed anthropic body" });
+      }
+    } else {
+      if (path !== "/chat/completions") return send(res, 400, { error: "wrong path" });
+      if (typeof body.model !== "string" || !Array.isArray(body.messages)) {
+        return send(res, 400, { error: "malformed body" });
+      }
+    }
+
     const auth = req.headers.authorization ?? req.headers["x-api-key"];
     if (auth !== `Bearer ${validKey}` && auth !== validKey) {
       send(res, 401, { error: "invalid api key" });

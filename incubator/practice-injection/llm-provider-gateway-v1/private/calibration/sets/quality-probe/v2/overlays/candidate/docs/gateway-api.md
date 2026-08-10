@@ -26,7 +26,18 @@
 }
 ```
 
-SSE 流式响应：`content-type: text/event-stream`，每个 `data:` 块携带一段增量文本，最后一条 `data:` 块携带 `{"usage": {...}, "cost": ...}` 并结束。
+SSE 流式响应：`content-type: text/event-stream`。每个文本增量是一个 `data:` 事件：
+
+```
+data: {"choices":[{"delta":{"content":"你"}}]}
+data: {"choices":[{"delta":{"content":"好"}}]}
+```
+
+流结束时，最后一条 `data:` 事件携带归一化用量与费用：
+
+```
+data: {"usage":{"promptTokens":10,"completionTokens":5},"cost":0.000075}
+```
 
 ## GET /api/usage
 
