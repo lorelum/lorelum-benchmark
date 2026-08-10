@@ -1,8 +1,9 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "43ba2a7e5072388250b876d9e0c4d5b59cba854cfa13024ad2109413319d6473",
+  "snapshot_id": "819ea2bf867bc33da84b23f9121a9e178f5a73a38575faa287f7606a4eb755bd",
   "files": {
+    "private/calibration.md": "99cda6004a51e422a27b86783f111a62efb5901dc137469781f1b48ddd495602",
     "private/calibration/run.ts": "8b66fad0db3e464a1528ed9dd793d06f56cf32d3422806f1db0415c111be0820",
     "private/calibration/sets.yaml": "908bf87401b32a22a1a6f2865e3c3b2933a254750a53b673e8b64a64ee8ef5c0",
     "private/calibration/sets/quality-probe/v2/overlays/anti-pattern/src/server.ts": "265776421ffb73d5b7a7aa29b70f95031c97acdde51e1149ca5378d3c786eddb",
