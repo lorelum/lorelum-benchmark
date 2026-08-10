@@ -4,7 +4,7 @@ source_commit: dde8c03c99812e01914de76219fd24d99d8b408b
 shared_execution:
   agent: { id: local-pi, version: v2 }
   pi_version: 0.80.10
-  model: { id: deepseek/deepseek-v4-pro }
+  model: { id: deepseek/deepseek-v4-flash }
   additional_shared_system_prompt: none
   additional_shared_system_prompt_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
   tool_policy: private/execution/tool-policy.yaml
