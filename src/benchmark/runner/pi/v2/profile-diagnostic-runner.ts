@@ -274,8 +274,9 @@ export async function verifyCandidateDeclaration(candidatePath: string): Promise
   const manifest = await readYaml<CandidateManifest>(resolve(candidatePath, "private/candidate.yaml"), "private/candidate.yaml");
   if (!isRecord(manifest) || !isRecord(manifest.kernel)) fail(`candidate.yaml must declare kernel: ${relativePath(candidatePath)}`);
   const { core, profile, materializer_kind } = manifest.kernel;
-  if (core !== "v1" || !injectionProfiles.includes(profile as (typeof injectionProfiles)[number]) || materializer_kind !== "react-vite") {
-    fail(`Candidate does not declare core/v1 + injection-calibration/v1|v2 + react-vite: ${relativePath(candidatePath)}`);
+  const supportedMaterializers = ["react-vite", "node-ts"];
+  if (core !== "v1" || !injectionProfiles.includes(profile as (typeof injectionProfiles)[number]) || !supportedMaterializers.includes(materializer_kind)) {
+    fail(`Candidate does not declare core/v1 + injection-calibration/v1|v2 + react-vite|node-ts: ${relativePath(candidatePath)}`);
   }
   if (!isRecord(manifest.source) || typeof manifest.source.source_commit !== "string") {
     fail(`candidate.yaml must declare source.source_commit: ${relativePath(candidatePath)}`);
@@ -727,27 +728,38 @@ export async function runAttempt(
     entry.error = closureEnv.error;
     return entry;
   }
-  let port: number;
-  try {
-    port = await allocateFreePort();
-  } catch {
-    entry.error = "evaluator-server-port-unavailable";
-    return entry;
-  }
-  // TOCTOU mitigation: the free port can be taken between allocation and
-  // bind, so retry once with a fresh port before failing closed.
-  let server = await serverStarter(resolve(workspace, "app"), port);
-  if (!server.ok) {
+  // node-ts candidates run backend tests that host their own servers; no
+  // external web server is required (react-vite candidates still get one).
+  const backendOnly = manifest.kernel.materializer_kind === "node-ts";
+  let server: { ok: true; handle: WebServerHandle };
+  if (backendOnly) {
+    server = { ok: true, handle: { pid: 0, port: 0, stop: async () => true } };
+  } else {
+    let port: number;
     try {
       port = await allocateFreePort();
     } catch {
       entry.error = "evaluator-server-port-unavailable";
       return entry;
     }
-    server = await serverStarter(resolve(workspace, "app"), port);
-    if (!server.ok) {
-      entry.error = server.category;
-      return entry;
+    // TOCTOU mitigation: the free port can be taken between allocation and
+    // bind, so retry once with a fresh port before failing closed.
+    const started = await serverStarter(resolve(workspace, "app"), port);
+    if (!started.ok) {
+      try {
+        port = await allocateFreePort();
+      } catch {
+        entry.error = "evaluator-server-port-unavailable";
+        return entry;
+      }
+      const retried = await serverStarter(resolve(workspace, "app"), port);
+      if (!retried.ok) {
+        entry.error = retried.category;
+        return entry;
+      }
+      server = retried;
+    } else {
+      server = started;
     }
   }
   let evaluation: CommandResult;
@@ -757,7 +769,7 @@ export async function runAttempt(
       [process.execPath, "run", resolve(candidatePath, "private/evaluator/evaluate.ts"), resolve(workspace, "app")],
       candidatePath,
       shared.budget.max_duration_minutes * 60_000,
-      { ...closureEnv.env, PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${server.handle.port}` }
+      { ...closureEnv.env, ...(backendOnly ? {} : { PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${server.handle.port}` }) }
     );
   } catch {
     cleanupConfirmed = await server.handle.stop();

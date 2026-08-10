@@ -45,10 +45,18 @@
 4. 汇总结果表 + 决策（oracle 严格领先 → 方向性结论；否则 diagnostic-only）；独立核对结果呈现。
 5. 终检：candidate 未改动；未建 record、未升级 suite、未合并 #162。
 
+### Runner 适配（node-ts candidate）
+
+- `profile-diagnostic-runner.ts` 原仅接受 `react-vite` materializer 并为每个 attempt 启动前端 web server（`bun run dev -- --port`）。本 pilot 的后端 candidate 使用 `node-ts` materializer，且其 evaluator 为 `bun run test`（自起 stub，无需外置 web server）。
+- 适配：`verifyCandidateDeclaration` 接受 `react-vite|node-ts`；`runAttempt` 对 `node-ts` 跳过 web server（无 PLAYWRIGHT_BASE_URL）。runner 测试同步更新（38 pass）。
+
 ## Open Questions
 
 待规划澄清确认：重复次数（默认 2）、模型（deepseek/deepseek-v4-pro 或环境可用）、judge opt-in 与 DeepSeek Key 可用性、单次预算。
 
 ## Planning Confirmation
 
-（待 issue #163 确认后回填。）
+2026-08-10（需求方确认，写入 design.md；issue #163 已记录）：
+1. 重复次数：每条件 3 次（plan repetitions: 3，共 9 attempts；runner 要求 repetitions 可被 3 整除，故采用 3 而非 2）。
+2. judge：执行（LORELUM_JUDGE_REAL=1 显式 opt-in，judge-agent/generic/v1 逐条件软分）。
+3. 模型：deepseek/deepseek-v4-pro（conditions.yaml 已声明）。

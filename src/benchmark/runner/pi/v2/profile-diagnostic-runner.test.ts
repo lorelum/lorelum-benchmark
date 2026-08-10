@@ -307,7 +307,7 @@ test("verifyCandidateDeclaration rejects a non-injection-calibration candidate",
     await Bun.write(join(candidate, "private/candidate.yaml"), yaml.replace("injection-calibration/v1", "treatment-comparison/v1"));
   });
   try {
-    await expect(verifyCandidateDeclaration(path)).rejects.toThrow("does not declare core/v1 + injection-calibration/v1|v2 + react-vite");
+    await expect(verifyCandidateDeclaration(path)).rejects.toThrow("does not declare core/v1 + injection-calibration/v1|v2 + react-vite|node-ts");
   } finally {
     await rm(path, { force: true, recursive: true });
   }
