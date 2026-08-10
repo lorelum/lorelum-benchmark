@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "ddf6bc9cf4ef8135abe5aa768d48a4d19e191cca16fa3dff76c67bc6038c3aaf",
+  "snapshot_id": "40e1dd1edd90edc6865fd5d334d808acd4bf07cdaf8c4d072cda06a539116166",
   "files": {
     "private/calibration.md": "99cda6004a51e422a27b86783f111a62efb5901dc137469781f1b48ddd495602",
     "private/calibration/run.ts": "8b66fad0db3e464a1528ed9dd793d06f56cf32d3422806f1db0415c111be0820",
@@ -50,15 +50,15 @@
     "public/starter/app/tests/gateway.spec.ts": "b45d524319f2665acf11432c7ef7153105ca596f18f14788848b84ee92a8ee4d",
     "public/starter/app/tests/stubs.ts": "2a2ab601b376eac1315025e347d867c0ad171395845f7aad1a15cf81b65b9f2f",
     "public/starter/app/tsconfig.json": "e867933118732e1f2cedb66dd8feea66b4e7d97eae12de096321c2556d7b8b48",
-    "public/task.md": "f3143ca8220eb6371aad444e2a056886af3230d75b4b93cfdc1b12b404e8cdee"
+    "public/task.md": "696d6df2ec2c53873007c63737041fab9d5f1fdc1e82b8e4ddf4680d704df6ab"
   },
   "resolved": {
     "core_version": "v1",
     "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "injection-calibration/v2",
     "materializer_kind": "node-ts",
-    "input_hash": "a70d77d82b275f71ef0b5041adea0a4febccdda68ec945b0c51f63dc15e446bb",
-    "materialized_output_hash": "5ac4a29d568f7c385d7f16327ac7d17658c030fe046c1bff1e6d1892efeffe6e",
+    "input_hash": "6e0146f0961b5f0043f44d2e9607384c4be0a5ee0170742e3fa1cf79cbfb5e69",
+    "materialized_output_hash": "b032696ea648784e42a7a693f22ef78ba365f3d62386081ece71ee23566760bc",
     "profile_input_hash": "a6c310333faeaf1f29195c09e4703dd5b4e459ca18c50ed6067208da7d2fd958",
     "calibration_sets_hash": "3cd321ac5f835e485f1e99a71a599ef09df526183c6891458e2899bb3e06939e"
   }
