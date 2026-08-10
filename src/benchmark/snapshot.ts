@@ -4,7 +4,7 @@ import { isAbsolute, join } from "node:path";
 import { hash, materialize, registerMaterializer } from "./kernel/core/v1/core";
 import { resolveCalibrationSets } from "./kernel/core/v1/calibration-fixtures";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
-import { materializeReactVite, reactViteKind } from "./kernel/materializers";
+import { materializeNodeTs, materializeReactVite, nodeTsKind, reactViteKind } from "./kernel/materializers";
 import { resolveInjectionCalibration as resolveInjectionCalibrationV1 } from "./kernel/profiles/injection-calibration/v1/runtime";
 import { resolveInjectionCalibration as resolveInjectionCalibrationV2 } from "./kernel/profiles/injection-calibration/v2/runtime";
 import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256File, sha256Text, workspaceRoot } from "./fs";
@@ -65,6 +65,7 @@ const [group, reference] = argumentsList.filter((argument) => !argument.startsWi
 const failures: string[] = [];
 
 registerMaterializer({ kind: reactViteKind, materialize: materializeReactVite });
+registerMaterializer({ kind: nodeTsKind, materialize: materializeNodeTs });
 
 async function discoverCandidates(): Promise<CandidateLocation[]> {
   const candidates: CandidateLocation[] = [];
@@ -179,7 +180,7 @@ async function readKernelDeclaration(target: SnapshotTarget): Promise<KernelReso
   const kernel = doc.kernel;
   if (kernel.core !== "v1") throw new Error(`Unsupported kernel core in ${relativePath(manifestPath)}: ${String(kernel.core)}`);
   if (kernel.profile !== "injection-calibration/v1" && kernel.profile !== "injection-calibration/v2" && kernel.profile !== "treatment-comparison/v1") throw new Error(`Unsupported kernel profile in ${relativePath(manifestPath)}: ${String(kernel.profile)}`);
-  if (kernel.materializer_kind !== reactViteKind) throw new Error(`Unsupported materializer_kind in ${relativePath(manifestPath)}: ${String(kernel.materializer_kind)}`);
+  if (kernel.materializer_kind !== reactViteKind && kernel.materializer_kind !== nodeTsKind) throw new Error(`Unsupported materializer_kind in ${relativePath(manifestPath)}: ${String(kernel.materializer_kind)}`);
   return {
     declaration: { core: "v1", profile: kernel.profile, materializer_kind: kernel.materializer_kind },
     declarationPath: manifestPath,

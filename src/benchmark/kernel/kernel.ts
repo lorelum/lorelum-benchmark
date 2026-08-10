@@ -3,11 +3,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { calibrate, getMaterializer, hash, isolate, materialize, registerMaterializer } from "./core/v1/core";
 import { hashCalibrationFixtureSource, resolveCalibrationSets, stageCalibrationSets } from "./core/v1/calibration-fixtures";
-import { materializeReactVite, reactViteKind } from "./materializers";
+import { materializeNodeTs, materializeReactVite, nodeTsKind, reactViteKind } from "./materializers";
 import { sha256Directory, workspaceRoot } from "../fs";
 import type { CalibrationRole, KernelDeclaration } from "./core/v1/types";
 
 registerMaterializer({ kind: reactViteKind, materialize: materializeReactVite });
+registerMaterializer({ kind: nodeTsKind, materialize: materializeNodeTs });
 
 const argumentsList = Bun.argv.slice(2);
 const subcommand = argumentsList[0];
