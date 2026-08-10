@@ -8,8 +8,9 @@ import { pathToFileURL } from "node:url";
  * llm-provider-gateway practice candidate.
  *
  * It accepts responsibility-equivalent implementations regardless of naming or
- * directory layout. It reports observed / not-observed / indeterminate only; it
- * never judges semantics (the public test suite owns that).
+ * directory layout (interface / class / type-based contracts all qualify). It
+ * reports observed / not-observed / indeterminate only; it never judges
+ * semantics (the public test suite owns that).
  */
 
 const appRoot = resolve(Bun.argv[2] ?? "public/starter/app");
@@ -47,16 +48,6 @@ async function loadSources(root: string): Promise<SourceFile[]> {
   return sources;
 }
 
-function stringLiterals(source: SourceFile): string[] {
-  const values: string[] = [];
-  const visit = (node: any): void => {
-    if (ts.isStringLiteral(node)) values.push(node.text);
-    ts.forEachChild(node, visit);
-  };
-  visit(source.source);
-  return values;
-}
-
 function importedModulePaths(source: SourceFile): string[] {
   const paths: string[] = [];
   const visit = (node: any): void => {
@@ -67,13 +58,26 @@ function importedModulePaths(source: SourceFile): string[] {
   return paths;
 }
 
-function hasInterfaceWithMethods(source: SourceFile): boolean {
+/**
+ * R1: a unified model client contract. Accepted forms are interface, class, or
+ * type-literal declarations exposing at least two method signatures — the
+ * practice only requires "a unified client contract", not a specific keyword.
+ */
+function contractMethodCount(node: any): number {
+  if (ts.isInterfaceDeclaration(node)) return node.members.filter((member: any) => ts.isMethodSignature(member)).length;
+  if (ts.isClassDeclaration(node)) return node.members.filter((member: any) => ts.isMethodDeclaration(member)).length;
+  if (ts.isTypeAliasDeclaration(node) && node.type && ts.isTypeLiteralNode(node.type)) {
+    return node.type.members.filter((member: any) => ts.isMethodSignature(member)).length;
+  }
+  return 0;
+}
+
+function hasContractLikeDeclaration(source: SourceFile): boolean {
   let found = false;
   const visit = (node: any): void => {
     if (found) return;
-    if (ts.isInterfaceDeclaration(node)) {
-      const methods = node.members.filter((member: any) => ts.isMethodSignature(member));
-      if (methods.length >= 2) found = true;
+    if (ts.isInterfaceDeclaration(node) || ts.isClassDeclaration(node) || ts.isTypeAliasDeclaration(node)) {
+      if (contractMethodCount(node) >= 2) found = true;
     }
     ts.forEachChild(node, visit);
   };
@@ -96,6 +100,32 @@ function hasCostComputation(source: SourceFile): boolean {
   return priceMarker && perMillion && rounding;
 }
 
+/**
+ * R3: OpenAI-compatible providers must not get a hardcoded branch / separate
+ * request path. A bare "deepseek" string literal in config or docs is fine; we
+ * only reject branch/switch/fetch-argument forms that actually wire up a
+ * provider-specific path.
+ */
+function hasDeepseekBranch(source: SourceFile): boolean {
+  let found = false;
+  const visit = (node: any): void => {
+    if (found) return;
+    if (ts.isStringLiteral(node) && node.text === "deepseek") {
+      const parent = node.parent;
+      const isComparison = parent && ts.isBinaryExpression(parent) &&
+        (parent.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken ||
+         parent.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken);
+      const isCaseLabel = parent && ts.isCaseClause(parent);
+      const isFetchArgument = parent && ts.isCallExpression(parent) &&
+        parent.expression && ts.isIdentifier(parent.expression) && parent.expression.text === "fetch";
+      if (isComparison || isCaseLabel || isFetchArgument) found = true;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source.source);
+  return found;
+}
+
 function failuresFor(sources: SourceFile[]): string[] {
   const failures: string[] = [];
   const server = sources.find(isServerFile);
@@ -104,9 +134,9 @@ function failuresFor(sources: SourceFile[]): string[] {
     return failures;
   }
 
-  // R1: unified model client contract (interface with >= 2 methods).
-  if (!sources.some(hasInterfaceWithMethods)) {
-    failures.push("未观察到统一模型客户端契约（至少两个方法的接口声明）");
+  // R1: unified model client contract (interface / class / type, >= 2 methods).
+  if (!sources.some(hasContractLikeDeclaration)) {
+    failures.push("未观察到统一模型客户端契约（interface/class/type 中至少两个方法的声明）");
   }
 
   // R2: no direct transport in the api/server layer.
@@ -117,8 +147,9 @@ function failuresFor(sources: SourceFile[]): string[] {
 
   // R3: OpenAI-compatible providers are not given a separate hardcoded path.
   const requestPathFiles = sources.filter((source) => isServerFile(source) || isAdapterFile(source) || source.text.includes("fetch("));
-  const deepseekLiterals = requestPathFiles.flatMap((source) => stringLiterals(source).filter((value) => value === "deepseek"));
-  if (deepseekLiterals.length > 0) failures.push("出现按 deepseek 名称硬编码的分支或路径（OpenAI 兼容供应商应复用同一适配器，只靠配置区分）");
+  if (requestPathFiles.some(hasDeepseekBranch)) {
+    failures.push("出现按 deepseek 名称硬编码的分支或独立请求路径（OpenAI 兼容供应商应复用同一适配器，只靠配置区分）");
+  }
 
   // R4: cost computation centralized outside server/adapters.
   const costFiles = sources.filter(hasCostComputation);

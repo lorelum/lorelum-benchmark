@@ -64,7 +64,7 @@
 4. `/api/usage` 费用精确匹配（三家各自的 usage 字段映射正确、多次请求聚合、按模型分组、rounding）；
 5. 流式请求同样记账；
 6. 无效 key → 认证错误、限流 → 领域错误（不泄漏原始状态码）；
-7. 保护约束（config/key 不入库、不硬编码密钥、只允许改声明范围文件、依赖清单不变）。
+7. 保护约束（config/key 不入库、不硬编码密钥、只允许改声明范围文件、依赖清单不变）。说明：第 7 条保护约束由 `private/execution/tool-policy.yaml`、`private/execution/git-history.yaml` 与 snapshot 生命周期承担，不属于 `oracle.yaml` 的 semantic_oracle 可观察行为断言（oracle 断言为 1-6 条）；pilot/升级时如需硬门禁，应在 runner/snapshot 层追加审计。
 
 ### 职责可解释探针（verify-provider-gateway.ts）
 

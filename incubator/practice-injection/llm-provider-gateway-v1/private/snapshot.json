@@ -1,11 +1,11 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "e240cf677c5a0f9b91c124103c5a034b1a44cf62e39fc46d009874504b168677",
+  "snapshot_id": "28380993575fb20f237f01c6c9b0e23af415476655bd3b298774de3fe584937d",
   "files": {
-    "private/calibration.md": "99cda6004a51e422a27b86783f111a62efb5901dc137469781f1b48ddd495602",
-    "private/calibration/run.ts": "8b66fad0db3e464a1528ed9dd793d06f56cf32d3422806f1db0415c111be0820",
-    "private/calibration/sets.yaml": "c9cef65a70b79be5a96ee4c4ac81bde0c3ae8cc2264b2d250aa568563dc902af",
+    "private/calibration.md": "57399252bbb38da7536ec3042855d61e4cc8794a09400021e1e52a1176055df9",
+    "private/calibration/run.ts": "59a33313909dcfc0279c3354f5f3f79c841399ba54b6d72cbb7ebeda467066a9",
+    "private/calibration/sets.yaml": "d113d4c4c9b65eb3195d394946efa3a62740169ebdbb2a93e331fff9a0ba45e6",
     "private/calibration/sets/quality-probe/v2/overlays/anti-pattern/src/server.ts": "265776421ffb73d5b7a7aa29b70f95031c97acdde51e1149ca5378d3c786eddb",
     "private/calibration/sets/quality-probe/v2/overlays/candidate/.gitignore": "fc0ab109757eccf84aa043d147599251c0ea7d25e0ab6ff51a1900cfe63bd0c0",
     "private/calibration/sets/quality-probe/v2/overlays/candidate/bun.lock": "ef1c7d6972eb67dd39a9ac66ffe7cbd09a6e1e193006bb1ed086622386d072d5",
@@ -30,13 +30,18 @@
     "private/calibration/sets/quality-probe/v2/overlays/reference/src/providers.ts": "8353fce9a7a0bca5315a2ef418ffb9c133ab37466eed10cf962f3a51dc18af55",
     "private/calibration/sets/quality-probe/v2/overlays/reference/src/server.ts": "65aac993dc353f1b73a57853e46fd7887ed20da10c35f62d3b2f3d78dd13ea90",
     "private/calibration/sets/quality-probe/v2/overlays/reference/src/usage.ts": "70837ef1a242d909c89b43a376bd46ada00b367fd82ea4d7c4d43d1bf30a7826",
+    "private/calibration/sets/quality-probe/v2/overlays/type-based/src/billing.ts": "e8a253636845efa0aa48d8bcfd80ac4fa064ac2e61e740124eb2520fa5418478",
+    "private/calibration/sets/quality-probe/v2/overlays/type-based/src/config.ts": "97d737e1d2ef7bf7f705574403b28c3b9c87d770f2df5747eb41c1be9781ff03",
+    "private/calibration/sets/quality-probe/v2/overlays/type-based/src/providers.ts": "46f2cd3d6f8d7c353088a6400968a2520cc54e81ec1d2b6cbfbdf855bebe9d56",
+    "private/calibration/sets/quality-probe/v2/overlays/type-based/src/server.ts": "65aac993dc353f1b73a57853e46fd7887ed20da10c35f62d3b2f3d78dd13ea90",
+    "private/calibration/sets/quality-probe/v2/overlays/type-based/src/usage.ts": "70837ef1a242d909c89b43a376bd46ada00b367fd82ea4d7c4d43d1bf30a7826",
     "private/candidate.yaml": "4aa10799d6a234466ae4d5ce2cf3b74fc4f00d18c38b7c5b90284de8e1d3f61c",
     "private/conditions.yaml": "0fd11e7fe396c38a5efe19c13f98eb84e2c35f1d9ba9910e030e5cc8932b772b",
-    "private/evaluator/evaluate.ts": "65cd4c5140ce1771b6085fef1164239484c0bcc99415b0054eba4fddb8af0e6a",
+    "private/evaluator/evaluate.ts": "0f147f585fc0be554837017171efaccb621366704d1a85883be894a88236377f",
     "private/evaluator/runtime-closure.yaml": "82e3192b1142ca3c13c3e5520f8f8e73c3b403e5c3ee4d5e17d644db60c7ecf5",
     "private/evaluator/runtime-closure/bun.lock": "5dbdeaec4ac2f02fb0457e8c5070f1b2a708719dffa07ab43957a911c5c7bd7f",
     "private/evaluator/runtime-closure/package.json": "da71ac16a971bde1d5e2910d534d27212030ed281c52912b8e53ce9e399ca9af",
-    "private/evaluator/verify-provider-gateway.ts": "bf2f17b6746b51cf8b9459b49e9950125dd75b26c59ed58e14d25f4740b7847d",
+    "private/evaluator/verify-provider-gateway.ts": "dfb027a18f7b597ef9a2bea5e009d02b6ec226b6d0fe434ef235571dd8767d79",
     "private/execution/git-history.yaml": "69813b70f669119a6f46a4f747e0554cb63e39179c135af9c2172f4ac69f2642",
     "private/execution/tool-policy.yaml": "6acd34a225913fd789a5b00003e103b239bbcd3afd876d35117d67062a72d11a",
     "private/oracle.yaml": "5d41a58a6a6950fb167d1f2329a2f6fe741efc0376ec3be2c3d62cb25da86c75",
@@ -60,6 +65,6 @@
     "input_hash": "90504b78bb9ed93c8ebf621858a64e60614de0f59806db5112725e58115f646c",
     "materialized_output_hash": "ef31d48bb50bcd17638a185f33464fd9ed88cbf5ad4589b91451a15c483ad7d5",
     "profile_input_hash": "a6c310333faeaf1f29195c09e4703dd5b4e459ca18c50ed6067208da7d2fd958",
-    "calibration_sets_hash": "f1c2603908768970b19dbecb8e944ac04aad385a622c16ac06e94a0b7e533137"
+    "calibration_sets_hash": "cd81d39f09bd1f0a618b5480e27b8be83a6cdf408d7176529c299e3e9cf06f2f"
   }
 }

@@ -27,6 +27,11 @@ sets:
         overlay:
           path: private/calibration/sets/quality-probe/v2/overlays/anti-pattern
           sha256: 9aa294eb06d356f053ab1175e0fea4663af2ab8aed5f764acf98adf48700bbc2
+      type-based-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v2/overlays/type-based
+          sha256: d3a331fedd127dae5202464149d2310e7a60af8029accddef7f79ba774db3e33
       docs-present-tree:
         extends: candidate-foundation
         overlay:
@@ -37,3 +42,4 @@ sets:
       equivalent: equivalent-tree
       anti-pattern: anti-pattern-tree
       docs-present: docs-present-tree
+      type-based: type-based-tree

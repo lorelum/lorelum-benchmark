@@ -36,6 +36,7 @@ const cases: CalibrationCase[] = [
   { id: "equivalent", path: stagedFixture("equivalent"), expectedSemantic: "pass", expectedObservation: "observed" },
   { id: "anti-pattern", path: stagedFixture("anti-pattern"), expectedSemantic: "pass", expectedObservation: "not-observed" },
   { id: "docs-present", path: stagedFixture("docs-present"), expectedSemantic: "pass", expectedObservation: "not-observed" },
+  { id: "type-based", path: stagedFixture("type-based"), expectedSemantic: "pass", expectedObservation: "observed" },
 ];
 
 async function run(command: string[], cwd: string, env?: Record<string, string>): Promise<number> {

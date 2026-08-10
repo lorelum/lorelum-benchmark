@@ -21,7 +21,8 @@ async function practiceObservation(): Promise<{ practice_observation: string; ob
   return { practice_observation: "indeterminate", observation_reason: "invalid-probe-output" };
 }
 
-const semantic = await Bun.spawn([process.execPath, "run", "test"], { cwd: appRoot, stdout: "inherit", stderr: "inherit" }).exited === 0 ? "pass" : "fail";
+const semanticPass = await Bun.spawn([process.execPath, "run", "test"], { cwd: appRoot, stdout: "inherit", stderr: "inherit" }).exited === 0;
 const observation = await practiceObservation();
+const semantic = semanticPass ? "pass" : "fail";
 console.log(JSON.stringify({ semantic, ...observation }));
-process.exit(semantic === 0 ? 0 : 1);
+process.exit(semanticPass ? 0 : 1);
