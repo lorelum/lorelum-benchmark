@@ -588,7 +588,9 @@ export async function materializeGitHistory(appRoot: string, history: GitHistory
     } else {
       await git(["add", "--", ...commit.files]);
     }
-    const result = await git(["commit", "-q", "-m", commit.message]);
+    // The final commit is an add -A catch-all; allow it to be empty (e.g. a
+    // baseline workspace without a condition-injected convention document).
+    const result = await git(["commit", "-q", "--allow-empty", "-m", commit.message]);
     if (result.code !== 0) throw new Error(`Git history commit failed for ${commit.message}: ${result.stderr.trim()}`);
   }
 }

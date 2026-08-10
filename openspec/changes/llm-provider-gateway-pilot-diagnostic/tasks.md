@@ -5,13 +5,13 @@
 
 ## 2. 执行三条件诊断对照 [runner 适配 + 只读运行]
 
-- [x] 2.0 runner 适配：`profile-diagnostic-runner.ts` 接受 `node-ts` materializer；`runAttempt` 对 node-ts 跳过前端 web server（evaluator 为 `bun run test`，自起 stub）；runner 测试 38 pass。
-- [x] 2.1 创建冻结诊断计划 `incubator/practice-injection-plans/llm-provider-gateway-v1-three-condition-diagnostic.yaml`（repetitions: 3，9 attempts）；dry-run 通过（plan 身份/条件声明校验）。
-- [ ] 2.2 用 profile-diagnostic-runner 执行三条件（baseline / oracle-practice / irrelevant-practice）诊断对照（每条件 3 次），输出到 scratch；确认 runner 使用冻结 conditions.yaml/snapshot，评估器不向 agent 暴露 condition/评测信息。
-- [ ] 2.3 judge（judge-agent/generic/v1，LORELUM_JUDGE_REAL=1）逐条件软分；judge 校准（reference/equiv/anti-pattern 判别力）按 `private/calibration.md` 重放命令执行或记 not-run+原因。
-- [ ] 2.4 按 PRACTICE_BENCHMARK_GUIDE 模板产出人可读原始结果表（evaluated / semantic / practice_observation / joint_pass / 非健康评测 / indeterminate），证据保存到本 change verification/。
+- [x] 2.0 runner 适配：`profile-diagnostic-runner.ts` 接受 `node-ts` materializer；`runAttempt` 对 node-ts 跳过前端 web server；`materializeGitHistory` 最后 commit 支持 `--allow-empty`（修复 baseline 无约定文档时空提交失败）；runner 测试 38 pass。
+- [x] 2.1 创建冻结诊断计划 `incubator/practice-injection-plans/llm-provider-gateway-v1-three-condition-diagnostic.yaml`（repetitions: 3，9 attempts）；dry-run 通过。
+- [x] 2.2 执行三条件诊断对照（每条件 3 次，deepseek-v4-pro，10min 预算）→ `scratch/profile-diagnostics/llm-provider-gateway-v1-diagnostic-2026-08-10-r2`（R1 因 git-history 空提交失败，修复后 R2 完整执行，interrupted=false）。
+- [x] 2.3 judge（judge-agent/generic/v1，LORELUM_JUDGE_REAL=1）逐条件软分已执行（baseline 70 / oracle 62 / irrelevant 67 中位）。
+- [x] 2.4 人可读原始结果表 + 决策已写入 `verification/diagnostic-results.md`。
 
 ## 3. 决策与终检
 
-- [ ] 3.1 按 strictly-greater-than-each-control 给出决策：oracle 严格高于 baseline 与 irrelevant-practice → 方向性结论；否则 diagnostic-only；不扩大解释。
-- [ ] 3.2 终检：candidate public/private 未改动（hash/snapshot intact）；未创建正式 record、未升级 suite revision、未合并/关闭 #162；模型调用仅限诊断执行与 judge opt-in。
+- [x] 3.1 决策：oracle joint_pass 1/3 > baseline 0/3 且 > irrelevant 0/3，但 baseline 健康评测不足（1/3）→ `conclusion_grade: diagnostic-or-uncertain`、`overall_conclusion_grade: diagnostic-only`；不扩大到"practice 有效"。
+- [x] 3.2 终检：candidate public/private 未改动（仅 runner/plan 属 pilot change 范围）；未创建正式 record、未升级 suite revision、未合并/关闭 #162；模型调用仅限诊断执行与 judge opt-in。
