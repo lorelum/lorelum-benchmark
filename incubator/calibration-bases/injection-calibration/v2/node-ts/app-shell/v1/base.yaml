@@ -1,0 +1,4 @@
+# node-ts app-shell base for injection-calibration/v2 candidates.
+profile: injection-calibration/v2
+materializer_kind: node-ts
+source: source

@@ -1,0 +1,22 @@
+id: llm-provider-gateway-v1
+semantic_oracle:
+  command: bun run test
+  assertions:
+    - OpenAI stub 非流式与流式对话成功并返回用量/费用
+    - DeepSeek（OpenAI 兼容）仅改配置即可切换、同一份代码对话成功
+    - Anthropic（协议不同）非流式与流式对话成功，usage 字段映射正确
+    - GET /api/usage 按模型聚合的用量与费用精确（含 rounding 与多次请求聚合）
+    - 流式请求同样记账并进入聚合与 JSONL 日志
+    - 无效 Key 返回统一认证错误、限流返回统一领域错误（不泄漏原始状态码）
+practice_observation:
+  command: bun run private/evaluator/verify-provider-gateway.ts public/starter/app
+  signal_only: true
+  responsibilities:
+    - 存在统一模型客户端契约（至少两个方法的接口），业务/接口层只依赖它
+    - 网关服务文件不直接发起 HTTP 传输、不依赖供应商 SDK、不含供应商直连地址
+    - OpenAI 兼容供应商（DeepSeek）不新增独立硬编码路径（复用同一适配器，只靠配置区分）
+    - 费用换算集中在边界模块，不散落在服务/适配器实现内
+    - 网关服务文件不泄漏原始供应商 usage 字段命名
+    - 供应商选择由配置/注册表驱动，业务路径不按供应商名写分支
+    - 观测（usage/latency/cost）从边界 usage/telemetry 模块统一记录
+baseline_expected_result: { semantic: fail, practice_observation: not-observed }
