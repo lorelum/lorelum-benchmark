@@ -59,4 +59,4 @@
 2026-08-10（需求方确认，写入 design.md；issue #163 已记录）：
 1. 重复次数：每条件 3 次（plan repetitions: 3，共 9 attempts；runner 要求 repetitions 可被 3 整除，故采用 3 而非 2）。
 2. judge：执行（LORELUM_JUDGE_REAL=1 显式 opt-in，judge-agent/generic/v1 逐条件软分）。
-3. 模型：deepseek/deepseek-v4-pro（conditions.yaml 已声明）。
+3. 模型：先 deepseek/deepseek-v4-pro；2026-08-10 需求方确认追加 model-tier rerun（deepseek-v4-flash，conditions.yaml model 改为 flash + snapshot/plan 更新，config commit `6133a07`）。
