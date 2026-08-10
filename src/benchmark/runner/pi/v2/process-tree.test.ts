@@ -14,9 +14,11 @@ async function exitsWithin(child: { exited: Promise<number | null> }, ms: number
   return result;
 }
 
+// Windows: Bun.spawn("taskkill") can take several seconds even for an unknown
+// pid, so this test gets an explicit timeout instead of the 5s default.
 test("terminateProcessTree does not throw for an unknown pid", async () => {
   await expect(terminateProcessTree(999_999_999)).resolves.toBeUndefined();
-});
+}, 15_000);
 
 test("terminateProcessTree on Windows uses taskkill tree kill", async () => {
   if (process.platform !== "win32") return;
