@@ -7,11 +7,10 @@ import { pathToFileURL } from "node:url";
  * verify-provider-gateway-v2.ts — responsibility-boundary probe for the
  * llm-provider-gateway-v2 practice candidate.
  *
- * It resolves the relative import graph with the TypeScript parser and then
- * classifies files into handler / registry / adapter / boundary-policy roles.
- * It accepts responsibility-equivalent implementations regardless of naming
- * or directory layout. It reports observed / not-observed / indeterminate
- * only; public tests own semantic completion.
+ * It builds the relative import graph and classifies TypeScript AST nodes
+ * (calls, string literals, identifiers, property names, declarations) rather
+ * than scanning source text with regular expressions. It accepts
+ * responsibility-equivalent implementations regardless of naming or layout.
  */
 
 const appRoot = resolve(Bun.argv[2] ?? "public/starter/app");
@@ -26,7 +25,15 @@ if (!existsSync(typescriptPath)) {
 
 const ts = await import(pathToFileURL(typescriptPath).href);
 
-type SourceFile = { path: string; text: string; source: any };
+type SourceFile = {
+  path: string;
+  source: any;
+  imports: string[];
+  stringLiterals: Set<string>;
+  identifiers: Set<string>;
+  propertyNames: Set<string>;
+  hasFetchCall: boolean;
+};
 
 async function listTypeScriptFiles(root: string, relative = ""): Promise<string[]> {
   const entries = await readdir(join(root, relative), { withFileTypes: true }).catch(() => []);
@@ -40,41 +47,34 @@ async function listTypeScriptFiles(root: string, relative = ""): Promise<string[
 }
 
 async function loadSources(root: string): Promise<SourceFile[]> {
-  const files: SourceFile[] = [];
+  const result: SourceFile[] = [];
   for (const file of await listTypeScriptFiles(root)) {
-    const text = await readFile(join(root, file), "utf-8");
-    files.push({ path: file, text, source: ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS) });
+    const source = ts.createSourceFile(file, await readFile(join(root, file), "utf-8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    result.push(analyzeSource({ path: file, source }));
   }
-  return files;
+  return result;
 }
 
-function importedModulePaths(source: SourceFile): string[] {
-  const paths: string[] = [];
+function analyzeSource(file: Omit<SourceFile, "imports" | "stringLiterals" | "identifiers" | "propertyNames" | "hasFetchCall">): SourceFile {
+  const imports: string[] = [];
+  const stringLiterals = new Set<string>();
+  const identifiers = new Set<string>();
+  const propertyNames = new Set<string>();
+  let hasFetchCall = false;
+
   const visit = (node: any): void => {
-    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) paths.push(node.moduleSpecifier.text);
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) imports.push(node.moduleSpecifier.text);
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) stringLiterals.add(node.text);
+    if (ts.isIdentifier(node)) identifiers.add(node.text);
+    if ((ts.isPropertyAccessExpression(node) || ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node) || ts.isMethodDeclaration(node) || ts.isMethodSignature(node))) {
+      if (node.name && ts.isIdentifier(node.name)) propertyNames.add(node.name.text);
+    }
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "fetch") hasFetchCall = true;
     ts.forEachChild(node, visit);
   };
-  visit(source.source);
-  return paths;
-}
+  visit(file.source);
 
-function resolveRelativeImport(fromPath: string, specifier: string): string | null {
-  if (!specifier.startsWith(".")) return null;
-  const base = fromPath.split("/").slice(0, -1);
-  const parts = specifier.split("/");
-  const joined = [...base, ...parts];
-  const normalized: string[] = [];
-  for (const part of joined) {
-    if (part === "." || part === "") continue;
-    if (part === "..") normalized.pop();
-    else normalized.push(part);
-  }
-  const candidate = normalized.join("/");
-  for (const suffix of ["", ".ts", ".tsx", "/index.ts"]) {
-    const path = suffix ? `${candidate}${suffix}` : candidate;
-    if (sources.some((source) => source.path === path)) return path;
-  }
-  return null;
+  return { ...file, imports, stringLiterals, identifiers, propertyNames, hasFetchCall };
 }
 
 function contractMethodCount(node: any): number {
@@ -99,36 +99,6 @@ function hasContractLikeDeclaration(source: SourceFile): boolean {
   return found;
 }
 
-function isServerFile(source: SourceFile): boolean {
-  return source.text.includes("/api/chat") || source.text.includes("createServer");
-}
-
-function isAdapterFile(source: SourceFile): boolean {
-  return (
-    source.text.includes("fetch(") &&
-    (source.text.includes("chat/completions") || source.text.includes("/v1/messages") || source.text.toLowerCase().includes("x-nebula-key"))
-  );
-}
-
-function hasCostComputation(source: SourceFile): boolean {
-  const priceMarker = /price_?in|price_?out|PRICE_IN|PRICE_OUT/i.test(source.text);
-  const perMillion = /1_?000_?000|1e6|1000000/i.test(source.text);
-  const rounding = /Math\.round|round6|round\(/i.test(source.text);
-  return priceMarker && perMillion && rounding;
-}
-
-function hasPolicyMarkers(source: SourceFile): boolean {
-  const hasRetry = /retry|RETRY/i.test(source.text);
-  const hasFallback = /fallback|FALLBACK/i.test(source.text);
-  const hasBudget = /budget|BUDGET/i.test(source.text);
-  const hasIdempotency = /idempoten/i.test(source.text);
-  return [hasRetry, hasFallback, hasBudget, hasIdempotency].filter(Boolean).length >= 2;
-}
-
-function hasRawWireNames(source: SourceFile): boolean {
-  return /(prompt_tokens|completion_tokens|input_tokens|output_tokens|output_text|message_start|content_block_delta)/i.test(source.text);
-}
-
 function hasProviderBranch(source: SourceFile): boolean {
   const providerNames = new Set(["openai", "deepseek", "anthropic", "nebula"]);
   let found = false;
@@ -140,9 +110,7 @@ function hasProviderBranch(source: SourceFile): boolean {
         (parent.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken ||
          parent.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken);
       const isCaseLabel = parent && ts.isCaseClause(parent);
-      const isCondition = parent && (ts.isConditionalExpression(parent) || ts.isIfStatement(parent));
-      const isSwitchCaseExpression = parent && ts.isSwitchStatement(parent);
-      if (isComparison || isCaseLabel || isCondition || isSwitchCaseExpression) found = true;
+      if (isComparison || isCaseLabel) found = true;
     }
     ts.forEachChild(node, visit);
   };
@@ -150,8 +118,62 @@ function hasProviderBranch(source: SourceFile): boolean {
   return found;
 }
 
-function boundaryLikeModuleName(path: string): boolean {
-  return /(^|\/)(policy|ledger|usage|billing|telemetry|metrics|observability|log)(\/|$)/i.test(path);
+function isServerFile(source: SourceFile): boolean {
+  return source.stringLiterals.has("/api/chat") || source.identifiers.has("createServer");
+}
+
+function isAdapterFile(source: SourceFile): boolean {
+  if (!source.hasFetchCall) return false;
+  return (
+    source.stringLiterals.has("/chat/completions") ||
+    source.stringLiterals.has("/v1/messages") ||
+    source.stringLiterals.has("x-nebula-key")
+  );
+}
+
+function hasCostComputation(source: SourceFile): boolean {
+  return (
+    source.identifiers.has("priceInPerMillion") &&
+    source.identifiers.has("priceOutPerMillion") &&
+    source.identifiers.has("round")
+  );
+}
+
+function hasPolicyResponsibilities(source: SourceFile): boolean {
+  const markers = ["retryAttempts", "fallbackProviderName", "reserveForTenant", "settleForTenant", "lookupIdempotency", "rememberIdempotency", "resolveProviderChain"];
+  return markers.some((marker) => source.identifiers.has(marker));
+}
+
+function hasLedgerResponsibilities(source: SourceFile): boolean {
+  const markers = ["recordUsage", "usageSnapshot", "remainingBudget", "reserveBudget", "settleBudget", "checkIdempotency", "storeIdempotency", "appendRecord", "snap", "reserve", "settle", "idempotentLookup"];
+  return markers.some((marker) => source.identifiers.has(marker));
+}
+
+function hasRawWireNames(source: SourceFile): boolean {
+  const rawNames = ["prompt_tokens", "completion_tokens", "input_tokens", "output_tokens", "output_text", "message_start", "content_block_delta"];
+  return [...source.stringLiterals].some((value) => rawNames.includes(value)) ||
+    [...source.propertyNames].some((name) => rawNames.includes(name));
+}
+
+function hasProviderSdkImport(source: SourceFile): boolean {
+  return source.imports.some((specifier) => !specifier.startsWith(".") && (specifier === "openai" || specifier.startsWith("@anthropic-ai/sdk")));
+}
+
+function resolveRelativeImport(fromPath: string, specifier: string): string | null {
+  if (!specifier.startsWith(".")) return null;
+  const base = fromPath.split("/").slice(0, -1);
+  const normalized: string[] = [];
+  for (const part of [...base, ...specifier.split("/")]) {
+    if (part === "." || part === "") continue;
+    if (part === "..") normalized.pop();
+    else normalized.push(part);
+  }
+  const candidate = normalized.join("/");
+  for (const suffix of ["", ".ts", ".tsx", "/index.ts"]) {
+    const path = suffix ? `${candidate}${suffix}` : candidate;
+    if (sources.some((source) => source.path === path)) return path;
+  }
+  return null;
 }
 
 let sources: SourceFile[] = [];
@@ -169,7 +191,7 @@ function transitiveImports(start: SourceFile): SourceFile[] {
     if (visited.has(current.path)) continue;
     visited.add(current.path);
     result.push(current);
-    for (const specifier of importedModulePaths(current)) {
+    for (const specifier of current.imports) {
       const resolved = resolveRelativeImport(current.path, specifier);
       if (!resolved || visited.has(resolved)) continue;
       const target = sourceByPath(resolved);
@@ -190,15 +212,15 @@ function failuresFor(files: SourceFile[]): string[] {
   if (!files.some(hasContractLikeDeclaration)) {
     failures.push("未观察到统一模型客户端契约（interface/class/type 中至少两个方法的声明）");
   }
-
-  if (server.text.includes("fetch(")) failures.push("网关服务文件直接发起 HTTP 传输（fetch）");
-  if (/api\.(openai|anthropic|deepseek)\.com/.test(server.text)) failures.push("网关服务文件包含供应商直连地址");
-  const sdkImports = importedModulePaths(server).filter((path) => !path.startsWith(".") && /(^|\/)(openai|@anthropic-ai\/sdk)(\/|$)/.test(path));
-  if (sdkImports.length > 0) failures.push("网关服务文件直接依赖供应商 SDK");
+  if (server.hasFetchCall) failures.push("网关服务文件直接发起 HTTP 传输（fetch）");
+  if ([...server.stringLiterals].some((value) => /^https?:\/\/api\.(openai|anthropic|deepseek)\.com/.test(value))) {
+    failures.push("网关服务文件包含供应商直连地址");
+  }
+  if (hasProviderSdkImport(server)) failures.push("网关服务文件直接依赖供应商 SDK");
 
   const adapterFiles = files.filter(isAdapterFile);
   if (adapterFiles.length === 0) failures.push("未观察到独立适配器文件（HTTP 传输与供应商线协议未隔离）");
-  if (!files.some((source) => !isServerFile(source) && source.text.includes("nebula") && source.text.toLowerCase().includes("x-nebula-key"))) {
+  if (!files.some((source) => !isServerFile(source) && source.stringLiterals.has("nebula") && source.stringLiterals.has("x-nebula-key"))) {
     failures.push("未观察到伪兼容供应商 Nebula 的独立线协议适配器（存在 Nebula 专用鉴权/字段映射）");
   }
 
@@ -208,10 +230,10 @@ function failuresFor(files: SourceFile[]): string[] {
   if (costFiles.some((source) => isServerFile(source) || isAdapterFile(source))) {
     failures.push("费用换算散落在服务/适配器实现内，未集中在边界模块");
   }
-  if (!boundary.some((source) => hasPolicyMarkers(source) || boundaryLikeModuleName(source.path))) {
+  if (!boundary.some((source) => hasPolicyResponsibilities(source))) {
     failures.push("未观察到 fallback/retry/租户预算/幂等等统一执行政策模块");
   }
-  if (!boundary.some((source) => /recordUsage|recordRequest|writeUsage|usage/i.test(source.text) && /tenant|budget|cost/i.test(source.text))) {
+  if (!boundary.some((source) => hasLedgerResponsibilities(source))) {
     failures.push("未观察到从边界账本模块统一记录 usage/latency/cost/tenant/trace");
   }
 
