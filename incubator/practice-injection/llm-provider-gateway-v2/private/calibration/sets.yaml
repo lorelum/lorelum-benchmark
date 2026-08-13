@@ -1,0 +1,45 @@
+version: 1
+sets:
+  - id: quality-probe
+    version: v2
+    trees:
+      shared-node-ts:
+        base:
+          ref: incubator/calibration-bases/injection-calibration/v2/node-ts/app-shell/v1/source
+          sha256: 1105569c0e12fa30b5a129f8cc469862a2e4e83bf2d0ec6ae84969a89c27c8e3
+      candidate-foundation:
+        extends: shared-node-ts
+        overlay:
+          path: private/calibration/sets/quality-probe/v2/overlays/candidate-v2
+          sha256: 3d99a5295a5cefc37a95a6ad946a033b2714586361cdff4cfd60307a96e082b9
+      reference-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v2/overlays/reference-v2
+          sha256: b6adc077025b35398218c5871ecee178d8de18271d64e2a2c2864d47c3794eca
+      equivalent-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v2/overlays/equivalent-v2
+          sha256: a532685d41a74f4f5e1cd4da09906984c5f88e99bac17c3269ed5d777973cf14
+      type-based-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v2/overlays/type-based-v2
+          sha256: d319c52b2ad898b6a93c4b9131dadf14c91e47ea9d3913bb1c2aa8d5a70743de
+      anti-pattern-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v2/overlays/anti-pattern-v2
+          sha256: 5f71468eb6bbc26d0f5ccd55515c8d6e7046db983699a42fe68ec7c179a7877f
+      docs-present-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v2/overlays/docs-present-v2
+          sha256: bc62b5f7f6d031d867738a27df56c6d4672719e1d3f345ce5194e32914a93360
+    fixtures:
+      reference: reference-tree
+      equivalent: equivalent-tree
+      anti-pattern: anti-pattern-tree
+      docs-present: docs-present-tree
+      type-based: type-based-tree
