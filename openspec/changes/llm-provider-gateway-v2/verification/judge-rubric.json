@@ -1,0 +1,44 @@
+{
+  "rubric": {
+    "dimensions": [
+      {
+        "id": "correctness",
+        "name": "Correctness of gateway behaviors",
+        "description": "Measures whether all required observable behaviors are implemented end to end. Evidence: failover to the backup provider happens only on rate limiting, 5xx, or timeout and the same request is completed; retries and failover do not double-bill a single user request; insufficient budget rejects the request before any provider call; concurrent requests never exceed tenant budget; duplicate idempotency keys return the first result without re-invoking or re-billing; the same key with different content returns a conflict; streamed responses that fail after headers emit a terminating SSE error event; recorded usage is only what upstream reported; usage API filters by tenant/model/status; logs include tenant, trace, and retry count; error responses use documented error codes and never expose raw upstream bodies.",
+        "max_points": 30
+      },
+      {
+        "id": "boundary-translation",
+        "name": "Provider boundary translation",
+        "description": "Measures whether the provider boundary translates Nebula-specific transport outcomes into domain-shaped results instead of exposing raw transport semantics. Evidence: a provider adapter normalizes Nebula's non-OpenAI authentication and field differences; upstream 429/5xx/timeout are converted into explicit domain outcomes such as RateLimited, Unavailable, or Success; 401/404/409 map to AuthError, NotFound, or Conflict; orchestration code consumes these domain results and never branches on raw HTTP status codes.",
+        "max_points": 20
+      },
+      {
+        "id": "transport-isolation",
+        "name": "Transport isolation",
+        "description": "Measures whether raw HTTP client usage is confined to the provider boundary rather than spread through application logic. Evidence: route handlers and orchestration services do not create HTTP clients, call fetch/axios-like functions, read response.status, or parse raw upstream payloads; all provider I/O goes through a small injectable interface so the rest of the system can be tested with stubs.",
+        "max_points": 15
+      },
+      {
+        "id": "raw-response-containment",
+        "name": "Raw response containment",
+        "description": "Measures whether raw upstream response bodies, status details, or usage values leak into user-facing contracts or persisted domain state. Evidence: error responses are built from repository-documented error codes and do not embed the upstream raw message; usage records only contain usage actually reported by upstream and never include fabricated final usage; no transport response object is passed back to handlers or stored as a domain value.",
+        "max_points": 15
+      },
+      {
+        "id": "domain-delegation",
+        "name": "Domain delegation from handlers",
+        "description": "Measures whether HTTP handlers delegate provider selection, failover, billing, idempotency, and usage logging to service modules rather than implementing transport or cross-cutting plumbing inline. Evidence: a single handler entry point awaits a delegated orchestration function; retry/failover loops, budget reservation/settlement, idempotency cache lookups, and usage recording are not implemented inside route/controller code; swapping mock services is possible without changing the handler.",
+        "max_points": 10
+      },
+      {
+        "id": "state-and-feedback",
+        "name": "Explicit lifecycle state handling",
+        "description": "Measures whether each request lifecycle state is explicitly represented and surfaced correctly. Evidence: insufficient budget returns a clear rejection before calling the provider; retry/failover state tracks retry count; streaming failures after headers are sent emit a termination SSE error event; idempotent replay and conflict states are distinguishable; usage query responses have distinct successful, empty, and error states with appropriate status/feedback.",
+        "max_points": 10
+      }
+    ]
+  },
+  "text": "{\"dimensions\":[{\"id\":\"correctness\",\"name\":\"Correctness of gateway behaviors\",\"description\":\"Measures whether all required observable behaviors are implemented end to end. Evidence: failover to the backup provider happens only on rate limiting, 5xx, or timeout and the same request is completed; retries and failover do not double-bill a single user request; insufficient budget rejects the request before any provider call; concurrent requests never exceed tenant budget; duplicate idempotency keys return the first result without re-invoking or re-billing; the same key with different content returns a conflict; streamed responses that fail after headers emit a terminating SSE error event; recorded usage is only what upstream reported; usage API filters by tenant/model/status; logs include tenant, trace, and retry count; error responses use documented error codes and never expose raw upstream bodies.\",\"max_points\":30},{\"id\":\"boundary-translation\",\"name\":\"Provider boundary translation\",\"description\":\"Measures whether the provider boundary translates Nebula-specific transport outcomes into domain-shaped results instead of exposing raw transport semantics. Evidence: a provider adapter normalizes Nebula's non-OpenAI authentication and field differences; upstream 429/5xx/timeout are converted into explicit domain outcomes such as RateLimited, Unavailable, or Success; 401/404/409 map to AuthError, NotFound, or Conflict; orchestration code consumes these domain results and never branches on raw HTTP status codes.\",\"max_points\":20},{\"id\":\"transport-isolation\",\"name\":\"Transport isolation\",\"description\":\"Measures whether raw HTTP client usage is confined to the provider boundary rather than spread through application logic. Evidence: route handlers and orchestration services do not create HTTP clients, call fetch/axios-like functions, read response.status, or parse raw upstream payloads; all provider I/O goes through a small injectable interface so the rest of the system can be tested with stubs.\",\"max_points\":15},{\"id\":\"raw-response-containment\",\"name\":\"Raw response containment\",\"description\":\"Measures whether raw upstream response bodies, status details, or usage values leak into user-facing contracts or persisted domain state. Evidence: error responses are built from repository-documented error codes and do not embed the upstream raw message; usage records only contain usage actually reported by upstream and never include fabricated final usage; no transport response object is passed back to handlers or stored as a domain value.\",\"max_points\":15},{\"id\":\"domain-delegation\",\"name\":\"Domain delegation from handlers\",\"description\":\"Measures whether HTTP handlers delegate provider selection, failover, billing, idempotency, and usage logging to service modules rather than implementing transport or cross-cutting plumbing inline. Evidence: a single handler entry point awaits a delegated orchestration function; retry/failover loops, budget reservation/settlement, idempotency cache lookups, and usage recording are not implemented inside route/controller code; swapping mock services is possible without changing the handler.\",\"max_points\":10},{\"id\":\"state-and-feedback\",\"name\":\"Explicit lifecycle state handling\",\"description\":\"Measures whether each request lifecycle state is explicitly represented and surfaced correctly. Evidence: insufficient budget returns a clear rejection before calling the provider; retry/failover state tracks retry count; streaming failures after headers are sent emit a termination SSE error event; idempotent replay and conflict states are distinguishable; usage query responses have distinct successful, empty, and error states with appropriate status/feedback.\",\"max_points\":10}]}",
+  "hash": "db059c1653e74405e6ffab17da4f8d21f32ef5b9a24c816eb93246ac2ae19894"
+}
