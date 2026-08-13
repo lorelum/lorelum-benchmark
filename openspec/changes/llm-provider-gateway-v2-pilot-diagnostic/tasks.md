@@ -13,12 +13,12 @@
 
 ## 3. 三条件诊断执行
 
-- [ ] 3.1 以本地 Pi diagnostic runner 执行 baseline / oracle-practice / irrelevant-practice，每条件 3 次、预算 25 分钟/attempt，模型 `deepseek/deepseek-v4-flash`。
-- [ ] 3.2 保存每 attempt 的 evaluator 输出、judge sidecar 与 observation_reason。
-- [ ] 3.3 产出人可读原始结果表（evaluated / semantic / practice_observation / joint_pass / judge 中位）。
+- [x] 3.1 以本地 Pi diagnostic runner 执行 baseline / oracle-practice / irrelevant-practice，每条件 3 次、预算 25 分钟/attempt，模型 `deepseek/deepseek-v4-flash`。
+- [x] 3.2 保存每 attempt 的 evaluator 输出、judge sidecar 与 observation_reason。
+- [x] 3.3 产出人可读原始结果表（evaluated / semantic / practice_observation / joint_pass / judge 中位）。
 
 ## 4. 决策与终检
 
-- [ ] 4.1 按 `strictly-greater-than-each-control` 判定 `directional-screen` 或 `diagnostic-only`。
-- [ ] 4.2 将结果与决策写入 `verification/diagnostic-results-flash.md`。
-- [ ] 4.3 终检：candidate 题面/starter/evaluator/practices 未改动；未创建正式 record、未升级 suite revision；模型调用仅限诊断执行与 judge 校准。
+- [x] 4.1 按 `strictly-greater-than-each-control` 判定 `directional-screen` 或 `diagnostic-only`。
+- [x] 4.2 将结果与决策写入 `verification/diagnostic-results-flash.md`。
+- [x] 4.3 终检：candidate 题面/starter/evaluator/practices 未改动；未创建正式 record、未升级 suite revision；模型调用仅限诊断执行与 judge 校准。
