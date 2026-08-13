@@ -4,7 +4,7 @@ cards:
   - id: llm-gateway.provider-gateway
     version: v2
     path: llm.provider-gateway.v2.md
-    rendered_characters: 508
+    rendered_characters: 387
     target_path: docs/ai-gateway-guide.md
   - id: llm-gateway.pagination
     version: v1
@@ -13,5 +13,5 @@ cards:
     target_path: docs/ai-gateway-guide.md
 comparison:
   maximum_relative_difference: 0.10
-  actual_relative_difference: 0.19881889763779528
+  actual_relative_difference: 0.05167958656330749
   independently_reviewed: true
