@@ -107,7 +107,7 @@ function anthropicAdapter(config: ProviderConfig): ModelClient {
         message?: { usage?: { input_tokens?: number } };
         error?: { type?: string };
       };
-      if (event.type === "error") throw new ProviderUpstreamError("mid-stream upstream failure", "rate_limited", true);
+      if (event.type === "error") throw new ProviderUpstreamError("mid-stream upstream failure", "rate_limited", true, usage);
       if (event.type === "message_start" && event.message?.usage) {
         usage = { ...usage, promptTokens: event.message.usage.input_tokens ?? 0 };
       }

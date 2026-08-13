@@ -359,11 +359,27 @@ describe("流式失败与错误翻译", () => {
 
   test("流中途失败发送终止 SSE 错误事件且不伪造成功 usage", async () => {
     setProvider("anthropic", "claude-midstream");
-    const response = await postChat({ messages: [{ role: "user", content: "hi" }], max_tokens: 20, stream: true }, { "x-tenant-id": "streamfail", accept: "text/event-stream" });
-    expect(response.status).toBe(200);
-    const events = sseEvents(await response.text());
-    expect(events.some((event) => (event.error as { code?: string } | undefined)?.code === "rate_limited")).toBe(true);
-    expect(events.some((event) => "usage" in event)).toBe(false);
+    const logDir = await mkdtemp(join(tmpdir(), "gateway-streamfail-"));
+    const logPath = join(logDir, "requests.jsonl");
+    process.env.GATEWAY_LOG_PATH = logPath;
+    try {
+      const response = await postChat({ messages: [{ role: "user", content: "hi" }], max_tokens: 20, stream: true }, { "x-tenant-id": "streamfail", accept: "text/event-stream" });
+      expect(response.status).toBe(200);
+      const events = sseEvents(await response.text());
+      expect(events.some((event) => (event.error as { code?: string } | undefined)?.code === "rate_limited")).toBe(true);
+      expect(events.some((event) => "usage" in event)).toBe(false);
+      const lines = (await readFile(logPath, "utf-8")).trim().split(/\r?\n/).filter(Boolean);
+      expect(lines.length).toBe(1);
+      const record = JSON.parse(lines[0]) as Record<string, unknown>;
+      expect(record.provider).toBe("anthropic");
+      expect(record.status).toBe(429);
+      expect(record.promptTokens).toBe(12);
+      expect(record.completionTokens).toBe(0);
+      expect(record.cost).toBeCloseTo(0.000036, 9);
+    } finally {
+      delete process.env.GATEWAY_LOG_PATH;
+      await rm(logDir, { recursive: true, force: true });
+    }
   });
 });
 

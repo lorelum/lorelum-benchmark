@@ -1,7 +1,11 @@
 import type { ChatMessage, ChatResult, ProviderConfig, StreamEvent, Usage } from "./types";
 
 export class UpstreamFailure extends Error {
-  constructor(readonly code: "authentication_failed" | "rate_limited" | "upstream_timeout" | "upstream_error", readonly retryable: boolean) {
+  constructor(
+    readonly code: "authentication_failed" | "rate_limited" | "upstream_timeout" | "upstream_error",
+    readonly retryable: boolean,
+    readonly usage?: Usage,
+  ) {
     super(code);
   }
 }

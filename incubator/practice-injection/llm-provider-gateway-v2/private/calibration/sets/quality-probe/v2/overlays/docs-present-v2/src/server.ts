@@ -193,6 +193,26 @@ async function handleChat(req: IncomingMessage, res: ServerResponse): Promise<vo
     throw lastError;
   } catch (error) {
     const mapped = mapFailure(error);
+    const partialUsage = error instanceof UpstreamFailure && error.usage
+      ? error.usage
+      : { promptTokens: 0, completionTokens: 0 };
+    const partialCost = (partialUsage.promptTokens > 0 || partialUsage.completionTokens > 0)
+      ? callFor(providers[0]).cost(providers[0], partialUsage)
+      : 0;
+    await appendRecord({
+      tenant,
+      provider: providers[0].name,
+      model: providers[0].model,
+      stream: streaming,
+      traceId,
+      retryCount: 0,
+      latencyMs: performance.now() - started,
+      promptTokens: partialUsage.promptTokens,
+      completionTokens: partialUsage.completionTokens,
+      cost: partialCost,
+      status: mapped.status,
+      timestamp: new Date().toISOString(),
+    });
     if (reservation) await settle(tenant, reservation.reserved, 0);
     if (res.headersSent) {
       res.write(`data: ${JSON.stringify({ error: { code: mapped.code } })}\n\n`);

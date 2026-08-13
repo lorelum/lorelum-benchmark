@@ -45,7 +45,7 @@ export async function* streamAnthropic(provider: ProviderConfig, messages: ChatM
         const data = line.slice(5).trim();
         if (!data) continue;
         const event = JSON.parse(data) as { type?: string; delta?: { type?: string; text?: string }; usage?: { output_tokens?: number }; message?: { usage?: { input_tokens?: number } }; error?: { type?: string } };
-        if (event.type === "error") throw new UpstreamFailure("rate_limited", true);
+        if (event.type === "error") throw new UpstreamFailure("rate_limited", true, usage);
         if (event.type === "message_start" && event.message?.usage) usage = { ...usage, promptTokens: event.message.usage.input_tokens ?? 0 };
         if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) yield { type: "delta", text: event.delta.text };
         if (event.type === "message_delta" && event.usage) usage = { ...usage, completionTokens: event.usage.output_tokens ?? 0 };

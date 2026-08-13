@@ -137,8 +137,14 @@ async function handleChat(req: IncomingMessage, res: ServerResponse): Promise<vo
     sendJson(res, 200, response);
   } catch (error) {
     const mapped = domainError(error);
+    const partialUsage = error instanceof ProviderUpstreamError && error.usage
+      ? error.usage
+      : { promptTokens: 0, completionTokens: 0 };
+    const partialCost = (partialUsage.promptTokens > 0 || partialUsage.completionTokens > 0)
+      ? costFor(active, partialUsage)
+      : 0;
     await settleForTenant(tenant, reservation, 0);
-    await recordUsage({ tenant, provider: active.name, model: active.model, stream: streaming, traceId, retryCount: 0, latencyMs: performance.now() - started, promptTokens: 0, completionTokens: 0, cost: 0, status: mapped.status, timestamp: new Date().toISOString() });
+    await recordUsage({ tenant, provider: active.name, model: active.model, stream: streaming, traceId, retryCount: 0, latencyMs: performance.now() - started, promptTokens: partialUsage.promptTokens, completionTokens: partialUsage.completionTokens, cost: partialCost, status: mapped.status, timestamp: new Date().toISOString() });
     if (res.headersSent) {
       res.write(`data: ${JSON.stringify({ error: { code: mapped.code } })}\n\n`);
       res.end();

@@ -1,10 +1,11 @@
-import type { DomainErrorCode } from "../types";
+import type { DomainErrorCode, Usage } from "../types";
 
 export class ProviderUpstreamError extends Error {
   constructor(
     message: string,
     readonly code: Extract<DomainErrorCode, "authentication_failed" | "rate_limited" | "upstream_timeout" | "upstream_error">,
     readonly retryable: boolean,
+    readonly usage?: Usage,
   ) {
     super(message);
   }

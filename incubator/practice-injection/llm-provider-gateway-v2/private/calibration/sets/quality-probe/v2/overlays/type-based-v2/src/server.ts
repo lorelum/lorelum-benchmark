@@ -178,6 +178,12 @@ async function handleChat(req: IncomingMessage, res: ServerResponse): Promise<vo
     sendJson(res, 200, response);
   } catch (error) {
     const mapped = domainError(error);
+    const partialUsage = error instanceof ProviderUpstreamError && error.usage
+      ? error.usage
+      : { promptTokens: 0, completionTokens: 0 };
+    const partialCost = (partialUsage.promptTokens > 0 || partialUsage.completionTokens > 0)
+      ? costFor(active, partialUsage)
+      : 0;
     await settleForTenant(tenant, reservation, 0);
     await logRecord({
       tenant,
@@ -187,9 +193,9 @@ async function handleChat(req: IncomingMessage, res: ServerResponse): Promise<vo
       traceId,
       retryCount: 0,
       latencyMs: performance.now() - started,
-      promptTokens: 0,
-      completionTokens: 0,
-      cost: 0,
+      promptTokens: partialUsage.promptTokens,
+      completionTokens: partialUsage.completionTokens,
+      cost: partialCost,
       status: mapped.status,
       timestamp: new Date().toISOString(),
     });
