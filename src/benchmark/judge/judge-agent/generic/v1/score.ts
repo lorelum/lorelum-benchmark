@@ -12,15 +12,22 @@ function fail(message: string): never {
   throw new Error(`Invalid judge score output: ${message}`);
 }
 
+function normalizedInteger(value: unknown, label: string): number {
+  const number = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  if (!Number.isFinite(number)) fail(`${label} must be numeric`);
+  return Math.round(number);
+}
+
 export function assertScoredCandidate(value: unknown): ScoredCandidate {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("root must be an object");
   const root = value as Record<string, unknown>;
   const state = root.state === undefined ? "observed" : root.state;
   if (state !== "observed" && state !== "indeterminate") fail(`state must be observed or indeterminate, got ${String(state)}`);
-  if (!Number.isInteger(root.confidence) || (root.confidence as number) < 0 || (root.confidence as number) > 100) fail("confidence must be an integer 0-100");
+  const confidence = normalizedInteger(root.confidence, "confidence");
+  if (confidence < 0 || confidence > 100) fail("confidence must be an integer 0-100");
   if (state === "indeterminate") {
     if (typeof root.reason !== "string" || !root.reason) fail("indeterminate requires a non-empty reason");
-    return { state, reason: root.reason, confidence: root.confidence as number };
+    return { state, reason: root.reason, confidence };
   }
   if (!Array.isArray(root.criteria) || root.criteria.length < 1) fail("observed requires at least one criterion");
   const criteria: ScoredCriterion[] = [];
@@ -28,11 +35,12 @@ export function assertScoredCandidate(value: unknown): ScoredCandidate {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) fail("criterion must be an object");
     const c = raw as Record<string, unknown>;
     if (typeof c.id !== "string" || !/^[a-z0-9-]+$/.test(c.id)) fail(`criterion id must be kebab-case: ${String(c.id)}`);
-    if (!Number.isInteger(c.points) || (c.points as number) < 0) fail(`criterion ${String(c.id)} points must be a non-negative integer`);
+    const points = normalizedInteger(c.points, `criterion ${String(c.id)} points`);
+    if (points < 0) fail(`criterion ${String(c.id)} points must be a non-negative integer`);
     if (typeof c.rationale !== "string" || !c.rationale) fail(`criterion ${String(c.id)} rationale is required`);
-    criteria.push({ id: c.id, points: c.points as number, rationale: c.rationale });
+    criteria.push({ id: c.id, points, rationale: c.rationale });
   }
-  return { state, criteria, confidence: root.confidence as number };
+  return { state, criteria, confidence };
 }
 
 export function scoreSystemPrompt(): string {

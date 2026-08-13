@@ -3,7 +3,7 @@ import { sha256Text } from "../../../../fs";
 import { assertJudgeResultV1 } from "../../../../outcome/v1/contract";
 import { buildJudgeInput } from "../../../input";
 import { judgeLlmEnv, requireJudgeLlmEnv, type JudgeCompletion } from "./llm";
-import { assertGeneratedRubric, generateRubric, generateRubricCached, parseRubricText, serializeRubric } from "./rubric";
+import { assertGeneratedRubric, generateRubric, generateRubricCached, parseRubricText, rubricQualityGuideline, serializeRubric } from "./rubric";
 import { assertScoredCandidate, scoreCandidate, scorePromptText } from "./score";
 import { createJudgeAgentProvider } from "./provider";
 
@@ -58,6 +58,37 @@ test("generateRubricCached reuses the rubric for the same task", async () => {
   const second = await generateRubricCached(taskMd, complete);
   expect(first.hash).toBe(second.hash);
   expect(complete.calls).toBe(1);
+});
+
+test("rubric quality guideline covers cross-request policy dimensions", () => {
+  expect(rubricQualityGuideline).toContain("policy-centralization");
+  expect(rubricQualityGuideline).toContain("transport-accounting");
+  expect(rubricQualityGuideline).toContain("provider-protocol-mapping");
+  expect(rubricQualityGuideline).toContain("budget-atomicity");
+});
+
+test("generateRubricCached reuses a fixed rubric and does not call the LLM", async () => {
+  const fixedText = serializeRubric(assertGeneratedRubric(validRubric));
+  const complete = stubCompletion([{ dimensions: [] }]);
+  const { hash } = await generateRubricCached(taskMd, complete, { LORELUM_JUDGE_RUBRIC_TEXT: fixedText });
+  expect(complete.calls).toBe(0);
+  expect(hash).toBe(await sha256Text(fixedText));
+});
+
+test("scoreCandidate normalizes numeric confidence and points", async () => {
+  const rubric = assertGeneratedRubric(validRubric);
+  const text = serializeRubric(rubric);
+  const rubricHash = await sha256Text(text);
+  const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric: text });
+  const complete = stubCompletion([{ criteria: [
+    { id: "component-transport-isolation", points: 29.6, rationale: "no transport in component" },
+    { id: "domain-operation-delegation", points: 24.5, rationale: "submit awaits external op" },
+    { id: "boundary-response-translation", points: 30, rationale: "conflict translated" },
+    { id: "raw-response-containment", points: 15, rationale: "raw response contained" },
+  ], confidence: 92.7 }]);
+  const result = await scoreCandidate({ taskMd, candidateDiff, rubric, rubricText: text, rubricHash, inputHash: input.input_hash, judge: { id: "judge-agent/generic", version: "v1" }, complete });
+  expect(result.confidence).toBe(93);
+  expect(result.score).toBe(100);
 });
 
 test("scoreCandidate produces an observed judge-result with score equal to the criterion sum", async () => {
