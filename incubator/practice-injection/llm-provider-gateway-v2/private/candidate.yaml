@@ -1,0 +1,26 @@
+id: llm-provider-gateway-v2
+lifecycle_stage: candidate
+kernel:
+  core: v1
+  profile: injection-calibration/v2
+  materializer_kind: node-ts
+source:
+  kind: repository-local-starter
+  repository: lorelum/lorelum-benchmark
+  source_commit: dde8c03c99812e01914de76219fd24d99d8b408b
+  public_root: public/starter/app
+  immutable_by: private/snapshot.json
+calibration_roles:
+  - id: calibration-matrix
+    command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
+    expect: { kind: pass }
+calibration_sets:
+  manifest: private/calibration/sets.yaml
+runtime:
+  package_manager: bun
+  node: 22.19.x
+  backend: { typescript: 5.9.3 }
+baseline_expectation:
+  functional: false
+  practice_adherence: false
+  reason: 网关 v2 为真占位：仅硬编码 OpenAI 非流式直连路径，无注册表/适配器/fallback/retry/租户预算/幂等/JSONL 账本/usage 查询，Anthropic/DeepSeek/Nebula 与全部跨请求执行政策缺失，公开测试未通过。
