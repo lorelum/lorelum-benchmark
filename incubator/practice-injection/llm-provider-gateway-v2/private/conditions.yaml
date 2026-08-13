@@ -12,7 +12,7 @@ shared_execution:
   budget: { max_duration_minutes: 25 }
   workspace: clean-copy-per-attempt
   repetitions: 5
-  judge: { provider: judge-agent/generic/v1, indeterminate_budget: 0.25 }
+  judge: { provider: judge-agent/generic/v2, indeterminate_budget: 0.25 }
 conditions:
   - { id: baseline, status: declared, practice: none }
   - id: oracle-practice
