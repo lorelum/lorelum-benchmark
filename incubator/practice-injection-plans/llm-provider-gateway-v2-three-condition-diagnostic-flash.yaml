@@ -2,7 +2,7 @@ schema_version: profile-diagnostic-plan/v2
 id: llm-provider-gateway-v2-three-condition-diagnostic-flash
 schedule_seed: llm-provider-gateway-v2-diagnostic-flash-2026-08-13
 schedule_algorithm: cyclic-latin-square/v1
-repetitions: 5
+repetitions: 3
 independent_candidate_threshold: 1
 conditions: [baseline, oracle-practice, irrelevant-practice]
 candidates:

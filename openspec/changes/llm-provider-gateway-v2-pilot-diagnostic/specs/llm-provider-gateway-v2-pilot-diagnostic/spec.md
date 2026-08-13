@@ -8,7 +8,7 @@
 
 ### Requirement: 冻结输入与三条件诊断
 
-诊断 MUST 以 `incubator/practice-injection/llm-provider-gateway-v2/` 的冻结 `conditions.yaml`（baseline / oracle-practice / irrelevant-practice）与 snapshot 为输入，MUST 使用本地 Pi diagnostic runner 执行；本 change 的 model-tier 配置 MUST 为 `deepseek/deepseek-v4-flash`，每条件 MUST 为 5 次（15 attempts），单 attempt 预算 MUST 为 25 分钟。执行 MUST NOT 修改 candidate 的题面/starter/evaluator/practices。
+诊断 MUST 以 `incubator/practice-injection/llm-provider-gateway-v2/` 的冻结 `conditions.yaml`（baseline / oracle-practice / irrelevant-practice）与 snapshot 为输入，MUST 使用本地 Pi diagnostic runner 执行；本 change 的 model-tier 配置 MUST 为 `deepseek/deepseek-v4-flash`，每条件 MUST 为 3 次（9 attempts），单 attempt 预算 MUST 为 25 分钟。执行 MUST NOT 修改 candidate 的题面/starter/evaluator/practices。
 
 #### Scenario: 冻结输入
 

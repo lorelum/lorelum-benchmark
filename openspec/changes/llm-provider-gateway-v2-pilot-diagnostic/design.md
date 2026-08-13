@@ -7,7 +7,7 @@
 **Goals:**
 
 - 对冻结 candidate 执行 baseline / oracle-practice / irrelevant-practice 三条件诊断。
-- 每条件 n=5（15 attempts），预算 25 分钟/attempt，模型 `deepseek/deepseek-v4-flash`。
+- 每条件 n=3（9 attempts），预算 25 分钟/attempt，模型 `deepseek/deepseek-v4-flash`。
 - 先运行 `judge-agent/generic/v1` 真实 LLM 判别力校准，记录 rubric hash 与阈值；再对三条件逐 attempt 产出 judge soft sidecar。
 - 按 joint-pass 严格领先规则给出方向性结论。
 
@@ -55,7 +55,8 @@
 
 ## Planning Confirmation
 
-2026-08-13（需求方确认）：
+2026-08-13（需求方确认，第二次更新）：
 
 1. 模型档：仅 `deepseek/deepseek-v4-flash`。
-2. judge：额外执行真实 LLM 判别力校准；校准后复用同一 rubric 对三条件软分。
+2. judge：尝试真实 LLM 判别力校准；校准未通过，judge soft sidecar 记 not-run，方向性结论只依据 semantic 与 practice_observation；共享 judge 优化转独立 issue #170。
+3. 重复次数：n=3（9 attempts，runner 要求三条件计划 repetitions 能被 3 整除）。

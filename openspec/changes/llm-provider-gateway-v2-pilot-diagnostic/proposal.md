@@ -5,7 +5,7 @@
 ## What Changes
 
 - 以本地 Pi diagnostic runner 对 `incubator/practice-injection/llm-provider-gateway-v2` 执行三条件对照（baseline / oracle-practice / irrelevant-practice）。
-- 每条件 5 次、共 15 attempts，预算 25 分钟/attempt；模型仅 `deepseek/deepseek-v4-flash`。
+- 每条件 3 次、共 9 attempts，预算 25 分钟/attempt；模型仅 `deepseek/deepseek-v4-flash`。
 - judge：先以 `judge-agent/generic/v1` 执行真实 LLM 判别力校准（`LORELUM_JUDGE_REAL=1`），固定/记录 rubric hash 与阈值，再逐条件软分。
 - 结果按人可读原始维度呈现：evaluated / semantic / practice_observation / joint_pass，judge 独立 sidecar。
 - 决策按 `strictly-greater-than-each-control`：oracle joint-pass 严格高于 baseline 与 irrelevant-practice 才支持方向性结论，否则 diagnostic-only。

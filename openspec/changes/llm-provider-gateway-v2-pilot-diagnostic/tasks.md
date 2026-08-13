@@ -7,13 +7,13 @@
 
 ## 2. 诊断计划与 judge 校准
 
-- [ ] 2.1 创建冻结诊断计划 `incubator/practice-injection-plans/llm-provider-gateway-v2-three-condition-diagnostic-flash.yaml`（repetitions: 5，15 attempts，model-tier flash），dry-run 通过。
+- [ ] 2.1 创建冻结诊断计划 `incubator/practice-injection-plans/llm-provider-gateway-v2-three-condition-diagnostic-flash.yaml`（repetitions: 3，9 attempts，model-tier flash），dry-run 通过。
 - [ ] 2.2 运行 judge 判别力校准（`judge-agent/generic/v1`，`LORELUM_JUDGE_REAL=1`），记录 rubric hash 与 reference/equivalent/anti-pattern/public-starter 分数与阈值。
 - [ ] 2.3 若校准通过，复用同一 rubric hash 作为三条件 judge soft sidecar；否则记录 not-run 原因。
 
 ## 3. 三条件诊断执行
 
-- [ ] 3.1 以本地 Pi diagnostic runner 执行 baseline / oracle-practice / irrelevant-practice，每条件 5 次、预算 25 分钟/attempt，模型 `deepseek/deepseek-v4-flash`。
+- [ ] 3.1 以本地 Pi diagnostic runner 执行 baseline / oracle-practice / irrelevant-practice，每条件 3 次、预算 25 分钟/attempt，模型 `deepseek/deepseek-v4-flash`。
 - [ ] 3.2 保存每 attempt 的 evaluator 输出、judge sidecar 与 observation_reason。
 - [ ] 3.3 产出人可读原始结果表（evaluated / semantic / practice_observation / joint_pass / judge 中位）。
 
