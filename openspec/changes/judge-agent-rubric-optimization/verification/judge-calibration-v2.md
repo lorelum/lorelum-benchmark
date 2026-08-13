@@ -19,3 +19,15 @@
 ## 结论
 
 优化后通用 judge 对 `llm-provider-gateway-v2` 形成正确方向判别：reference 高分、equivalent 接近、anti-pattern 显著低于 reference（gap 14）、public-starter 不高于 reference。可复用同一 rubric hash 对三条件 soft score；该 rubric/hash 与阈值写入 pilot 使用说明。
+
+## 既有前端 candidate 回归
+
+`profile-update-command-boundary-v2`（`judge-agent/generic/v1`，未修改，真实 LLM opt-in，repetitions=1）：
+
+- rubric_hash：`fac29724d66a7ee09a17ae0192bd59afade51f41964e8432e9ab94cca6867241`
+- reference：67
+- equivalent：75
+- anti-pattern：20
+- checks：全部通过
+
+证明 v1 未修改、既有前端 candidate 的判别力未回归。

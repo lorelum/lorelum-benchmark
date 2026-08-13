@@ -16,6 +16,12 @@ function fail(message: string): never {
   throw new Error(`Invalid generated judge rubric: ${message}`);
 }
 
+function normalizedInteger(value: unknown, label: string): number {
+  const number = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  if (!Number.isFinite(number)) fail(`${label} must be numeric`);
+  return Math.round(number);
+}
+
 export function assertGeneratedRubric(value: unknown): GeneratedRubric {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("root must be an object");
   const root = value as Record<string, unknown>;
@@ -31,9 +37,10 @@ export function assertGeneratedRubric(value: unknown): GeneratedRubric {
     seen.add(d.id);
     if (typeof d.name !== "string" || !d.name) fail(`dimension ${d.id} name is required`);
     if (typeof d.description !== "string" || !d.description) fail(`dimension ${d.id} description is required`);
-    if (!Number.isInteger(d.max_points) || (d.max_points as number) < 1) fail(`dimension ${d.id} max_points must be a positive integer`);
-    total += d.max_points as number;
-    dimensions.push({ id: d.id, name: d.name, description: d.description, max_points: d.max_points as number });
+    const maxPoints = normalizedInteger(d.max_points, `dimension ${d.id} max_points`);
+    if (maxPoints < 1) fail(`dimension ${d.id} max_points must be a positive integer`);
+    total += maxPoints;
+    dimensions.push({ id: d.id, name: d.name, description: d.description, max_points: maxPoints });
   }
   if (total !== 100) fail(`dimension max_points must total 100, got ${total}`);
   return { dimensions };
@@ -65,6 +72,10 @@ export const rubricQualityGuideline = `Scoring guideline - reason carefully with
 4. raw-response-containment: raw transport response/body values must not flow back into component state, return values, or the component-facing contract.
 5. state-and-feedback: loading, empty, error, success, and retry states are handled explicitly and correctly; duplicate submissions are prevented; validation is correct and reflected in the UI.
 6. correctness: the task's stated observable behaviors are all implemented.
+7. policy-centralization: fallback, retry, tenant budget, idempotency, and metering are owned by a single boundary policy/ledger layer, not duplicated across route handlers or provider adapters; handlers delegate instead of implementing cross-cutting plumbing inline.
+8. transport-accounting: every logical request produces one accounting record; retry/fallback are transport details and must not double-bill; streamed failures record only usage actually reported upstream; logs carry tenant/provider/model/trace/retry/status attribution.
+9. provider-protocol-mapping: OpenAI-compatible providers are configuration-only reuse, while protocol-different and pseudo-compatible providers get their own wire translation; a provider is never reused by name when its auth/fields/stream shape differ.
+10. budget-atomicity: tenant budget reservation and settlement are atomic under concurrency; an insufficient-budget request is rejected before any provider call and never overspends.
 
 For each dimension you select, write a description that names concrete observable evidence a reviewer can check in code (for example "the component reads response.status directly" or "a boundary module translates 409 into a domain conflict result").`;
 
@@ -84,6 +95,11 @@ export function rubricUserPrompt(taskMd: string): string {
 
 const rubricCache = new Map<string, Promise<{ rubric: GeneratedRubric; text: string; hash: string }>>();
 
+export function fixedRubricText(env: Record<string, string | undefined> = Bun.env): string | undefined {
+  const value = env.LORELUM_JUDGE_RUBRIC_TEXT;
+  return value && value.trim() ? value.trim() : undefined;
+}
+
 export async function generateRubric(taskMd: string, complete: JudgeCompletion): Promise<{ rubric: GeneratedRubric; text: string; hash: string }> {
   const parsed = (await complete(rubricSystemPrompt(), rubricUserPrompt(taskMd))) as unknown;
   const rubric = assertGeneratedRubric(parsed);
@@ -91,11 +107,18 @@ export async function generateRubric(taskMd: string, complete: JudgeCompletion):
   return { rubric, text, hash: await sha256Text(text) };
 }
 
-export async function generateRubricCached(taskMd: string, complete: JudgeCompletion): Promise<{ rubric: GeneratedRubric; text: string; hash: string }> {
-  const key = await sha256Text(taskMd);
+export async function generateRubricCached(taskMd: string, complete: JudgeCompletion, env: Record<string, string | undefined> = Bun.env): Promise<{ rubric: GeneratedRubric; text: string; hash: string }> {
+  const fixed = fixedRubricText(env);
+  const key = await sha256Text(fixed ? `${taskMd}\0${fixed}` : taskMd);
   let pending = rubricCache.get(key);
   if (!pending) {
-    pending = generateRubric(taskMd, complete);
+    pending = fixed
+      ? (async () => {
+          const rubric = parseRubricText(fixed);
+          const text = serializeRubric(rubric);
+          return { rubric, text, hash: await sha256Text(text) };
+        })()
+      : generateRubric(taskMd, complete);
     rubricCache.set(key, pending);
   }
   return pending;

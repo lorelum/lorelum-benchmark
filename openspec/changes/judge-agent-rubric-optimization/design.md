@@ -19,6 +19,10 @@
 
 ## Decisions
 
+### 版本策略（规划澄清确认）
+
+- 不修改 `judge-agent/generic/v1`；新增 `judge-agent/generic/v2`，只把 `llm-provider-gateway-v2` 迁移到 v2；既有 candidate 继续使用 v1，保持历史软评分可复现。
+
 ### rubric guideline
 
 - 在 `rubricQualityGuideline` 增加政策维度，措辞面向任务自适应，不强制所有任务都用。
@@ -45,4 +49,12 @@
 
 ## Open Questions
 
-1. 固定 rubric 仅环境变量注入是否足够，还是需要 runner 参数化？当前按环境变量实现。
+已确认：固定 rubric 采用 `LORELUM_JUDGE_RUBRIC_TEXT` 环境变量注入。
+
+## Planning Confirmation
+
+2026-08-13（需求方确认）：
+
+1. 新增 `judge-agent/generic/v2`，不修改 v1。
+2. 只迁移 `llm-provider-gateway-v2` 到 v2。
+3. 固定 rubric 通过环境变量注入，默认行为向后兼容。

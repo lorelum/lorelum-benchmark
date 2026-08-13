@@ -4,9 +4,10 @@
 
 ## What Changes
 
-- 扩展 `judge-agent/generic/v1` 的 rubric quality guideline，纳入跨请求/后端政策维度（fallback 归属、retry 单次计费、租户预算原子性、幂等、流式失败记账、集中账本/观测、伪兼容协议映射），并保留现有前端分层维度。
+- 新增 `judge-agent/generic/v2`（不修改 v1），扩展 rubric quality guideline，纳入跨请求/后端政策维度（fallback 归属、retry 单次计费、租户预算原子性、幂等、流式失败记账、集中账本/观测、伪兼容协议映射），并保留现有前端分层维度。
 - 增强 judge 输出解析：对 `confidence` 与 criterion `points` 做稳健的有限数值归一（数字/数字字符串、round、0-100 约束），非关键格式抖动不再触发 fail-closed，仍拒绝缺失/非法结构化字段。
-- 支持固定 rubric 复用：`judge-agent/generic/v1` 在 `LORELUM_JUDGE_RUBRIC_TEXT` 提供时优先使用该 rubric 文本（校验并记录 hash），否则仍按任务生成；默认行为不变。
+- 支持固定 rubric 复用：`judge-agent/generic/v2` 在 `LORELUM_JUDGE_RUBRIC_TEXT` 提供时优先使用该 rubric 文本（校验并记录 hash），否则仍按任务生成；默认行为不变。
+- 只迁移 `llm-provider-gateway-v2` 到 `judge-agent/generic/v2`；既有 candidate 继续使用 v1。
 - 增加 gateway-style judge 校准/回归测试，覆盖 anti-pattern 低于 reference、equivalent 接近 reference，以及 confidence 归一化用例。
 - 不改变 `judge-result/v1` 契约、语义判定规则与 `.env` 安全边界。
 
