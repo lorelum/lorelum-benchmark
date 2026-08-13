@@ -38,9 +38,9 @@
 - [x] 6.1 生成并校验 v2 snapshot，确认独立身份且未触碰 v1 snapshot。
 - [x] 6.2 运行 public/private 泄露审计：公开面无 benchmark/oracle/evaluator/calibration/practice 术语，无被测规范或私有路径。
 - [x] 6.3 运行 `bun run validate`、OpenSpec strict、`git diff --check`，并记录验证证据。
-- [ ] 6.4 由独立 agent 执行真实环境验证（starter 语义测试、校准矩阵、真实性审计），将独立报告集成到同一 PR。
+- [x] 6.4 由独立 agent 执行真实环境验证（starter 语义测试、校准矩阵、真实性审计），将独立报告集成到同一 PR。
 
 ## 7. 最终门禁
 
-- [ ] 7.1 确认未调用模型、未创建正式 record、未升级 suite revision，v1 与现有对象未改动。
-- [ ] 7.2 完成 PR 描述与证据链，保持单一声明范围并引用 #166。
+- [x] 7.1 确认未调用模型、未创建正式 record、未升级 suite revision，v1 与现有对象未改动。
+- [x] 7.2 完成 PR 描述与证据链，保持单一声明范围并引用 #166。
