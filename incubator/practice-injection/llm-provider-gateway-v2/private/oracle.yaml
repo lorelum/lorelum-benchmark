@@ -1,0 +1,27 @@
+id: llm-provider-gateway-v2
+semantic_oracle:
+  command: bun run test
+  assertions:
+    - OpenAI/DeepSeek 非流式与流式对话成功，DeepSeek 仅改配置即可切换
+    - Anthropic 与伪兼容供应商 Nebula 的非流式与流式线协议、usage 字段映射正确
+    - 主供应商失败后 fallback 成功且响应/日志/费用归属实际供应商
+    - retry 后成功只产生一条账本记录且不双计费
+    - 租户预算预占/结算精确，并发请求不超支
+    - 幂等命中返回缓存结果且只计一次，同 key 不同体返回冲突
+    - 流式首 chunk 前失败返回 JSON，流中途失败发送终止 SSE 错误事件且只记上游已报告 usage
+    - JSONL 每逻辑请求一条并含 tenant/provider/model/trace_id/retry_count/status/cost/latency_ms
+    - GET /api/usage 支持 tenant/model/status 过滤与按模型/租户聚合
+    - 无效 Key/限流/超时/预算不足/幂等冲突/供应商缺失/非法请求均返回统一领域错误
+practice_observation:
+  command: bun run private/evaluator/verify-provider-gateway-v2.ts public/starter/app
+  signal_only: true
+  responsibilities:
+    - 存在统一模型客户端契约（至少两个方法的 interface/class/type），接口层只依赖它
+    - 网关服务文件不直接发起 HTTP 传输、不依赖供应商 SDK、不含供应商直连地址
+    - HTTP/供应商线协议只出现在适配器内，适配器输出规范化 usage 与类型化错误
+    - OpenAI 兼容供应商不新增独立硬编码路径；伪兼容供应商不按名称误复用适配器
+    - fallback/retry/租户预算/幂等/费用换算/计量集中在边界政策与账本模块，不在服务/适配器内散落
+    - 网关服务文件不泄漏原始供应商 usage 字段命名或上游错误文本
+    - 供应商选择由配置/注册表驱动，接口层不按供应商名分支
+    - 观测（usage/latency/cost/tenant/trace）从边界账本模块统一记录
+baseline_expected_result: { semantic: fail, practice_observation: not-observed }
