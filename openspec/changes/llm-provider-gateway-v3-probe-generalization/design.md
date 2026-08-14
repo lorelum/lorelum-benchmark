@@ -91,4 +91,8 @@
 
 ## Planning Confirmation
 
-待需求方确认后填写。
+2026-08-14，需求方在 #172 规划澄清中确认三项推荐口径：
+
+1. v3 完全复刻 v2 的公开 `task.md/starter/tests/docs`；candidate id、snapshot 与 private probe/calibration/snapshot 身份不同，以隔离题面变化与探针变化。
+2. naming-variant fixture 的预期标签采用“人工复核 + judge criterion 证据”复核；人工复核是最终 oracle，judge v2 证据仅用于解释与二次核对，不得单独决定标签。
+3. 新增独立 capability `practice-structure-probe-calibration`；不把该规范塞入 `practice-injection-candidate-v2`，也不修改既有冻结 capability。
