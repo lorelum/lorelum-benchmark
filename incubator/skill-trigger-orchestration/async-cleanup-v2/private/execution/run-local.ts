@@ -20,7 +20,7 @@ type ToolPolicy = {
     config_scope?: unknown;
   };
 };
-type Options = { dryRun: boolean; skipInstall: boolean; qualityPilot: boolean; repeat?: number; outputPath: string };
+type Options = { dryRun: boolean; skipInstall: boolean; qualityPilot: boolean; qualification: boolean; repeat?: number; outputPath: string };
 type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number };
 type AuditEvent = Record<string, unknown> & { event: string };
 
@@ -54,12 +54,14 @@ function parseOptions(): Options {
   let dryRun = false;
   let skipInstall = false;
   let qualityPilot = false;
+  let qualification = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
     if (argument === "--dry-run") { dryRun = true; continue; }
     if (argument === "--skip-install") { skipInstall = true; continue; }
     if (argument === "--quality-pilot") { qualityPilot = true; continue; }
+    if (argument === "--qualification") { qualification = true; continue; }
     if (argument === "--repeat") {
       const value = Number(args[++index]);
       if (!Number.isInteger(value) || value < 1) fail("--repeat must be a positive integer");
@@ -72,7 +74,8 @@ function parseOptions(): Options {
     }
     fail(`Unknown option: ${argument}`);
   }
-  return { dryRun, skipInstall, qualityPilot, repeat, outputPath };
+  if (qualification && qualityPilot) fail("--qualification cannot be combined with --quality-pilot");
+  return { dryRun, skipInstall, qualityPilot, qualification, repeat, outputPath };
 }
 
 async function run(command: string[], cwd: string, timeoutMs?: number, env = Bun.env): Promise<CommandResult> {
@@ -171,6 +174,8 @@ type EvaluatorResult = {
   scopeRejectProbe: string;
   reloadResolveProbe: string;
   reloadRejectProbe: string;
+  backgroundResolveProbe: string;
+  backgroundRejectProbe: string;
   practiceProbe: string;
   dualPass: boolean;
 };
@@ -178,8 +183,8 @@ type EvaluatorResult = {
 function evaluatorResult(stdout: string): EvaluatorResult | undefined {
   for (const line of stdout.trim().split(/\r?\n/).reverse()) {
     try {
-      const value = JSON.parse(line) as { semantic?: unknown; ast_probe?: unknown; runtime_scope_resolve_probe?: unknown; runtime_scope_reject_probe?: unknown; runtime_reload_resolve_probe?: unknown; runtime_reload_reject_probe?: unknown; practice_probe?: unknown };
-      if (typeof value.semantic === "string" && typeof value.ast_probe === "string" && typeof value.runtime_scope_resolve_probe === "string" && typeof value.runtime_scope_reject_probe === "string" && typeof value.runtime_reload_resolve_probe === "string" && typeof value.runtime_reload_reject_probe === "string" && typeof value.practice_probe === "string") {
+      const value = JSON.parse(line) as { semantic?: unknown; ast_probe?: unknown; runtime_scope_resolve_probe?: unknown; runtime_scope_reject_probe?: unknown; runtime_reload_resolve_probe?: unknown; runtime_reload_reject_probe?: unknown; runtime_background_resolve_probe?: unknown; runtime_background_reject_probe?: unknown; practice_probe?: unknown };
+      if (typeof value.semantic === "string" && typeof value.ast_probe === "string" && typeof value.runtime_scope_resolve_probe === "string" && typeof value.runtime_scope_reject_probe === "string" && typeof value.runtime_reload_resolve_probe === "string" && typeof value.runtime_reload_reject_probe === "string" && typeof value.runtime_background_resolve_probe === "string" && typeof value.runtime_background_reject_probe === "string" && typeof value.practice_probe === "string") {
         return {
           semantic: value.semantic,
           astProbe: value.ast_probe,
@@ -187,6 +192,8 @@ function evaluatorResult(stdout: string): EvaluatorResult | undefined {
           scopeRejectProbe: value.runtime_scope_reject_probe,
           reloadResolveProbe: value.runtime_reload_resolve_probe,
           reloadRejectProbe: value.runtime_reload_reject_probe,
+          backgroundResolveProbe: value.runtime_background_resolve_probe,
+          backgroundRejectProbe: value.runtime_background_reject_probe,
           practiceProbe: value.practice_probe,
           dualPass: value.semantic === "pass" && value.practice_probe === "pass"
         };
@@ -344,7 +351,7 @@ async function runAttempt(
     await Bun.write(resolve(attemptPath, "install.stdout.log"), install.stdout);
       await Bun.write(resolve(attemptPath, "install.stderr.log"), install.stderr);
     }
-    evaluator = await run([process.execPath, "run", resolve(candidateRoot, "private/evaluator/evaluate-operation-ownership.ts"), resolve(workspace, "app")], candidateRoot);
+    evaluator = await run([process.execPath, "run", resolve(candidateRoot, "private/evaluator/evaluate-operation-authority.ts"), resolve(workspace, "app")], candidateRoot);
     await Bun.write(resolve(attemptPath, "evaluator.stdout.log"), evaluator.stdout);
     await Bun.write(resolve(attemptPath, "evaluator.stderr.log"), evaluator.stderr);
     evaluation = evaluatorResult(evaluator.stdout);
@@ -379,6 +386,8 @@ async function runAttempt(
     runtime_scope_reject_probe: evaluation?.scopeRejectProbe ?? "not-run",
     runtime_reload_resolve_probe: evaluation?.reloadResolveProbe ?? "not-run",
     runtime_reload_reject_probe: evaluation?.reloadRejectProbe ?? "not-run",
+    runtime_background_resolve_probe: evaluation?.backgroundResolveProbe ?? "not-run",
+    runtime_background_reject_probe: evaluation?.backgroundRejectProbe ?? "not-run",
     practice_probe: evaluation?.practiceProbe ?? "not-run",
     dual_pass: evaluation?.dualPass ?? false,
     validity: { valid, reasons: invalidReasons },
@@ -387,6 +396,70 @@ async function runAttempt(
     constraint_adopted: condition.id === "lorelum-retrieval" && completeTrace && queryAnchored && evaluation?.dualPass === true,
     trace,
     output: relativeToRepository(attemptPath)
+  };
+}
+
+async function runToolQualification(
+  outputPath: string,
+  condition: Condition,
+  conditions: Conditions,
+  piRuntime: { shellPath: string },
+  command: string
+): Promise<Record<string, unknown>> {
+  if (condition.practice === "none" || typeof condition.practice !== "object") fail("Tool qualification requires a declared Practice reference");
+  const attemptPath = resolve(outputPath, "tool-qualification", "attempt-1");
+  const workspace = resolve(attemptPath, "workspace");
+  await mkdir(attemptPath, { recursive: true });
+  await copyPublicWorkspace(workspace);
+  const initialFiles = await workspaceFiles(workspace);
+  if (initialFiles.some((file) => file.includes("private/") || file.includes("practices/"))) fail("Private material was copied into a qualification workspace");
+
+  const auditPath = resolve(attemptPath, "lorelum-audit.jsonl");
+  const piAgentDirectory = resolve(attemptPath, "pi-agent");
+  await mkdir(piAgentDirectory, { recursive: true });
+  await writeJson(resolve(piAgentDirectory, "settings.json"), { shellPath: piRuntime.shellPath });
+  const piArgs = [
+    "--print", "--no-session", "--no-context-files", "--no-extensions",
+    "--no-skills", "--no-prompt-templates",
+    "--tools", "read,bash,edit,write,grep,find,ls,skills_list,skills_load,lorelum_query",
+    "--extension", resolve(candidateRoot, "private/execution/lorelum-extension.ts"),
+    "--model", conditions.shared_execution.model.id,
+    "--thinking", "off",
+    "Use the read tool to read task.md. Do not edit files. Then call skills_list for the project policy reference in task.md with public_refs set to [\"task.md\"]. Load the returned entry with skills_load, then call lorelum_query with task.md as public_refs and a query using factual wording from task.md. Stop after those calls."
+  ];
+  const piEnvironment = {
+    ...Bun.env,
+    PI_CODING_AGENT_DIR: piAgentDirectory,
+    LORELUM_MOCK_CONDITION: condition.id,
+    LORELUM_MOCK_PRACTICE_PATH: resolve(candidateRoot, condition.practice.path),
+    LORELUM_MOCK_PRACTICE_SHA256: condition.practice.sha256,
+    LORELUM_MOCK_AUDIT_PATH: auditPath,
+  };
+  const pi = await run([command, ...piArgs], workspace, conditions.shared_execution.budget.max_duration_minutes * 60_000, piEnvironment);
+  await Bun.write(resolve(attemptPath, "pi.stdout.log"), pi.stdout);
+  await Bun.write(resolve(attemptPath, "pi.stderr.log"), pi.stderr);
+
+  const workspaceFilesAfterAgent = await workspaceFiles(workspace);
+  const auditEvents = await readAudit(auditPath);
+  const trace = observedTrace(condition, auditEvents);
+  await writeJson(resolve(attemptPath, "trace.json"), trace);
+  const invalidReasons = await invalidityReasons(condition, pi, workspaceFilesAfterAgent, auditEvents, trace);
+  const traceEvents = (trace as { events: AuditEvent[] }).events;
+  const queryAnchored = traceEvents.some((event) => event.event === "practice_query_issued" && Array.isArray(event.public_refs) && event.public_refs.length > 0);
+  const qualified = pi.code === 0 && !pi.timedOut && invalidReasons.length === 0 && (trace as { complete?: unknown }).complete === true && queryAnchored;
+  return {
+    kind: "forced-tool-qualification",
+    condition: condition.id,
+    workspace: relativeToRepository(workspace),
+    initial_workspace_files: initialFiles,
+    agent_workspace_files: workspaceFilesAfterAgent,
+    pi: { code: pi.code, timed_out: pi.timedOut, duration_ms: pi.durationMs },
+    validity: { valid: invalidReasons.length === 0, reasons: invalidReasons },
+    complete_trace: (trace as { complete?: unknown }).complete === true,
+    query_anchored: queryAnchored,
+    status: qualified ? "pass" : "fail",
+    trace,
+    output: relativeToRepository(attemptPath),
   };
 }
 
@@ -421,6 +494,7 @@ const qualityPlan = runnable.flatMap((condition) => Array.from({ length: repeat 
 if (options.dryRun) {
   console.log(JSON.stringify({
     schema_version: "skill-trigger-local-plan/v2",
+    tool_qualification: options.qualification ? "forced-real-pi-canary" : "not-requested",
     discovery_gate: { planned_runs: discoveryPlan },
     quality_pilot: options.qualityPilot ? { planned_runs: qualityPlan } : "not-requested",
     workspace_template: ["task.md", "app/**"],
@@ -434,6 +508,23 @@ const command = await piCommand();
 const version = await run([command, "--version"], repositoryRoot);
 if (version.code !== 0) fail(`Unable to start Pi command ${command}: ${(version.stderr || version.stdout).trim()}`);
 await preflightModel(command, conditions.shared_execution.model.id);
+
+if (options.qualification) {
+  const qualification = await runToolQualification(options.outputPath, discoveryCondition, conditions, piRuntime, command);
+  const summary = {
+    schema_version: "skill-trigger-local-tool-qualification/v1",
+    generated_at: new Date().toISOString(),
+    pi_version: version.stdout.trim(),
+    model: conditions.shared_execution.model.id,
+    qualification,
+    discovery_gate: "not-run",
+    quality_pilot: "not-run",
+    outcome: "not-an-experiment",
+  };
+  await writeJson(resolve(options.outputPath, "summary.json"), summary);
+  console.log(JSON.stringify({ output: relativeToRepository(options.outputPath), ...summary }, null, 2));
+  process.exit((qualification as { status: string }).status === "pass" ? 0 : 1);
+}
 
 const discoveryEntries: Record<string, unknown>[] = [];
 for (let attempt = 1; attempt <= repeat; attempt += 1) {

@@ -30,6 +30,15 @@ test("可以重新加载当前范围", async ({ page }) => {
   await expect(page.getByRole("list", { name: "进行中项目" })).toBeVisible();
 });
 
+test("可以运行后台协调", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("list", { name: "进行中项目" })).toBeVisible();
+
+  await page.getByRole("button", { name: "运行后台协调" }).click();
+  await expect(page.getByRole("list", { name: "进行中项目" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__projectsRequestSources?.at(-1))).toBe("reconciliation");
+});
+
 test("范围切换后保留当前范围内容", async ({ page }) => {
   await page.addInitScript(() => {
     const original = window.setTimeout.bind(window);

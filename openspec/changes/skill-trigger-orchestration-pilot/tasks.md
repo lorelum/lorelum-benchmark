@@ -82,3 +82,14 @@
 - [x] 在 runner 增加三次触发校准与“未通过则停止”门，并在 summary 中单列发现门结果。 [写入范围：v2 private execution]
 - [x] 重生成 snapshot，运行 validate、contracts、v2 定向测试、strict OpenSpec、calibration 和泄露审计。 [写入范围：v2 private、scratch/]
 - [x] 在上述离线门禁全部通过后，运行三次 `lorelum-retrieval` 触发校准；三次均有效但均未形成完整查询链路，故按门禁阻止三条件 scratch quality pilot，并报告 `diagnostic-only`。 [写入范围：scratch/]
+
+## 12. v2 来源权威政策缺口修订
+
+- [x] 在 Issue #96 与 OpenSpec 记录 r9 的有效负结果，并明确强制工具 canary 只验证可达性、不构成自主发现证据。 [写入范围：Issue #96、OpenSpec]
+- [x] 将公开场景扩展为前台导航、手动重载与后台协调的来源权威冲突；`PX-47` 只说明外部政策缺口，不提供规则或实现。 [写入范围：v2 public]
+- [x] 将处理组工具文案收敛为“解析已读公开文件中的项目政策引用”的可选能力，保留真实三段链路、公开锚点与私有约束隔离。 [写入范围：v2 private execution]
+- [x] 将 private Practice、AST/runtime evaluator 与 reference/equivalent/anti-pattern calibration 扩展到前台 supersession 和后台 late-settlement 的 success/reject 六路径。 [写入范围：v2 private evaluator、calibration]
+- [x] 新增独立 scratch canary：显式调用真实 Pi 工具链，只报告可达性、不运行候选评测或写入效果统计。 [写入范围：v2 private execution、scratch/]
+- [x] 修复 opaque 政策标识锚定和 qualification extension 接线，重生成 snapshot，并以 extension/runner 隔离测试确认；真实 canary 完成完整、锚定且无泄露的链路。 [写入范围：v2 private、scratch/]
+- [x] 在相同模型与无工具调用要求的 runner prompt 下运行三次 r10 发现门；三次均有效但均未查询，按门禁阻止九次 quality pilot，并记录为 `diagnostic-only`。 [写入范围：scratch/]
+- [x] 运行 r10 最终 `validate`、contracts、定向测试、strict OpenSpec、calibration、泄露审计与 diff 检查。 [写入范围：v2 private、scratch/]

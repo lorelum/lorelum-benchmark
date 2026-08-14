@@ -115,17 +115,25 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 - **WHEN** extension error、trace/audit 不一致或私有材料泄露发生
 - **THEN** attempt 标记为 invalid，并从效果统计与模型/Pi 能力结论中排除
 
-### Requirement: v2 以政策缺口驱动异步操作归属修复
+### Requirement: v2 以来源权威政策缺口驱动操作归属修复
 
-`async-cleanup-v2` 的公开任务 MUST 描述项目范围切换与同范围手动重载中的结果错位，并包含一个不解释行为语义的项目政策编号。公开材料 MUST 说明该编号约束发布行为、但其定义不在公开代码中；不得提及 Lorelum、Skill、Practice、目录、查询、cleanup、AbortController 或固定实现。private 质量门 MUST 分别验证跨范围和同范围重载时，旧操作的成功与失败都不会调用状态 setter。
+`async-cleanup-v2` 的公开任务 MUST 描述项目范围切换、同范围手动重载与后台协调同时存在时的结果错位，并包含 `PX-47` 项目政策引用。公开材料 MUST 说明该政策定义这些公开可见操作来源的结果权威、定义不在公开代码且不能由时间先后推断；不得提及 Lorelum、Skill、Practice、目录、查询、cleanup、AbortController 或固定实现。private 质量门 MUST 验证被取代的前台操作及晚于前台启动的后台协调操作，在 success 与 reject 路径均不调用视图状态 setter。
 
-#### Scenario: 公开故障但实现开放
+#### Scenario: 公开故障构成真实政策缺口
 - **WHEN** agent 阅读 v2 task 与运行公开测试
-- **THEN** 它能观察到需要修复的结果错位与未解析政策引用，但不会收到工具调用或具体实现指令
+- **THEN** 它能观察到需要修复的结果错位、三个操作来源及缺失的来源权威政策，但不会收到工具调用、政策答案或具体实现指令
 
-#### Scenario: 双异步终态质量门
-- **WHEN** 跨范围或同范围的旧操作在被新操作取代后 resolve 或 reject
-- **THEN** 四种情形下组件状态 setter 调用数均为零
+#### Scenario: 来源权威运行时质量门
+- **WHEN** 跨范围或同范围的前台旧操作被取代，或者后台协调在前台操作后启动并 resolve 或 reject
+- **THEN** 六种情形下视图状态 setter 调用数均为零
+
+### Requirement: 工具可达性 canary 与自主发现分离
+
+系统 MUST 在无提示发现门前提供一个显式强制调用的真实 Pi canary，验证 `skills_list -> skills_load -> lorelum_query`、动态工具注册与 redacted audit 在模型端可达。canary MUST 使用独立 scratch 输出，MUST NOT 执行候选评测，MUST NOT 进入任何 condition、发现门或效果统计。处理组的可用工具只可将自身描述为解析 agent 已读公开文件中项目政策引用的可选能力，MUST NOT 点名当前政策、返回其答案或要求调用。
+
+#### Scenario: canary 通过不构成自主发现
+- **WHEN** 强制调用 canary 形成完整工具链
+- **THEN** 系统只将其记录为工具资格通过，不将它计为处理组发现、查询或约束采纳成功
 
 ### Requirement: 发现门先于完整质量 pilot
 

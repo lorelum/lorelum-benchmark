@@ -102,3 +102,17 @@ r9 在不创建 v3 的前提下继续修订 `async-cleanup-v2`，测量对象收
 场景改为项目范围切换与同范围手动重载同时存在的项目加载操作。相关 Practice 约束为：只有最新项目加载操作可结算视图；任何被后续操作取代的成功或失败终态都不得更新状态。它不规定失效标记、请求代次、可取消信号或其他实现。私有运行时质量门分别覆盖跨范围和同范围重载两类 superseded 操作，并分别让旧操作 resolve 与 reject；AST 门仅拒绝无归属保护或伪保护。这样，单一 effect cleanup 不再天然覆盖全部质量门，而等价的共享操作归属实现仍可通过。
 
 模型调用分两阶段：先以 lorelum-retrieval 连续三次执行轻量触发校准，要求每次都有完整 `skills_list -> skills_load -> lorelum_query` 真实链路且 query 引用已读公开对象。任何一次未达标即记录“发现门未通过”并停止，不运行完整九次质量 pilot。三次均达标后，才依旧按 baseline、lorelum-retrieval、irrelevant-practice 各三次运行；模型、预算、私有边界、redacted trace、`diagnostic-only` 规则和无正式 record 边界保持不变。
+
+### v2 r10 来源权威政策缺口修订
+
+`pilot-r9` 的三次有效 attempt 都读取了公开材料，却直接采用请求代次守卫修复范围切换与重载；`PX-47` 因而只是可以忽略的标签。r10 不把更强的提示、工具调用要求或 Practice 注入伪装为自主发现，而是让政策语义决定可观察的正确行为：公开源码同时存在前台导航、手动重载和后台协调操作，`PX-47` 是三者结果归属的外部权威政策。公开材料说明该政策适用于这些来源、定义不在公开代码，且不能由时间先后推断；题面仍不得提及 Lorelum、Skill、Practice、目录、查询、cleanup、AbortController 或固定实现。
+
+私有政策约束为：前台导航和手动重载取得视图结果权威；后台协调是非权威来源，即使在前台操作之后启动或更晚结算，也不得改变项目列表、加载或错误视图状态；被取代的前台操作同样不得结算。这样，全局“最新请求获胜”是可校准的 anti-pattern，而按来源与操作归属建立守卫的多种等价实现仍可通过。运行时质量门保留前台跨范围和同范围重载的 success/reject 覆盖，并新增后台协调在前台之后启动的 success/reject 覆盖。
+
+`skills_list` 的工具名与三段真实链路保持不变，但其 label/description 只准确陈述一个通用能力：根据 agent 已读公开文件中的项目政策引用发现可选指导。它不点名 `PX-47`，不返回政策答案，不要求调用。自主发现的证据仍只来自 agent 无提示地以公开锚点选择该链路；强制 Pi 调用 canary 仅验证动态工具注册、加载、查询和 redacted audit 在真实模型端可达，独立写入 scratch，不运行评测、不纳入发现门或处理效果。
+
+### r10 执行结果
+
+早期 qualification 输出分别揭示 opaque 标识 `PX-47` 未被锚点解析器识别、以及资格路径漏传 `--extension`；它们是 harness 资格缺陷，不构成模型或 Pi 能力证据。修复并通过 extension 与 runner 隔离测试后，新的真实 canary 成功完成 `public_input_read -> skills_list -> skills_load -> lorelum_query`，其发现和查询均锚定 `task.md` 中的 `PX-47`，且 trace、stdout、stderr、summary 与 agent 工作区均未泄露私有材料。
+
+在相同模型 `deepseek/deepseek-v4-pro`、相同预算且 runner prompt 不要求调用工具的三次 r10 发现门中，三个 attempt 都通过运行有效性门并读取了公开任务与源码，但均没有产生 `skills_list`、`skills_load` 或 `lorelum_query` 事件。因此这不是 extension 失败，也不是查询后实施失败，而是该来源权威政策缺口下的主动发现失败。发现门按协议失败，三条件各三次 quality pilot 未运行，结果只能报告为 `diagnostic-only`，不得产生方向性正信号。

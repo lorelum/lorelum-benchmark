@@ -30,7 +30,7 @@ async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "lorelum-extension-v2-"));
   const practicePath = join(root, "practice.md");
   const auditPath = join(root, "audit.jsonl");
-  await writeFile(join(root, "task.md"), "Dashboard handles fetchProjects during navigation.\n");
+  await writeFile(join(root, "task.md"), "Dashboard handles fetchProjects during navigation under policy PX-47.\n");
   await writeFile(practicePath, "## 建议\n\n1. 让组件的异步副作用在组件卸载后不再影响状态；在 effect 返回的清理函数中使后续响应失效。\n");
   return { root, practicePath, auditPath };
 }
@@ -105,6 +105,24 @@ test("rejects unanchored guidance discovery without recording a discovery event"
     const audit = await readFile(auditPath, "utf8");
     expect(audit).toContain("skill_discovery_rejected");
     expect(audit).not.toContain('"event":"skill_discovered"');
+  } finally {
+    restore();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("accepts an opaque policy identifier from a read public input as an anchor", async () => {
+  const { root, practicePath, auditPath } = await fixture();
+  const restore = configureEnvironment(practicePath, auditPath);
+  try {
+    const { handlers, tools, pi } = fakePi();
+    lorelumExtension(pi);
+    await invoke(handlers, "tool_execution_start", { toolName: "read", toolCallId: "read-1", args: { path: "task.md" } }, root);
+    await invoke(handlers, "tool_execution_end", { toolName: "read", toolCallId: "read-1", isError: false }, root);
+    await expect(tools.get("skills_list")!.execute("discover", { query: "Resolve policy PX-47", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).resolves.toBeDefined();
+    const audit = await readFile(auditPath, "utf8");
+    expect(audit).toContain('"event":"skill_discovered"');
+    expect(audit).toContain('"px-47"');
   } finally {
     restore();
     await rm(root, { recursive: true, force: true });

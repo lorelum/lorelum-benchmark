@@ -19,7 +19,7 @@ function sha256(value: string): string {
 }
 
 function anchors(value: string): string[] {
-  return [...new Set((value.toLowerCase().match(/[a-z_][a-z0-9_]{2,}|[\u4e00-\u9fff]{2,}/g) ?? [])
+  return [...new Set((value.toLowerCase().match(/[a-z_][a-z0-9_]{2,}|[a-z]{1,16}-\d{1,8}|[\u4e00-\u9fff]{2,}/g) ?? [])
     .filter((token) => !["const", "return", "from", "type", "function", "window", "await"].includes(token)))]
     .slice(0, 64);
 }
@@ -68,7 +68,7 @@ export default function lorelumExtension(pi: ExtensionAPI) {
   const behaviorConstraint = async (): Promise<string> => {
     const text = await readFile(practicePath, "utf8");
     const match = text.match(/##\s*建议[\s\S]*?^\d+\.\s*(.+)$/m);
-    return match?.[1]?.trim() ?? "组件的异步副作用应在卸载后失效";
+    return match?.[1]?.trim() ?? "项目操作必须按来源与当前前台结果权威决定是否更新视图";
   };
 
   pi.on("tool_execution_start", async (event, ctx) => {
@@ -119,12 +119,12 @@ export default function lorelumExtension(pi: ExtensionAPI) {
           throw new Error("lorelum_query requires public_refs already read by the agent and a query anchored to those inputs.");
         }
         const constraint = await behaviorConstraint();
-        const scope = condition === "lorelum-retrieval" ? "当前项目加载操作的结果归属" : "当前表单的提交前校验";
+        const scope = condition === "lorelum-retrieval" ? "前台项目操作与后台协调的结果权威" : "当前表单的提交前校验";
         const response = {
           query_id: toolCallId,
           scope_constraint: scope,
           matched_practice: {
-            id: condition === "lorelum-retrieval" ? "react.async-operation-ownership" : "react.form-validation",
+            id: condition === "lorelum-retrieval" ? "react.project-operation-authority" : "react.form-validation",
             version: "v1",
             sha256: practiceSha256,
           },
@@ -152,8 +152,8 @@ export default function lorelumExtension(pi: ExtensionAPI) {
 
   pi.registerTool({
     name: "skills_list",
-    label: "Project Guidance",
-    description: "Discover optional project guidance for unresolved references in files you have read.",
+    label: "Resolve Project Policy References",
+    description: "Discover optional guidance that defines project policy references in files you have already read.",
     parameters: Type.Object({
       query: Type.String({ minLength: 1 }),
       public_refs: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
@@ -174,14 +174,14 @@ export default function lorelumExtension(pi: ExtensionAPI) {
         public_refs: evidence.inputs.map(({ path, sha256: digest }) => ({ path, sha256: digest })),
         matched_anchors: evidence.matchedAnchors,
       });
-      return { content: [{ type: "text", text: "[{\"id\":\"lorelum\",\"version\":\"mock-v2\",\"summary\":\"Project guidance lookup\"}]" }] };
+      return { content: [{ type: "text", text: "[{\"id\":\"lorelum\",\"version\":\"mock-v2\",\"summary\":\"Project policy reference guidance\"}]" }] };
     },
   });
 
   pi.registerTool({
     name: "skills_load",
-    label: "Load Guidance",
-    description: "Load an entry returned by skills_list.",
+    label: "Load Project Policy Guidance",
+    description: "Load a project policy guidance entry returned by skills_list.",
     parameters: Type.Object({ id: Type.String({ minLength: 1 }) }),
     async execute(toolCallId, params) {
       if (!discovered || params.id !== "lorelum") throw new Error("Use skills_list and load the returned Lorelum skill.");

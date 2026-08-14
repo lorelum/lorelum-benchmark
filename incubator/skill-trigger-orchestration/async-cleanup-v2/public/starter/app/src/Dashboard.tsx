@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchProjects, type ProjectScope, type ProjectSummary } from "./services/projects";
+import { fetchProjects, type ProjectOperationSource, type ProjectScope, type ProjectSummary } from "./services/projects";
 
 type ViewState =
   | { kind: "loading"; scope: ProjectScope }
@@ -15,9 +15,9 @@ export function Dashboard() {
   const [scope, setScope] = useState<ProjectScope>("active");
   const [state, setState] = useState<ViewState>({ kind: "loading", scope: "active" });
 
-  const loadProjects = (nextScope: ProjectScope) => {
+  const loadProjects = (nextScope: ProjectScope, source: ProjectOperationSource) => {
     setState({ kind: "loading", scope: nextScope });
-    fetchProjects(nextScope)
+    fetchProjects(nextScope, source)
       .then((response) => {
         if (response.status === 200) {
           setState({ kind: "ready", scope: nextScope, projects: response.body.projects });
@@ -31,7 +31,7 @@ export function Dashboard() {
   };
 
   useEffect(() => {
-    loadProjects(scope);
+    loadProjects(scope, "navigation");
   }, [scope]);
 
   const selectScope = (nextScope: ProjectScope) => {
@@ -49,7 +49,8 @@ export function Dashboard() {
             </button>
           ))}
         </nav>
-        <button type="button" onClick={() => loadProjects(scope)}>重新加载当前范围</button>
+        <button type="button" onClick={() => loadProjects(scope, "manual-reload")}>重新加载当前范围</button>
+        <button type="button" onClick={() => loadProjects(scope, "reconciliation")}>运行后台协调</button>
         {state.kind === "loading" && <p role="status">加载中…</p>}
         {state.kind === "error" && <p role="alert">{state.message}</p>}
         {state.kind === "ready" && (

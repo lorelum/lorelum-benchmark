@@ -23,14 +23,14 @@ conditions:
     status: declared
     channel: mock-retrieval-tool-call
     practice:
-      path: private/practices/oracle.async-operation-ownership.v2.md
-      sha256: 37d54f577f45f80aeadbd5f2c3ea2a57e4d60e6f42d2b18a488999f9f50ac8af
+      path: private/practices/oracle.project-operation-authority.v1.md
+      sha256: 2078d8bbde86a0617416c154583ea1837129dfc66a3d27454cf6d404ac454aae
   - id: irrelevant-practice
     status: declared
     channel: mock-retrieval-tool-call
     practice:
       path: private/practices/irrelevant.form-validation.v1.md
-      sha256: 2c5c090ec5966e81b1d4e326839b5c5e0928887c7eddfb48cc20082da29451e9
+      sha256: 0749d3aa5deaf6c6425f226068a379caf8b4a59f9cf0eb96b2e8f3d9688b4a3e
 decision_rule:
   metric: joint-pass-count
   relation: lorelum-passes-and-irrelevant-fails

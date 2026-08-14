@@ -9,11 +9,15 @@ cards:
     version: v2
     path: oracle.async-operation-ownership.v2.md
     rendered_characters: 480
+  - id: react.project-operation-authority
+    version: v1
+    path: oracle.project-operation-authority.v1.md
+    rendered_characters: 583
   - id: react.form-validation
     version: v1
     path: irrelevant.form-validation.v1.md
-    rendered_characters: 432
+    rendered_characters: 539
 comparison:
   maximum_relative_difference: 0.10
-  actual_relative_difference: 0.100000
+  actual_relative_difference: 0.07547169811320755
   independently_reviewed: true

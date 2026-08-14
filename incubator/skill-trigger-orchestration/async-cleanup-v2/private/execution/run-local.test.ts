@@ -146,6 +146,32 @@ test("dry-run does not trigger the model preflight", async () => {
   }
 });
 
+test("forced tool qualification is isolated from discovery and quality results", async () => {
+  const output = "scratch/skill-trigger-local/test-tool-qualification";
+  const { wrapper, cleanup } = await createFakePi(true, "error: connection refused", false, true);
+  try {
+    const result = await execute(["--output", output, "--qualification"], { ...Bun.env, LORELUM_PI_COMMAND: wrapper, LORELUM_REQUIRE_EXTENSION: "1" });
+    expect(result.code).toBe(0);
+    const summary = await Bun.file(join(repositoryRoot, output, "summary.json")).json() as {
+      qualification: { status: string; trace: { complete: boolean }; query_anchored: boolean; agent_workspace_files: string[] };
+      discovery_gate: string;
+      quality_pilot: string;
+      outcome: string;
+    };
+    expect(summary.qualification.status).toBe("pass");
+    expect(summary.qualification.trace.complete).toBeTrue();
+    expect(summary.qualification.query_anchored).toBeTrue();
+    expect(summary.qualification.agent_workspace_files.some((file) => file.includes("private/") || file.includes("practices/"))).toBeFalse();
+    expect(summary.discovery_gate).toBe("not-run");
+    expect(summary.quality_pilot).toBe("not-run");
+    expect(summary.outcome).toBe("not-an-experiment");
+    expect(await Bun.file(join(repositoryRoot, output, "tool-qualification", "attempt-1", "evaluator.stdout.log")).exists()).toBeFalse();
+  } finally {
+    await cleanup();
+    await rm(join(repositoryRoot, output), { recursive: true, force: true });
+  }
+});
+
 test("quality pilot starts only after every discovery-gate attempt has a complete trace", async () => {
   const output = "scratch/skill-trigger-local/test-discovery-gate-pass";
   const { wrapper, cleanup } = await createFakePi(true, "error: connection refused", false, true);
@@ -185,7 +211,7 @@ async function createFakePi(succeedPrint: boolean, failureMessage = "error: conn
   const fakeTs = join(fixtureRoot, "fake-pi.ts");
   const versionBranch = 'if (a.includes("--version")) { console.log("0.80.10"); process.exit(0); }';
   const printBranch = succeedPrint
-    ? `if (a.includes("--print")) { if (${emitExtensionError ? "true" : "false"} && a.includes("@task.md")) process.stderr.write("Extension error (test): observation failed\\n"); if (${emitDiscoveryTrace ? "true" : "false"} && a.includes("@task.md") && process.env.LORELUM_MOCK_AUDIT_PATH) appendFileSync(process.env.LORELUM_MOCK_AUDIT_PATH, ["public_input_read", "skill_discovered", "skill_loaded", "practice_query_issued", "practice_query_resolved"].map((event) => JSON.stringify({ event, query_id: "query-1", public_refs: [{ path: "task.md", sha256: "task-hash" }] })).join("\\n") + "\\n"); console.log("ok"); process.exit(0); }`
+    ? `if (a.includes("--print")) { const agentCall = a.includes("@task.md") || a.some((value) => value.includes("Use the read tool to read task.md")); if (process.env.LORELUM_REQUIRE_EXTENSION === "1" && agentCall && !a.includes("--extension")) { process.stderr.write("missing extension\\n"); process.exit(2); } if (${emitExtensionError ? "true" : "false"} && agentCall) process.stderr.write("Extension error (test): observation failed\\n"); if (${emitDiscoveryTrace ? "true" : "false"} && agentCall && process.env.LORELUM_MOCK_AUDIT_PATH) appendFileSync(process.env.LORELUM_MOCK_AUDIT_PATH, ["public_input_read", "skill_discovered", "skill_loaded", "practice_query_issued", "practice_query_resolved"].map((event) => JSON.stringify({ event, query_id: "query-1", public_refs: [{ path: "task.md", sha256: "task-hash" }] })).join("\\n") + "\\n"); console.log("ok"); process.exit(0); }`
     : `if (a.includes("--print")) { process.stderr.write(${JSON.stringify(`${failureMessage}\n`)}); process.exit(1); }`;
   await writeFile(fakeTs, 'import { appendFileSync } from "node:fs"; const a = process.argv.slice(2); ' + versionBranch + ' ' + printBranch + ' console.error("unknown args"); process.exit(1);');
   const isWin = process.platform === "win32";

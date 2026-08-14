@@ -6,12 +6,13 @@ semantic_oracle:
     - 当前范围服务不可用时展示错误提示。
     - 快速切换范围后，旧范围响应不会覆盖当前范围内容。
     - 可以重新加载当前范围。
+    - 可以运行后台协调。
 practice_probe:
-  command: bun run private/evaluator/evaluate-operation-ownership.ts public/starter/app
-  component: src/Dashboard.tsx 中的项目加载入口与终态处理。
-  required_ownership: 每次范围切换或同范围重新加载都必须取代此前项目加载操作；被取代操作 resolve 或 reject 时均不得调用状态 setter。
-  accepts: 请求代次、失效标记、可取消信号或任意共享最新操作归属的等价写法。
-  rejects: 无操作归属保护；仅按范围判断；仅保护成功分支；每个加载入口各自保护而无法共同取代旧操作。
+  command: bun run private/evaluator/evaluate-operation-authority.ts public/starter/app
+  component: src/Dashboard.tsx 中的前台项目加载与后台协调入口。
+  required_ownership: 前台导航和手动重载拥有视图结果权威；被取代的前台操作及晚于前台启动的后台协调在 resolve 或 reject 时均不得调用视图状态 setter。
+  accepts: 按来源区分的请求代次、失效标记、可取消信号或任意显式结果权威等价机制。
+  rejects: 无操作归属保护；把所有来源按最新请求处理；仅保护前台旧操作；只保护成功分支。
 baseline_expected_result:
   semantic: fail
   practice_probe: fail
