@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "927208d0b6b01e6de5d08458db15df7dbd27f5c8a4ffa6b7de7d112f43bd784a",
+  "snapshot_id": "79eb4d255ac9169de1d22ab59b13b685ca896a5c110ccd26acc7d0b1e447a2a2",
   "files": {
     "private/README.md": "4b0e2f25b368f2ec20ea9d92b4b171c7effb61a824df98ee9d93569c62105010",
     "private/calibration/run.ts": "336d5c7a7d59c9ffd450a8e6b8c0ce20f209d9b757461c551903d9cc5d8fc768",
@@ -62,20 +62,20 @@
     "public/starter/app/src/main.tsx": "9868827b0f071035c754683d14dd3b87d97e19e6ceaa3a517b0e360abac261b3",
     "public/starter/app/src/services/projects.ts": "9baa983ef45dc4d1a2db2bbaea363ebb82123d13a6194710453af55587a92258",
     "public/starter/app/src/styles.css": "621c14c628041c9ac3b31495165a15c41cfb967ab8a7ff6020f52437817c5e2a",
-    "public/starter/app/tests/dashboard.spec.ts": "257a79c036be67d2efee7519eeecee2d59dc21a2bde3cd257d447c906c2c7f8b",
+    "public/starter/app/tests/dashboard.spec.ts": "79efdd2e77274940cf6702ad366ae5c2b8784ea3cd032044a66e75128239cdc0",
     "public/starter/app/tsconfig.app.json": "4ef236d842458096cef4304e4e048b1e048c55c8731ac4001ce58a8601fe109e",
     "public/starter/app/tsconfig.json": "770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808",
     "public/starter/app/tsconfig.node.json": "99cbcda8723034e3c3c4b4e7688fa4ab607d78aab45cf754d19e5f269c826af2",
     "public/starter/app/vite.config.ts": "eca485c281977125366d4800553256e419f364984e615f75a2d2bae54f7857fd",
-    "public/task.md": "6f72fe30c46469d3a0223e3d10ae6890523f891777028eb129d68ea9414ea832"
+    "public/task.md": "bf78441611f20c3b3158eb204bfbd5d621efd581361e32d87b409f7b282dc78d"
   },
   "resolved": {
     "core_version": "v1",
     "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "skill-trigger-orchestration/v1",
     "materializer_kind": "react-vite",
-    "input_hash": "bf7cf2eb3292c51168f95a7b0abce707e168b4bcc035065f10843f50dc2bc9d7",
-    "materialized_output_hash": "c322265966fe90e5bff035f4f3cbf466b8d3732781ec9d964bcf34b9595c5886",
+    "input_hash": "9cb6725c74ba5345018ef4ca57cbb28286ebaf5e8219d23b629943f83b00d0f7",
+    "materialized_output_hash": "16331fd15ba9a2c842cb030e133e23bf1ed31a34589e9ea850fc10b4a578ebfa",
     "profile_input_hash": "dbc3a1d2b91a42b380de5f6ea873c1d5e895233145f76cc151b4ec2374ce4b75",
     "calibration_sets_hash": "165a7c6ca7779db69a373f2c41dd429ec3d1bdc587991869f7da66f16ab98114"
   }

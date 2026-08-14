@@ -117,11 +117,11 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 
 ### Requirement: v2 以来源权威政策缺口驱动操作归属修复
 
-`async-cleanup-v2` 的公开任务 MUST 描述项目范围切换、同范围手动重载与后台协调同时存在时的结果错位，并包含 `PX-47` 项目政策引用。公开材料 MUST 说明该政策定义这些公开可见操作来源的结果权威、定义不在公开代码且不能由时间先后推断；不得提及 Lorelum、Skill、Practice、目录、查询、cleanup、AbortController 或固定实现。private 质量门 MUST 验证被取代的前台操作及晚于前台启动的后台协调操作，在 success 与 reject 路径均不调用视图状态 setter。
+`async-cleanup-v2` 的公开任务 MUST 描述项目范围切换、同范围手动重载与后台协调同时存在时的结果错位，并包含 `PX-47` 项目政策引用。公开材料 MUST 引用一个不随公开代码提供的政策文档路径（`docs/project-policies/PX-47.md`）以形成真实读取缺口，MUST 说明该政策定义这些公开可见操作来源的结果权威且不能由时间先后推断；不得提及 Lorelum、Skill、Practice、目录、查询、cleanup、AbortController 或固定实现。公开回归 MUST 包含一条“后台协调在前台操作后启动且更晚结算不得改变前台结果”的用户可见用例，使仅按操作开始时间守卫的实现失败。private 质量门 MUST 验证被取代的前台操作及晚于前台启动的后台协调操作，在 success 与 reject 路径均不调用视图状态 setter。
 
 #### Scenario: 公开故障构成真实政策缺口
-- **WHEN** agent 阅读 v2 task 与运行公开测试
-- **THEN** 它能观察到需要修复的结果错位、三个操作来源及缺失的来源权威政策，但不会收到工具调用、政策答案或具体实现指令
+- **WHEN** agent 阅读 v2 task、尝试读取引用的政策文档并运行公开测试
+- **THEN** 它能观察到需要修复的结果错位、三个操作来源及缺失的政策文档，且仅按操作开始时间守卫的实现无法通过公开回归；它不会收到工具调用、政策答案或具体实现指令
 
 #### Scenario: 来源权威运行时质量门
 - **WHEN** 跨范围或同范围的前台旧操作被取代，或者后台协调在前台操作后启动并 resolve 或 reject

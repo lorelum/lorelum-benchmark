@@ -94,3 +94,10 @@
 - [x] 在相同模型与无工具调用要求的 runner prompt 下运行三次 r10 发现门；三次均有效但均未查询，按门禁阻止九次 quality pilot，并记录为 `diagnostic-only`。 [写入范围：scratch/]
 - [x] 运行 r10 最终 `validate`、contracts、定向测试、strict OpenSpec、calibration、泄露审计与 diff 检查。 [写入范围：v2 private、scratch/]
 - [x] per-attempt 记录与 evaluator 输出对齐 outcome/v1 词汇（health/semantic/quality），保留 discovery gate 等过程字段，判定逻辑不变。 [写入范围：v2 private evaluator、execution]
+
+## 13. r11 不可绕过信息缺口修订
+
+- [x] 诊断 r10 工具可见性：无提示会话中 `skills_list`/`skills_load` 对模型可见（共 8 个工具），排除 harness 暴露问题；确认失败源于题面动机不足。 [写入范围：scratch/]
+- [x] 新增公开回归用例“后台协调不得覆盖前台手动重载的结果”，使仅按操作开始时间守卫的实现失败；reference 6/6 通过，naive 与 anti-pattern 在该用例失败（临时 Playwright 工作区验证）。 [写入范围：v2 public]
+- [x] 公开 task.md 显式引用 `docs/project-policies/PX-47.md`（工作区不含该文件），形成读取 `ENOENT` 的真实信息缺口。 [写入范围：v2 public]
+- [ ] 重建 snapshot 并运行 validate、定向测试、strict OpenSpec、泄露审计。 [写入范围：v2 private、scratch/]

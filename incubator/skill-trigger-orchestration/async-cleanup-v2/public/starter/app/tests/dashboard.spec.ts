@@ -69,3 +69,44 @@ test("范围切换后保留当前范围内容", async ({ page }) => {
   });
   await expect(page.getByRole("list", { name: "已归档项目" })).toContainText("遗留 API 下线");
 });
+
+test("后台协调不得覆盖前台手动重载的结果", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__forceProjectsRejectedSources = ["reconciliation"];
+    const original = window.setTimeout.bind(window);
+    const delayed: Array<() => void> = [];
+    window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      if (timeout === 300 && typeof handler === "function") {
+        delayed.push(() => handler(...args));
+        return 0 as unknown as number;
+      }
+      return original(handler, timeout, ...args);
+    }) as typeof window.setTimeout;
+    (window as typeof window & { __releaseLatestProjectRequest?: () => void }).__releaseLatestProjectRequest = () => {
+      delayed.pop()?.();
+    };
+    (window as typeof window & { __releasePendingProjectRequests?: () => void }).__releasePendingProjectRequests = () => {
+      for (const release of delayed.splice(0)) release();
+    };
+  });
+  await page.goto("/");
+  await page.waitForFunction(() => typeof (window as typeof window & { __releaseLatestProjectRequest?: () => void }).__releaseLatestProjectRequest === "function");
+
+  // 前台手动重载是权威来源；后台协调即使更晚结算，也不得改变页面结果。
+  await page.getByRole("button", { name: "重新加载当前范围" }).click();
+  await page.getByRole("button", { name: "运行后台协调" }).click();
+
+  // 后台协调先结算且被强制失败：页面必须保持前台加载状态，不得切到错误。
+  await page.evaluate(() => {
+    (window as typeof window & { __releaseLatestProjectRequest?: () => void }).__releaseLatestProjectRequest?.();
+  });
+  await expect(page.getByRole("status")).toHaveText("加载中…");
+
+  // 前台手动重载随后结算：恢复项目列表。
+  await page.evaluate(() => {
+    (window as typeof window & { __releasePendingProjectRequests?: () => void }).__releasePendingProjectRequests?.();
+  });
+  const items = page.getByRole("list", { name: "进行中项目" }).locator("li");
+  await expect(items).toHaveCount(2);
+  await expect(page.getByRole("alert")).not.toBeVisible();
+});

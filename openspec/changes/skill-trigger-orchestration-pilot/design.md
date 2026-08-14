@@ -116,3 +116,7 @@ r9 在不创建 v3 的前提下继续修订 `async-cleanup-v2`，测量对象收
 早期 qualification 输出分别揭示 opaque 标识 `PX-47` 未被锚点解析器识别、以及资格路径漏传 `--extension`；它们是 harness 资格缺陷，不构成模型或 Pi 能力证据。修复并通过 extension 与 runner 隔离测试后，新的真实 canary 成功完成 `public_input_read -> skills_list -> skills_load -> lorelum_query`，其发现和查询均锚定 `task.md` 中的 `PX-47`，且 trace、stdout、stderr、summary 与 agent 工作区均未泄露私有材料。
 
 在相同模型 `deepseek/deepseek-v4-pro`、相同预算且 runner prompt 不要求调用工具的三次 r10 发现门中，三个 attempt 都通过运行有效性门并读取了公开任务与源码，但均没有产生 `skills_list`、`skills_load` 或 `lorelum_query` 事件。因此这不是 extension 失败，也不是查询后实施失败，而是该来源权威政策缺口下的主动发现失败。发现门按协议失败，三条件各三次 quality pilot 未运行，结果只能报告为 `diagnostic-only`，不得产生方向性正信号。
+
+### v2 r11 不可绕过信息缺口修订
+
+r10 的失败证据表明：三次 attempt 均把任务框架化为经典竞态 bug 并用最新请求守卫闭合，`PX-47` 只是可忽略标签；工具可见性诊断确认无提示会话中 `skills_list`/`skills_load` 对模型可见，问题不在 harness 暴露而在信息缺口强度。r11 不注入工具调用要求或行为约束，只让通用知识失效：公开回归新增“后台协调在前台操作后启动且更晚结算不得改变前台结果”的用户可见用例，使仅按操作开始时间守卫（requestIdRef）的实现必然失败；公开 task 改为显式引用 `docs/project-policies/PX-47.md`，而该文档不随公开代码提供，agent 读取将得到 `ENOENT`，形成无法用通用竞态知识闭合的真实缺口。预期行为链为：跑公开测试失败 → 尝试读取政策文档不存在 → 通过 `skills_list` 解析项目政策引用 → 加载并查询来源权威约束 → 按来源权威实现。该修订保持题面不得出现 Lorelum、Skill、Practice、目录、查询或固定实现词。
