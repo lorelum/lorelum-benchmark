@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "b34ec1eb669a5201dfa1e37b9b0b715d62f2ff74a36b7ecd5f5c19e237d3b748",
+  "snapshot_id": "927208d0b6b01e6de5d08458db15df7dbd27f5c8a4ffa6b7de7d112f43bd784a",
   "files": {
     "private/README.md": "4b0e2f25b368f2ec20ea9d92b4b171c7effb61a824df98ee9d93569c62105010",
     "private/calibration/run.ts": "336d5c7a7d59c9ffd450a8e6b8c0ce20f209d9b757461c551903d9cc5d8fc768",
@@ -26,7 +26,7 @@
     "private/calibration/sets/operation-ownership/v1/overlays/reference/src/services/projects.ts": "70a37ebd35f923186515aaa589c951ee6a3c327be318d0e474a86821286677fd",
     "private/candidate.yaml": "c9203ace013987b5761c40f2a0832e0da33283afce7a8eb1abdd5868c1ca020f",
     "private/conditions.yaml": "ad38ca7950fb00ff4cd521bfc6443d8fff2156a33d4e27d44821fbb942088776",
-    "private/evaluator/evaluate-operation-authority.ts": "73c1c4c94245f4627f507b187ca8999a62dc33655ed807eb16f9a3dca7cbbc3d",
+    "private/evaluator/evaluate-operation-authority.ts": "27e015e0cd12643cebfdd08bc447fde2629fe8e3989ba40e058d85a451488f51",
     "private/evaluator/evaluate-operation-ownership.ts": "cdff2206c75afb03d12ee912e997b2a2360ec2a03c344c4bf9b8c2d03ec9d747",
     "private/evaluator/evaluate.ts": "12a1190c1419f9066b7562d4c295dfcad0c8563cdd15c58cc912e32d1d88e7d6",
     "private/evaluator/verify-cleanup-runtime.test.ts": "d33c54485d7680b9a2eb0d16bca5e0828af3cef05189e9edcdba73a1740135f3",
@@ -44,7 +44,7 @@
     "private/execution/lorelum-extension.test.ts": "1c67a8cfd635309c6f2efd717b5d980d17b1ef5200486cefb166d60454654b7d",
     "private/execution/lorelum-extension.ts": "4ed43473c1cb4204cd39d038fe7bf7323f05cb9ae96da4f147d116c9efc4c3fb",
     "private/execution/run-local.test.ts": "10918fdca4485d54f119c8742a9790ef6ef6d7492e746c0c339cdd5be6bc8931",
-    "private/execution/run-local.ts": "9df0d988cd93ae1ee3d4ad59df60241900e5bb18af8859cf340f05c098ee998c",
+    "private/execution/run-local.ts": "3177a87a8dec4739587f4b5b12f3c2a4448e3ca4b30bf94f03691a108711fdc8",
     "private/execution/tool-policy.yaml": "bc0b37f6384e44d686b80a940c48487f578dd9b607f47381a8213e1006b1b760",
     "private/execution/unified-diff.ts": "7bc9f968a44030b0fb21dea1052b64463202acf6b02d90073e5cf827a93fad46",
     "private/oracle.yaml": "66f6fdf0dbc9eb307640350d9a9b888c590b67d575235b265a66df42440a14db",

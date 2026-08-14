@@ -168,7 +168,9 @@ async function workspaceFiles(workspace: string): Promise<string[]> {
 }
 
 type EvaluatorResult = {
+  health: string;
   semantic: string;
+  quality: string;
   astProbe: string;
   scopeResolveProbe: string;
   scopeRejectProbe: string;
@@ -183,10 +185,12 @@ type EvaluatorResult = {
 function evaluatorResult(stdout: string): EvaluatorResult | undefined {
   for (const line of stdout.trim().split(/\r?\n/).reverse()) {
     try {
-      const value = JSON.parse(line) as { semantic?: unknown; ast_probe?: unknown; runtime_scope_resolve_probe?: unknown; runtime_scope_reject_probe?: unknown; runtime_reload_resolve_probe?: unknown; runtime_reload_reject_probe?: unknown; runtime_background_resolve_probe?: unknown; runtime_background_reject_probe?: unknown; practice_probe?: unknown };
+      const value = JSON.parse(line) as { health?: unknown; semantic?: unknown; quality?: unknown; ast_probe?: unknown; runtime_scope_resolve_probe?: unknown; runtime_scope_reject_probe?: unknown; runtime_reload_resolve_probe?: unknown; runtime_reload_reject_probe?: unknown; runtime_background_resolve_probe?: unknown; runtime_background_reject_probe?: unknown; practice_probe?: unknown };
       if (typeof value.semantic === "string" && typeof value.ast_probe === "string" && typeof value.runtime_scope_resolve_probe === "string" && typeof value.runtime_scope_reject_probe === "string" && typeof value.runtime_reload_resolve_probe === "string" && typeof value.runtime_reload_reject_probe === "string" && typeof value.runtime_background_resolve_probe === "string" && typeof value.runtime_background_reject_probe === "string" && typeof value.practice_probe === "string") {
         return {
+          health: typeof value.health === "string" ? value.health : "evaluated",
           semantic: value.semantic,
+          quality: typeof value.quality === "string" ? value.quality : "not-run",
           astProbe: value.ast_probe,
           scopeResolveProbe: value.runtime_scope_resolve_probe,
           scopeRejectProbe: value.runtime_scope_reject_probe,
@@ -380,7 +384,9 @@ async function runAttempt(
     agent_workspace_files: workspaceFilesAfterAgent,
     pi: { code: pi.code, timed_out: pi.timedOut, duration_ms: pi.durationMs },
     evaluator: evaluator ? { code: evaluator.code, duration_ms: evaluator.durationMs } : null,
+    health: evaluation?.health ?? "not-executable",
     semantic: evaluation?.semantic ?? "not-run",
+    quality: evaluation?.quality ?? "not-run",
     ast_probe: evaluation?.astProbe ?? "not-run",
     runtime_scope_resolve_probe: evaluation?.scopeResolveProbe ?? "not-run",
     runtime_scope_reject_probe: evaluation?.scopeRejectProbe ?? "not-run",

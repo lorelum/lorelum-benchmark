@@ -22,7 +22,9 @@ const runtime = Object.fromEntries(runtimeResults.map(({ mode, exitCode }) => [m
 const practiceProbe = structureExitCode === 0 && runtimeResults.every(({ exitCode }) => exitCode === 0) ? "pass" : "fail";
 
 console.log(JSON.stringify({
+  health: "evaluated",
   semantic: semanticExitCode === 0 ? "pass" : "fail",
+  quality: practiceProbe === "pass" ? "observed" : "not-observed",
   ast_probe: structureExitCode === 0 ? "pass" : "fail",
   runtime_scope_resolve_probe: runtime["scope-resolve"],
   runtime_scope_reject_probe: runtime["scope-reject"],

@@ -93,3 +93,4 @@
 - [x] 修复 opaque 政策标识锚定和 qualification extension 接线，重生成 snapshot，并以 extension/runner 隔离测试确认；真实 canary 完成完整、锚定且无泄露的链路。 [写入范围：v2 private、scratch/]
 - [x] 在相同模型与无工具调用要求的 runner prompt 下运行三次 r10 发现门；三次均有效但均未查询，按门禁阻止九次 quality pilot，并记录为 `diagnostic-only`。 [写入范围：scratch/]
 - [x] 运行 r10 最终 `validate`、contracts、定向测试、strict OpenSpec、calibration、泄露审计与 diff 检查。 [写入范围：v2 private、scratch/]
+- [x] per-attempt 记录与 evaluator 输出对齐 outcome/v1 词汇（health/semantic/quality），保留 discovery gate 等过程字段，判定逻辑不变。 [写入范围：v2 private evaluator、execution]
