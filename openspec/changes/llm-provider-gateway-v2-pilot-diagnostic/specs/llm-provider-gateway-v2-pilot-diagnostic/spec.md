@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义对 `llm-provider-gateway-v2` 执行三条件本地诊断对照与 judge 判别力校准的要求：使用冻结 candidate/conditions/snapshot、`deepseek/deepseek-v4-flash` model-tier、每条件 n=5、真实 LLM judge 校准、人可读结果表与 joint-pass 决策边界；不改写冻结对象，不创建正式产物。
+定义对 `llm-provider-gateway-v2` 执行三条件本地诊断对照与 judge 判别力校准的要求：使用冻结 candidate/conditions/snapshot、`deepseek/deepseek-v4-flash` model-tier、每条件 n=3、先执行 v1 校准、失败后经 #170/#171 迁移 `judge-agent/generic/v2` soft sidecar、人可读结果表与 joint-pass 决策边界；不改写冻结对象，不创建正式产物。
 
 ## ADDED Requirements
 
@@ -20,23 +20,33 @@
 - **WHEN** Pi agent 在任意条件运行
 - **THEN** workspace/prompt 不包含 condition、evaluator、评分或评测信息
 
-### Requirement: judge 判别力校准先行
+### Requirement: judge 校准与 v2 迁移处置
 
-在对三条件 attempt 评分前，MUST 使用 `judge-agent/generic/v1`（`LORELUM_JUDGE_REAL=1`）对固定校准夹具（reference / equivalent / anti-pattern / public-starter）执行判别力校准，记录 rubric hash 与阈值。校准未通过时，judge 软分 MUST 记 not-run/未通过原因，MUST NOT 参与结论。
+在对三条件 attempt 评分前，MUST 先尝试 `judge-agent/generic/v1`（`LORELUM_JUDGE_REAL=1`）判别力校准并保留失败证据。v1 校准未通过后，本 change MUST 使用 #170/#171 交付并完成夹具校准的 `judge-agent/generic/v2` 作为 soft sidecar；v2 结果 MUST 逐 attempt、逐条件记录 rubric hash 与分数。任一 judge 校准/评分通道不可用时，方向性结论 MUST 只依据 semantic 与 practice_observation。
 
-#### Scenario: 校准通过
+#### Scenario: v1 校准失败被保留
 
-- **WHEN** judge 校准通过
-- **THEN** 记录 rubric hash、阈值与各夹具分数，后续三条件软分复用同一 rubric
+- **WHEN** v1 校准出现 anti-pattern 高于 reference、equivalent 偏差过大或解析失败
+- **THEN** 记录 rubric hash、各夹具分数与 fail-closed 原因，不掩盖原始证据
 
-#### Scenario: 校准未通过
+#### Scenario: v2 迁移并评分
 
-- **WHEN** judge 校准未通过或未 opt-in
-- **THEN** judge 仅记录 not-run 与原因，方向性结论只依据 semantic 与 practice_observation
+- **WHEN** #170/#171 的 v2 校准通过且 candidate 条件迁移到 v2
+- **THEN** 三条件 attempt 使用 `judge-agent/generic/v2`，记录同一 run-level rubric hash、逐 attempt score 与 rationale
+
+#### Scenario: judge 不可用
+
+- **WHEN** 任一 judge 校准/评分通道未 opt-in、provider 不可用或 fail-closed
+- **THEN** 对应 sidecar 记 not-run/judge-unavailable 与原因，方向性结论只依据 semantic 与 practice_observation
 
 ### Requirement: 结果表达与决策边界
 
-诊断结果 MUST 按人可读原始维度呈现每条件 x/y：evaluated、semantic pass、practice observed/not-observed/indeterminate、joint_pass，judge 中位分独立列出；`joint_pass` MUST 仅派生为 semantic=pass 且 practice_observation=observed；非健康评测 MUST 单独计数。决策 MUST 按 `strictly-greater-than-each-control`：oracle joint-pass 严格高于 baseline 与 irrelevant-practice 才支持方向性结论，否则 `diagnostic-only`。
+诊断结果 MUST 按人可读原始维度呈现每条件 x/y：evaluated、semantic pass、practice observed/not-observed/indeterminate、joint_pass；judge 的逐 attempt score 与每条件中位分 MUST 在 verification artifact 中完整列出，rubric hash MUST 与分数并列记录。`joint_pass` MUST 仅派生为 semantic=pass 且 practice_observation=observed；非健康评测 MUST 单独计数。决策 MUST 按 `strictly-greater-than-each-control`：oracle joint-pass 严格高于 baseline 与 irrelevant-practice 才支持方向性结论，否则 `diagnostic-only`。
+
+#### Scenario: judge 证据完整
+
+- **WHEN** 诊断完成且 judge sidecar 存在
+- **THEN** verification 记录每个条件的三个 score、中位分、共同 rubric hash 与逐 attempt 引用
 
 #### Scenario: 方向性结论
 

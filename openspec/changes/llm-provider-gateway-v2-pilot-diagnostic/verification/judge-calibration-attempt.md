@@ -24,6 +24,10 @@
   `Invalid judge score output: confidence must be an integer 0-100`
 - 校准未完成，`passed` 未产出。
 
-## 结论
+## 结论与后续处置
 
-judge 判别力校准未通过；按 OpenSpec 要求，三条件诊断的 judge soft sidecar 记 `not-run`/`judge-unavailable`，方向性结论只依据 `semantic` 与 `practice_observation`。若后续需要 judge 软分，应在独立 change 中调整 rubric 生成约束或校准阈值，不得修改冻结 candidate。
+`judge-agent/generic/v1` 判别力校准未通过。该失败被拆到独立 issue #170；#170/#171 新增 `judge-agent/generic/v2`，完成 v2 夹具校准并把 `llm-provider-gateway-v2` 的 soft judge 迁移到 v2。最终三条件诊断使用 v2 observed sidecar，而不是 v1 的 `not-run`；完整 v2 结果见 `diagnostic-results-flash.md`。
+
+- v1 校准失败证据必须保留：reference 66 / equivalent 80 / anti-pattern 72，方向错误；第二次因 confidence 非整数 fail-closed。
+- v2 夹具校准证据见 #170 的 `judge-calibration-v2.md`（reference 90 / equivalent 88 / anti-pattern 76，全部 checks 通过）。
+- 本 pilot 的方向性结论仍只依据 `semantic` 与 `practice_observation`，judge v2 仅作 soft sidecar。
