@@ -130,3 +130,7 @@ r10 的失败证据表明：三次 attempt 均把任务框架化为经典竞态 
 r11 证明公开测试断言本身成为规格来源：规则能从断言推断时，缺失的政策文档不构成查询动机。r12 把验收分层：公开测试只验证回归（保持现有区分度，但不再作为政策符合性的充分条件），新增私有 judge 验收层依据未公开的 PX-47 完整规则判定实现是否符合政策。task.md 如实声明验收方式（修复按 PX-47 完整规则评审，规则见未随公开代码提供的 `docs/project-policies/PX-47.md`，公开测试通过不等于符合政策），使 agent 的闭合目标从“让测试通过”变为“符合不可见规则”，从而恢复对政策文档/查询工具的动机；该声明不要求调用工具，也不注入行为约束。
 
 judge 层设计：新建 skill-trigger 专属 judge provider，静态私有 rubric 编码 PX-47 的来源权威规则（前台导航/手动重载权威、后台协调非权威、被取代前台操作不得结算），rubric 与评分逻辑位于 candidate private 或 `src/benchmark/judge/` 且不得进入 agent 工作区；评分输入仅含公开材料（task.md、candidate diff、公开测试结果），输出为 outcome/v1 的 QualityOutcome。处理组 success 收紧为完整查询链路 + 公开测试通过 + judge 符合政策；baseline/irrelevant 需在公开测试或 judge 层失败。signal 判定与发现门协议不变；judge 使用独立 LLM 配置（`LORELUM_JUDGE_*`），不占用 agent 模型预算。实现前必须先做 judge 校准：reference 与 anti-pattern 应分别被 judge 判为符合与不符合，并记录校准矩阵。
+
+### r12 执行结果
+
+judge 校准通过（deepseek-v4-pro）：reference 100/100，anti-pattern 30/100，gap 70 ≥ 45。三次 r12 发现门均有效，但 skills_list 发现、lorelum_query 查询与完整链路均为 0/3，质量 pilot 被阻止，结果 diagnostic-only。三次 attempt 都正确实现来源权威规则（与 reference 等价），且明确引用 policy PX-47，但没有一次尝试读取 docs/project-policies/PX-47.md 或调用查询工具。即使 task.md 声明“测试通过不代表符合政策”，agent 仍自信地从公开断言与题面提示推断出完整规则。r12 因此把负证据推进到：在规则可从公开材料推断的场景里，无论验收如何声明，该模型都不会主动查询外部知识工具。
