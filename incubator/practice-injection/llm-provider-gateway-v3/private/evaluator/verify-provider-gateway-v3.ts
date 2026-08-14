@@ -69,8 +69,13 @@ function propertyNameOf(node: any): string | undefined {
 function stateNameFromExpression(node: any): string | undefined {
   if (!node) return undefined;
   if (ts.isIdentifier(node)) return node.text;
-  if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression)) return node.name.text;
-  if (ts.isElementAccessExpression(node) && ts.isIdentifier(node.expression) && ts.isStringLiteral(node.argumentExpression)) return node.argumentExpression.text;
+  if (ts.isPropertyAccessExpression(node)) {
+    return stateNameFromExpression(node.expression) ?? node.name.text;
+  }
+  if (ts.isElementAccessExpression(node)) {
+    return stateNameFromExpression(node.expression) ??
+      (ts.isStringLiteral(node.argumentExpression) ? node.argumentExpression.text : undefined);
+  }
   return undefined;
 }
 
@@ -153,7 +158,7 @@ function analyzeFunction(node: any, kind: FunctionShape["kind"]): FunctionShape 
     }
     if (ts.isIdentifier(current)) {
       const parent = current.parent;
-      if (ts.isPropertyAccessExpression(parent) && parent.expression === current) readsState.add(current.text);
+      if (ts.isPropertyAccessExpression(parent) && (parent.expression === current || parent.name === current)) readsState.add(current.text);
     }
 
     ts.forEachChild(current, visit);
@@ -386,10 +391,33 @@ function policyFunction(source: SourceFileShape): FunctionShape | undefined {
 }
 
 function ledgerEvidence(source: SourceFileShape): string | undefined {
-  const hasRecordWrite = source.functions.some((fn) => fn.mutatesState.includes("push") || fn.mutatesState.includes("set") || fn.mutatesState.includes("add"));
+  const hasRecordWrite = source.functions.some((fn) => source.stateNames.some((state) => fn.mutatesState.includes(state)));
   const hasRecordRead = source.functions.some((fn) => fn.iteratesState.some((name) => fn.readsState.includes(name)));
-  const hasPersistence = source.identifiers.has("appendFile") || source.identifiers.has("append");
+  const hasPersistence = source.identifiers.has("appendFile") || source.identifiers.has("appendFileSync") || source.identifiers.has("append");
   return hasRecordWrite && hasRecordRead && hasPersistence ? source.path : undefined;
+}
+
+function sharedCrossRequestState(source: SourceFileShape): boolean {
+  const functionIndexes = new Map<string, Set<number>>();
+  for (const [index, fn] of source.functions.entries()) {
+    for (const state of new Set([...fn.readsState, ...fn.mutatesState, ...fn.iteratesState])) {
+      if (!source.stateNames.includes(state)) continue;
+      const indexes = functionIndexes.get(state) ?? new Set<number>();
+      indexes.add(index);
+      functionIndexes.set(state, indexes);
+    }
+  }
+  return [...functionIndexes.values()].some((indexes) => indexes.size >= 2);
+}
+
+function delegatesToLedgerBoundary(source: SourceFileShape): boolean {
+  return directValueImports(source).some((imported) =>
+    ledgerEvidence(imported.source) !== undefined && callsImportedSymbols(source, imported.symbols)
+  );
+}
+
+function hasPolicyOwnershipEvidence(source: SourceFileShape): boolean {
+  return sharedCrossRequestState(source) || delegatesToLedgerBoundary(source);
 }
 
 function costEvidence(source: SourceFileShape): string | undefined {
@@ -441,7 +469,11 @@ function failuresFor(files: SourceFileShape[]): { failures: string[]; evidence?:
   const boundary = reachable.filter((source) => source.path !== server.path && !isAdapterFile(source));
   const adapters = files.filter(isAdapterFile);
   const contract = boundary.find(hasContractLikeDeclaration);
-  const policyModule = boundary.find((source) => policyFunction(source) !== undefined && hasExecutionPath(server, source));
+  const policyModule = boundary.find((source) =>
+    policyFunction(source) !== undefined &&
+    hasExecutionPath(server, source) &&
+    hasPolicyOwnershipEvidence(source)
+  );
   const policy = policyModule ? policyFunction(policyModule) : undefined;
   const ledgerPath = boundary.filter((source) => hasExecutionPath(server, source)).map(ledgerEvidence).find(Boolean);
   const costPath = boundary.map(costEvidence).find(Boolean);
@@ -456,7 +488,7 @@ function failuresFor(files: SourceFileShape[]): { failures: string[]; evidence?:
   if (!costPath) failures.push("未观察到 token 用量、单价与 rounding 构成的集中费用数据流");
   else if (adapters.some((source) => source.path === costPath) || server.path === costPath) failures.push("费用换算落在 handler 或 transport adapter 内");
 
-  if (!policyModule || !policy) failures.push("未观察到非 HTTP 函数集中执行 retry/fallback/预算/幂等/计量政策；结构证据要求 await 执行循环、错误分支且不直接操作 request/response");
+  if (!policyModule || !policy) failures.push("未观察到非 HTTP 函数集中执行 retry/fallback/预算/幂等/计量政策；结构证据要求 await 执行循环、错误分支、不直接操作 request/response，且跨函数共享状态或委托 ledger 边界");
 
   if (!ledgerPath) failures.push("未观察到同一非 transport 模块持有跨请求记录状态并承担写入与聚合读取");
 

@@ -36,7 +36,7 @@ v3 的 `public/task.md`、`public/starter`、公开语义测试与 `docs/gateway
 
 ### Requirement: v3 结构探针采用通用泛化规范
 
-v3 private probe MUST 满足 `practice-structure-probe-calibration`：以 TypeScript import graph、实际 value 调用边、数据流、类型契约与模块所有权判定 handler/policy/registry/adapter/ledger 职责，MUST NOT 用固定标识符集合单独判通过；`import type` 与未调用 import MUST NOT 单独构成执行边，任何命名线索 MUST 有结构证据和真实输出变体回归兜底。
+v3 private probe MUST 满足 `practice-structure-probe-calibration`：以 TypeScript import graph、实际 value 调用边、数据流、类型契约与模块所有权判定 handler/policy/registry/adapter/ledger 职责，MUST NOT 用固定标识符集合单独判通过；await/loop/catch 单独 MUST NOT 构成政策集中证据，`import type` 与未调用 import MUST NOT 单独构成执行边，任何命名线索 MUST 有结构证据和真实输出变体回归兜底。
 
 #### Scenario: 职责集中但命名不同
 
@@ -53,9 +53,19 @@ v3 private probe MUST 满足 `practice-structure-probe-calibration`：以 TypeSc
 - **WHEN** handler 导入具备 policy/ledger 结构的模块，但从未调用其导出的 runtime value
 - **THEN** probe MUST 判 `not-observed`，且不得把 import 可达误当执行边界
 
+#### Scenario: 只有执行循环但政策散落
+
+- **WHEN** candidate 提取 retry/fallback 循环，但预算、幂等与计量仍散落在 handler/transport
+- **THEN** probe MUST 判 `not-observed`，不得仅凭 await/loop/catch 判 `observed`
+
+#### Scenario: 同步账本边界
+
+- **WHEN** 同一非 transport 模块通过实际状态执行记录写入、过滤聚合和同步 append 持久化
+- **THEN** probe MUST 判 `observed`
+
 ### Requirement: v3 calibration 必须包含真实命名变体
 
-v3 calibration matrix MUST 在 `private/calibration/sets/quality-probe/v3/` 中包含 reference、equivalent、type-based、docs-present 与 anti-pattern 基线，并 MUST 增加至少五类从 #168 真实输出提炼的变体：职责集中但命名不同、职责集中但不同模块布局、命名碰撞但职责散落、结构完整但边界模块未被调用、结构正确但账本记录命名不同。全部样例 MUST 保持 private，MUST 通过 kernel calibration 与 snapshot identity 固定。
+v3 calibration matrix MUST 在 `private/calibration/sets/quality-probe/v3/` 中包含 reference、equivalent、type-based、docs-present 与 anti-pattern 基线，并 MUST 增加至少七类从 #168 真实输出提炼的变体：职责集中但命名不同、职责集中但不同模块布局、命名碰撞但职责散落、结构完整但边界模块未被调用、执行循环但政策散落、同步账本边界、结构正确但账本记录命名不同。全部样例 MUST 保持 private，MUST 通过 kernel calibration 与 snapshot identity 固定。
 
 #### Scenario: 变体分类正确
 

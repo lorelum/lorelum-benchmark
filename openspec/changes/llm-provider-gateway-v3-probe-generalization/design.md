@@ -57,6 +57,8 @@
   - `irrelevant-naming-collision`：irrelevant rep1 的 `reserveBudget/settleBudget/retryAttempts` 命名碰撞，预期 `pass/not-observed`。
   - `ledger-naming-variant`：以不同命名承担 usage/latency/cost/tenant/trace 聚合的边界账本，预期 `pass/observed`。
   - `unused-boundary-modules`：handler 导入结构完整但从未调用的 policy/ledger 模块，预期 `pass/not-observed`，用于防止 import 图假阳性。
+  - `baseline-policy-scatter`：#168 baseline attempt-2 的 retry/fallback 提取但预算/幂等/计量散落反例，预期 `pass/not-observed`。
+  - `oracle-sync-ledger`：#168 oracle attempt-2 的同步账本写入/聚合正例，预期 `pass/observed`。
   - 可选 `baseline-good-structure`：baseline 中语义通过但政策未完全集中或账本散落的样例，预期按复核标签固定。
 - 这些变体必须由需求方确认标签后写回 issue/design；judge v2 的 criterion 证据只作复核输入，不作唯一 oracle。
 

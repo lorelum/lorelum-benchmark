@@ -50,3 +50,10 @@
 - [x] 8.1 policy/ledger 边界必须由实际 value import 调用边激活，拒绝 type-only 与未调用 import。
 - [x] 8.2 增加 `unused-boundary-modules` private decoy-import 反例并接入 `quality-probe/v3`。
 - [x] 8.3 重跑 v3 calibration、OpenSpec strict、泄露审计、`bun run validate` 与 `git diff --check`。
+
+## 9. 历史 PI 回放收紧
+
+- [x] 9.1 用 v3 探针回放 #168 的 9 个 v2 PI workspace，定位 baseline attempt-2 假阳与 oracle attempt-2 假阴。
+- [x] 9.2 收紧跨请求状态提取、同步持久化识别与 policy 模块所有权证据。
+- [x] 9.3 增加 `baseline-policy-scatter` 与 `oracle-sync-ledger` 两个真实 PI-derived private overlays，并接入 14-case matrix。
+- [x] 9.4 历史回放达到 baseline 0/3、oracle 3/3、irrelevant 0/3，并重跑全部验证门禁。

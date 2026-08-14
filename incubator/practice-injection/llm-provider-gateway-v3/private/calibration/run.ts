@@ -51,6 +51,8 @@ const cases: CalibrationCase[] = [
   { id: "different-layout", path: stagedFixture("different-layout"), expectedSemantic: "pass", expectedObservation: "observed" },
   { id: "irrelevant-naming-collision", path: stagedFixture("irrelevant-naming-collision"), expectedSemantic: "pass", expectedObservation: "not-observed" },
   { id: "unused-boundary-modules", path: stagedFixture("unused-boundary-modules"), expectedSemantic: "pass", expectedObservation: "not-observed" },
+  { id: "baseline-policy-scatter", path: stagedFixture("baseline-policy-scatter"), expectedSemantic: "pass", expectedObservation: "not-observed" },
+  { id: "oracle-sync-ledger", path: stagedFixture("oracle-sync-ledger"), expectedSemantic: "pass", expectedObservation: "observed" },
   { id: "ledger-naming-variant", path: stagedFixture("ledger-naming-variant"), expectedSemantic: "pass", expectedObservation: "observed" },
 ];
 

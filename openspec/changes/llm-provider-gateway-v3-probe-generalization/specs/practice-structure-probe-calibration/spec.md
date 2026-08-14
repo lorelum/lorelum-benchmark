@@ -39,6 +39,20 @@
 - **WHEN** handler 构造职责边界模块导出的类并调用其请求入口，或直接调用导出的 policy/ledger 函数
 - **THEN** 探针 MUST 建立 value 调用边，并在职责证据成立时判 `observed`
 
+### Requirement: policy 执行形状必须伴随模块所有权证据
+
+非 transport 模块中的 await/loop/catch 函数形状 MUST NOT 单独构成集中政策证据。policy 候选 MUST 同时证明模块所有权：至少一个跨请求状态被多个函数读写，或该模块实际调用另一个具备 ledger 边界的模块。只有 retry/fallback 循环、但预算/幂等/计量状态与调用仍散落在 handler 或 transport 的实现 MUST 判 `not-observed`。
+
+#### Scenario: 只有执行循环但职责散落
+
+- **WHEN** candidate 把 retry/fallback 抽成函数，但预算、幂等、计量仍散落在 server/transport 内
+- **THEN** 探针 MUST 判 `not-observed`，不得只依据函数含 await/loop/catch 就认为政策集中
+
+#### Scenario: 政策模块共享状态或委托 ledger
+
+- **WHEN** policy 模块的跨请求预算/幂等/记录状态被多个函数访问，或 policy 实际调用 ledger 边界
+- **THEN** 探针 MUST 接受该模块为集中政策证据
+
 ### Requirement: 真实输出命名变体进入校准矩阵
 
 一个结构质量探针在进入模型比较前，MUST 在校准矩阵中覆盖至少两组真实输出或与其职责等价的私有变体：一组命名与 reference 不同但职责等价，MUST 为 `observed`；一组命名与 reference 重叠但职责散落，MUST 为 `not-observed`。变体 MUST 保持 private，MUST NOT 出现在 agent workspace、prompt、trace 或 summary，MUST 通过 candidate snapshot/calibration identity 固定。

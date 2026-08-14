@@ -27,9 +27,11 @@ The kernel staged the private `quality-probe/v3` fixtures and public starter, re
 | different-layout | pass / observed | Reference-equivalent boundary modules are nested under a different directory. |
 | irrelevant-naming-collision | pass / not-observed | Derived from #168 irrelevant rep1: `reserveBudget`, `settleBudget`, and `retryAttempts` occur, but retry/fallback orchestration and metering remain inline in the route handler. |
 | unused-boundary-modules | pass / not-observed | Handler imports structurally complete policy and ledger modules, but never calls their exported values; transitive import reachability alone is not an execution edge. |
+| baseline-policy-scatter | pass / not-observed | Derived from #168 baseline attempt-2: retry/fallback is extracted, but budget/idempotency/metering remain scattered and the executor has no shared policy state or ledger delegation. |
+| oracle-sync-ledger | pass / observed | Derived from #168 oracle attempt-2: gateway owns synchronous record write, filtered aggregation, and `appendFileSync` persistence in one non-transport module. |
 | ledger-naming-variant | pass / observed | Record persistence, reads, and aggregation use renamed symbols while remaining in one non-transport module. |
 
-Labels were fixed by source review; #168 judge v2 rationale was used only as corroborating evidence. The probe reports structural evidence paths and function names (for example policy module/function and ledger module), not identifier-allowlist matches.
+Labels were fixed by source review; #168 judge v2 rationale was used only as corroborating evidence. The probe reports structural evidence paths and function names (for example policy module/function and ledger module), not identifier-allowlist matches. The deterministic matrix now has 14 cases: 2 extra real PI-derived regressions from the historical v2 replay, plus the public starter.
 
 ## Judge Boundary
 

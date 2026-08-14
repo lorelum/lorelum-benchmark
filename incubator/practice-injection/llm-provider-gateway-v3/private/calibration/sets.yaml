@@ -62,6 +62,16 @@ sets:
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/unused-boundary-modules
           sha256: 442b616f5aca329a4d9a8c881d213e06432443983f0eed102959598e62998f7d
+      baseline-policy-scatter-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v3/overlays/baseline-policy-scatter
+          sha256: 4c615623c2b8d6f9e8cc09b7719154ba191b53b41cd680c2e91ff5cc85a88257
+      oracle-sync-ledger-tree:
+        extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v3/overlays/oracle-sync-ledger
+          sha256: 59fcff455d78c084d405bc252b549e3971231d663ca61bafef4e7f0540b7a20b
       ledger-naming-variant-tree:
         extends: candidate-foundation
         overlay:
@@ -78,4 +88,6 @@ sets:
       different-layout: different-layout-tree
       irrelevant-naming-collision: irrelevant-naming-collision-tree
       unused-boundary-modules: unused-boundary-modules-tree
+      baseline-policy-scatter: baseline-policy-scatter-tree
+      oracle-sync-ledger: oracle-sync-ledger-tree
       ledger-naming-variant: ledger-naming-variant-tree
