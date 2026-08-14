@@ -3,7 +3,7 @@
 - [x] 1.1 创建单一问题 issue #172，记录 #168 假阴/假阳证据、v3 边界与待确认问题。
 - [x] 1.2 创建 `llm-provider-gateway-v3-probe-generalization` change，并补齐 proposal/specs/design/tasks。
 - [x] 1.3 运行 `openspec validate llm-provider-gateway-v3-probe-generalization --type change --strict`，修正至通过。
-- [ ] 1.4 从最新 main 创建 `codex/llm-provider-gateway-v3-probe-generalization` 分支，提交仅含 OpenSpec artifacts 的变更并创建初始 PR（引用 #172）。
+- [x] 1.4 从最新 main 创建 `codex/llm-provider-gateway-v3-probe-generalization` 分支，提交仅含 OpenSpec artifacts 的变更并创建初始 PR（引用 #172，PR #173）。
 - [ ] 1.5 完成规划澄清，将需求方对公开题面、命名变体标签与规范落点的回答写回 #172 与 design Planning Confirmation。
 
 ## 2. 通用结构探针规范与回归契约
