@@ -25,6 +25,20 @@
 - **WHEN** 探针只能通过固定标识符命中得出结论，无法证明模块所有权或调用边界
 - **THEN** 探针 MUST 返回 `indeterminate` 或 fail closed，不得输出 `observed`
 
+### Requirement: import 可达必须由实际 value 调用边支撑
+
+候选 handler 的请求执行路径 MUST 对 policy/ledger 等职责边界建立实际 runtime value 调用边。仅存在 transitively imported module、`import type`、或从未调用的 value import MUST NOT 被算作该边界被执行。边界判定 MUST 找到 handler 路径导入的 runtime value，并观察到至少一次调用、构造、实例方法调用、`await` 数据流或明确 delegation；未调用模块即使自身结构看起来完整，也不得满足 policy/ledger 证据。
+
+#### Scenario: 未调用 import 不构成执行边
+
+- **WHEN** handler 导入了结构完整的 policy/ledger 模块，但从未调用其导出的 runtime value
+- **THEN** 探针 MUST 不把这两个模块算作 handler 请求路径的执行边界，散落实现保持 `not-observed`
+
+#### Scenario: 构造器或实例入口被接受
+
+- **WHEN** handler 构造职责边界模块导出的类并调用其请求入口，或直接调用导出的 policy/ledger 函数
+- **THEN** 探针 MUST 建立 value 调用边，并在职责证据成立时判 `observed`
+
 ### Requirement: 真实输出命名变体进入校准矩阵
 
 一个结构质量探针在进入模型比较前，MUST 在校准矩阵中覆盖至少两组真实输出或与其职责等价的私有变体：一组命名与 reference 不同但职责等价，MUST 为 `observed`；一组命名与 reference 重叠但职责散落，MUST 为 `not-observed`。变体 MUST 保持 private，MUST NOT 出现在 agent workspace、prompt、trace 或 summary，MUST 通过 candidate snapshot/calibration identity 固定。

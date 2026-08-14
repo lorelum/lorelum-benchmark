@@ -26,18 +26,13 @@ The kernel staged the private `quality-probe/v3` fixtures and public starter, re
 | oracle-naming-variant-b | pass / observed | Derived from #168 oracle rep3: centralized `recordUsage` and execution policies use a different layout and vocabulary. |
 | different-layout | pass / observed | Reference-equivalent boundary modules are nested under a different directory. |
 | irrelevant-naming-collision | pass / not-observed | Derived from #168 irrelevant rep1: `reserveBudget`, `settleBudget`, and `retryAttempts` occur, but retry/fallback orchestration and metering remain inline in the route handler. |
+| unused-boundary-modules | pass / not-observed | Handler imports structurally complete policy and ledger modules, but never calls their exported values; transitive import reachability alone is not an execution edge. |
 | ledger-naming-variant | pass / observed | Record persistence, reads, and aggregation use renamed symbols while remaining in one non-transport module. |
 
 Labels were fixed by source review; #168 judge v2 rationale was used only as corroborating evidence. The probe reports structural evidence paths and function names (for example policy module/function and ledger module), not identifier-allowlist matches.
 
-## Judge
+## Judge Boundary
 
-Offline implementation checks:
+The final diff does not modify `judge-agent/generic/v2` or add a shared judge capability delta. The v3 candidate still declares the frozen `judge-agent/generic/v2` as a soft sidecar, but judge scoring does not contribute to semantic or `practice_observation`.
 
-```text
-bun test src/benchmark/judge/judge-agent/generic/v2/judge.test.ts
-```
-
-Result: 18 passed, 0 failed. The new tests reject rationales that only supply an identifier or path, normalize model-provided numeric suffixes, and accept behavioral evidence for correctness-only dimensions. Generic v2 calibration automatically adds the v3 naming-variant positive and naming-collision negative fixtures when that staged set is present.
-
-Approved real judge calibration was not completed. Two later diagnostic kernel invocations unexpectedly inherited judge credentials from repository `.env` and reached the judge API; both stopped at fail-closed validation errors, the exact request count was not logged, and neither result is calibration evidence. The v3 candidate declares no automatic judge calibration role, and a future three-condition pilot or judge calibration must use a separate issue and explicit authorization.
+Generic judge evidence-rationale hardening and naming-variant judge calibration are deferred to #174 because `generic/v2` is already used by frozen candidates. Approved real judge calibration was not completed. Two later diagnostic kernel invocations unexpectedly inherited judge credentials from repository `.env` and reached the judge API; both stopped at fail-closed validation errors, the exact request count was not logged, and neither result is calibration evidence. The v3 candidate declares no automatic judge calibration role.

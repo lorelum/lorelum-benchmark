@@ -17,9 +17,7 @@ function fail(message: string): never {
 }
 
 function normalizedInteger(value: unknown, label: string): number {
-  const match = typeof value === "string" ? value.trim().match(/^\d+(?:\.\d+)?/) : undefined;
-  const raw = typeof value === "number" ? value : match ? match[0] : Number.NaN;
-  const number = Number(raw);
+  const number = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
   if (!Number.isFinite(number)) fail(`${label} must be numeric`);
   return Math.round(number);
 }

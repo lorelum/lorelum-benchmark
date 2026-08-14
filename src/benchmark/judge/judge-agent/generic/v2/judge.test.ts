@@ -52,15 +52,6 @@ test("generateRubric parses and hashes the serialized rubric; invalid output fai
   await expect(generateRubric(taskMd, bad)).rejects.toThrow("total 100");
 });
 
-test("generateRubric normalizes numeric strings with model-added suffixes", async () => {
-  const completion = stubCompletion([{ dimensions: [
-    { id: "a", name: "A", description: "d", max_points: "50 points" },
-    { id: "b", name: "B", description: "d", max_points: "50 points" },
-  ] }]);
-  const { rubric } = await generateRubric(taskMd, completion);
-  expect(rubric.dimensions.map((dimension) => dimension.max_points)).toEqual([50, 50]);
-});
-
 test("generateRubricCached reuses the rubric for the same task", async () => {
   const complete = stubCompletion([validRubric]);
   const first = await generateRubricCached(taskMd, complete);
@@ -104,91 +95,22 @@ test("scoreCandidate normalizes numeric confidence and points", async () => {
   const rubricHash = await sha256Text(text);
   const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric: text });
   const complete = stubCompletion([{ criteria: [
-    { id: "component-transport-isolation", points: 29.6, rationale: "component delegates transport calls to the api boundary" },
-    { id: "domain-operation-delegation", points: 24.5, rationale: "submit awaits the delegated profile update request" },
-    { id: "boundary-response-translation", points: 30, rationale: "boundary translates upstream conflict state into a domain response" },
-    { id: "raw-response-containment", points: 15, rationale: "raw response fields never return into component state" },
+    { id: "component-transport-isolation", points: 29.6, rationale: "no transport in component" },
+    { id: "domain-operation-delegation", points: 24.5, rationale: "submit awaits external op" },
+    { id: "boundary-response-translation", points: 30, rationale: "conflict translated" },
+    { id: "raw-response-containment", points: 15, rationale: "raw response contained" },
   ], confidence: 92.7 }]);
   const result = await scoreCandidate({ taskMd, candidateDiff, rubric, rubricText: text, rubricHash, inputHash: input.input_hash, judge: { id: "judge-agent/generic", version: "v2" }, complete });
   expect(result.confidence).toBe(93);
   expect(result.score).toBe(100);
 });
 
-test("scoreCandidate normalizes numeric strings with model-added suffixes", async () => {
-  const rubric = assertGeneratedRubric(validRubric);
-  const text = serializeRubric(rubric);
-  const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric: text });
-  const complete = stubCompletion([{ criteria: [
-    { id: "component-transport-isolation", points: "30 points", rationale: "component delegates transport calls to the api boundary" },
-    { id: "domain-operation-delegation", points: "25 points", rationale: "submit awaits the delegated profile update request" },
-    { id: "boundary-response-translation", points: "30 points", rationale: "boundary translates upstream conflict state into a domain response" },
-    { id: "raw-response-containment", points: "15 points", rationale: "raw response fields never return into component state" },
-  ], confidence: "92 percent" }]);
-  const result = await scoreCandidate({
-    taskMd,
-    candidateDiff,
-    rubric,
-    rubricText: text,
-    rubricHash: await sha256Text(text),
-    inputHash: input.input_hash,
-    judge: { id: "judge-agent/generic", version: "v2" },
-    complete,
-  });
-  expect(result.score).toBe(100);
-  expect(result.confidence).toBe(92);
-});
-
-test("scoreCandidate rejects rationale that only names an identifier or path", async () => {
-  const rubric = assertGeneratedRubric(validRubric);
-  const text = serializeRubric(rubric);
-  const rubricHash = await sha256Text(text);
-  const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric: text });
-  const complete = stubCompletion([{ criteria: [
-    { id: "component-transport-isolation", points: 30, rationale: "reserveBudget" },
-    { id: "domain-operation-delegation", points: 25, rationale: "src/LoginPage.tsx" },
-    { id: "boundary-response-translation", points: 30, rationale: "conflict translated at boundary" },
-    { id: "raw-response-containment", points: 15, rationale: "raw response contained" },
-  ], confidence: 80 }]);
-  await expect(scoreCandidate({
-    taskMd,
-    candidateDiff,
-    rubric,
-    rubricText: text,
-    rubricHash,
-    inputHash: input.input_hash,
-    judge: { id: "judge-agent/generic", version: "v2" },
-    complete,
-  })).rejects.toThrow("rationale must cite concrete responsibility/call/data-flow behavior");
-});
-
-test("scoreCandidate accepts behavioral evidence for correctness-only dimensions", async () => {
-  const rubric = assertGeneratedRubric({ dimensions: [
-    { id: "correctness", name: "correctness", description: "observable behavior", max_points: 100 },
-  ] });
-  const text = serializeRubric(rubric);
-  const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric: text });
-  const complete = stubCompletion([{ criteria: [
-    { id: "correctness", points: 100, rationale: "streamed output and request retries preserve the documented behavior" },
-  ], confidence: 90 }]);
-  const result = await scoreCandidate({
-    taskMd,
-    candidateDiff,
-    rubric,
-    rubricText: text,
-    rubricHash: await sha256Text(text),
-    inputHash: input.input_hash,
-    judge: { id: "judge-agent/generic", version: "v2" },
-    complete,
-  });
-  expect(result.score).toBe(100);
-});
-
 test("scoreCandidate produces an observed judge-result with score equal to the criterion sum", async () => {
   const complete = stubCompletion([{ criteria: [
-    { id: "component-transport-isolation", points: 30, rationale: "component delegates transport calls to the api boundary" },
-    { id: "domain-operation-delegation", points: 25, rationale: "submit awaits the delegated profile update request" },
-    { id: "boundary-response-translation", points: 30, rationale: "boundary translates upstream conflict state into a domain response" },
-    { id: "raw-response-containment", points: 15, rationale: "raw response fields never return into component state" },
+    { id: "component-transport-isolation", points: 30, rationale: "no transport in component" },
+    { id: "domain-operation-delegation", points: 25, rationale: "submit awaits external op" },
+    { id: "boundary-response-translation", points: 30, rationale: "conflict translated" },
+    { id: "raw-response-containment", points: 15, rationale: "raw response contained" },
   ], confidence: 92 }]);
   const rubric = assertGeneratedRubric(validRubric);
   const text = serializeRubric(rubric);
@@ -214,22 +136,22 @@ test("scoreCandidate fails closed on missing dimension, out-of-range points, and
   const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric: text });
   const base = { taskMd, candidateDiff, rubric, rubricText: text, rubricHash, inputHash: input.input_hash, judge: { id: "j", version: "v" } };
 
-  const missing = stubCompletion([{ criteria: [{ id: "component-transport-isolation", points: 30, rationale: "component delegates transport calls to the api boundary" }], confidence: 80 }]);
+  const missing = stubCompletion([{ criteria: [{ id: "component-transport-isolation", points: 30, rationale: "r" }], confidence: 80 }]);
   await expect(scoreCandidate({ ...base, complete: missing })).rejects.toThrow("cover every rubric dimension");
 
   const outOfRange = stubCompletion([{ criteria: [
-    { id: "component-transport-isolation", points: 31, rationale: "component delegates transport calls to the api boundary" },
-    { id: "domain-operation-delegation", points: 25, rationale: "submit awaits the delegated profile update request" },
-    { id: "boundary-response-translation", points: 30, rationale: "boundary translates upstream conflict state into a domain response" },
-    { id: "raw-response-containment", points: 15, rationale: "raw response fields never return into component state" },
+    { id: "component-transport-isolation", points: 31, rationale: "r" },
+    { id: "domain-operation-delegation", points: 25, rationale: "r" },
+    { id: "boundary-response-translation", points: 30, rationale: "r" },
+    { id: "raw-response-containment", points: 15, rationale: "r" },
   ], confidence: 80 }]);
   await expect(scoreCandidate({ ...base, complete: outOfRange })).rejects.toThrow("exceed max_points");
 
   const badConfidence = stubCompletion([{ criteria: [
-    { id: "component-transport-isolation", points: 30, rationale: "component delegates transport calls to the api boundary" },
-    { id: "domain-operation-delegation", points: 25, rationale: "submit awaits the delegated profile update request" },
-    { id: "boundary-response-translation", points: 30, rationale: "boundary translates upstream conflict state into a domain response" },
-    { id: "raw-response-containment", points: 15, rationale: "raw response fields never return into component state" },
+    { id: "component-transport-isolation", points: 30, rationale: "r" },
+    { id: "domain-operation-delegation", points: 25, rationale: "r" },
+    { id: "boundary-response-translation", points: 30, rationale: "r" },
+    { id: "raw-response-containment", points: 15, rationale: "r" },
   ], confidence: 101 }]);
   await expect(scoreCandidate({ ...base, complete: badConfidence })).rejects.toThrow("confidence");
 });
@@ -250,11 +172,11 @@ test("scoreCandidate returns an indeterminate judge-result with reason when the 
 });
 
 test("assertScoredCandidate validates shape", () => {
-  expect(assertScoredCandidate({ criteria: [{ id: "a", points: 1, rationale: "handler delegates request transport to boundary" }], confidence: 50 }).state).toBe("observed");
+  expect(assertScoredCandidate({ criteria: [{ id: "a", points: 1, rationale: "r" }], confidence: 50 }).state).toBe("observed");
   expect(assertScoredCandidate({ state: "indeterminate", reason: "r", confidence: 50 }).state).toBe("indeterminate");
   expect(() => assertScoredCandidate({ criteria: [], confidence: 50 })).toThrow();
   expect(() => assertScoredCandidate({ state: "indeterminate", confidence: 50 })).toThrow();
-  expect(() => assertScoredCandidate({ criteria: [{ id: "a", points: 1, rationale: "handler delegates request transport to boundary" }], confidence: -1 })).toThrow();
+  expect(() => assertScoredCandidate({ criteria: [{ id: "a", points: 1, rationale: "r" }], confidence: -1 })).toThrow();
 });
 
 test("judgeLlmEnv and requireJudgeLlmEnv enforce opt-in and required config", () => {

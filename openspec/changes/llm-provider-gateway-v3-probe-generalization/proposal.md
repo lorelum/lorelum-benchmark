@@ -4,10 +4,10 @@
 
 ## What Changes
 
-- 新增通用 capability `practice-structure-probe-calibration`：结构质量探针 MUST 以 import graph、调用/数据流、类型契约、模块所有权或可观察行为分类职责；封闭标识符 allowlist MUST NOT 单独构成通过/拒绝依据。若实现保留命名线索，MUST 同步提供覆盖真实输出的正例/反例回归夹具。
-- 新建 `incubator/practice-injection/llm-provider-gateway-v3/` 作为独立 candidate revision：复用 v2 的公开行为题面与语义契约，替换 private structure probe、evaluator、calibration matrix 与 snapshot，并把 #168 暴露的假阴/假阳实现整理成私有命名变体夹具。
-- 修改 `judge-agent-rubric-scoring`：judge criterion rationale MUST 引用职责/调用/数据证据，MUST NOT 仅凭函数名、文件路径或相似命名证明或否定达标；judge 判别力校准 MUST 包含 naming-variant 正例与 anti-pattern 反例。
+- 新增通用 capability `practice-structure-probe-calibration`：结构质量探针 MUST 以 import graph、实际 value 调用边、调用/数据流、类型契约、模块所有权或可观察行为分类职责；封闭标识符 allowlist MUST NOT 单独构成通过/拒绝依据，`import type` 与未调用 import MUST NOT 单独构成执行边。若实现保留命名线索，MUST 同步提供覆盖真实输出的正例/反例回归夹具。
+- 新建 `incubator/practice-injection/llm-provider-gateway-v3/` 作为独立 candidate revision：复用 v2 的公开行为题面与语义契约，替换 private structure probe、evaluator、calibration matrix 与 snapshot，并把 #168 暴露的假阴/假阳实现整理成私有命名变体与 decoy-import 回归夹具。
 - v1/v2、其 snapshot、已有 pilot 结果、shared evaluator helper、suite、treatment 与 record 均不修改。
+- generic judge 的 evidence rationale 与命名变体校准硬化不在本 change 内实现，保持 `judge-agent/generic/v2` 文件与契约不变，已由独立 #174 承接。
 - 本 change 不调用模型、不创建正式 record、不升级 suite revision；v3 仅进入 `incubator/`。
 
 ## Capabilities
@@ -17,13 +17,9 @@
 - `practice-structure-probe-calibration`: 定义结构质量探针的通用证据标准与校准门槛，要求名称无关、真实输出命名变体回归、确定性重放和失败阻塞。
 - `llm-provider-gateway-v3-practice-candidate`: 定义 v3 gateway candidate 的公开/私有边界、泛化探针、命名变体校准矩阵、snapshot 与生命周期，隔离“题面变化”与“探针变化”。
 
-### Modified Capabilities
-
-- `judge-agent-rubric-scoring`: 增加 criterion rationale 的证据型判据与 naming-variant 判别力校准要求；不改变语义完成判定、`judge-result/v1` 契约或 judge 软信号地位。
-
 ## Impact
 
 - 新增 `incubator/practice-injection/llm-provider-gateway-v3/`：public task/starter/tests/docs、private manifests/practices/evaluator/probe、`quality-probe/v3` calibration overlays 与 snapshot。
-- 私有校准矩阵新增 naming-variant true-positive/true-negative/false-positive/false-negative 类夹具；所有夹具保持 `private/`，不得进入 agent workspace。
+- 私有校准矩阵新增 naming-variant true-positive/true-negative/false-positive/false-negative 类夹具，以及 handler 导入但未调用 policy/ledger 的 decoy-import 反例；所有夹具保持 `private/`，不得进入 agent workspace。
 - 若 v3 的探针需要新的 TypeScript AST/import-graph 能力，MUST 使用 candidate-local private evaluator；不修改 `src/benchmark/` 中已冻结的 helper 版本。
 - 不影响 `llm-provider-gateway-v2` 的 diagnostic 结论与 snapshot；不创建 record、不进入默认 suite。

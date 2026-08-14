@@ -57,6 +57,11 @@ sets:
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/irrelevant-naming-collision
           sha256: a25b2a2774d089545e65779fecdb5a015e15f17fcd7f98062d10c6744be71296
+      unused-boundary-modules-tree:
+        extends: irrelevant-naming-collision-tree
+        overlay:
+          path: private/calibration/sets/quality-probe/v3/overlays/unused-boundary-modules
+          sha256: 442b616f5aca329a4d9a8c881d213e06432443983f0eed102959598e62998f7d
       ledger-naming-variant-tree:
         extends: candidate-foundation
         overlay:
@@ -72,4 +77,5 @@ sets:
       oracle-naming-variant-b: oracle-naming-variant-b-tree
       different-layout: different-layout-tree
       irrelevant-naming-collision: irrelevant-naming-collision-tree
+      unused-boundary-modules: unused-boundary-modules-tree
       ledger-naming-variant: ledger-naming-variant-tree

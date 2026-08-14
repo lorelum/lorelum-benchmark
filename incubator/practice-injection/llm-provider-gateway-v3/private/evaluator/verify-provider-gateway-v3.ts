@@ -41,7 +41,7 @@ type FunctionShape = {
 type SourceFileShape = {
   path: string;
   source: any;
-  imports: Array<{ specifier: string; symbols: string[] }>;
+  imports: Array<{ specifier: string; symbols: string[]; typeOnly: boolean }>;
   stringLiterals: Set<string>;
   propertyNames: Set<string>;
   identifiers: Set<string>;
@@ -136,10 +136,15 @@ function analyzeFunction(node: any, kind: FunctionShape["kind"]): FunctionShape 
 
     if (ts.isCallExpression(current)) {
       const state = stateNameFromExpression(current.expression);
+      if (ts.isIdentifier(current.expression)) readsState.add(current.expression.text);
       const method = ts.isPropertyAccessExpression(current.expression) ? current.expression.name.text : undefined;
       if (state && method && ["push", "set", "add"].includes(method)) mutatesState.add(state);
       if (state && method && ["filter", "forEach", "entries", "keys", "values", "reduce"].includes(method)) iteratesState.add(state);
       if (state && (method === "get" || method === "has")) readsState.add(state);
+    }
+    if (ts.isNewExpression(current)) {
+      const state = stateNameFromExpression(current.expression);
+      if (state) readsState.add(state);
     }
 
     if (ts.isForOfStatement(current)) {
@@ -226,10 +231,12 @@ async function loadSource(root: string, path: string): Promise<SourceFileShape> 
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       const symbols: string[] = [];
       if (node.importClause?.namedBindings && ts.isNamedImports(node.importClause.namedBindings)) {
-        for (const element of node.importClause.namedBindings.elements) symbols.push(element.name.text);
+        for (const element of node.importClause.namedBindings.elements) {
+          if (!element.isTypeOnly) symbols.push(element.name.text);
+        }
       }
-      if (node.importClause?.name) symbols.push(node.importClause.name.text);
-      imports.push({ specifier: node.moduleSpecifier.text, symbols });
+      if (node.importClause?.name && !node.importClause.isTypeOnly) symbols.push(node.importClause.name.text);
+      imports.push({ specifier: node.moduleSpecifier.text, symbols, typeOnly: node.importClause?.isTypeOnly === true });
       if (node.moduleSpecifier.text === "openai" || node.moduleSpecifier.text.startsWith("@anthropic-ai/sdk")) hasProviderSdkImport = true;
     }
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) stringLiterals.add(node.text);
@@ -389,17 +396,54 @@ function costEvidence(source: SourceFileShape): string | undefined {
   return source.functions.some((fn) => fn.hasCostArithmetic) ? source.path : undefined;
 }
 
+function directValueImports(source: SourceFileShape): Array<{ source: SourceFileShape; symbols: string[] }> {
+  const result: Array<{ source: SourceFileShape; symbols: string[] }> = [];
+  for (const imported of source.imports) {
+    if (imported.typeOnly) continue;
+    const path = resolveRelativeImport(source.path, imported.specifier);
+    const target = path ? sourceByPath(path) : undefined;
+    if (target) result.push({ source: target, symbols: imported.symbols });
+  }
+  return result;
+}
+
+function functionUsesImportedValue(fn: FunctionShape, symbols: string[]): boolean {
+  return symbols.some((symbol) => fn.readsState.includes(symbol) || fn.mutatesState.includes(symbol) || fn.iteratesState.includes(symbol));
+}
+
+function callsImportedSymbols(source: SourceFileShape, symbols: string[]): boolean {
+  return source.functions.some((fn) => functionUsesImportedValue(fn, symbols));
+}
+
+function hasExecutionPath(server: SourceFileShape, target: SourceFileShape): boolean {
+  const visited = new Set<string>();
+  const queue: SourceFileShape[] = [server];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current.path)) continue;
+    visited.add(current.path);
+    for (const imported of directValueImports(current)) {
+      if (callsImportedSymbols(current, imported.symbols)) {
+        if (imported.source.path === target.path) return true;
+        queue.push(imported.source);
+      }
+    }
+  }
+  return false;
+}
+
 function failuresFor(files: SourceFileShape[]): { failures: string[]; evidence?: string } {
   const failures: string[] = [];
   const server = files.find(isServerFile);
   if (!server) return { failures: ["未找到包含 /api/chat、/api/usage 或 createServer 的 handler 模块"] };
 
-  const boundary = transitiveImports(server).filter((source) => source.path !== server.path && !isAdapterFile(source));
+  const reachable = transitiveImports(server);
+  const boundary = reachable.filter((source) => source.path !== server.path && !isAdapterFile(source));
   const adapters = files.filter(isAdapterFile);
   const contract = boundary.find(hasContractLikeDeclaration);
-  const policyModule = boundary.find((source) => policyFunction(source) !== undefined);
+  const policyModule = boundary.find((source) => policyFunction(source) !== undefined && hasExecutionPath(server, source));
   const policy = policyModule ? policyFunction(policyModule) : undefined;
-  const ledgerPath = boundary.map(ledgerEvidence).find(Boolean);
+  const ledgerPath = boundary.filter((source) => hasExecutionPath(server, source)).map(ledgerEvidence).find(Boolean);
   const costPath = boundary.map(costEvidence).find(Boolean);
 
   if (!contract) failures.push("handler 可达边界内未观察到至少两个方法的统一客户端契约");

@@ -27,11 +27,11 @@
 - [x] 4.4 对 oracle rep1/rep3、irrelevant rep1 等变体完成人工/证据复核并固定预期标签。
 - [x] 4.5 运行 kernel calibration：naming-variant 正例 observed、碰撞/反模式 not-observed、public-starter fail+not-observed。
 
-## 5. Judge 证据规范与测试
+## 5. Judge 边界与延期
 
-- [x] 5.1 将 evidence-based criterion rationale 要求落实到 judge spec 与实现验收，不修改 provider/契约。
-- [x] 5.2 增加 judge naming-variant 校准测试与证据型 rationale 检查；保留既有 candidate 回归。
-- [x] 5.3 真实 judge 校准仅在前置条件齐备且显式授权后执行；未执行时记录 not-run/原因。
+- [x] 5.1 从本 change 的最终 diff 移除 `judge-agent/generic/v2` 与 judge spec delta，保留 v2 为冻结软 sidecar。
+- [x] 5.2 在 #172 / PR #173 中记录 generic judge evidence rationale 与 naming-variant 校准由 #174 独立承接。
+- [x] 5.3 不执行真实 judge 校准；已发生的事故保持可见且不作为校准证据。
 
 ## 6. Snapshot、验证与审计
 
@@ -44,3 +44,9 @@
 
 - [ ] 7.1 确认未调用模型、未创建正式 record、未升级 suite revision、v1/v2/suites/treatments/records 未变。
 - [x] 7.2 完成 PR 描述与证据链，保持单一声明范围并引用 #172。
+
+## 8. Review 修复
+
+- [x] 8.1 policy/ledger 边界必须由实际 value import 调用边激活，拒绝 type-only 与未调用 import。
+- [x] 8.2 增加 `unused-boundary-modules` private decoy-import 反例并接入 `quality-probe/v3`。
+- [x] 8.3 重跑 v3 calibration、OpenSpec strict、泄露审计、`bun run validate` 与 `git diff --check`。

@@ -8,7 +8,6 @@
 
 - 把“结构探针名称无关 + 真实命名变体校准”从设计意图固化为 stable capability。
 - 创建独立 `llm-provider-gateway-v3`，用泛化探针修复 v2 的假阴/假阳，并保持公开题面可对照。
-- 把同一证据原则写进 judge criterion rationale 规范。
 - 建立可确定性重放的 private naming-variant 回归矩阵。
 
 **Non-Goals:**
@@ -17,6 +16,7 @@
 - 不重写共享 evaluator helper；v3 使用 candidate-local private evaluator。
 - 不执行模型调用、不创建正式 record、不升级 suite revision。
 - 不把 judge 作为唯一 oracle，不引入隐藏加权总分。
+- 不修改 `judge-agent/generic/v2` 或其他已使用共享 helper。
 
 ## Decisions
 
@@ -28,8 +28,8 @@
 ### 通用规范落点
 
 - 新增 stable capability `practice-structure-probe-calibration`，作为所有候选结构探针的跨任务执行规范。
-- 同时给 `judge-agent-rubric-scoring` 增加 evidence-based rationale 要求，防止 judge 也通过名称相似性给分。
 - 不修改 `practice-injection-candidate-v2`、`llm-provider-gateway-v2-practice-candidate` 或 `judge-agent/generic/v1/v2` 已冻结对象。
+- judge rationale 的同一证据原则是本候选的独立后续 scope，已由 #174 承接，不在本 change 内回写共享 judge helper。
 
 ### v3 公开输入
 
@@ -39,6 +39,7 @@
 ### 结构探针实现方向
 
 - 首选方案 A：以 import graph + 数据流/所有权证据分类，不依赖精确标识符。
+- import graph 只提供候选边界，不作为执行证据：policy/ledger 边界必须由 handler 请求路径的实际 value import 调用边激活；`import type`、未调用 value import 和纯 transitive reachability 一律 fail closed。
 - 分类基座：
   - `handler/server`：公开 `/api/chat` 与 `/api/usage` 路由。
   - `adapter/transport`：持有 fetch/SSE 与供应商 wire 字段映射。
@@ -55,6 +56,7 @@
   - `oracle-naming-variant-b`：oracle rep3 的 `recordUsage` 与集中执行政策变体，预期 `pass/observed`。
   - `irrelevant-naming-collision`：irrelevant rep1 的 `reserveBudget/settleBudget/retryAttempts` 命名碰撞，预期 `pass/not-observed`。
   - `ledger-naming-variant`：以不同命名承担 usage/latency/cost/tenant/trace 聚合的边界账本，预期 `pass/observed`。
+  - `unused-boundary-modules`：handler 导入结构完整但从未调用的 policy/ledger 模块，预期 `pass/not-observed`，用于防止 import 图假阳性。
   - 可选 `baseline-good-structure`：baseline 中语义通过但政策未完全集中或账本散落的样例，预期按复核标签固定。
 - 这些变体必须由需求方确认标签后写回 issue/design；judge v2 的 criterion 证据只作复核输入，不作唯一 oracle。
 
@@ -63,14 +65,15 @@
 - semantic 仍由公开 `bun run test` 决定。
 - `practice_observation` 由 v3 泛化探针决定。
 - `joint_pass = semantic=pass && practice_observation=observed`，不引入加权或 judge 覆盖。
-- judge-agent/generic/v2 仅 soft sidecar，rationale 必须证据化；未通过命名变体校准时不支撑方向性结论。
+- judge-agent/generic/v2 保持冻结并仅作 soft sidecar；它不参与 `practice_observation` 或 joint-pass 派生。
 
 ## Risks / Trade-offs
 
 - [纯 AST 仍可能误分类动态调用或不同模块组织] → 用真实输出变体回归包兜底；无法稳定分类时返回 `indeterminate`，阻止模型比较。
+- [transitive import 可能把未调用模块误当执行边界] → policy/ledger 必须同时存在实际 value 调用边，并以 `unused-boundary-modules` decoy fixture 固定回归。
 - [把真实模型输出提交进 calibration 可能带入私有泄露] → 只提炼 `src/` 与 fixture 所需结构，放 `private/calibration/`，不进入 workspace/prompt，并跑泄露审计。
 - [v3 复用公开题面仍无法让 baseline 与 irrelevant 自然分布干净] → 这正是下一阶段诊断对象；若结果仍收敛，需单独讨论改题面，不在本 change 内夹带。
-- [修改 judge spec 影响所有 judge 用户] → 只新增 evidence-based rationale 要求，不修改既有 provider/契约；用 v2 gateway 与既有 candidate regression 验证。
+- [共享 judge 硬化会扩大本 change 范围] → 不在本 change 修改 `judge-agent/generic/v2`；后续 evidence rationale 与命名变体校准由 #174 独立承接。
 
 ## Migration Plan
 
@@ -78,7 +81,7 @@
 2. 完成规划澄清并写回 #172 与本 design；确认 v3 public input 是否复刻、命名变体标签与 judge 规范边界。
 3. 实现通用 capability 的 private regression 契约与 v3 candidate 骨架。
 4. 实现 v3 probe/evaluator、naming-variant calibration overlays 与 snapshot。
-5. 增加 judge spec 证据测试与 v3 calibration 回归；运行 `bun run validate`、OpenSpec strict、泄露审计、`git diff --check`。
+5. 增加 v3 calibration 与 decoy-import 回归；运行 `bun run validate`、OpenSpec strict、泄露审计、`git diff --check`。
 6. 终检 v1/v2 不变、无模型调用、无 record、无 suite 升级。
 
 回滚：删除 v3 目录与新 calibration overlays；OpenSpec delta 未归档前不改变 stable specs。

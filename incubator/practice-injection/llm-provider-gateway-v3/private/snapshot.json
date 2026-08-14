@@ -1,11 +1,11 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "e5919c41532a5435fe36633f88234979b4150d3483040c1eccecc0795f041f5d",
+  "snapshot_id": "d55822f0bd2bd63b45b157889234a066742a06cd5d71e430277625b3c32d00b3",
   "files": {
-    "private/calibration.md": "0c5346c247992552b43e729351be5b5359dfe192fda4820b27e71fa3bd0b975c",
-    "private/calibration/run.ts": "a56062e70931a57a0041934921a672592c2ee37aea51294018e04648bbec416b",
-    "private/calibration/sets.yaml": "0080c29fd2184cc6e81b50bc0ffe875bdde9b111c1dd416104563470fba8c51c",
+    "private/calibration.md": "a8d15f2bce2892561eea149d88730f1ae8b5106b471b2c04de8e5f44ca09de92",
+    "private/calibration/run.ts": "6bf25b873c51748a91990ddb9105a290a460b09ee5ddd84e9262cc5fdd5c0062",
+    "private/calibration/sets.yaml": "32cc893a2d043bbf2ed65020bfea6cd3351210b8807585e973ceeb85425ca81e",
     "private/calibration/sets/quality-probe/v3/overlays/anti-pattern-v3/src/anthropic.ts": "5c38141ff779de4427b19bc85a7927eed602cd61eb23400a4bb9bf0315ecf0ff",
     "private/calibration/sets/quality-probe/v3/overlays/anti-pattern-v3/src/nebula.ts": "87192564791ee56393faa73583a69ddf6936ef51499bdbcd49d462e0060303e1",
     "private/calibration/sets/quality-probe/v3/overlays/anti-pattern-v3/src/openai.ts": "90a7f4fd6c50d6a3ce4f17fa7260331bc8aa6e7561778a88dafaaf05d609218e",
@@ -73,13 +73,16 @@
     "private/calibration/sets/quality-probe/v3/overlays/type-based-v3/src/ledger.ts": "f7f7e856bb55b6f91ae72c9ea5ffc18772ed386fb9c418385d148ab2ee4e8313",
     "private/calibration/sets/quality-probe/v3/overlays/type-based-v3/src/policy.ts": "f33ab8cc6f4093a24ad5774286bd96170177e50b4e41ad58861714870a6f6239",
     "private/calibration/sets/quality-probe/v3/overlays/type-based-v3/src/server.ts": "019098599e7b0e26c1397e5435450a8b0883f72a3da12a89e61be02c9e754e80",
+    "private/calibration/sets/quality-probe/v3/overlays/unused-boundary-modules/src/ledger.ts": "138037111cdfaa606b03b47f4d6134401ebac341cab193f79c0346e12203b44f",
+    "private/calibration/sets/quality-probe/v3/overlays/unused-boundary-modules/src/policy.ts": "0e74bf0fab4b774245799fd9ff7f2b67d1c47aa10afc4fc74884ecd11901c10c",
+    "private/calibration/sets/quality-probe/v3/overlays/unused-boundary-modules/src/server.ts": "94854d78bd1972bc3b102e215fa14513c6e6fc4987dca032cf71ad97b9e706f8",
     "private/candidate.yaml": "f8dc507a39285e4464fddd4d972e08a68d4a459356319e04e0048b78b80eda4f",
     "private/conditions.yaml": "b1de3b844148dae9525aeb5366f06c3c55c7597211bd03143a09bd1b2aeb3777",
     "private/evaluator/evaluate.ts": "64764a2e90f0192137815537f568e239bc7027ade739e1252265c7fc1ae48a14",
     "private/evaluator/runtime-closure.yaml": "82e3192b1142ca3c13c3e5520f8f8e73c3b403e5c3ee4d5e17d644db60c7ecf5",
     "private/evaluator/runtime-closure/bun.lock": "5dbdeaec4ac2f02fb0457e8c5070f1b2a708719dffa07ab43957a911c5c7bd7f",
     "private/evaluator/runtime-closure/package.json": "da71ac16a971bde1d5e2910d534d27212030ed281c52912b8e53ce9e399ca9af",
-    "private/evaluator/verify-provider-gateway-v3.ts": "e7a566165ac9c1f7279af1b45a67fc5b7bab078e28f77caba1a7a929db77d931",
+    "private/evaluator/verify-provider-gateway-v3.ts": "087cf141250fa75ca86444fb95e59be413af5fd6af216e09664e5b22f9ff21fb",
     "private/execution/git-history.yaml": "69813b70f669119a6f46a4f747e0554cb63e39179c135af9c2172f4ac69f2642",
     "private/execution/tool-policy.yaml": "6acd34a225913fd789a5b00003e103b239bbcd3afd876d35117d67062a72d11a",
     "private/oracle.yaml": "1841da6ca15d7dc65b846f7163b2860a5d5decbf3f385d163b42fd17c80ee0a3",
@@ -103,6 +106,6 @@
     "input_hash": "821475b2c049865ba75e48e085dd1335a1d3fd47952443f30dbfe70b76890813",
     "materialized_output_hash": "27e10b29d2d61af7d450d91ec4fc0f951d331f366ce9c6e5285201a5af0b6fa0",
     "profile_input_hash": "29a395a0fe16d6322abc23f6401556fc35b386f766eb954538d4f2d7d3ed3fb2",
-    "calibration_sets_hash": "c39201916d569075942725953d74f32a4f9142af930fb4f824633b2ac6b5f77a"
+    "calibration_sets_hash": "5082ab620644e3a979f3887c27300cf2e6c7ad7cb2b58f0dd3f049dc254f9ed7"
   }
 }
