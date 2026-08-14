@@ -1,6 +1,9 @@
 import { cp, mkdir, readFile, stat } from "node:fs/promises";
 import { basename, isAbsolute, relative, resolve, sep } from "node:path";
 import { generateUnifiedDiff } from "./unified-diff";
+import { sourceMapFromWorkspace, sourceMapToDiff } from "../../../../../src/benchmark/judge/source-map";
+import { buildJudgeInput } from "../../../../../src/benchmark/judge/input";
+import { resolveJudgeProvider } from "../../../../../src/benchmark/judge/providers";
 
 type PracticeReference = { path: string; sha256: string };
 type Condition = { id: string; status: string; channel: string; practice: PracticeReference | "none" };
@@ -11,6 +14,7 @@ type Conditions = {
     model: { id: string };
     budget: { max_duration_minutes: number };
     repetitions: number;
+    judge?: { provider: string; reference_min: number };
   };
   conditions: Condition[];
 };
@@ -469,6 +473,58 @@ async function runToolQualification(
   };
 }
 
+type JudgeSidecar = {
+  provider_id: string;
+  provider_version: string;
+  state: string;
+  score?: number;
+  criteria?: Array<{ id: string; points: number; max_points: number; rationale?: string }>;
+  rubric_hash?: string;
+  input_hash?: string;
+  confidence?: number;
+  reason?: string;
+};
+
+async function runJudge(attemptPath: string, workspacePath: string, judge: { provider: string; reference_min: number }): Promise<JudgeSidecar> {
+  const provider = resolveJudgeProvider(judge.provider);
+  if (!provider) {
+    const sidecar: JudgeSidecar = { provider_id: judge.provider, provider_version: "", state: "judge-unavailable", reason: "unknown judge provider" };
+    await writeJson(resolve(attemptPath, "judge.sidecar.json"), sidecar);
+    return sidecar;
+  }
+  try {
+    const files = await sourceMapFromWorkspace(resolve(workspacePath, "app"));
+    const candidateDiff = sourceMapToDiff(files);
+    const taskMd = await Bun.file(resolve(workspacePath, "task.md")).text();
+    const rubric = await provider.rubricText();
+    const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric });
+    const result = await provider.score(input, {
+      judge: { id: provider.id, version: provider.version },
+      prompt: "score",
+      prompt_hash: "0".repeat(64),
+      rubric_hash: "0".repeat(64),
+    });
+    const sidecar: JudgeSidecar = {
+      provider_id: provider.id,
+      provider_version: provider.version,
+      state: result.state,
+      score: result.score,
+      criteria: result.criteria,
+      rubric_hash: result.rubric_hash,
+      input_hash: result.input_hash,
+      confidence: result.confidence,
+      reason: result.reason,
+    };
+    await writeJson(resolve(attemptPath, "judge.sidecar.json"), sidecar);
+    return sidecar;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    const sidecar: JudgeSidecar = { provider_id: judge.provider, provider_version: "", state: "judge-unavailable", reason };
+    await writeJson(resolve(attemptPath, "judge.sidecar.json"), sidecar);
+    return sidecar;
+  }
+}
+
 function outcome(entries: Record<string, unknown>[], repetitions: number): "signal" | "diagnostic-only" {
   const byCondition = new Map<string, Record<string, unknown>[]>();
   for (const entry of entries) {
@@ -480,9 +536,9 @@ function outcome(entries: Record<string, unknown>[], repetitions: number): "sign
     return values.length === repetitions && values.every(predicate);
   };
   const valid = (entry: Record<string, unknown>) => (entry.validity as { valid?: unknown } | undefined)?.valid === true;
-  const treatmentPasses = every("lorelum-retrieval", (entry) => valid(entry) && entry.dual_pass === true && (entry.trace as { complete?: unknown } | undefined)?.complete === true);
-  const baselineFailsQuality = every("baseline", (entry) => valid(entry) && entry.practice_probe === "fail");
-  const irrelevantFailsQuality = every("irrelevant-practice", (entry) => valid(entry) && entry.practice_probe === "fail");
+  const treatmentPasses = every("lorelum-retrieval", (entry) => valid(entry) && entry.dual_pass === true && (entry.trace as { complete?: unknown } | undefined)?.complete === true && entry.judge_pass === true);
+  const baselineFailsQuality = every("baseline", (entry) => valid(entry) && (entry.practice_probe === "fail" || entry.judge_pass === false));
+  const irrelevantFailsQuality = every("irrelevant-practice", (entry) => valid(entry) && (entry.practice_probe === "fail" || entry.judge_pass === false));
   return treatmentPasses && baselineFailsQuality && irrelevantFailsQuality ? "signal" : "diagnostic-only";
 }
 
@@ -563,6 +619,11 @@ const entries: Record<string, unknown>[] = [];
 for (const condition of runnable) {
   for (let attempt = 1; attempt <= repeat; attempt += 1) {
     const entry = await runAttempt(resolve(options.outputPath, "quality-pilot"), condition, attempt, conditions, piRuntime, command, options.skipInstall, true);
+    if (conditions.shared_execution.judge) {
+      const judge = await runJudge(resolve(options.outputPath, "quality-pilot", condition.id, "attempt-" + attempt), resolve(repositoryRoot, entry.workspace as string), conditions.shared_execution.judge);
+      entry.judge = judge;
+      entry.judge_pass = judge.state === "observed" && typeof judge.score === "number" && judge.score >= conditions.shared_execution.judge.reference_min;
+    }
     entries.push(entry);
     await writeJson(resolve(options.outputPath, "summary.json"), {
       schema_version: "skill-trigger-local-summary/v2",

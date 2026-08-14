@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "79eb4d255ac9169de1d22ab59b13b685ca896a5c110ccd26acc7d0b1e447a2a2",
+  "snapshot_id": "a1f99ce9d54198fa61274831cb00fd1a71145beeae0023bb27dc1c5321d966e2",
   "files": {
     "private/README.md": "4b0e2f25b368f2ec20ea9d92b4b171c7effb61a824df98ee9d93569c62105010",
     "private/calibration/run.ts": "336d5c7a7d59c9ffd450a8e6b8c0ce20f209d9b757461c551903d9cc5d8fc768",
@@ -25,7 +25,7 @@
     "private/calibration/sets/operation-ownership/v1/overlays/reference/src/Dashboard.tsx": "dd11d9445141c8174494e6cebce2d800894186260bb66159a6ee6660a84412ab",
     "private/calibration/sets/operation-ownership/v1/overlays/reference/src/services/projects.ts": "70a37ebd35f923186515aaa589c951ee6a3c327be318d0e474a86821286677fd",
     "private/candidate.yaml": "c9203ace013987b5761c40f2a0832e0da33283afce7a8eb1abdd5868c1ca020f",
-    "private/conditions.yaml": "ad38ca7950fb00ff4cd521bfc6443d8fff2156a33d4e27d44821fbb942088776",
+    "private/conditions.yaml": "1467b6ac1f3f71ff0f54a22801c24f3743f02a3d3346fbe9270694ffcc3f8081",
     "private/evaluator/evaluate-operation-authority.ts": "27e015e0cd12643cebfdd08bc447fde2629fe8e3989ba40e058d85a451488f51",
     "private/evaluator/evaluate-operation-ownership.ts": "cdff2206c75afb03d12ee912e997b2a2360ec2a03c344c4bf9b8c2d03ec9d747",
     "private/evaluator/evaluate.ts": "12a1190c1419f9066b7562d4c295dfcad0c8563cdd15c58cc912e32d1d88e7d6",
@@ -44,7 +44,7 @@
     "private/execution/lorelum-extension.test.ts": "1c67a8cfd635309c6f2efd717b5d980d17b1ef5200486cefb166d60454654b7d",
     "private/execution/lorelum-extension.ts": "4ed43473c1cb4204cd39d038fe7bf7323f05cb9ae96da4f147d116c9efc4c3fb",
     "private/execution/run-local.test.ts": "10918fdca4485d54f119c8742a9790ef6ef6d7492e746c0c339cdd5be6bc8931",
-    "private/execution/run-local.ts": "3177a87a8dec4739587f4b5b12f3c2a4448e3ca4b30bf94f03691a108711fdc8",
+    "private/execution/run-local.ts": "5d2fbd7a984feed452c3083fe9658edde825e03294c1a5e7cdbb540817aec075",
     "private/execution/tool-policy.yaml": "bc0b37f6384e44d686b80a940c48487f578dd9b607f47381a8213e1006b1b760",
     "private/execution/unified-diff.ts": "7bc9f968a44030b0fb21dea1052b64463202acf6b02d90073e5cf827a93fad46",
     "private/oracle.yaml": "66f6fdf0dbc9eb307640350d9a9b888c590b67d575235b265a66df42440a14db",
@@ -67,15 +67,15 @@
     "public/starter/app/tsconfig.json": "770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808",
     "public/starter/app/tsconfig.node.json": "99cbcda8723034e3c3c4b4e7688fa4ab607d78aab45cf754d19e5f269c826af2",
     "public/starter/app/vite.config.ts": "eca485c281977125366d4800553256e419f364984e615f75a2d2bae54f7857fd",
-    "public/task.md": "bf78441611f20c3b3158eb204bfbd5d621efd581361e32d87b409f7b282dc78d"
+    "public/task.md": "b08701054d48f09fd5edcf77f59f2320602baa30a1111e414a715fabf7805800"
   },
   "resolved": {
     "core_version": "v1",
     "core_hash": "db563a83df356af089d1a29a24955c094939db56735c29be3a6150d54843c92d",
     "profile": "skill-trigger-orchestration/v1",
     "materializer_kind": "react-vite",
-    "input_hash": "9cb6725c74ba5345018ef4ca57cbb28286ebaf5e8219d23b629943f83b00d0f7",
-    "materialized_output_hash": "16331fd15ba9a2c842cb030e133e23bf1ed31a34589e9ea850fc10b4a578ebfa",
+    "input_hash": "f6c0414c579992860334f550d3df690bd6424b50bc63cea52f698038acb2c630",
+    "materialized_output_hash": "965f02d835c7252a97d6b106a4a0c3534ce09862207a7cc56bc80f071be18699",
     "profile_input_hash": "dbc3a1d2b91a42b380de5f6ea873c1d5e895233145f76cc151b4ec2374ce4b75",
     "calibration_sets_hash": "165a7c6ca7779db69a373f2c41dd429ec3d1bdc587991869f7da66f16ab98114"
   }

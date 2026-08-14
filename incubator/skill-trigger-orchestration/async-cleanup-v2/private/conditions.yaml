@@ -12,6 +12,9 @@ shared_execution:
   tool_policy_sha256: bc0b37f6384e44d686b80a940c48487f578dd9b607f47381a8213e1006b1b760
   budget:
     max_duration_minutes: 10
+  judge:
+    provider: skill-trigger-source-authority/v1
+    reference_min: 90
   workspace: clean-copy-per-attempt
   repetitions: 3
 conditions:
