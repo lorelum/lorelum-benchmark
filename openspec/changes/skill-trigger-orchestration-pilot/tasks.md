@@ -116,4 +116,4 @@
 
 - [x] 收敛 r9–r12 证据链：12 次有效 attempt 中查询链路 0/12，结论为「可推断场景下无自主查询」；暂停 async-cleanup-v2 题面迭代，冻结证据链，不创建正式 record、不升级 suites。 [写入范围：OpenSpec]
 - [x] 落地重审计划：四方向按信息价值与成本排序（模型差异先行诊断、规则不可推断性为关键路径、任务类型、检索入口语义），结论须先规划后实施。 [写入范围：Issue #96、OpenSpec]
-- [ ] 运行模型差异诊断探针（如 deepseek-v4-flash），记录是否改变“无自主查询”结论。 [写入范围：scratch/]
+- [x] 运行模型差异诊断探针（deepseek-v4-flash）：两次带 extension 的完整任务探针均卡死（最小调用正常），判定为 harness 兼容性问题，结果 inconclusive，不据此改变结论；后续换模型或修 harness 后再评估。 [写入范围：scratch/]
