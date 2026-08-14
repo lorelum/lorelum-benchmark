@@ -10,7 +10,9 @@ import { pathToFileURL } from "node:url";
  * Classification is based on the TypeScript import graph and structural data
  * flow. Responsibility names are intentionally not used as allowlists: a
  * centralized policy may use arbitrary method names, while a handler that only
- * borrows familiar names remains non-centralized.
+ * borrows familiar names remains non-centralized. Calibration labels and
+ * condition ids are not inputs; a condition named oracle only reaches observed
+ * when the declared Practice responsibilities are actually present.
  */
 
 const appRoot = resolve(Bun.argv[2] ?? "public/starter/app");

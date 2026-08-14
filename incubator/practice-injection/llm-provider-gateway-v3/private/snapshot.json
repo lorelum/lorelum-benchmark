@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "be8909b68fd8f34ecf7b2efb7e2bcd5ec255ce9d405d608731739060a8e6c227",
+  "snapshot_id": "4493cf203f1408e5c1bab86959cde789537ebfc39cb2b46f2f69f81de66cc54b",
   "files": {
     "private/calibration.md": "3af4adade1d9b823c2cf5a41c2e9436ae7b61b5678b2b7fca4eb6a85dea7434f",
     "private/calibration/run.ts": "b56f01029cafe13f5adfd96b57ef7eb43b6e439f16b214e2f7b401c9a1576a66",
@@ -93,7 +93,7 @@
     "private/evaluator/runtime-closure.yaml": "82e3192b1142ca3c13c3e5520f8f8e73c3b403e5c3ee4d5e17d644db60c7ecf5",
     "private/evaluator/runtime-closure/bun.lock": "5dbdeaec4ac2f02fb0457e8c5070f1b2a708719dffa07ab43957a911c5c7bd7f",
     "private/evaluator/runtime-closure/package.json": "da71ac16a971bde1d5e2910d534d27212030ed281c52912b8e53ce9e399ca9af",
-    "private/evaluator/verify-provider-gateway-v3.ts": "9f9b17af572dcfc816e512b91112511a19a1253ada3789b9e7ce693255b6b040",
+    "private/evaluator/verify-provider-gateway-v3.ts": "c380472fe320915fc5813eb9b7eb4db16d8efc7b579c0d967da00230a3989d77",
     "private/execution/git-history.yaml": "69813b70f669119a6f46a4f747e0554cb63e39179c135af9c2172f4ac69f2642",
     "private/execution/tool-policy.yaml": "6acd34a225913fd789a5b00003e103b239bbcd3afd876d35117d67062a72d11a",
     "private/oracle.yaml": "1841da6ca15d7dc65b846f7163b2860a5d5decbf3f385d163b42fd17c80ee0a3",

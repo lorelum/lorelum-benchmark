@@ -65,7 +65,7 @@
 ### 评分与决策
 
 - semantic 仍由公开 `bun run test` 决定。
-- `practice_observation` 由 v3 泛化探针决定。
+- `practice_observation` 只由 v3 泛化探针读取 candidate 源码决定；calibration 的 condition id 与 expected label 不作为探针输入，不因历史 condition 成功而放行。
 - `joint_pass = semantic=pass && practice_observation=observed`，不引入加权或 judge 覆盖。
 - judge-agent/generic/v2 保持冻结并仅作 soft sidecar；它不参与 `practice_observation` 或 joint-pass 派生。
 

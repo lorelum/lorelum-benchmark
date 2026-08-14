@@ -31,7 +31,7 @@ The kernel staged the private `quality-probe/v3` fixtures and public starter, re
 | oracle-sync-ledger | pass / observed | Derived from #168 oracle attempt-2: gateway owns synchronous record write, filtered aggregation, and `appendFileSync` persistence in one non-transport module. |
 | ledger-naming-variant | pass / observed | Record persistence, reads, and aggregation use renamed symbols while remaining in one non-transport module. |
 
-Labels were fixed by source review; #168 judge v2 rationale was used only as corroborating evidence. The probe reports structural evidence paths and function names (for example policy module/function and ledger module), not identifier-allowlist matches. The deterministic matrix now has 14 cases: 2 extra real PI-derived regressions from the historical v2 replay, plus the public starter.
+Labels were fixed by source review; #168 judge v2 rationale was used only as corroborating evidence. Expected labels are calibration assertions only and are never passed to the probe. The probe reports structural evidence paths and function names (for example policy module/function and ledger module), not identifier-allowlist matches. The deterministic matrix now has 14 cases: 2 extra real PI-derived regressions from the historical v2 replay, plus the public starter.
 
 ## Judge Boundary
 

@@ -15,7 +15,7 @@ bun run validate
 - Workspace validation: `Workspace layout is valid.` and `Snapshots are intact.`
 - v3 public/private leak audit: no forbidden private, oracle, calibration, evaluator, condition, scoring, probe, hash, or joint-pass markers in `public/`.
 - Frozen-object audit: no changes to `llm-provider-gateway-v1`, `llm-provider-gateway-v2`, `judge-agent/generic/v2`, suites, treatments, environments, records, or experiments.
-- Historical PI replay against the saved #168 v2 workspaces: baseline `0/3 observed`, oracle `3/3 observed`, irrelevant `0/3 observed`; the two previously misclassified attempts are now locked as private regression overlays.
+- Historical PI replay against the saved #168 v2 workspaces is an observational audit, not a target: baseline `0/3 observed`, oracle `3/3 observed`, irrelevant `0/3 observed`. Each oracle attempt was source-audited against the declared Practice; the probe itself never reads condition ids or expected labels.
 
 ## Boundary
 
