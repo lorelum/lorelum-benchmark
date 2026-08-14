@@ -1,0 +1,13 @@
+schema_version: profile-diagnostic-plan/v2
+id: llm-provider-gateway-v2-three-condition-diagnostic-flash
+schedule_seed: llm-provider-gateway-v2-diagnostic-flash-2026-08-13
+schedule_algorithm: cyclic-latin-square/v1
+repetitions: 3
+independent_candidate_threshold: 1
+conditions: [baseline, oracle-practice, irrelevant-practice]
+candidates:
+  - id: llm-provider-gateway-v2
+    path: incubator/practice-injection/llm-provider-gateway-v2
+    source_commit: b9f206e6e319a71fe80946fbb1d1ffe2a836d304
+    snapshot_id: b6f53af939759a6fbbfe24a094b2f225483b0877df62a411f4f11475dd71efb4
+    profile_input_hash: 29a395a0fe16d6322abc23f6401556fc35b386f766eb954538d4f2d7d3ed3fb2
