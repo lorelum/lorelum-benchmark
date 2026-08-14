@@ -187,3 +187,7 @@ r9–r12 构成完整证据链：r9 中 `PX-47` 只是可忽略标签；r10 中 
 ### r13 实施结果
 
 `async-cleanup-v3` 已创建并完成离线验证。现象级公开测试两条（范围切换保留、后台协调失败后前台结果保持）：naive 失败、reference/equivalent/anti-pattern 均通过（临时 Playwright 工作区验证）。judge v2（`skill-trigger-source-authority/v2`）校准通过（真实 LLM，deepseek-v4-pro）：reference 100、equivalent 100、anti-pattern（后台永不覆盖）63，thresholds reference_min 90 / anti_pattern_max 75 / gap 15（anti 为单维度陷阱实现，前台维度完善，故阈值较 practice-layered-api 宽松）。三层区分度成立：naive 测试失败（地板）、reference/equiv 测试+judge 双过、anti-pattern 过测试但 judge 判不符合（陷阱），agent 无法从现象级测试推断 500ms 窗口规则，查询成为消除不确定性的唯一途径。r13 发现门待运行。
+
+### r13 发现门结果
+
+三次 r13 发现门均有效，但 `skills_list` 发现、`lorelum_query` 查询与完整链路均为 0/3，质量 pilot 被阻止，结果 `diagnostic-only`。三次 attempt 都实现了“来源权威”类变体（attempt-3 为后台永不改变状态，attempt-1/2 为协调成功时静默刷新、被更新前台忽略），均未包含 500ms 窗口条件。现象级公开测试未泄露窗口规则，agent 选择“猜测一个合理实现”而非查询。r13 因此证明：即使规则真正不可推断（测试无法泄露），该模型仍不会主动消除不确定性——不查询是稳定的行为模式，而非“规则可推断”的副产品。这是本轨道最强的负证据；判断 agent 实现是否符合窗口规则可对三次 workspace 跑 judge v2 作补充确认。
