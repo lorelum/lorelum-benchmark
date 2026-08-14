@@ -107,7 +107,7 @@
 
 - [x] 在 Issue #96 与 OpenSpec 记录 r12 规划：公开测试仅验证回归，私有 judge 依据未公开 PX-47 规则判定政策符合性；task.md 如实声明验收方式但不要求调用工具。 [写入范围：Issue #96、OpenSpec]
 - [x] 新建 skill-trigger 专属 judge provider 与私有 rubric（编码来源权威规则），注册到 judge providers；rubric/评分逻辑不得进入 agent 工作区或公开题面。 [写入范围：src/benchmark/judge/、v2 private]
-- [ ] 先做 judge 校准：reference 判为符合、anti-pattern（最新请求守卫）判为不符合，记录校准矩阵；未通过校准前不进入模型运行。 [写入范围：src/benchmark/judge/、v2 private]
+- [x] 先做 judge 校准：reference 判为符合、anti-pattern（最新请求守卫）判为不符合，记录校准矩阵；未通过校准前不进入模型运行。校准矩阵（deepseek-v4-pro）：reference 100/100，anti-pattern 30/100，gap 70 ≥ 45，calibration_pass=true。 [写入范围：src/benchmark/judge/、v2 private]
 - [x] 更新公开 task.md 验收声明，保持不泄露规则、不出现 Lorelum/Skill/Practice/查询等词。 [写入范围：v2 public]
 - [x] run-local 在质量 pilot 阶段调用 judge provider，记录 judge sidecar 与 redacted 输出；处理组 success 收紧为查询链路 + 公开测试 + judge 符合。 [写入范围：v2 private execution]
 - [ ] 运行离线校验与 r12 发现门（三次），按门禁判定并记录结果。 [写入范围：v2 private、scratch/]

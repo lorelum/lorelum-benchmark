@@ -1,9 +1,10 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "a1f99ce9d54198fa61274831cb00fd1a71145beeae0023bb27dc1c5321d966e2",
+  "snapshot_id": "a66ad226da93642982050922f92d04f5714ac86c5e68c428bfeb6baf3270b532",
   "files": {
     "private/README.md": "4b0e2f25b368f2ec20ea9d92b4b171c7effb61a824df98ee9d93569c62105010",
+    "private/calibration/judge-calibrate.ts": "5c3fe50825a22f2c4ef64cba3bd8bad66ef40b42ac664ad36811e10d8cce9492",
     "private/calibration/run.ts": "336d5c7a7d59c9ffd450a8e6b8c0ce20f209d9b757461c551903d9cc5d8fc768",
     "private/calibration/sets.yaml": "33c4da47f62ecc4844236ba386b9bc1458b0e63b9e21adb3860cb6b367692a03",
     "private/calibration/sets/cleanup-probe/v2/overlays/anti-pattern/src/Dashboard.tsx": "b4719e35709eac5c59b4cb77adc573331f9d355b66dcba33f50f0f8b965da5a4",
