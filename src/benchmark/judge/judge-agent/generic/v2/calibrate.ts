@@ -7,8 +7,8 @@ import { generateRubricCached, parseRubricText } from "./rubric";
 import { scoreCandidate } from "./score";
 
 const candidateRoot = resolve(Bun.argv[2] ?? process.env.LORELUM_CALIBRATION_CANDIDATE_PATH ?? ".");
-const fixtureOrder = (process.env.LORELUM_CALIBRATION_FIXTURES ?? "reference,equivalent,anti-pattern")
-  .split(",").map((value) => value.trim()).filter(Boolean);
+const requestedFixtureOrder = process.env.LORELUM_CALIBRATION_FIXTURES;
+const baseFixtureOrder = ["reference", "equivalent", "anti-pattern"];
 
 function threshold(name: string, fallback: number): number {
   const raw = process.env[`LORELUM_JUDGE_${name}`];
@@ -35,6 +35,15 @@ const setKey = requestedSetKey ?? Object.keys(staged.sets).find((key) =>
 if (!setKey) throw new Error("LORELUM_CALIBRATION_SET_KEY must be provided (no staged set covers reference/equivalent/anti-pattern)");
 const set = staged.sets[setKey];
 if (!set) throw new Error(`Missing staged calibration set: ${setKey}`);
+const availableNamingVariant = ["naming-variant", "oracle-naming-variant-a"].find((name) => Boolean(set.fixtures[name]));
+const availableNamingCollision = ["naming-collision", "irrelevant-naming-collision"].find((name) => Boolean(set.fixtures[name]));
+const fixtureOrder = requestedFixtureOrder
+  ? requestedFixtureOrder.split(",").map((value) => value.trim()).filter(Boolean)
+  : [
+      ...baseFixtureOrder,
+      ...(availableNamingVariant ? [availableNamingVariant] : []),
+      ...(availableNamingCollision ? [availableNamingCollision] : []),
+    ];
 const taskMd = await Bun.file(resolve(candidateRoot, "public", "task.md")).text();
 if (!judgeLlmEnv().real) throw new Error("real judge calibration requires LORELUM_JUDGE_REAL=1");
 const complete = httpJudgeCompletion();
@@ -114,6 +123,8 @@ const checks = {
   anti_pattern_separated: antiPattern?.state === "observed" && antiPattern.score <= antiPatternMax && ((reference?.score ?? 0) - antiPattern.score) >= antiPatternGap,
   public_starter_below_reference: publicStarter === undefined || (publicStarter.state !== "observed") || (reference !== undefined && publicStarter.score < reference.score),
   all_rubric_hashes_match: Object.values(results).every((entry) => entry.rubric_hash === rubricHash),
+  ...(availableNamingVariant ? { naming_variant_available: results[availableNamingVariant] !== undefined } : {}),
+  ...(availableNamingCollision ? { naming_collision_available: results[availableNamingCollision] !== undefined } : {}),
 };
 const passed = Object.values(checks).every(Boolean);
 console.log(JSON.stringify({

@@ -1,0 +1,17 @@
+delivery_template: project-convention/v1
+length_metric: project-convention/v1:utf8-rendered-characters
+cards:
+  - id: llm-gateway.provider-gateway
+    version: v2
+    path: llm.provider-gateway.v2.md
+    rendered_characters: 387
+    target_path: docs/ai-gateway-guide.md
+  - id: llm-gateway.pagination
+    version: v1
+    path: irrelevant.pagination.v1.md
+    rendered_characters: 407
+    target_path: docs/ai-gateway-guide.md
+comparison:
+  maximum_relative_difference: 0.10
+  actual_relative_difference: 0.05167958656330749
+  independently_reviewed: true

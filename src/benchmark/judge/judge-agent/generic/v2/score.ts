@@ -13,9 +13,18 @@ function fail(message: string): never {
 }
 
 function normalizedInteger(value: unknown, label: string): number {
-  const number = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  const match = typeof value === "string" ? value.trim().match(/^-?\d+(?:\.\d+)?/) : undefined;
+  const raw = typeof value === "number" ? value : match ? match[0] : Number.NaN;
+  const number = Number(raw);
   if (!Number.isFinite(number)) fail(`${label} must be numeric`);
   return Math.round(number);
+}
+
+function hasEvidenceBasis(rationale: string): boolean {
+  const text = rationale.trim().toLowerCase();
+  if (text.length < 12) return false;
+  const behaviorWords = ["transport", "boundary", "adapter", "handler", "policy", "ledger", "budget", "idempotency", "metering", "wire", "provider", "state", "request", "response", "stream", "record"];
+  return behaviorWords.some((word) => text.includes(word));
 }
 
 export function assertScoredCandidate(value: unknown): ScoredCandidate {
@@ -38,6 +47,7 @@ export function assertScoredCandidate(value: unknown): ScoredCandidate {
     const points = normalizedInteger(c.points, `criterion ${String(c.id)} points`);
     if (points < 0) fail(`criterion ${String(c.id)} points must be a non-negative integer`);
     if (typeof c.rationale !== "string" || !c.rationale) fail(`criterion ${String(c.id)} rationale is required`);
+    if (!hasEvidenceBasis(c.rationale)) fail(`criterion ${String(c.id)} rationale must cite concrete responsibility/call/data-flow behavior, not only a name or path`);
     criteria.push({ id: c.id, points, rationale: c.rationale });
   }
   return { state, criteria, confidence };
@@ -59,7 +69,7 @@ export function scoreSystemPrompt(): string {
     "Return ONLY a JSON object with one of these exact shapes:",
     '{"criteria":[{"id":"dimension-id","points":0,"rationale":"one or two sentences of concrete evidence from the candidate code"}],"confidence":85}',
     '{"state":"indeterminate","reason":"short reason","confidence":50}',
-    "Rules: score EVERY rubric dimension exactly once; points are integers between 0 and the dimension's max_points; confidence is 0-100; rationale MUST cite concrete candidate code (file/symbol/behavior), not generic praise.",
+    "Rules: score EVERY rubric dimension exactly once; points are integers between 0 and the dimension's max_points; confidence is 0-100; rationale MUST cite concrete candidate responsibility/call/data-flow behavior (not only a function, field, directory, or path name) and explain whether the named code actually owns, delegates, or duplicates that responsibility.",
     "If you cannot judge because required files are missing or the candidate is incomplete, return the indeterminate shape with a reason.",
   ].join("\n");
 }

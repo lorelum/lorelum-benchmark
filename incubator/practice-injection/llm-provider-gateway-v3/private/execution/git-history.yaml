@@ -1,0 +1,28 @@
+# Per-condition git history materialized by the diagnostic runner.
+# The last commit captures every remaining file (add -A), including the
+# condition-injected convention document (docs/ai-gateway-guide.md) for the
+# oracle-practice / irrelevant-practice conditions; the baseline workspace has
+# no convention document and therefore a slightly different (smaller) history.
+# The tree is reproduced by this manifest plus the condition injection payload.
+identity:
+  name: ops-admin
+  email: ops@meridian.internal
+commits:
+  - message: "chore: scaffold AI gateway service"
+    files:
+      - package.json
+      - bun.lock
+      - tsconfig.json
+      - .gitignore
+      - src/types.ts
+  - message: "feat(api): add OpenAI chat path and gateway API docs"
+    files:
+      - src/openai.ts
+      - src/server.ts
+      - docs/gateway-api.md
+  - message: "test: cover gateway chat, usage and error behaviors"
+    files:
+      - tests/stubs.ts
+      - tests/gateway.spec.ts
+  - message: "feat: gateway shell awaiting wiring"
+    files: []
