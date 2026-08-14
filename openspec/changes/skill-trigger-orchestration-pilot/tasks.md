@@ -100,4 +100,5 @@
 - [x] 诊断 r10 工具可见性：无提示会话中 `skills_list`/`skills_load` 对模型可见（共 8 个工具），排除 harness 暴露问题；确认失败源于题面动机不足。 [写入范围：scratch/]
 - [x] 新增公开回归用例“后台协调不得覆盖前台手动重载的结果”，使仅按操作开始时间守卫的实现失败；reference 6/6 通过，naive 与 anti-pattern 在该用例失败（临时 Playwright 工作区验证）。 [写入范围：v2 public]
 - [x] 公开 task.md 显式引用 `docs/project-policies/PX-47.md`（工作区不含该文件），形成读取 `ENOENT` 的真实信息缺口。 [写入范围：v2 public]
-- [ ] 重建 snapshot 并运行 validate、定向测试、strict OpenSpec、泄露审计。 [写入范围：v2 private、scratch/]
+- [x] 重建 snapshot 并运行 validate、定向测试、strict OpenSpec、泄露审计。 [写入范围：v2 private、scratch/]
+- [x] 运行三次 r11 发现门：三次均有效但均未查询；agent 从公开回归断言推导出正确来源权威规则，未读取政策文档，质量 pilot 被阻止，记录为 `diagnostic-only`。 [写入范围：scratch/]
