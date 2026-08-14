@@ -8,6 +8,7 @@ import { loadRubric } from "./practice-layered-api/v2/rubric";
 import { scoreSourceV2 } from "./practice-layered-api/v2/score";
 import { sourceMapFromDiff } from "./source-map";
 import { sourceAuthorityProvider } from "./skill-trigger-source-authority/v1/provider";
+import { sourceAuthorityProvider as sourceAuthorityProviderV2 } from "./skill-trigger-source-authority/v2/provider";
 
 /** login Practice judge v2 as a deterministic local judge provider. */
 export const practiceLayeredApiV2Provider: JudgeProvider = {
@@ -36,6 +37,7 @@ export const judgeProviders: Record<string, JudgeProvider> = {
   "judge-agent/generic/v1": judgeAgentGenericV1Provider,
   "judge-agent/generic/v2": judgeAgentGenericV2Provider,
   "skill-trigger-source-authority/v1": sourceAuthorityProvider,
+  "skill-trigger-source-authority/v2": sourceAuthorityProviderV2,
 };
 
 export function resolveJudgeProvider(id: string): JudgeProvider | undefined {

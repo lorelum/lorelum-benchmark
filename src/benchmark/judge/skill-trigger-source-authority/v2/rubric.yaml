@@ -1,0 +1,55 @@
+id: skill-trigger-source-authority-judge-rubric
+version: v2
+judge:
+  id: skill-trigger-source-authority
+  version: "2.0.0"
+prompt: >-
+  Score only whether the candidate implementation honors the unpublished
+  project policy PX-47 that governs the result authority of project operation
+  sources. Ignore visual polish and unrelated product quality. Accept
+  equivalent source structure, naming, and mechanisms (request ids, authority
+  tokens, timestamps, cleanup effects) as long as the observable authority
+  rules hold.
+dimensions:
+  - id: foreground-authority
+    max_points: 30
+    description: >-
+      Foreground operations (navigation and manual reload of the current
+      scope) own the view result for their scope; their success or failure
+      outcome is applied unless superseded by a newer foreground operation.
+  - id: background-window-authority
+    max_points: 30
+    description: >-
+      Background reconciliation is conditionally authoritative: it may apply
+      its result only when it started with no foreground operation in flight AND
+      more than 500ms has elapsed since the most recent foreground operation
+      started. A correct implementation MUST include an explicit elapsed-time /
+      window condition (for example comparing timestamps) so that reconciliation
+      CAN apply when the window is satisfied; an implementation that never
+      applies reconciliation results (hard-coded discard, fire-and-forget with
+      no application path) or that applies them unconditionally violates the
+      policy. When the window is not satisfied, reconciliation success or
+      failure must not change the project list, loading, or error view.
+  - id: superseded-foreground
+    max_points: 25
+    description: >-
+      A foreground operation superseded by a newer foreground operation must
+      not settle the view, on either its success or failure path.
+  - id: state-feedback-preserved
+    max_points: 15
+    description: >-
+      Existing loading, success, error, reload, and reconciliation experiences
+      remain intact. While a foreground operation is in flight or within the
+      reconciliation window, a background reconciliation must not change the
+      project list, loading, or error view; when the window is satisfied, a
+      reconciliation result (success or failure) may update the view.
+repetition:
+  count: 1
+  aggregate: single
+thresholds:
+  reference_min: 90
+  equivalent_tolerance: 0
+  anti_pattern_max: 75
+  anti_pattern_gap: 15
+  low_confidence: 65
+  disagreement_spread: 0

@@ -120,7 +120,7 @@
 
 ## 16. r13 规则不可推断场景（规划）
 
-- [ ] 起草并确认 r13 规划：公开测试只断言现象、PX-47 规则仅由 judge 判定、处理组 success 需真实查询链路；确认领域、规则形态、baseline 区分度三个决策点。 [写入范围：Issue #96、OpenSpec]
-- [ ] 设计反直觉不可推断规则并校准：reference（符合）与至少两种“貌似合理但不符合”实现（最新获胜、后台永不覆盖）应分别被 judge 判为符合/不符合，且均通过现象级公开测试。 [写入范围：src/benchmark/judge/、v2 private]
-- [ ] 新建 async-cleanup-v3 revision（若确认），迁移现象级测试与规则；v2 证据冻结。 [写入范围：v2 private、v3]
+- [x] 起草并确认 r13 规划：公开测试只断言现象、PX-47 规则仅由 judge 判定、处理组 success 需真实查询链路；确认领域（复用）、规则形态（窗口阈值型）、baseline 区分度（naive 公开测试失败）。 [写入范围：Issue #96、OpenSpec]
+- [x] 设计窗口阈值规则并校准 judge v2：reference/equi 100 分（符合）、anti-pattern（后台永不覆盖）63 分（不符合）、naive 公开测试失败；现象级测试下 reference/equi/anti 均通过。校准阈值 reference_min 90 / anti_pattern_max 75 / gap 15。 [写入范围：src/benchmark/judge/、v3 private]
+- [x] 新建 async-cleanup-v3 revision：现象级公开测试、窗口规则 Practice 卡、judge v2、简化 evaluator 与 calibration；v2 证据冻结。 [写入范围：v2 private、v3]
 - [ ] 运行 r13 发现门（三次），按门禁判定并记录。 [写入范围：v3、scratch/]
