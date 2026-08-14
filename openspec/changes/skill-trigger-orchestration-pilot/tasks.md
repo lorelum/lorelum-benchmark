@@ -111,3 +111,8 @@
 - [x] 更新公开 task.md 验收声明，保持不泄露规则、不出现 Lorelum/Skill/Practice/查询等词。 [写入范围：v2 public]
 - [x] run-local 在质量 pilot 阶段调用 judge provider，记录 judge sidecar 与 redacted 输出；处理组 success 收紧为查询链路 + 公开测试 + judge 符合。 [写入范围：v2 private execution]
 - [x] 运行离线校验与 r12 发现门（三次）：三次均有效但均未查询，agent 从公开材料推断出正确来源权威规则且引用 PX-47，质量 pilot 被阻止，记录为 `diagnostic-only`。 [写入范围：v2 private、scratch/]
+
+## 15. 证据链收敛
+
+- [x] 收敛 r9–r12 证据链：12 次有效 attempt 中查询链路 0/12，结论为「可推断场景下无自主查询」；暂停 async-cleanup-v2 题面迭代，冻结证据链，不创建正式 record、不升级 suites。 [写入范围：OpenSpec]
+- [ ] 重审实验设定（规则不可推断性 / 模型差异 / 任务类型 / 检索入口语义），先规划后实施。 [写入范围：Issue #96、OpenSpec]
