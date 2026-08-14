@@ -37,6 +37,12 @@
 - `practice-login-page-oracle-probe` 是本规则落库时唯一的引导例外：#74 在其首个
   OpenSpec commit 和 PR 创建后才建立。该顺序不得作为合规先例；本规则对其后的新
   benchmark change 严格生效。
+- 修复现有 runner、validation、流程或文档缺陷，且不改变评测语义、candidate/snapshot
+  身份、record 或结论解释的改动，可直接在独立分支提交 PR，不需要先创建 issue 或 OpenSpec
+  change；PR 正文必须说明根因、修复边界与验证方式。
+- 用户明确授权的本地测试、诊断或 smoke 可以直接执行，不需要单独授权 issue；仍不得创建
+  正式 record、升级 suite revision，或把测试结果当作正式结论。OpenSpec strict、
+  public/private 泄露审计与生命周期门禁继续约束正式运行。
 - 对 suite、任务、schema、evaluator、runner、treatment、environment、实验协议或记录的
   新增与修改，必须先确认已有可追溯 GitHub issue；没有时先创建一个只收敛单一问题、边界、
   依赖、验收口径与验证要求的 issue。
