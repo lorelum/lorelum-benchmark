@@ -199,3 +199,7 @@ r9–r12 构成完整证据链：r9 中 `PX-47` 只是可忽略标签；r10 中 
 ### r14 实施结果
 
 `async-cleanup-v4` 已创建并完成离线验证。协调数据可见化（协调后列表新增一项），公开测试新增「运行后台协调后显示协调结果」（生效断言 + 失败信息指向政策文档）。校准矩阵验证：naive 2 失败（地板）、reference/equivalent 7/7 通过、anti-pattern（approximate：协调成功无条件生效、失败忽略）7/7 通过但 judge v2 判 30 分不符合（陷阱）、never-apply 协调生效断言失败。judge v2 校准通过（deepseek-v4-pro）：reference 100、equivalent 100、approximate 30，thresholds reference_min 90 / anti_pattern_max 75 / gap 15。r14 让常识实现必然失败（任何实现都失败一个现象级断言），失败反馈指向政策文档，为 agent 提供「继续猜 vs 查询」的真实选择。发现门待运行。
+
+### r14 发现门结果
+
+三次 r14 发现门均有效：attempt-1 实现近似实现（协调成功生效、失败忽略）并通过全部 7 个测试（未查询）；attempt-2 主动调用 `skills_list` 两次（被锚点校验拒绝），随后从测试时序线索（waitForTimeout 600）自行推断 500ms 窗口规则并正确实现（与 reference 等价）；attempt-3 未查询。发现门因无完整链路判 fail，结果 diagnostic-only。r14 是轨道首次出现「自主查询意图」：反馈循环设计（协调可见化 + 失败反馈）使 agent 在遇到规则缺口时尝试使用检索工具，但被 harness 锚点校验拒绝（疑似 public_refs 引用未用 read 工具读取的 task.md）。修复锚点误拒后重跑，可能形成首个正信号。r14 因此把负证据推进到「查询意图已出现、链路被 harness 阻断」。

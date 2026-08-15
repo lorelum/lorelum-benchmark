@@ -130,4 +130,4 @@
 - [x] 新建 async-cleanup-v4：协调数据可见化、现象级双断言（协调生效/前台保持）、失败信息指向政策文档；v3 冻结。 [写入范围：v4 public/private]
 - [x] 校准矩阵验证：naive 2 失败（地板）、reference/equiv 7/7 通过 + judge 100、anti-pattern（approximate）7/7 通过但 judge 30 分不符合（陷阱）、never-apply 协调生效断言失败。 [写入范围：v4 private、scratch/]
 - [x] 离线校验：validate、contracts、v4 定向、strict OpenSpec、泄露审计、diff check；v4 snapshot 重建。 [写入范围：v4、scratch/]
-- [ ] 运行 r14 发现门（三次），按门禁判定并记录。 [写入范围：v4、scratch/]
+- [x] 运行 r14 发现门（三次）：attempt-2 主动调用 skills_list 两次（被锚点拒绝）后自行推断 500ms 规则并正确实现；attempt-1/3 未查询；发现门 fail，结果 diagnostic-only。首次出现自主查询意图，疑为 harness 锚点误拒，需诊断修复后重跑。 [写入范围：v4、scratch/]
