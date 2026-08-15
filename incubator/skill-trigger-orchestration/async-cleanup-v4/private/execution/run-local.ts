@@ -296,9 +296,11 @@ async function invalidityReasons(
   pi: CommandResult,
   workspaceFilesAfterAgent: string[],
   auditEvents: AuditEvent[],
-  trace: Record<string, unknown>
+  trace: Record<string, unknown>,
+  workspace: string
 ): Promise<string[]> {
   const reasons = traceAuditIssues(condition, auditEvents);
+  reasons.push(...await publicTestTamperReasons(workspace));
   if (/Extension error\b/i.test(pi.stderr)) reasons.push("extension error in Pi stderr");
   if (workspaceFilesAfterAgent.some((file) => file.includes("private/") || file.includes("practices/"))) reasons.push("agent workspace contains private material");
   const privateRoot = resolve(candidateRoot, "private").replaceAll("\\", "/");
@@ -307,6 +309,27 @@ async function invalidityReasons(
   if (condition.practice !== "none") {
     const card = await readFile(resolve(candidateRoot, condition.practice.path), "utf8");
     if (visibleText.includes(card)) reasons.push("execution output contains Practice card source");
+  }
+  return reasons;
+}
+
+// agent 不得修改公开测试（验收断言）；篡改 tests/** 判定为无效（作弊路径）。
+async function publicTestTamperReasons(workspace: string): Promise<string[]> {
+  const reasons: string[] = [];
+  const starterTests = resolve(candidateRoot, "public/starter/app/tests");
+  let tests: string[];
+  try {
+    tests = await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: starterTests, onlyFiles: true }));
+  } catch { return reasons; }
+  for (const rel of tests) {
+    const starterFile = resolve(starterTests, rel);
+    const agentFile = resolve(workspace, "app/tests", rel);
+    try {
+      if (await hashFile(starterFile) !== await hashFile(agentFile)) {
+        reasons.push("agent modified public tests");
+        break;
+      }
+    } catch { /* 文件缺失也视为篡改 */ reasons.push("agent modified public tests"); break; }
   }
   return reasons;
 }
@@ -379,7 +402,7 @@ async function runAttempt(
   const auditEvents = await readAudit(auditPath);
   const trace = observedTrace(condition, auditEvents);
   await writeJson(resolve(attemptPath, "trace.json"), trace);
-  const invalidReasons = await invalidityReasons(condition, pi, workspaceFilesAfterAgent, auditEvents, trace);
+  const invalidReasons = await invalidityReasons(condition, pi, workspaceFilesAfterAgent, auditEvents, trace, workspace);
   const valid = invalidReasons.length === 0;
   const completeTrace = (trace as { complete?: unknown }).complete === true;
   const traceEvents = (trace as { events: AuditEvent[] }).events;
@@ -461,7 +484,7 @@ async function runToolQualification(
   const auditEvents = await readAudit(auditPath);
   const trace = observedTrace(condition, auditEvents);
   await writeJson(resolve(attemptPath, "trace.json"), trace);
-  const invalidReasons = await invalidityReasons(condition, pi, workspaceFilesAfterAgent, auditEvents, trace);
+  const invalidReasons = await invalidityReasons(condition, pi, workspaceFilesAfterAgent, auditEvents, trace, workspace);
   const traceEvents = (trace as { events: AuditEvent[] }).events;
   const queryAnchored = traceEvents.some((event) => event.event === "practice_query_issued" && Array.isArray(event.public_refs) && event.public_refs.length > 0);
   const qualified = pi.code === 0 && !pi.timedOut && invalidReasons.length === 0 && (trace as { complete?: unknown }).complete === true && queryAnchored;
