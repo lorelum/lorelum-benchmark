@@ -207,3 +207,7 @@ r9–r12 构成完整证据链：r9 中 `PX-47` 只是可忽略标签；r10 中 
 ### r14b 锚点修复后重跑
 
 锚点修复（task.md 经 @task.md 注入视为初始公开输入）已落地并有隔离测试覆盖。r14b 三次发现门均无查询（attempt-1/2 超时 889s/746s、attempt-3 347s 正常），发现门仍 fail，结果 diagnostic-only。r14a 的查询尝试（attempt-2 两次 skills_list）为偶发事件，本轮回合未复现；无法确认修复是否让查询链路成功。超时与 pi 残留子进程阻塞 runner 有关（清理残留后 runner 继续），属 runner 稳定性问题。r14 表明：反馈循环设计偶发触发查询意图，但远非稳定。
+
+### r14c 首个完整查询链路
+
+锚点修复 + runner 超时修复后，r14c 三次发现门中 attempt-2 完成完整自主查询链路（skill_discovered → skill_loaded → 多次 practice_query issued/resolved，trace.complete=true，agent 自述 "discovered via the project guidance"）；attempt-1/3 为近似实现未查询。发现门按 3/3 协议仍 fail，结果 diagnostic-only。但 attempt-2 的实现为 approximate（协调成功生效、失败静默，无 500ms 窗口），说明 agent 查询到约束却未完整采纳窗口规则。综合 r14a/r14c：6 次中 2 次出现查询意图、1 次完整链路，触发率约 1/3；「反馈循环 + 锚点修复」使自主查询从 0 变为可复现但远非稳定。
