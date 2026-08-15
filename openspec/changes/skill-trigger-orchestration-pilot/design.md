@@ -195,3 +195,7 @@ r9–r12 构成完整证据链：r9 中 `PX-47` 只是可忽略标签；r10 中 
 ### r13 judge 补充判定
 
 对 r13 三次 attempt 的 workspace 实现跑 judge v2（deepseek-v4-pro）：attempt-1 30 分、attempt-2 60 分、attempt-3 70 分，三次 `background-window-authority` 均为 0 分（均未实现 500ms 窗口条件）。结合 0/3 查询，证据链闭合：在规则不可推断场景下，agent 不查询且实现不符合规则——「不查询」不是理性回避（查询可避免猜错），而是该模型在该任务设定下的稳定行为模式。这是本轨道最终最强负证据。
+
+### r14 实施结果
+
+`async-cleanup-v4` 已创建并完成离线验证。协调数据可见化（协调后列表新增一项），公开测试新增「运行后台协调后显示协调结果」（生效断言 + 失败信息指向政策文档）。校准矩阵验证：naive 2 失败（地板）、reference/equivalent 7/7 通过、anti-pattern（approximate：协调成功无条件生效、失败忽略）7/7 通过但 judge v2 判 30 分不符合（陷阱）、never-apply 协调生效断言失败。judge v2 校准通过（deepseek-v4-pro）：reference 100、equivalent 100、approximate 30，thresholds reference_min 90 / anti_pattern_max 75 / gap 15。r14 让常识实现必然失败（任何实现都失败一个现象级断言），失败反馈指向政策文档，为 agent 提供「继续猜 vs 查询」的真实选择。发现门待运行。

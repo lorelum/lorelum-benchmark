@@ -124,3 +124,10 @@
 - [x] 设计窗口阈值规则并校准 judge v2：reference/equi 100 分（符合）、anti-pattern（后台永不覆盖）63 分（不符合）、naive 公开测试失败；现象级测试下 reference/equi/anti 均通过。校准阈值 reference_min 90 / anti_pattern_max 75 / gap 15。 [写入范围：src/benchmark/judge/、v3 private]
 - [x] 新建 async-cleanup-v3 revision：现象级公开测试、窗口规则 Practice 卡、judge v2、简化 evaluator 与 calibration；v2 证据冻结。 [写入范围：v2 private、v3]
 - [x] 运行 r13 发现门（三次）：三次均有效但均未查询；agent 实现来源权威类变体但无窗口规则，质量 pilot 被阻止，记录为 `diagnostic-only`；不查询在规则不可推断下依然稳定。 [写入范围：v3、scratch/]
+
+## 17. r14 反馈循环（async-cleanup-v4）
+
+- [x] 新建 async-cleanup-v4：协调数据可见化、现象级双断言（协调生效/前台保持）、失败信息指向政策文档；v3 冻结。 [写入范围：v4 public/private]
+- [x] 校准矩阵验证：naive 2 失败（地板）、reference/equiv 7/7 通过 + judge 100、anti-pattern（approximate）7/7 通过但 judge 30 分不符合（陷阱）、never-apply 协调生效断言失败。 [写入范围：v4 private、scratch/]
+- [x] 离线校验：validate、contracts、v4 定向、strict OpenSpec、泄露审计、diff check；v4 snapshot 重建。 [写入范围：v4、scratch/]
+- [ ] 运行 r14 发现门（三次），按门禁判定并记录。 [写入范围：v4、scratch/]

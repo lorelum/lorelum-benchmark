@@ -1,0 +1,41 @@
+version: v2
+shared_execution:
+  agent:
+    id: local-pi
+    version: v2
+  pi_version: 0.80.10
+  model:
+    id: deepseek/deepseek-v4-pro
+  additional_shared_system_prompt: none
+  additional_shared_system_prompt_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  tool_policy: private/execution/tool-policy.yaml
+  tool_policy_sha256: bc0b37f6384e44d686b80a940c48487f578dd9b607f47381a8213e1006b1b760
+  budget:
+    max_duration_minutes: 10
+  judge:
+    provider: skill-trigger-source-authority/v2
+    reference_min: 90
+  workspace: clean-copy-per-attempt
+  repetitions: 3
+conditions:
+  - id: baseline
+    status: declared
+    channel: none
+    practice: none
+  - id: lorelum-retrieval
+    status: declared
+    channel: mock-retrieval-tool-call
+    practice:
+      path: private/practices/oracle.project-operation-authority.v1.md
+      sha256: 303ec1a5f5985ad52db53722875f34af7f732c21db199007816056ebf584e2f2
+  - id: irrelevant-practice
+    status: declared
+    channel: mock-retrieval-tool-call
+    practice:
+      path: private/practices/irrelevant.form-validation.v1.md
+      sha256: a4bd13b618db0aa162d594b13356f2a6cc6889a32ade76b5908559efaeaad8c4
+decision_rule:
+  metric: joint-pass-count
+  relation: lorelum-passes-and-irrelevant-fails
+  controls: [baseline, irrelevant-practice]
+  otherwise: diagnostic-only

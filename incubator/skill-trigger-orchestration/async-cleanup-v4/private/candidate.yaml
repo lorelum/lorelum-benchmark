@@ -1,0 +1,44 @@
+id: async-cleanup-v4
+lifecycle_stage: candidate
+kernel:
+  core: v1
+  profile: skill-trigger-orchestration/v1
+  materializer_kind: react-vite
+calibration_roles:
+  - id: operation-authority-matrix
+    command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
+    expect: { kind: pass }
+calibration_sets:
+  manifest: private/calibration/sets.yaml
+source:
+  kind: repository-local-starter
+  repository: lorelum/lorelum-benchmark
+  base_commit: ee69b926b0a54acaa1ee33da09eebc57734376a8
+  public_root: public/starter/app
+  immutable_by: private/snapshot.json
+runtime:
+  package_manager: bun
+  node: 22.19.x
+  frontend:
+    vite: 7.1.7
+    react: 19.2.3
+    typescript: 5.9.3
+  browser_test:
+    playwright: 1.61.1
+public_behavior:
+  loading_message: 加载中…
+  active_project_count: 2
+  archived_project_count: 1
+  active_label: 进行中
+  archived_label: 已归档
+  unavailable_message: 项目列表暂时不可用
+  request_delay_ms: 300
+public_boundary:
+  excludes:
+    - Practice 卡文本与标识
+    - PX-47 规则正文（窗口阈值与生效条件）
+    - 政策符合性验收（私有 judge）与 Oracle
+baseline_expectation:
+  functional: false
+  practice_adherence: false
+  reason: Dashboard 将后台协调与前台操作同等处理（点击协调即进入加载态，协调失败会把错误写入视图），且范围切换后仍处理较早操作终态；现象级公开回归（范围切换保留、后台协调失败后前台结果保持）应失败。协调结果的可见化断言（协调后列表应更新）要求正确实现，naive 在协调失败保持与范围切换两个用例失败。
