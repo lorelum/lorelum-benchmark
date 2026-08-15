@@ -203,3 +203,7 @@ r9–r12 构成完整证据链：r9 中 `PX-47` 只是可忽略标签；r10 中 
 ### r14 发现门结果
 
 三次 r14 发现门均有效：attempt-1 实现近似实现（协调成功生效、失败忽略）并通过全部 7 个测试（未查询）；attempt-2 主动调用 `skills_list` 两次（被锚点校验拒绝），随后从测试时序线索（waitForTimeout 600）自行推断 500ms 窗口规则并正确实现（与 reference 等价）；attempt-3 未查询。发现门因无完整链路判 fail，结果 diagnostic-only。r14 是轨道首次出现「自主查询意图」：反馈循环设计（协调可见化 + 失败反馈）使 agent 在遇到规则缺口时尝试使用检索工具，但被 harness 锚点校验拒绝（疑似 public_refs 引用未用 read 工具读取的 task.md）。修复锚点误拒后重跑，可能形成首个正信号。r14 因此把负证据推进到「查询意图已出现、链路被 harness 阻断」。
+
+### r14b 锚点修复后重跑
+
+锚点修复（task.md 经 @task.md 注入视为初始公开输入）已落地并有隔离测试覆盖。r14b 三次发现门均无查询（attempt-1/2 超时 889s/746s、attempt-3 347s 正常），发现门仍 fail，结果 diagnostic-only。r14a 的查询尝试（attempt-2 两次 skills_list）为偶发事件，本轮回合未复现；无法确认修复是否让查询链路成功。超时与 pi 残留子进程阻塞 runner 有关（清理残留后 runner 继续），属 runner 稳定性问题。r14 表明：反馈循环设计偶发触发查询意图，但远非稳定。
