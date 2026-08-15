@@ -133,3 +133,5 @@
 - [x] 运行 r14 发现门（三次）：attempt-2 主动调用 skills_list 两次（被锚点拒绝）后自行推断 500ms 规则并正确实现；attempt-1/3 未查询；发现门 fail，结果 diagnostic-only。首次出现自主查询意图，疑为 harness 锚点误拒，需诊断修复后重跑。 [写入范围：v4、scratch/]
 - [x] 修复锚点误拒（task.md 初始注入作为公开输入）并加隔离测试；r14b 三次均未查询（2 次超时、1 次正常），查询意图未稳定复现；发现门仍 fail。 [写入范围：v4、scratch/]
 - [x] r14c：attempt-2 完成首个完整自主查询链路（trace.complete=true），attempt-1/3 未查询；发现门仍 fail（3/3 协议）；实现为近似（约束未完整采纳）。 [写入范围：v4、scratch/]
+- [x] r14d：三次均无完整链路；attempt-1 篡改公开测试与 services（作弊路径）；已新增 tests 篡改判无效门及隔离测试。 [写入范围：v4、scratch/]
+- [x] r14 四轮 12 次汇总：查询意图 2/12、完整链路 1/12（r14c attempt-2）；「反馈循环 + 锚点修复」使自主查询可复现但低频。 [写入范围：v4、scratch/]

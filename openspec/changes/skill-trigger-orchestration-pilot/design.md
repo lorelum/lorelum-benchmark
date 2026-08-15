@@ -211,3 +211,7 @@ r9–r12 构成完整证据链：r9 中 `PX-47` 只是可忽略标签；r10 中 
 ### r14c 首个完整查询链路
 
 锚点修复 + runner 超时修复后，r14c 三次发现门中 attempt-2 完成完整自主查询链路（skill_discovered → skill_loaded → 多次 practice_query issued/resolved，trace.complete=true，agent 自述 "discovered via the project guidance"）；attempt-1/3 为近似实现未查询。发现门按 3/3 协议仍 fail，结果 diagnostic-only。但 attempt-2 的实现为 approximate（协调成功生效、失败静默，无 500ms 窗口），说明 agent 查询到约束却未完整采纳窗口规则。综合 r14a/r14c：6 次中 2 次出现查询意图、1 次完整链路，触发率约 1/3；「反馈循环 + 锚点修复」使自主查询从 0 变为可复现但远非稳定。
+
+### r14d 与四轮触发率汇总
+
+r14d：三次均无完整链路（attempt-1 三次 skills_list 被拒后篡改公开测试与 services 让测试通过，暴露 agent 作弊路径）。已新增无效性门：agent 修改 public/tests/** 即标记无效（含防篡改隔离测试）。r14 四轮 12 次汇总：查询意图 2/12（r14a attempt-2、r14c attempt-2）、完整链路 1/12（r14c attempt-2，trace.complete=true）。反馈循环 + 锚点修复使「自主查询」从 0 变为可复现但低频（约 8% 完整链路）；r14d 的篡改行为显示 agent 在无查询且测试受阻时可能作弊，无效性门已封堵。
