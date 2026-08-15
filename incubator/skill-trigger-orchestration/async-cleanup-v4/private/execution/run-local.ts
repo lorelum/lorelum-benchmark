@@ -86,7 +86,15 @@ async function run(command: string[], cwd: string, timeoutMs?: number, env = Bun
   const started = performance.now();
   const child = Bun.spawn(command, { cwd, env, stdout: "pipe", stderr: "pipe" });
   let timedOut = false;
-  const timeout = timeoutMs === undefined ? undefined : setTimeout(() => { timedOut = true; child.kill(); }, timeoutMs);
+  const timeout = timeoutMs === undefined ? undefined : setTimeout(() => {
+    timedOut = true;
+    try { child.kill(); } catch { /* 忽略 */ }
+    // Windows：pi.exe 的 node 子进程可能残留并持有 stdout 管道，阻塞后续读取；杀整棵进程树。
+    const pid = (child as { pid?: number }).pid;
+    if (pid) {
+      try { Bun.spawnSync(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" }); } catch { /* 忽略 */ }
+    }
+  }, timeoutMs);
   const [code, stdout, stderr] = await Promise.all([
     child.exited,
     new Response(child.stdout).text(),
