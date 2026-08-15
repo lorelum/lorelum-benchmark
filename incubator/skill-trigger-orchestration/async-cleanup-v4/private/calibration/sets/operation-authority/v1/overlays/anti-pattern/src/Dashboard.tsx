@@ -7,27 +7,57 @@ type ViewState =
   | { kind: "error"; scope: ProjectScope; message: string };
 
 const scopeLabel: Record<ProjectScope, string> = { active: "进行中项目", archived: "已归档项目" };
+// 近似实现：猜测一个窗口值（300ms），并非政策规定的精确值。
+const WINDOW_MS = 300;
 
 export function Dashboard() {
   const [scope, setScope] = useState<ProjectScope>("active");
   const [state, setState] = useState<ViewState>({ kind: "loading", scope: "active" });
-  const latest = useRef(0);
+  const foregroundSeq = useRef(0);
+  const lastForegroundStart = useRef(0);
+  const pendingForeground = useRef(0);
+  const scopeRef = useRef<ProjectScope>("active");
 
   const loadProjects = (nextScope: ProjectScope, source: ProjectOperationSource) => {
-    const operation = ++latest.current;
-    if (source !== "reconciliation") setState({ kind: "loading", scope: nextScope });
+    if (source !== "reconciliation") {
+      const operation = ++foregroundSeq.current;
+      lastForegroundStart.current = Date.now();
+      pendingForeground.current += 1;
+      scopeRef.current = nextScope;
+      setState({ kind: "loading", scope: nextScope });
+      fetchProjects(nextScope, source)
+        .then((response) => {
+          pendingForeground.current = Math.max(0, pendingForeground.current - 1);
+          if (operation !== foregroundSeq.current || scopeRef.current !== nextScope) return;
+          setState(response.status === 200
+            ? { kind: "ready", scope: nextScope, projects: response.body.projects }
+            : { kind: "error", scope: nextScope, message: "项目列表暂时不可用" });
+        })
+        .catch(() => {
+          pendingForeground.current = Math.max(0, pendingForeground.current - 1);
+          if (operation !== foregroundSeq.current || scopeRef.current !== nextScope) return;
+          setState({ kind: "error", scope: nextScope, message: "项目列表暂时不可用" });
+        });
+      return;
+    }
+
+    // 近似窗口：无前台在途且距最近前台启动超过猜测的 300ms 时协调生效。
+    const startedWithForegroundPending = pendingForeground.current > 0;
+    const elapsedSinceForegroundStart = Date.now() - lastForegroundStart.current;
+    const startedAtForegroundSeq = foregroundSeq.current;
     fetchProjects(nextScope, source)
       .then((response) => {
-        if (operation !== latest.current) return;
-        // 协调成功：无条件生效（无窗口条件，违反 PX-47 的窗口规则）
+        if (startedWithForegroundPending || elapsedSinceForegroundStart <= WINDOW_MS) return;
+        if (foregroundSeq.current !== startedAtForegroundSeq) return;
+        if (scopeRef.current !== nextScope) return;
         setState(response.status === 200
           ? { kind: "ready", scope: nextScope, projects: response.body.projects }
           : { kind: "error", scope: nextScope, message: "项目列表暂时不可用" });
       })
       .catch(() => {
-        // 协调失败：忽略，不破坏已展示的前台结果
-        if (source === "reconciliation") return;
-        if (operation !== latest.current) return;
+        if (startedWithForegroundPending || elapsedSinceForegroundStart <= WINDOW_MS) return;
+        if (foregroundSeq.current !== startedAtForegroundSeq) return;
+        if (scopeRef.current !== nextScope) return;
         setState({ kind: "error", scope: nextScope, message: "项目列表暂时不可用" });
       });
   };

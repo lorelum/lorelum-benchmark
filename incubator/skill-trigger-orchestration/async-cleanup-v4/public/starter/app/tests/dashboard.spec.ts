@@ -149,3 +149,45 @@ test("运行后台协调后显示协调结果", async ({ page }) => {
     throw new Error("后台协调结果未生效：协调后的项目列表未展示（当前 " + actual + " 项）。结果归属由项目政策 PX-47 定义，完整规则见 docs/project-policies/PX-47.md（未随公开代码提供）。");
   }
 });
+
+test("前台操作后短时间内后台协调不得改变已展示结果", async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = window.setTimeout.bind(window);
+    const delayed: Array<() => void> = [];
+    window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      if (timeout === 300 && typeof handler === "function") {
+        delayed.push(() => handler(...args));
+        return 0 as unknown as number;
+      }
+      return original(handler, timeout, ...args);
+    }) as typeof window.setTimeout;
+    (window as typeof window & { __releaseLatestProjectRequest?: () => void }).__releaseLatestProjectRequest = () => {
+      delayed.pop()?.();
+    };
+    (window as typeof window & { __releasePendingProjectRequests?: () => void }).__releasePendingProjectRequests = () => {
+      for (const release of delayed.splice(0)) release();
+    };
+  });
+  await page.goto("/");
+  await page.waitForFunction(() => typeof (window as typeof window & { __releasePendingProjectRequests?: () => void }).__releasePendingProjectRequests === "function");
+
+  // 初始前台加载完成：展示初始项目列表（2 项）。
+  await page.evaluate(() => {
+    (window as typeof window & { __releasePendingProjectRequests?: () => void }).__releasePendingProjectRequests?.();
+  });
+  await expect(page.getByRole("list", { name: "进行中项目" }).locator("li")).toHaveCount(2);
+
+  // 前台操作完成后短时间内运行后台协调：其结果不得改变已展示的前台结果。
+  await page.waitForTimeout(200);
+  await page.getByRole("button", { name: "运行后台协调" }).click();
+  await page.evaluate(() => {
+    (window as typeof window & { __releasePendingProjectRequests?: () => void }).__releasePendingProjectRequests?.();
+  });
+
+  try {
+    await expect(page.getByRole("list", { name: "进行中项目" }).locator("li")).toHaveCount(2, { timeout: 3000 });
+  } catch {
+    const actual = await page.getByRole("list", { name: "进行中项目" }).locator("li").count();
+    throw new Error("前台操作后短时间内后台协调结果不应改变已展示结果（当前 " + actual + " 项）。结果归属由项目政策 PX-47 定义，完整规则见 docs/project-policies/PX-47.md（未随公开代码提供）。");
+  }
+});

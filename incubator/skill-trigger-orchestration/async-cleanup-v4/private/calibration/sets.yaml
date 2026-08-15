@@ -21,7 +21,7 @@ sets:
         extends: shared-react-vite
         overlay:
           path: private/calibration/sets/operation-authority/v1/overlays/anti-pattern
-          sha256: d086d8f0506e8cf7dbde84ede5b6ff810f34ac6b60bc9283a1656522a2ce985f
+          sha256: b47433d433313d3114832bb4c61dd51deacc12fb354b0869303e8a5e6dd83331
       never-apply-tree:
         extends: shared-react-vite
         overlay:
