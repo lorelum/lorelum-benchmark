@@ -101,7 +101,7 @@ test("rejects unanchored guidance discovery without recording a discovery event"
   try {
     const { tools, pi } = fakePi();
     lorelumExtension(pi);
-    await expect(tools.get("skills_list")!.execute("discover", { query: "policy PX-47", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).rejects.toThrow("already read");
+    await expect(tools.get("skills_list")!.execute("discover", { query: "unrelated topic", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).rejects.toThrow("already read");
     const audit = await readFile(auditPath, "utf8");
     expect(audit).toContain("skill_discovery_rejected");
     expect(audit).not.toContain('"event":"skill_discovered"');
@@ -121,6 +121,25 @@ test("accepts an opaque policy identifier from a read public input as an anchor"
     await invoke(handlers, "tool_execution_end", { toolName: "read", toolCallId: "read-1", isError: false }, root);
     await expect(tools.get("skills_list")!.execute("discover", { query: "Resolve policy PX-47", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).resolves.toBeDefined();
     const audit = await readFile(auditPath, "utf8");
+    expect(audit).toContain('"event":"skill_discovered"');
+    expect(audit).toContain('"px-47"');
+  } finally {
+    restore();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("initial-injected task.md anchors a query without a prior read call", async () => {
+  const { root, practicePath, auditPath } = await fixture();
+  const restore = configureEnvironment(practicePath, auditPath);
+  try {
+    const { tools, pi } = fakePi();
+    lorelumExtension(pi);
+    // 不调用 read：task.md 经 @task.md 注入，skills_list 应通过懒加载锚定 PX-47。
+    await expect(tools.get("skills_list")!.execute("discover", { query: "Resolve policy PX-47", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).resolves.toBeDefined();
+    const audit = await readFile(auditPath, "utf8");
+    expect(audit).toContain('"event":"public_input_read"');
+    expect(audit).toContain('"source":"initial-injection"');
     expect(audit).toContain('"event":"skill_discovered"');
     expect(audit).toContain('"px-47"');
   } finally {

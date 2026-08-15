@@ -37,6 +37,19 @@ function readPathFromStart(event: ReadEvent): string | undefined {
   return typeof path === "string" ? path : undefined;
 }
 
+// task.md 通过 @task.md 注入初始消息，agent 直接可见；将其懒加载为初始公开输入，
+// 使 agent 对题面锚点（如 PX-47）的查询能够通过锚定校验。
+async function ensureInitialPublicInputs(cwd: string, publicInputs: Map<string, PublicInput>, auditSafely: (event: Record<string, unknown>) => Promise<void>): Promise<void> {
+  if (publicInputs.has("task.md")) return;
+  try {
+    const content = await readFile(resolve(cwd, "task.md"), "utf8");
+    const path = "task.md";
+    const digest = sha256(content);
+    publicInputs.set(path, { path, sha256: digest, anchors: anchors(content) });
+    await auditSafely({ event: "public_input_read", path, sha256: digest, source: "initial-injection", anchors: anchors(content) });
+  } catch { /* task.md 缺失不阻断查询 */ }
+}
+
 function anchoredPublicInputs(cwd: string, request: AnchoredRequest, publicInputs: Map<string, PublicInput>): { refs: string[]; inputs: PublicInput[]; matchedAnchors: string[] } | undefined {
   const refs = request.public_refs.map((entry) => relativePublicPath(cwd, entry)).filter((entry): entry is string => Boolean(entry));
   const inputs = refs.map((entry) => publicInputs.get(entry)).filter((entry): entry is PublicInput => Boolean(entry));
@@ -159,6 +172,7 @@ export default function lorelumExtension(pi: ExtensionAPI) {
       public_refs: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
     }),
     async execute(toolCallId, params, _signal, _onUpdate, ctx) {
+      await ensureInitialPublicInputs(ctx.cwd, publicInputs, auditSafely);
       const evidence = anchoredPublicInputs(ctx.cwd, params, publicInputs);
       if (!evidence) {
         await auditSafely({ event: "skill_discovery_rejected", tool_call_id: toolCallId, query_sha256: sha256(params.query) });
