@@ -160,3 +160,11 @@
 - [x] 运行 strict OpenSpec、v4 定向测试，确认解耦改动不破坏既有契约。 [写入范围：OpenSpec、scratch/]
 - [x] 同步 Issue #96 与 PR #113：记录解耦决策，重定位结论为「发现层 3/3 达成（方向性正信号）、采纳层移交」。 [写入范围：Issue #96、PR #113]
 - [ ] practice-injection 承接（独立 change）：复用 react.project-operation-authority 卡 + judge v2，用 oracle-practice 注入通道验证完整采纳（窗口起点 + 前台在途语义）。 [写入范围：practice-injection、新 issue + OpenSpec]
+
+## 21. PR 体量精简（v4 内）
+
+- [x] 清理 v2 未引用的迭代残留：operation-ownership 与 cleanup-probe 两套旧 evaluator/calibration/practice 卡（r7-r11 遗留，未被 oracle/conditions/run-local/calibration 引用），删除 26 文件、968 行。 [写入范围：async-cleanup-v2 private]
+- [x] 清除 v2 从 v1 继承的未引用 practice 卡 oracle.async-lifecycle.v1.md 并同步 metadata。 [写入范围：async-cleanup-v2 private]
+- [x] 修复 v3 过时 practice 元数据（sha256 303ec1a5→实际 06d800c、rendered_characters 637→636、相对差重算），与 v4 已修复的同根因缺陷对齐；重建 v2/v3 snapshot。 [写入范围：async-cleanup-v3 private]
+- [x] 消除历史遗留 validate 阻塞：全量 un run validate 由 v2/v3 mismatch 报错恢复为全绿（Workspace layout valid + Snapshots intact）；contracts 200/200、OpenSpec strict 通过。 [写入范围：async-cleanup-v2/v3、OpenSpec]
+- [x] 保留 v1-v4 全部 revision 的正式源与 snapshot；不删除 calibration-bases/app-shell/v1（属 v1 正式源），不做跨 revision execution 共享（受 snapshot 自包含契约约束，留待 SLIMMING_PLAN 阶段二）。 [写入范围：v1-v4]
