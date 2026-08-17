@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "3648df583d7c71503ee6b626597f044d44be3c2b102c29bc38246fa9ab2dd883",
+  "snapshot_id": "d162f342afa1cdadffd34754f81aefb883d3a1d1283267c527612b9ff93d8646",
   "files": {
     "private/README.md": "c0262ed15c16e0a402e9f42e720ec4b0bcd8d3c28975c1788a0a4c2d95c30232",
     "private/calibration/judge-calibrate.ts": "225130956ec2433ffdff94da11767e5f463c94d5e7b39c6e6cd2da887fd7b17b",
@@ -20,8 +20,8 @@
     "private/evaluator/evaluate-operation-authority.ts": "61b7342a925cb587fc66d6061c551efc8e523e57f7f7856f987c376af9d20cc0",
     "private/execution/lorelum-extension.test.ts": "b873292333d57e96ceee2d84d8f922dd1c28de5fbc46fc7e9d568b5a6ff81cb2",
     "private/execution/lorelum-extension.ts": "e10879754cbc0504068a5e1da369dfd4e7355466beb51086f7dcd0dcad785c0f",
-    "private/execution/run-local.test.ts": "cffe4a60151456c124e75135b41285e35e015497d6070ce9fc9e6b46ed322a38",
-    "private/execution/run-local.ts": "0f449967052fa7b69d6ad2041a970dc018e3eb2f61741dc335d80f70c01898fc",
+    "private/execution/run-local.test.ts": "f26d2fddc6998ca0525655852039b21a9b2050965f1e3ddbd69d08e7e73e746d",
+    "private/execution/run-local.ts": "815b785186970c94f1ce01632779b67c4fd0e548a9af1aa1043242ed5935205a",
     "private/execution/tool-policy.yaml": "bc0b37f6384e44d686b80a940c48487f578dd9b607f47381a8213e1006b1b760",
     "private/execution/unified-diff.ts": "7bc9f968a44030b0fb21dea1052b64463202acf6b02d90073e5cf827a93fad46",
     "private/oracle.yaml": "66f6fdf0dbc9eb307640350d9a9b888c590b67d575235b265a66df42440a14db",

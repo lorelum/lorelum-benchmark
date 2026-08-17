@@ -407,7 +407,7 @@ async function runAttempt(
   const completeTrace = (trace as { complete?: unknown }).complete === true;
   const traceEvents = (trace as { events: AuditEvent[] }).events;
   const discovered = traceEvents.some((event) => event.event === "docs_discovered");
-  const queryAnchored = traceEvents.some((event) => event.event === "policy_query_issued" && Array.isArray(event.public_refs) && event.public_refs.length > 0);
+  const queryAnchored = traceEvents.some((event) => event.event === "policy_query_issued" && Array.isArray(event.matched_anchors) && event.matched_anchors.length > 0);
 
   return {
     condition: condition.id,
@@ -486,7 +486,7 @@ async function runToolQualification(
   await writeJson(resolve(attemptPath, "trace.json"), trace);
   const invalidReasons = await invalidityReasons(condition, pi, workspaceFilesAfterAgent, auditEvents, trace, workspace);
   const traceEvents = (trace as { events: AuditEvent[] }).events;
-  const queryAnchored = traceEvents.some((event) => event.event === "policy_query_issued" && Array.isArray(event.public_refs) && event.public_refs.length > 0);
+  const queryAnchored = traceEvents.some((event) => event.event === "policy_query_issued" && Array.isArray(event.matched_anchors) && event.matched_anchors.length > 0);
   const qualified = pi.code === 0 && !pi.timedOut && invalidReasons.length === 0 && (trace as { complete?: unknown }).complete === true && queryAnchored;
   return {
     kind: "forced-tool-qualification",
