@@ -145,3 +145,8 @@
 - [x] task.md 改为规范引用式需求（PX-47 为实现依据、规范库可检索、工作区无规范正文），不出现窗口/500/Lorelum 等词。 [写入范围：v4 public]
 - [x] 离线校验：extension/run-local 定向 19、validate、contracts 197、strict OpenSpec、泄露审计、diff check。 [写入范围：v4、scratch/]
 - [x] 运行 r16 发现门（三次）：3/3 主动尝试 docs_search；attempt-2 完整链路且正确实现 500ms 窗口（比 r14c 更强）；attempt-1 超时、attempt-3 未成链路；发现门 fail，diagnostic-only。生态位修正使 agent 从从不检索变为总是尝试检索。 [写入范围：v4、scratch/]
+
+## 19. r17 锚定判定修复与发现门通过（v4 内）
+
+- [x] 修复 runner 锚定判定：queryAnchored 从 policy_query_issued.public_refs 非空改为 matched_anchors 非空，与 extension 263917d 语义对齐；同步 fake-pi 测试数据；定向 20/20、validate、contracts 197、v4 snapshot 重建全绿。 [写入范围：v4 private execution、snapshot、OpenSpec]
+- [x] 运行 r17c 发现门（三次）：3/3 attempt valid + trace.complete + docs_discovered + query_anchored，**发现门首次通过**；公开测试 3/3 全部 8/8 通过；judge v2 3/3 判不符合（43/41/40，reference_min=90）——三个实现均只实现「距前台完成 >500ms」近似、缺失「前台在途时不生效 + 窗口从启动时刻算起」。发现门达 3/3 为方向性正信号，约束采纳仍为近似，结果 diagnostic-only。 [写入范围：v4、scratch/]

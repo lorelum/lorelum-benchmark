@@ -235,3 +235,11 @@ r15 三次均无查询、无篡改，发现门 fail，diagnostic-only。关键�
 ### r16 发现门结果
 
 r16 三次中 3/3 均主动尝试 `docs_search`（attempt-1/3 被锚点拒绝、attempt-2 成功），attempt-2 完成完整链路（docs_discovered → docs_opened → policy_query_issued/resolved，trace.complete=true）并通过文档检索获取 PX-47 规范、正确实现 500ms 窗口规则（与 reference 等价）。attempt-1 超时（944s）、attempt-3 未形成链路；发现门按 3/3 协议仍 fail，结果 diagnostic-only。这是生态位修正的关键证据：规范文档检索入口 + 规范引用式需求使 agent 从「从不检索」（r9–r15 约 30 次 0 检索）变为「总是尝试检索、1/3 完整链路且正确实现」。锚点拒绝（attempt-1/3 的 docs_search 被拒）是剩余 harness 摩擦，修复后可能进一步提升完整链路率。
+
+### r17 锚定判定修复与发现门通过
+
+r16 锚定放宽提交（263917d）只改了 extension（nchoredPublicInputs 的锚定依据从 inputs 改为全部已读公开输入、matched_anchors 非空即通过），未同步 runner 的 query_anchored 判定（仍要求 policy_query_issued.public_refs 非空）。真实 agent 用规范库路径（工作区不存在）作 public_refs，vidence.inputs 为空数组，导致 r17b 三个 attempt 均形成完整链路（docs_discovered/docs_opened/policy_query_issued/resolved 齐全、matched_anchors 非空）却被判 query_anchored: False、发现门误判 fail。已修复 runner：queryAnchored 改为要求 policy_query_issued.matched_anchors 非空（与 extension 语义一致），并同步 fake-pi 测试数据；新增定向测试 20/20、validate、contracts 197 全绿，v4 snapshot 重建。
+
+r17c 完整三次重跑：**发现门通过**（3/3 attempt valid、trace.complete、docs_discovered、query_anchored 全部 True），公开测试 3/3 全部 8/8 通过。三个 attempt 均通过完整 docs 链路获取 PX-47 规范并实现 500ms 窗口近似（FOREGROUND_SETTLE_WINDOW_MS / FRONT_OFFICE_AUTHORITY_WINDOW_MS / RECONCILIATION_GRACE_MS）。这是生态位修正后首次 3/3 完整链路 + 3/3 测试通过：锚点修复消除 harness 摩擦后，自主发现与主动查询从 r16 的 1/3 稳定复现到 3/3。
+
+但 judge v2 判定三个实现均不符合（attempt-1=43、attempt-2=41、attempt-3=40，reference_min=90）：三者都只实现「距最近前台操作**完成**时刻 >500ms 协调才生效」且共用统一 seq（后台协调会递增序号、使在途前台响应被丢弃、后台 setState 可能覆盖前台 loading），缺失 judge 规则要求的「后台协调启动时无前台在途 且 距最近前台操作**启动**时刻 >500ms」语义。superseded-foreground 均满分（25/25，前台被更新操作取代不结算做对），foreground-authority（5/30）、background-window-authority（5-8/30）、state-feedback-preserved（3-5/15）低分。结论：发现门已达 3/3，但约束采纳停留在近似——agent 查询到窗口存在却未完整采纳窗口起点与前台在途语义；按处理组 success 协议（完整链路 + 测试通过 + judge 符合）仍判未采纳成功，结果 diagnostic-only。发现门侧 3/3 是方向性正信号，judge 侧近似表明公开测试仍不足以驱动完整约束采纳。
