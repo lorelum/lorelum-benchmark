@@ -149,4 +149,4 @@
 ## 19. r17 锚定判定修复与发现门通过（v4 内）
 
 - [x] 修复 runner 锚定判定：queryAnchored 从 policy_query_issued.public_refs 非空改为 matched_anchors 非空，与 extension 263917d 语义对齐；同步 fake-pi 测试数据；定向 20/20、validate、contracts 197、v4 snapshot 重建全绿。 [写入范围：v4 private execution、snapshot、OpenSpec]
-- [x] 运行 r17c 发现门（三次）：3/3 attempt valid + trace.complete + docs_discovered + query_anchored，**发现门首次通过**；公开测试 3/3 全部 8/8 通过；judge v2 3/3 判不符合（43/41/40，reference_min=90）——三个实现均只实现「距前台完成 >500ms」近似、缺失「前台在途时不生效 + 窗口从启动时刻算起」。发现门达 3/3 为方向性正信号，约束采纳仍为近似，结果 diagnostic-only。 [写入范围：v4、scratch/]
+- [x] 运行 r17c 发现门（三次）：3/3 attempt valid + trace.complete + docs_discovered + query_anchored，**发现门首次通过**；公开测试 3/3 全部 8/8 通过；judge v2 3/3 判不符合（43/41/40，reference_min=90）——三个实现均只实现「距前台完成 >500ms」近似、缺失「前台在途时不生效 + 窗口从启动时刻算起」。发现门达 3/3 为方向性正信号，约束采纳仍为近似，结果 diagnostic-only。 [写入范围：v4、scratch/]- [x] 修复 v4 过时 practice 元数据：conditions.yaml sha256 同步实际内容、metadata.yaml 字符数与相对差修正、verifySnapshot 目标 v2→v4、snapshot 重建；定向 20/20、contracts 200。冻结 v2/v3 的历史遗留 mismatch（r11/r13 未同步）保留为已知问题。 [写入范围：v4 private、OpenSpec]
