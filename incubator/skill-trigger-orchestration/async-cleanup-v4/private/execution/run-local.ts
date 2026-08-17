@@ -274,7 +274,7 @@ async function readAudit(path: string): Promise<AuditEvent[]> {
 
 function observedTrace(condition: Condition, events: AuditEvent[]): Record<string, unknown> {
   const names = events.map((event) => event.event);
-  const required = ["public_input_read", "skill_discovered", "skill_loaded", "practice_query_issued", "practice_query_resolved"];
+  const required = ["public_input_read", "docs_discovered", "docs_opened", "policy_query_issued", "policy_query_resolved"];
   const complete = condition.id !== "baseline" && required.every((event) => names.includes(event));
   return { condition_id: condition.id, channel: condition.id === "baseline" ? "none" : "mock-retrieval-tool-call", events, complete };
 }
@@ -282,11 +282,11 @@ function observedTrace(condition: Condition, events: AuditEvent[]): Record<strin
 function traceAuditIssues(condition: Condition, events: AuditEvent[]): string[] {
   const names = events.map((event) => event.event);
   if (condition.id === "baseline") return names.length === 0 ? [] : ["baseline emitted retrieval audit events"];
-  const issued = new Set(events.filter((event) => event.event === "practice_query_issued" && typeof event.query_id === "string").map((event) => event.query_id as string));
-  const resolved = events.filter((event) => event.event === "practice_query_resolved" && typeof event.query_id === "string").map((event) => event.query_id as string);
+  const issued = new Set(events.filter((event) => event.event === "policy_query_issued" && typeof event.query_id === "string").map((event) => event.query_id as string));
+  const resolved = events.filter((event) => event.event === "policy_query_resolved" && typeof event.query_id === "string").map((event) => event.query_id as string);
   const issues: string[] = [];
-  if (names.includes("skill_loaded") && !names.includes("skill_discovered")) issues.push("skill_loaded has no discovery event");
-  if ((names.includes("practice_query_issued") || names.includes("practice_query_resolved")) && !names.includes("skill_loaded")) issues.push("query event has no load event");
+  if (names.includes("docs_opened") && !names.includes("docs_discovered")) issues.push("docs_opened has no discovery event");
+  if ((names.includes("policy_query_issued") || names.includes("policy_query_resolved")) && !names.includes("docs_opened")) issues.push("query event has no load event");
   if (resolved.some((queryId) => !issued.has(queryId))) issues.push("query resolution has no issued event");
   return issues;
 }
@@ -354,7 +354,7 @@ async function runAttempt(
   const piArgs = [
     "--print", "--no-session", "--no-context-files", "--no-extensions",
     "--no-skills", "--no-prompt-templates",
-    "--tools", "read,bash,edit,write,grep,find,ls,skills_list,skills_load,lorelum_query",
+    "--tools", "read,bash,edit,write,grep,find,ls,docs_search,docs_open,policy_lookup",
     "--model", conditions.shared_execution.model.id,
     "--thinking", "off",
     "@task.md", "Complete the coding task. Work only inside app/."
@@ -406,8 +406,8 @@ async function runAttempt(
   const valid = invalidReasons.length === 0;
   const completeTrace = (trace as { complete?: unknown }).complete === true;
   const traceEvents = (trace as { events: AuditEvent[] }).events;
-  const discovered = traceEvents.some((event) => event.event === "skill_discovered");
-  const queryAnchored = traceEvents.some((event) => event.event === "practice_query_issued" && Array.isArray(event.public_refs) && event.public_refs.length > 0);
+  const discovered = traceEvents.some((event) => event.event === "docs_discovered");
+  const queryAnchored = traceEvents.some((event) => event.event === "policy_query_issued" && Array.isArray(event.public_refs) && event.public_refs.length > 0);
 
   return {
     condition: condition.id,
@@ -432,7 +432,7 @@ async function runAttempt(
     practice_probe: evaluation?.practiceProbe ?? "not-run",
     dual_pass: evaluation?.dualPass ?? false,
     validity: { valid, reasons: invalidReasons },
-    skill_discovery: discovered,
+    docs_discovery: discovered,
     query_anchored: queryAnchored,
     constraint_adopted: condition.id === "lorelum-retrieval" && completeTrace && queryAnchored && evaluation?.dualPass === true,
     trace,
@@ -462,11 +462,11 @@ async function runToolQualification(
   const piArgs = [
     "--print", "--no-session", "--no-context-files", "--no-extensions",
     "--no-skills", "--no-prompt-templates",
-    "--tools", "read,bash,edit,write,grep,find,ls,skills_list,skills_load,lorelum_query",
+    "--tools", "read,bash,edit,write,grep,find,ls,docs_search,docs_open,policy_lookup",
     "--extension", resolve(candidateRoot, "private/execution/lorelum-extension.ts"),
     "--model", conditions.shared_execution.model.id,
     "--thinking", "off",
-    "Use the read tool to read task.md. Do not edit files. Then call skills_list for the project policy reference in task.md with public_refs set to [\"task.md\"]. Load the returned entry with skills_load, then call lorelum_query with task.md as public_refs and a query using factual wording from task.md. Stop after those calls."
+    "Use the read tool to read task.md. Do not edit files. Then call docs_search for the project policy reference in task.md with public_refs set to [\"task.md\"]. Open the returned entry with docs_open, then call policy_lookup with task.md as public_refs and a query using factual wording from task.md. Stop after those calls."
   ];
   const piEnvironment = {
     ...Bun.env,
@@ -486,7 +486,7 @@ async function runToolQualification(
   await writeJson(resolve(attemptPath, "trace.json"), trace);
   const invalidReasons = await invalidityReasons(condition, pi, workspaceFilesAfterAgent, auditEvents, trace, workspace);
   const traceEvents = (trace as { events: AuditEvent[] }).events;
-  const queryAnchored = traceEvents.some((event) => event.event === "practice_query_issued" && Array.isArray(event.public_refs) && event.public_refs.length > 0);
+  const queryAnchored = traceEvents.some((event) => event.event === "policy_query_issued" && Array.isArray(event.public_refs) && event.public_refs.length > 0);
   const qualified = pi.code === 0 && !pi.timedOut && invalidReasons.length === 0 && (trace as { complete?: unknown }).complete === true && queryAnchored;
   return {
     kind: "forced-tool-qualification",

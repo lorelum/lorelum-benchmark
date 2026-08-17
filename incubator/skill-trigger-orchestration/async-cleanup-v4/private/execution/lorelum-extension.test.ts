@@ -79,15 +79,15 @@ test("records only a real, redacted Skill chain", async () => {
     lorelumExtension(pi);
     await invoke(handlers, "tool_execution_start", { toolName: "read", toolCallId: "read-1", args: { path: "task.md" } }, root);
     await invoke(handlers, "tool_execution_end", { toolName: "read", toolCallId: "read-1", isError: false }, root);
-    await tools.get("skills_list")!.execute("discover", { query: "Dashboard fetchProjects navigation", public_refs: ["task.md"] }, undefined, undefined, { cwd: root });
-    await tools.get("skills_load")!.execute("load", { id: "lorelum" });
-    const response = await tools.get("lorelum_query")!.execute("query", { query: "Dashboard fetchProjects navigation", public_refs: ["task.md"] }, undefined, undefined, { cwd: root });
+    await tools.get("docs_search")!.execute("discover", { query: "Dashboard fetchProjects navigation", public_refs: ["task.md"] }, undefined, undefined, { cwd: root });
+    await tools.get("docs_open")!.execute("load", { id: "project-policy" });
+    const response = await tools.get("policy_lookup")!.execute("query", { query: "Dashboard fetchProjects navigation", public_refs: ["task.md"] }, undefined, undefined, { cwd: root });
     const serialized = JSON.stringify(response);
     expect(serialized).toContain("behavior_constraint");
     expect(serialized).not.toContain("private/practices");
     expect(serialized).not.toContain("# React");
     const audit = await readFile(auditPath, "utf8");
-    for (const event of ["skill_discovered", "skill_loaded", "practice_query_issued", "practice_query_resolved"]) expect(audit).toContain(`"event":"${event}"`);
+    for (const event of ["docs_discovered", "docs_opened", "policy_query_issued", "policy_query_resolved"]) expect(audit).toContain(`"event":"${event}"`);
     expect(audit).not.toContain(practicePath);
   } finally {
     restore();
@@ -101,10 +101,10 @@ test("rejects unanchored guidance discovery without recording a discovery event"
   try {
     const { tools, pi } = fakePi();
     lorelumExtension(pi);
-    await expect(tools.get("skills_list")!.execute("discover", { query: "unrelated topic", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).rejects.toThrow("already read");
+    await expect(tools.get("docs_search")!.execute("discover", { query: "unrelated topic", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).rejects.toThrow("already read");
     const audit = await readFile(auditPath, "utf8");
-    expect(audit).toContain("skill_discovery_rejected");
-    expect(audit).not.toContain('"event":"skill_discovered"');
+    expect(audit).toContain("docs_discovery_rejected");
+    expect(audit).not.toContain('"event":"docs_discovered"');
   } finally {
     restore();
     await rm(root, { recursive: true, force: true });
@@ -119,9 +119,9 @@ test("accepts an opaque policy identifier from a read public input as an anchor"
     lorelumExtension(pi);
     await invoke(handlers, "tool_execution_start", { toolName: "read", toolCallId: "read-1", args: { path: "task.md" } }, root);
     await invoke(handlers, "tool_execution_end", { toolName: "read", toolCallId: "read-1", isError: false }, root);
-    await expect(tools.get("skills_list")!.execute("discover", { query: "Resolve policy PX-47", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).resolves.toBeDefined();
+    await expect(tools.get("docs_search")!.execute("discover", { query: "Resolve policy PX-47", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).resolves.toBeDefined();
     const audit = await readFile(auditPath, "utf8");
-    expect(audit).toContain('"event":"skill_discovered"');
+    expect(audit).toContain('"event":"docs_discovered"');
     expect(audit).toContain('"px-47"');
   } finally {
     restore();
@@ -135,12 +135,12 @@ test("initial-injected task.md anchors a query without a prior read call", async
   try {
     const { tools, pi } = fakePi();
     lorelumExtension(pi);
-    // 不调用 read：task.md 经 @task.md 注入，skills_list 应通过懒加载锚定 PX-47。
-    await expect(tools.get("skills_list")!.execute("discover", { query: "Resolve policy PX-47", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).resolves.toBeDefined();
+    // 不调用 read：task.md 经 @task.md 注入，docs_search 应通过懒加载锚定 PX-47。
+    await expect(tools.get("docs_search")!.execute("discover", { query: "Resolve policy PX-47", public_refs: ["task.md"] }, undefined, undefined, { cwd: root })).resolves.toBeDefined();
     const audit = await readFile(auditPath, "utf8");
     expect(audit).toContain('"event":"public_input_read"');
     expect(audit).toContain('"source":"initial-injection"');
-    expect(audit).toContain('"event":"skill_discovered"');
+    expect(audit).toContain('"event":"docs_discovered"');
     expect(audit).toContain('"px-47"');
   } finally {
     restore();
@@ -158,8 +158,8 @@ test("does not fabricate discovery or query events", async () => {
     await invoke(handlers, "tool_execution_end", { toolName: "read", toolCallId: "read-1", isError: false }, root);
     const audit = await readFile(auditPath, "utf8");
     expect(audit).toContain("public_input_read");
-    expect(audit).not.toContain("skill_discovered");
-    expect(audit).not.toContain("practice_query");
+    expect(audit).not.toContain("docs_discovered");
+    expect(audit).not.toContain("policy_query");
   } finally {
     restore();
     await rm(root, { recursive: true, force: true });

@@ -10,7 +10,7 @@
 
 #### Scenario: mock Practice 工具返回
 - **WHEN** 条件为 lorelum-retrieval 或 irrelevant-practice
-- **THEN** agent 必须先发现并加载 Lorelum，再调用 mock-retrieval-tool-call；三字段结果作为该工具返回进入模型上下文，其 Practice id/version/SHA-256 记录在 trace 中，Practice 正文与 private 路径不进 public 工作区或模型输入
+- **THEN** agent 必须先检索并打开项目规范条目，再调用 policy_lookup；三字段结果作为该工具返回进入模型上下文，其 Practice id/version/SHA-256 记录在 trace 中，Practice 正文与 private 路径不进 public 工作区或模型输入
 
 ### Requirement: mock 查询返回三字段结构
 
@@ -80,9 +80,9 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 
 ### Requirement: mock-retrieval-tool-call 通道
 
-系统 MUST 提供 `mock-retrieval-tool-call` 通道：agent 可调用 `skills_list`、`skills_load` 与加载后才可用的 `lorelum_query`。runner MUST NOT 预先注入 Lorelum 或查询结果；Practice 正文 MUST NOT 进入 public 工作区；trace 只记录 redacted 信息。
+系统 MUST 提供 `mock-retrieval-tool-call` 通道：agent 可调用 `docs_search`、`docs_open` 与加载后才可用的 `policy_lookup`。runner MUST NOT 预先注入 Lorelum、规范或查询结果；Practice 正文 MUST NOT 进入 public 工作区；trace 只记录 redacted 信息。
 
-`skills_list` MUST 以通用方式说明其用于发现与已读公开任务或源码中的未解析项目政策引用相关的可选指导能力。该工具说明 MUST NOT 提到本题的政策编号、行为答案、Lorelum 或任何具体实现，且 MUST NOT 要求 agent 调用工具。目录发现调用 MUST 关联已读公开输入与任务锚点。
+`docs_search` MUST 以通用方式说明其用于检索项目规范库中与已读公开任务或源码中的未解析项目政策引用相关的规范条目。该工具说明 MUST NOT 提到本题的政策编号、行为答案、Lorelum、Skill 或任何具体实现，且 MUST NOT 要求 agent 调用工具。规范检索调用 MUST 关联已读公开输入与任务锚点。
 
 #### Scenario: agent 主动查询
 - **WHEN** lorelum-retrieval 条件下 agent 触发查询
@@ -129,7 +129,7 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 
 ### Requirement: 工具可达性 canary 与自主发现分离
 
-系统 MUST 在无提示发现门前提供一个显式强制调用的真实 Pi canary，验证 `skills_list -> skills_load -> lorelum_query`、动态工具注册与 redacted audit 在模型端可达。canary MUST 使用独立 scratch 输出，MUST NOT 执行候选评测，MUST NOT 进入任何 condition、发现门或效果统计。处理组的可用工具只可将自身描述为解析 agent 已读公开文件中项目政策引用的可选能力，MUST NOT 点名当前政策、返回其答案或要求调用。
+系统 MUST 在无提示发现门前提供一个显式强制调用的真实 Pi canary，验证 `docs_search -> docs_open -> policy_lookup`、动态工具注册与 redacted audit 在模型端可达。canary MUST 使用独立 scratch 输出，MUST NOT 执行候选评测，MUST NOT 进入任何 condition、发现门或效果统计。处理组的可用工具只可将自身描述为检索 agent 已读公开文件中项目政策引用相关规范条目的能力，MUST NOT 点名当前政策、返回其答案或要求调用。
 
 #### Scenario: canary 通过不构成自主发现
 - **WHEN** 强制调用 canary 形成完整工具链
@@ -137,7 +137,7 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 
 ### Requirement: 发现门先于完整质量 pilot
 
-系统 MUST 在完整三条件质量 pilot 前执行 lorelum-retrieval 的三次轻量触发校准。每次校准均须有带已读公开锚点的 `skills_list -> skills_load -> lorelum_query` 真实事件链；任一次缺失时，runner MUST 报告发现门未通过并停止，MUST NOT 执行完整九次质量 pilot。该校准不得创建正式 record 或升级 suite。
+系统 MUST 在完整三条件质量 pilot 前执行 lorelum-retrieval 的三次轻量触发校准。每次校准均须有带已读公开锚点的 `docs_search -> docs_open -> policy_lookup` 真实事件链；任一次缺失时，runner MUST 报告发现门未通过并停止，MUST NOT 执行完整九次质量 pilot。该校准不得创建正式 record 或升级 suite。
 
 #### Scenario: 发现门通过
 - **WHEN** 三次触发校准均具备完整真实事件链

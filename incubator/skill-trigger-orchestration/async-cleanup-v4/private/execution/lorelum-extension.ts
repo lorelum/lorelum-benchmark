@@ -65,7 +65,7 @@ export default function lorelumExtension(pi: ExtensionAPI) {
   const practicePath = required("LORELUM_MOCK_PRACTICE_PATH");
   const practiceSha256 = required("LORELUM_MOCK_PRACTICE_SHA256");
   const auditPath = required("LORELUM_MOCK_AUDIT_PATH");
-  const skillVersion = "mock-v2";
+  const docVersion = "mock-v2";
   const publicInputs = new Map<string, PublicInput>();
   const pendingReadPaths = new Map<string, string>();
   let discovered = false;
@@ -117,19 +117,19 @@ export default function lorelumExtension(pi: ExtensionAPI) {
     if (queryRegistered) return;
     queryRegistered = true;
     pi.registerTool({
-      name: "lorelum_query",
-      label: "Lorelum Query",
-      description: "Query the loaded Lorelum skill using task-specific public evidence.",
+      name: "policy_lookup",
+      label: "Policy Lookup",
+      description: "Query the loaded project policy entry using task-specific public evidence.",
       parameters: Type.Object({
         query: Type.String({ minLength: 1 }),
         public_refs: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
       }),
       async execute(toolCallId, params, _signal, _onUpdate, ctx) {
-      if (!loaded) throw new Error("Load Lorelum with skills_load before querying it.");
+      if (!loaded) throw new Error("Open the project policy entry with docs_open before querying it.");
         const evidence = anchoredPublicInputs(ctx.cwd, params, publicInputs);
         if (!evidence) {
-          await auditSafely({ event: "practice_query_rejected", query_id: toolCallId, query_sha256: sha256(params.query), public_refs: params.public_refs });
-          throw new Error("lorelum_query requires public_refs already read by the agent and a query anchored to those inputs.");
+          await auditSafely({ event: "policy_query_rejected", query_id: toolCallId, query_sha256: sha256(params.query), public_refs: params.public_refs });
+          throw new Error("policy_lookup requires public_refs already read by the agent and a query anchored to those inputs.");
         }
         const constraint = await behaviorConstraint();
         const scope = condition === "lorelum-retrieval" ? "前台项目操作与后台协调的结果权威" : "当前表单的提交前校验";
@@ -144,14 +144,14 @@ export default function lorelumExtension(pi: ExtensionAPI) {
           behavior_constraint: constraint,
         };
         await auditSafely({
-          event: "practice_query_issued",
+          event: "policy_query_issued",
           query_id: toolCallId,
           query_sha256: sha256(params.query),
           public_refs: evidence.inputs.map(({ path, sha256: digest }) => ({ path, sha256: digest })),
           matched_anchors: evidence.matchedAnchors,
         });
         await auditSafely({
-          event: "practice_query_resolved",
+          event: "policy_query_resolved",
           query_id: toolCallId,
           practice_id: response.matched_practice.id,
           practice_version: response.matched_practice.version,
@@ -164,9 +164,9 @@ export default function lorelumExtension(pi: ExtensionAPI) {
   };
 
   pi.registerTool({
-    name: "skills_list",
-    label: "Resolve Project Policy References",
-    description: "Discover optional guidance that defines project policy references in files you have already read.",
+    name: "docs_search",
+    label: "Search Project Policy Docs",
+    description: "Search the project policy documentation library for policy references in files you have already read.",
     parameters: Type.Object({
       query: Type.String({ minLength: 1 }),
       public_refs: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
@@ -175,34 +175,34 @@ export default function lorelumExtension(pi: ExtensionAPI) {
       await ensureInitialPublicInputs(ctx.cwd, publicInputs, auditSafely);
       const evidence = anchoredPublicInputs(ctx.cwd, params, publicInputs);
       if (!evidence) {
-        await auditSafely({ event: "skill_discovery_rejected", tool_call_id: toolCallId, query_sha256: sha256(params.query) });
-        throw new Error("skills_list requires public_refs already read by the agent and a query anchored to those inputs.");
+        await auditSafely({ event: "docs_discovery_rejected", tool_call_id: toolCallId, query_sha256: sha256(params.query) });
+        throw new Error("docs_search requires public_refs already read by the agent and a query anchored to those inputs.");
       }
       discovered = true;
       await auditSafely({
-        event: "skill_discovered",
+        event: "docs_discovered",
         tool_call_id: toolCallId,
-        skill_id: "lorelum",
-        skill_version: skillVersion,
+        doc_id: "project-policy",
+        doc_version: docVersion,
         query_sha256: sha256(params.query),
         public_refs: evidence.inputs.map(({ path, sha256: digest }) => ({ path, sha256: digest })),
         matched_anchors: evidence.matchedAnchors,
       });
-      return { content: [{ type: "text", text: "[{\"id\":\"lorelum\",\"version\":\"mock-v2\",\"summary\":\"Project policy reference guidance\"}]" }] };
+      return { content: [{ type: "text", text: "[{\"id\":\"project-policy\",\"version\":\"mock-v2\",\"summary\":\"Project policy reference guidance\"}]" }] };
     },
   });
 
   pi.registerTool({
-    name: "skills_load",
-    label: "Load Project Policy Guidance",
-    description: "Load a project policy guidance entry returned by skills_list.",
+    name: "docs_open",
+    label: "Open Policy Doc Entry",
+    description: "Open a project policy documentation entry returned by docs_search.",
     parameters: Type.Object({ id: Type.String({ minLength: 1 }) }),
     async execute(toolCallId, params) {
-      if (!discovered || params.id !== "lorelum") throw new Error("Use skills_list and load the returned Lorelum skill.");
+      if (!discovered || params.id !== "project-policy") throw new Error("Use docs_search and open the returned project policy entry.");
       loaded = true;
       registerQuery();
-      await auditSafely({ event: "skill_loaded", tool_call_id: toolCallId, skill_id: "lorelum", skill_version: skillVersion });
-      return { content: [{ type: "text", text: "Project guidance loaded. lorelum_query is now available." }] };
+      await auditSafely({ event: "docs_opened", tool_call_id: toolCallId, doc_id: "project-policy", doc_version: docVersion });
+      return { content: [{ type: "text", text: "Project policy doc opened. policy_lookup is now available." }] };
     },
   });
 }

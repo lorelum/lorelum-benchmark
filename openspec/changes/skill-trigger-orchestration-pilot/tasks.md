@@ -138,3 +138,10 @@
 - [x] r14e：三次均无查询、无篡改；五轮 15 次汇总：查询意图 2/15、完整链路 1/15；结论为方向性弱正信号。 [写入范围：v4、scratch/]
 - [x] r14f：新增「前台后 200ms 内协调不得改变结果」现象级断言（抓无条件生效近似）；校准矩阵更新（naive 3 失败、anti-pattern 猜 300ms 过测试但 judge 不符合）；judge 校准通过。 [写入范围：v4、scratch/]
 - [x] r15：三次均无查询；attempt-1 从测试时序点插值猜中 500ms 窗口并正确实现但未查询；「窗口内不生效」断言未提升触发率（agent 猜值闭合）。累计 18 次：查询意图 2/18、完整链路 1/18。 [写入范围：v4、scratch/]
+
+## 18. r16 规范引用式自主查询（v4 内生态位修正）
+
+- [x] 工具生态位修正：skills_list→docs_search、skills_load→docs_open、lorelum_query→policy_lookup，事件/trace/契约同步；去除 Lorelum/Skill 暴露。 [写入范围：v4 private、src/benchmark、OpenSpec]
+- [x] task.md 改为规范引用式需求（PX-47 为实现依据、规范库可检索、工作区无规范正文），不出现窗口/500/Lorelum 等词。 [写入范围：v4 public]
+- [x] 离线校验：extension/run-local 定向 19、validate、contracts 197、strict OpenSpec、泄露审计、diff check。 [写入范围：v4、scratch/]
+- [ ] 运行 r16 发现门（三次），判定新工具链路是否形成完整查询。 [写入范围：v4、scratch/]

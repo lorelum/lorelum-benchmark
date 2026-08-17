@@ -90,10 +90,10 @@ export type ResolvedCondition = {
 /** Three-layer trace events (redacted; no Practice text or private paths). */
 export type TraceEvent =
   | { event: "public_input_read"; path: string; sha256: string; anchors: string[] }
-  | { event: "skill_discovered"; tool_call_id: string; skill_id: string; skill_version: string }
-  | { event: "skill_loaded"; tool_call_id: string; skill_id: string; skill_version: string }
-  | { event: "practice_query_issued"; query_id: string; query_sha256: string }
-  | { event: "practice_query_resolved"; query_id: string; practice_id: string; practice_version: string; practice_sha256: string; behavior_constraint_sha256: string };
+  | { event: "docs_discovered"; tool_call_id: string; doc_id: string; doc_version: string }
+  | { event: "docs_opened"; tool_call_id: string; doc_id: string; doc_version: string }
+  | { event: "policy_query_issued"; query_id: string; query_sha256: string }
+  | { event: "policy_query_resolved"; query_id: string; practice_id: string; practice_version: string; practice_sha256: string; behavior_constraint_sha256: string };
 
 export type RedactedSkillTriggerTrace = {
   condition_id: SkillTriggerConditionId;
