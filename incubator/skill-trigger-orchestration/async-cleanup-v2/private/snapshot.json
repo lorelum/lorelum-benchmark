@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "0f83c3f2a742e47b5a84a38840850fd85628616d15646f26cf9e2a82d38e9939",
+  "snapshot_id": "77a4e1057bddf6600a7d4921640715cf61aaa412f731496f4ee7f02c3c3f14be",
   "files": {
     "private/README.md": "4b0e2f25b368f2ec20ea9d92b4b171c7effb61a824df98ee9d93569c62105010",
     "private/calibration/judge-calibrate.ts": "5c3fe50825a22f2c4ef64cba3bd8bad66ef40b42ac664ad36811e10d8cce9492",
@@ -28,8 +28,7 @@
     "private/execution/unified-diff.ts": "7bc9f968a44030b0fb21dea1052b64463202acf6b02d90073e5cf827a93fad46",
     "private/oracle.yaml": "66f6fdf0dbc9eb307640350d9a9b888c590b67d575235b265a66df42440a14db",
     "private/practices/irrelevant.form-validation.v1.md": "0749d3aa5deaf6c6425f226068a379caf8b4a59f9cf0eb96b2e8f3d9688b4a3e",
-    "private/practices/metadata.yaml": "4f17fb825c8b5b7e099500ac3a708bd5cd420e30d2bdba6f7e39bcd6a886d24a",
-    "private/practices/oracle.async-lifecycle.v1.md": "d40038d89f3a135fe31db42cbe3decf00e7b0807d42eecd57a7be8ec55b6aaf8",
+    "private/practices/metadata.yaml": "1f451049034cd938f93edb75ad2da987e048533b04f27770fcb846657a4a8208",
     "private/practices/oracle.project-operation-authority.v1.md": "2078d8bbde86a0617416c154583ea1837129dfc66a3d27454cf6d404ac454aae",
     "public/starter/app/.gitignore": "463b5f9362420aaa6bbf70c200b7cef361af47f34e60e6767851406f3091a39a",
     "public/starter/app/bun.lock": "68c0a96263a2891e23cc804b88164117f14e4bc87992431ab6bc483fd04a6f10",

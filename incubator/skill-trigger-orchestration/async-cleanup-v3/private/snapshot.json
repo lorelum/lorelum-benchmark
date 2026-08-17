@@ -1,9 +1,9 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "69a651f003b37bd1207d5aac935af4a8fa6bf29c2705fabe578ec1ac51c766cf",
+  "snapshot_id": "3f4169ac7f422a8c887a8553f046e2e03f2baf70aa36c6017208e57de84c6500",
   "files": {
-    "private/README.md": "3d1b0007c231e8f7373a2fb0ae46ae21c6e9448a79e7575b8d5b8ffd59150d0c",
+    "private/README.md": "3d1c5af0e481fbd7c4dfee22366a3eb6bc6fe59821b9a83474618a02e7370d78",
     "private/calibration/judge-calibrate.ts": "225130956ec2433ffdff94da11767e5f463c94d5e7b39c6e6cd2da887fd7b17b",
     "private/calibration/run.ts": "394462fea568451a241c08e99ce99c784a91d446dc2dedff0f9bf9d1fe54a11b",
     "private/calibration/sets.yaml": "3b714f17fa9041e54196334a54b5a3974861d2ff813792680d6dd176a870e58b",
@@ -14,7 +14,7 @@
     "private/calibration/sets/operation-authority/v1/overlays/reference/src/Dashboard.tsx": "f4dda654040ebe1c46e6332eb5063f1a3a8365b8f7672ef5d762c209b12523fa",
     "private/calibration/sets/operation-authority/v1/overlays/reference/src/services/projects.ts": "9baa983ef45dc4d1a2db2bbaea363ebb82123d13a6194710453af55587a92258",
     "private/candidate.yaml": "c824bf80ef9dcceda251e84513345ac88c477cc2992758d246cfd472a53da580",
-    "private/conditions.yaml": "6356259db083f48f33ab7488ad6de30e6ea8b966d6cff484da891e0880387ed5",
+    "private/conditions.yaml": "2216fe3362c1f9e652625beadc321787a616e68739291db901771e473d65db69",
     "private/evaluator/evaluate-operation-authority.ts": "61b7342a925cb587fc66d6061c551efc8e523e57f7f7856f987c376af9d20cc0",
     "private/execution/lorelum-extension.test.ts": "1c67a8cfd635309c6f2efd717b5d980d17b1ef5200486cefb166d60454654b7d",
     "private/execution/lorelum-extension.ts": "4ed43473c1cb4204cd39d038fe7bf7323f05cb9ae96da4f147d116c9efc4c3fb",
@@ -24,8 +24,8 @@
     "private/execution/unified-diff.ts": "7bc9f968a44030b0fb21dea1052b64463202acf6b02d90073e5cf827a93fad46",
     "private/oracle.yaml": "66f6fdf0dbc9eb307640350d9a9b888c590b67d575235b265a66df42440a14db",
     "private/practices/irrelevant.form-validation.v1.md": "a4bd13b618db0aa162d594b13356f2a6cc6889a32ade76b5908559efaeaad8c4",
-    "private/practices/metadata.yaml": "64d0c3e78ca63253d7a42e4e3bafd39bb4fadb57d8f052c425820895cf1379b9",
-    "private/practices/oracle.project-operation-authority.v1.md": "303ec1a5f5985ad52db53722875f34af7f732c21db199007816056ebf584e2f2",
+    "private/practices/metadata.yaml": "982d324fe88d6b38a335ff6bcf8ef2f1a03d24eea5a7ec638cb73783a3643d8e",
+    "private/practices/oracle.project-operation-authority.v1.md": "a06d800c99ad43ac1b10b67e70d0089ee55d3a4a0b08a182bd98c2495c9ba1e9",
     "public/starter/app/.gitignore": "463b5f9362420aaa6bbf70c200b7cef361af47f34e60e6767851406f3091a39a",
     "public/starter/app/bun.lock": "68c0a96263a2891e23cc804b88164117f14e4bc87992431ab6bc483fd04a6f10",
     "public/starter/app/index.html": "512b50bf0f6362bf9044c35c9e4d0b1426faab0dd64dd6c6c60bd87214a80a1e",
@@ -49,7 +49,7 @@
     "materializer_kind": "react-vite",
     "input_hash": "f75a84af5d112f516172fb5237c30b8604c74f6141d8c74e13e18b5013e76029",
     "materialized_output_hash": "73e637b665d3ba33be31f20dde27d85647f0e37ed7d117df7a0c6ad46eec6905",
-    "profile_input_hash": "c838f2906c28339f8238b656df25698479f914c3647b8f253f1dce9f81eb2e55",
+    "profile_input_hash": "93887dfdfd3aede339919ac1f58c9d60c42b1e23c8e557f7d7aa415f3934d19d",
     "calibration_sets_hash": "60530aa888aeaad2848e7c95af291676165beeb4c1adc36a3f14d2ba8da86652"
   }
 }
