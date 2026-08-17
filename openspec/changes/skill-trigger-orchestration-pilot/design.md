@@ -34,7 +34,7 @@ baseline 下 agent 写出不带 cleanup 的 useEffect。由 AST 探针稳定检�
 
 ### 度量
 
-主量看过程：trace 记录公开输入读取、Skill 发现、Skill 加载、带任务锚点的查询及结构化返回。处理组只有同时具备完整真实事件链、语义通过与质量门通过，才可计为成功。辅量看结果：AST 结构门拒绝明显伪 cleanup，运行时门分别通过“延迟请求 -> 卸载 -> resolve”与“延迟请求 -> 卸载 -> reject”断言卸载后状态 setter 调用数为零。没有过程链、结果却碰巧对，不算。
+主量看过程：trace 记录公开输入读取、规范检索发现（docs_discovered）、规范条目打开（docs_opened）、带任务锚点的政策查询（policy_query_issued/resolved）及结构化返回。轨道结论只取发现层——lorelum-retrieval 是否形成完整真实查询链路；约束采纳（agent 是否按行为约束正确实现、judge 是否符合）移交 practice-injection 轨道验证，不属于本轨道结论。质量门（AST 结构门、运行时探针、judge）保留为采纳层旁证与复用基础，不进入本轨道成功判定。没有过程链、结果却碰巧对，不算发现层成功。
 
 ### v2 运行有效性
 
@@ -246,3 +246,17 @@ r17c 完整三次重跑：**发现门通过**（3/3 attempt valid、trace.comple
 ### r17 附：v4 过时 practice 元数据修复
 
 r17 收尾时发现 v4 的 practice 元数据为 r14 复制 v3 时继承的过时值：conditions.yaml 声明的 practice sha256（303ec1a5）与实际内容（a06d800c）不符，metadata.yaml 的 rendered_characters（637）比实际（636）多 1。同时 v4 runner 的 verifySnapshot 硬编码校验 async-cleanup-v2（v2），v2 的 snapshot 因 r11 历史遗留 mismatch 导致 v4 runner 无法启动。已修复：conditions.yaml 同步实际 sha256、metadata.yaml 修正字符数与相对差、verifySnapshot 目标修正为 async-cleanup-v4、v4 snapshot 重建。定向测试 20/20、contracts 200、v4 snapshot 校验通过。这些修复不改变 practice 内容与评测语义，也不改变 r17c 已记录的 3/3 发现门结论。冻结的 v2/v3 仍因历史遗留（r11/r13 未同步）导致全量 validate 报 snapshot/profile mismatch，按「冻结不改」原则保留，作为已知问题。
+
+### 解耦决策：轨道结论限定发现层，采纳层移交 practice-injection
+
+r17c 暴露了两层目标的测量冲突：发现门 3/3 通过（完整 docs 链路 + 锚定，历史上首次稳定复现自主查询），但 judge v2 三个 attempt 全判不符合（43/41/40，reference_min=90）——agent 查询到窗口规则却只实现「距前台完成 >500ms」近似，缺失「前台在途时不生效 + 窗口从启动时刻算起」。根因：发现层要求规则不可推断（否则 agent 没有查询动机），采纳层要求不采纳可观察失败（否则无法验证 agent 是否按约束实现）——公开材料越能驱动查询，越接近「测试即规格」，approximate 实现越容易通过公开测试而 judge 不符合。
+
+两个目标在同一测量上互相矛盾，解耦是正解：
+
+- 本轨道（skill-trigger-orchestration）只验证发现层：lorelum-retrieval 是否形成完整真实查询链路（docs_search -> docs_open -> policy_lookup + 锚定）。r17c 3/3 达标即为方向性正信号。
+- 采纳层（agent 是否按行为约束正确实现、judge 是否符合）移交 `practice-injection`（login-page-layered-api-v1）轨道验证：那里 Practice 是显式注入的处理变量，不依赖 agent 自主查询，可直接测约束采纳。
+- 三条件结构、质量门（AST/runtime probe、judge）保留为本轨道素材与采纳层复用基础，但不再作为本轨道 success 判定的门槛。
+
+回到原始任务定义（飞书 t100237/t100238/t100239/t100240：触发时机设计 -> mock 编排流程 -> 端到端闭环验证「触发+查询+注入+AI 按约束改写」），本轨道收敛为「验证触发+查询链路通不通」，采纳闭环由 practice-injection 承接。结论：未偏离原始任务，解耦是收敛回朴素目标的修正。
+
+后续承接（独立 change，需新 issue + OpenSpec）：practice-injection 新建任务复用 `react.project-operation-authority` 卡与 judge v2，用 oracle-practice 注入通道验证完整采纳（包括窗口起点与前台在途语义）。

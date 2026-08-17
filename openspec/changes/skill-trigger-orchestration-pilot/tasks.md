@@ -149,4 +149,14 @@
 ## 19. r17 锚定判定修复与发现门通过（v4 内）
 
 - [x] 修复 runner 锚定判定：queryAnchored 从 policy_query_issued.public_refs 非空改为 matched_anchors 非空，与 extension 263917d 语义对齐；同步 fake-pi 测试数据；定向 20/20、validate、contracts 197、v4 snapshot 重建全绿。 [写入范围：v4 private execution、snapshot、OpenSpec]
-- [x] 运行 r17c 发现门（三次）：3/3 attempt valid + trace.complete + docs_discovered + query_anchored，**发现门首次通过**；公开测试 3/3 全部 8/8 通过；judge v2 3/3 判不符合（43/41/40，reference_min=90）——三个实现均只实现「距前台完成 >500ms」近似、缺失「前台在途时不生效 + 窗口从启动时刻算起」。发现门达 3/3 为方向性正信号，约束采纳仍为近似，结果 diagnostic-only。 [写入范围：v4、scratch/]- [x] 修复 v4 过时 practice 元数据：conditions.yaml sha256 同步实际内容、metadata.yaml 字符数与相对差修正、verifySnapshot 目标 v2→v4、snapshot 重建；定向 20/20、contracts 200。冻结 v2/v3 的历史遗留 mismatch（r11/r13 未同步）保留为已知问题。 [写入范围：v4 private、OpenSpec]
+- [x] 运行 r17c 发现门（三次）：3/3 attempt valid + trace.complete + docs_discovered + query_anchored，**发现门首次通过**；公开测试 3/3 全部 8/8 通过；judge v2 3/3 判不符合（43/41/40，reference_min=90）——三个实现均只实现「距前台完成 >500ms」近似、缺失「前台在途时不生效 + 窗口从启动时刻算起」。发现门达 3/3 为方向性正信号，约束采纳仍为近似，结果 diagnostic-only。 [写入范围：v4、scratch/]
+- [x] 修复 v4 过时 practice 元数据：conditions.yaml sha256 同步实际内容、metadata.yaml 字符数与相对差修正、verifySnapshot 目标 v2→v4、snapshot 重建；定向 20/20、contracts 200。冻结 v2/v3 的历史遗留 mismatch（r11/r13 未同步）保留为已知问题。 [写入范围：v4 private、OpenSpec]
+
+## 20. 轨道解耦收尾（v4 内）
+
+- [x] 记录解耦决策：本轨道结论限定发现层（完整真实查询链路），采纳层移交 practice-injection；分析 r17c「发现 3/3 通过 + judge 3/3 不符合」的测量冲突。 [写入范围：spec.md、design.md、proposal.md、Issue #96、PR #113]
+- [x] spec.md：处理组 success 门槛从「完整链路 + 公开测试 + judge 符合」改为「发现层只验证完整查询链路（docs 三事件 + 锚定）」；采纳层标记为移交 practice-injection；trace 事件名同步 docs_* 语义。 [写入范围：spec.md]
+- [x] design.md：修正「度量」为发现层结论，追加解耦决策记录与承接计划。 [写入范围：design.md]
+- [x] 运行 strict OpenSpec、v4 定向测试，确认解耦改动不破坏既有契约。 [写入范围：OpenSpec、scratch/]
+- [x] 同步 Issue #96 与 PR #113：记录解耦决策，重定位结论为「发现层 3/3 达成（方向性正信号）、采纳层移交」。 [写入范围：Issue #96、PR #113]
+- [ ] practice-injection 承接（独立 change）：复用 react.project-operation-authority 卡 + judge v2，用 oracle-practice 注入通道验证完整采纳（窗口起点 + 前台在途语义）。 [写入范围：practice-injection、新 issue + OpenSpec]

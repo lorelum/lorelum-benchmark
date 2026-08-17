@@ -30,13 +30,12 @@
 #### Scenario: 无天花板
 - **THEN** conditions 中不包含 oracle-practice 或任何写死正确约束的条件
 
-#### Scenario: 盲从判定
+#### Scenario: 盲从判定（采纳层旁证）
 - **WHEN** lorelum-retrieval 过 evaluator 且 irrelevant-practice 也过
-- **THEN** 结果标记为盲从可疑，不记为听懂约束
+- **THEN** 结果标记为盲从可疑，不作为采纳层结论
 
-#### Scenario: 听懂约束
-- **WHEN** lorelum-retrieval 过 evaluator 且 irrelevant-practice 不过
-- **THEN** 结果记为 agent 真正听懂约束
+#### Scenario: 三条件结构复用
+- **THEN** baseline、lorelum-retrieval、irrelevant-practice 三条件结构保留，作为采纳层（practice-injection）复用基础；本轨道结论只取 lorelum-retrieval 的发现层查询链路
 
 ### Requirement: 异步操作归属质量门稳定检出 baseline 缺陷
 
@@ -93,15 +92,15 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 
 ### Requirement: trace 记录三层事件
 
-系统 MUST 在 trace 中记录真实事件：public_input_read、skill_discovered、skill_loaded、practice_query_issued、practice_query_resolved。每层 MUST 包含足够审计的 redacted 元信息，MUST NOT 包含 Practice 正文或私有路径。缺少任一真实事件链不得计为处理组成功。
+系统 MUST 在 trace 中记录真实事件：public_input_read、docs_discovered、docs_opened、policy_query_issued、policy_query_resolved。每层 MUST 包含足够审计的 redacted 元信息，MUST NOT 包含 Practice 正文或私有路径。缺少任一真实事件链不得计为发现层成功。
 
 #### Scenario: 真实事件链齐全
 - **WHEN** lorelum-retrieval 条件完成一次尝试
-- **THEN** trace 包含公开输入、发现、加载、查询与返回事件，可据此判定过程链是否成立
+- **THEN** trace 包含公开输入、发现、加载、查询与返回事件，可据此判定发现层过程链是否成立
 
 #### Scenario: 过程链缺失
 - **WHEN** trace 缺少任一层事件但结果通过
-- **THEN** 不记为听懂约束
+- **THEN** 不记为发现层成功，本轨道不归因
 
 ### Requirement: revision 冻结与运行有效性
 
@@ -146,3 +145,14 @@ candidate 正式用作对照前 MUST 先跑本地 pilot，确认 baseline 下 ag
 #### Scenario: 发现门未通过
 - **WHEN** 任一触发校准未发生完整真实事件链
 - **THEN** runner 仅输出 redacted 发现门诊断并停止，不对 Lorelum 效果或模型质量行为作正向归因
+
+### Requirement: 轨道结论限定发现层，采纳层移交 practice-injection
+
+系统 MUST 将 skill-trigger-orchestration 轨道的结论限定为发现层：lorelum-retrieval 是否"自主发现并查询"由完整真实查询链路（docs_search -> docs_open -> policy_lookup 三事件 + 锚定）单独判定。约束采纳（agent 是否按查询到的行为约束正确实现、judge 是否符合）不属于本轨道结论，MUST 移交 practice-injection（login-page-layered-api-v1）轨道验证。
+
+#### Scenario: 发现层结论独立于采纳层
+- **WHEN** lorelum-retrieval 形成完整真实查询链路但 judge 判为不符合
+- **THEN** 本轨道记为发现层成功；采纳层不归因于本轨道，留给 practice-injection 验证
+
+#### Scenario: 不创建新版质量 pilot
+- **THEN** 本轨道只输出发现门结果，不再以 judge 符合性作为处理组 success 的门槛

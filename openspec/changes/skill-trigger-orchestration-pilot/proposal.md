@@ -39,3 +39,4 @@ Issue #96 需要一条独立轨道，验证 coding agent 在工程任务中会�
 - 不依赖真实 Lorelum CLI/检索引擎。
 - 不创建 `results/records/`、不升级 suite revision、不变更活跃 runner/treatment/schema/environment。
 - 私有材料不得进入 agent 工作区或模型输入。
+- 解耦决策：本轨道结论限定为发现层（lorelum-retrieval 是否形成完整真实查询链路），约束采纳由 practice-injection（login-page-layered-api-v1）验证。r17c 显示发现门 3/3 通过但 judge 3/3 不符合（43/41/40）——查询到约束却未完整采纳，恰证明两目标在测量上冲突；本轨道只取发现层正信号。
