@@ -5,10 +5,6 @@ cards:
     version: v1
     path: oracle.async-lifecycle.v1.md
     rendered_characters: 480
-  - id: react.async-operation-ownership
-    version: v2
-    path: oracle.async-operation-ownership.v2.md
-    rendered_characters: 480
   - id: react.project-operation-authority
     version: v1
     path: oracle.project-operation-authority.v1.md
