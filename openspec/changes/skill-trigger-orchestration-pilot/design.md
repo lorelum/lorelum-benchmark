@@ -231,3 +231,7 @@ r15 三次均无查询、无篡改，发现门 fail，diagnostic-only。关键�
 ### r16 规范引用式自主查询（生态位修正）
 
 在 v4 内迭代，把「自主发现证据」从 Lorelum/Skill 语义修正为真实开发场景的规范文档检索：工具改为 `docs_search → docs_open → policy_lookup`（三段结构保留，label/description 无 Lorelum/Skill 暴露），trace 事件改为 docs_discovered/docs_opened/policy_query_*；task.md 改为规范引用式需求（“实现协调行为必须符合项目规范 PX-47，规范见项目规范库，可通过文档检索入口获取；工作区不包含规范正文”）。查询动机来自「需求引用规范 + 入口可识别 + 规范不在工作区」，judge 仅作验收。r15 前 skills 链路证据标注为旧工具语义。离线校验全绿（validate、contracts 197、v4 定向 19、strict OpenSpec、泄露审计）。r16 发现门待运行。
+
+### r16 发现门结果
+
+r16 三次中 3/3 均主动尝试 `docs_search`（attempt-1/3 被锚点拒绝、attempt-2 成功），attempt-2 完成完整链路（docs_discovered → docs_opened → policy_query_issued/resolved，trace.complete=true）并通过文档检索获取 PX-47 规范、正确实现 500ms 窗口规则（与 reference 等价）。attempt-1 超时（944s）、attempt-3 未形成链路；发现门按 3/3 协议仍 fail，结果 diagnostic-only。这是生态位修正的关键证据：规范文档检索入口 + 规范引用式需求使 agent 从「从不检索」（r9–r15 约 30 次 0 检索）变为「总是尝试检索、1/3 完整链路且正确实现」。锚点拒绝（attempt-1/3 的 docs_search 被拒）是剩余 harness 摩擦，修复后可能进一步提升完整链路率。

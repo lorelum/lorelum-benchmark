@@ -144,4 +144,4 @@
 - [x] 工具生态位修正：skills_list→docs_search、skills_load→docs_open、lorelum_query→policy_lookup，事件/trace/契约同步；去除 Lorelum/Skill 暴露。 [写入范围：v4 private、src/benchmark、OpenSpec]
 - [x] task.md 改为规范引用式需求（PX-47 为实现依据、规范库可检索、工作区无规范正文），不出现窗口/500/Lorelum 等词。 [写入范围：v4 public]
 - [x] 离线校验：extension/run-local 定向 19、validate、contracts 197、strict OpenSpec、泄露审计、diff check。 [写入范围：v4、scratch/]
-- [ ] 运行 r16 发现门（三次），判定新工具链路是否形成完整查询。 [写入范围：v4、scratch/]
+- [x] 运行 r16 发现门（三次）：3/3 主动尝试 docs_search；attempt-2 完整链路且正确实现 500ms 窗口（比 r14c 更强）；attempt-1 超时、attempt-3 未成链路；发现门 fail，diagnostic-only。生态位修正使 agent 从从不检索变为总是尝试检索。 [写入范围：v4、scratch/]
