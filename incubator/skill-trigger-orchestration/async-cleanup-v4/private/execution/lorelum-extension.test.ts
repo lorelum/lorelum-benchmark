@@ -148,6 +148,23 @@ test("initial-injected task.md anchors a query without a prior read call", async
   }
 });
 
+test("policy-library path as public_refs still anchors via task.md query", async () => {
+  const { root, practicePath, auditPath } = await fixture();
+  const restore = configureEnvironment(practicePath, auditPath);
+  try {
+    const { tools, pi } = fakePi();
+    lorelumExtension(pi);
+    // agent 用规范库路径（工作区不存在）作 public_refs，query 锚定 task.md 的 PX-47：应通过。
+    await expect(tools.get("docs_search")!.execute("discover", { query: "Resolve policy PX-47", public_refs: ["docs/project-policies/PX-47.md"] }, undefined, undefined, { cwd: root })).resolves.toBeDefined();
+    const audit = await readFile(auditPath, "utf8");
+    expect(audit).toContain('"event":"docs_discovered"');
+    expect(audit).toContain('"px-47"');
+  } finally {
+    restore();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("does not fabricate discovery or query events", async () => {
   const { root, practicePath, auditPath } = await fixture();
   const restore = configureEnvironment(practicePath, auditPath);

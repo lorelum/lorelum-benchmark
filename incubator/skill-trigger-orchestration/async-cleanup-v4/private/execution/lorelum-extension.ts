@@ -51,12 +51,15 @@ async function ensureInitialPublicInputs(cwd: string, publicInputs: Map<string, 
 }
 
 function anchoredPublicInputs(cwd: string, request: AnchoredRequest, publicInputs: Map<string, PublicInput>): { refs: string[]; inputs: PublicInput[]; matchedAnchors: string[] } | undefined {
+  // 锚定要求：query 必须引用任一已读公开输入（含 @task.md 初始注入）的锚点。
+  // public_refs 只需非空；agent 可能引用规范库路径（如 docs/project-policies/PX-47.md，工作区不存在），
+  // 不得因此拒绝真实检索尝试——匹配的 refs 仅用于 trace 证据。
   const refs = request.public_refs.map((entry) => relativePublicPath(cwd, entry)).filter((entry): entry is string => Boolean(entry));
   const inputs = refs.map((entry) => publicInputs.get(entry)).filter((entry): entry is PublicInput => Boolean(entry));
   const queryAnchors = anchors(request.query);
-  const knownAnchors = new Set(inputs.flatMap((entry) => entry.anchors));
+  const knownAnchors = new Set([...publicInputs.values()].flatMap((entry) => entry.anchors));
   const matchedAnchors = queryAnchors.filter((entry) => knownAnchors.has(entry));
-  if (inputs.length !== refs.length || matchedAnchors.length === 0) return undefined;
+  if (request.public_refs.length === 0 || matchedAnchors.length === 0) return undefined;
   return { refs, inputs, matchedAnchors };
 }
 

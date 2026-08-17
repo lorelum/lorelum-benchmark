@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "e76eecfe2b0af67dd2b938a6db7a289ea401080a9873f901a70aba092997ae95",
+  "snapshot_id": "3648df583d7c71503ee6b626597f044d44be3c2b102c29bc38246fa9ab2dd883",
   "files": {
     "private/README.md": "c0262ed15c16e0a402e9f42e720ec4b0bcd8d3c28975c1788a0a4c2d95c30232",
     "private/calibration/judge-calibrate.ts": "225130956ec2433ffdff94da11767e5f463c94d5e7b39c6e6cd2da887fd7b17b",
@@ -18,8 +18,8 @@
     "private/candidate.yaml": "1293346fbd70d194cc0f5699191b743a03315a18b45034a147c67ab207e6607f",
     "private/conditions.yaml": "6356259db083f48f33ab7488ad6de30e6ea8b966d6cff484da891e0880387ed5",
     "private/evaluator/evaluate-operation-authority.ts": "61b7342a925cb587fc66d6061c551efc8e523e57f7f7856f987c376af9d20cc0",
-    "private/execution/lorelum-extension.test.ts": "f306387bbec7a7c08376f366ddee35bc81848716c09ad94e8206108d77fb5102",
-    "private/execution/lorelum-extension.ts": "f58d10586200545497e1f04d0c8f10a2ae81f92e9b486b64883708480501078d",
+    "private/execution/lorelum-extension.test.ts": "b873292333d57e96ceee2d84d8f922dd1c28de5fbc46fc7e9d568b5a6ff81cb2",
+    "private/execution/lorelum-extension.ts": "e10879754cbc0504068a5e1da369dfd4e7355466beb51086f7dcd0dcad785c0f",
     "private/execution/run-local.test.ts": "cffe4a60151456c124e75135b41285e35e015497d6070ce9fc9e6b46ed322a38",
     "private/execution/run-local.ts": "0f449967052fa7b69d6ad2041a970dc018e3eb2f61741dc335d80f70c01898fc",
     "private/execution/tool-policy.yaml": "bc0b37f6384e44d686b80a940c48487f578dd9b607f47381a8213e1006b1b760",
