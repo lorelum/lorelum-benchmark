@@ -148,7 +148,7 @@ async function verifySnapshot(): Promise<void> {
   const result = await run([
     process.execPath, "run",
     resolve(repositoryRoot, "src/benchmark/snapshot.ts"),
-    "--incubator", "skill-trigger-orchestration", "async-cleanup-v2"
+    "--incubator", "skill-trigger-orchestration", "async-cleanup-v4"
   ], repositoryRoot);
   if (result.code !== 0) fail(`Candidate snapshot verification failed: ${(result.stderr || result.stdout).trim()}`);
 }

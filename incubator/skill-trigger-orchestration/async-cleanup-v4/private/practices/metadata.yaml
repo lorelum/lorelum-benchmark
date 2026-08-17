@@ -4,12 +4,12 @@ cards:
   - id: react.project-operation-authority
     version: v1
     path: oracle.project-operation-authority.v1.md
-    rendered_characters: 637
+    rendered_characters: 636
   - id: react.form-validation
     version: v1
     path: irrelevant.form-validation.v1.md
     rendered_characters: 588
 comparison:
   maximum_relative_difference: 0.10
-  actual_relative_difference: 0.07692307692307693
+  actual_relative_difference: 0.07547169811320754
   independently_reviewed: true
