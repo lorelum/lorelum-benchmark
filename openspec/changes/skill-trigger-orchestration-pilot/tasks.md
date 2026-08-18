@@ -159,7 +159,7 @@
 - [x] design.md：修正「度量」为发现层结论，追加解耦决策记录与承接计划。 [写入范围：design.md]
 - [x] 运行 strict OpenSpec、v4 定向测试，确认解耦改动不破坏既有契约。 [写入范围：OpenSpec、scratch/]
 - [x] 同步 Issue #96 与 PR #113：记录解耦决策，重定位结论为「发现层 3/3 达成（方向性正信号）、采纳层移交」。 [写入范围：Issue #96、PR #113]
-- [ ] practice-injection 承接（独立 change）：复用 react.project-operation-authority 卡 + judge v2，用 oracle-practice 注入通道验证完整采纳（窗口起点 + 前台在途语义）。 [写入范围：practice-injection、新 issue + OpenSpec]
+- [ ] practice-injection 承接（独立 change，本轨道归档后由新 issue + OpenSpec 承接）：复用 react.project-operation-authority 卡 + judge v2，用 oracle-practice 注入通道验证完整采纳（窗口起点 + 前台在途语义）。未执行原因：解耦决策将采纳层移交 practice-injection，属独立轨道范围，不在本 change 交付内。 [写入范围：practice-injection、新 issue + OpenSpec]
 
 ## 21. PR 体量精简（v4 内）
 
