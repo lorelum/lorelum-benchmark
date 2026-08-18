@@ -33,6 +33,26 @@ The kernel staged the private `quality-probe/v3` fixtures and public starter, re
 
 Labels were fixed by source review; #168 judge v2 rationale was used only as corroborating evidence. Expected labels are calibration assertions only and are never passed to the probe. The probe reports structural evidence paths and function names (for example policy module/function and ledger module), not identifier-allowlist matches. The deterministic matrix now has 14 cases: 2 extra real PI-derived regressions from the historical v2 replay, plus the public starter.
 
+## 2026-08-18 Real one-repeat smoke (authorized, observational)
+
+A real one-repeat PI smoke (plan `v3-one-repeat-smoke-optimized`, issue #175 authorization) was
+run to `scratch/v3-one-repeat-smoke-final-4` with the local Pi catalog override and the
+`LORELUM_PI_API_KEY` -> `DEEPSEEK_API_KEY` mapping. All three conditions produced semantically
+passing workspaces (public tests 22/22 each):
+
+| Condition | runner semantic | runner practice_observation | direct probe re-check (observational) |
+| --- | --- | --- | --- |
+| baseline | pass | not-observed | not-observed (no centralized policy module) |
+| irrelevant-practice | pass | not-observed | not-observed (no centralized policy module) |
+| oracle-practice | Pi timed out (25 min budget) | execution-failed | observed (policy=gateway.ts, ledger=ledger.ts, independent adapters) |
+
+The oracle attempt exceeded the 25-minute Pi budget before the runner could run its evaluator, so
+the formal summary records `execution-failed` for oracle and `diagnostic-only`. Re-checking the
+saved oracle workspace with the v3 probe and public tests shows semantic pass and practice
+`observed`; the baseline and irrelevant workspaces remain `not-observed`. This is observational
+evidence of probe discriminative power, not a formal record, suite upgrade, or re-label of
+calibration fixtures.
+
 ## Judge Boundary
 
 The final diff does not modify `judge-agent/generic/v2` or add a shared judge capability delta. The v3 candidate still declares the frozen `judge-agent/generic/v2` as a soft sidecar, but judge scoring does not contribute to semantic or `practice_observation`.

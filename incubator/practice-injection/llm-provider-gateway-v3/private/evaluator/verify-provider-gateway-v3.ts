@@ -47,6 +47,7 @@ type SourceFileShape = {
   stringLiterals: Set<string>;
   propertyNames: Set<string>;
   identifiers: Set<string>;
+  valueUses: Set<string>;
   hasFetchCall: boolean;
   hasProviderSdkImport: boolean;
   functions: FunctionShape[];
@@ -70,6 +71,7 @@ function propertyNameOf(node: any): string | undefined {
 
 function stateNameFromExpression(node: any): string | undefined {
   if (!node) return undefined;
+  if (node.kind === ts.SyntaxKind.ThisKeyword) return undefined;
   if (ts.isIdentifier(node)) return node.text;
   if (ts.isPropertyAccessExpression(node)) {
     return stateNameFromExpression(node.expression) ?? node.name.text;
@@ -79,6 +81,27 @@ function stateNameFromExpression(node: any): string | undefined {
       (ts.isStringLiteral(node.argumentExpression) ? node.argumentExpression.text : undefined);
   }
   return undefined;
+}
+
+function isValueIdentifierUse(node: any): boolean {
+  const parent = node.parent;
+  if (!parent) return false;
+  if (ts.isNewExpression(parent) && parent.expression === node) return true;
+  if (ts.isCallExpression(parent)) {
+    if (parent.expression === node) return true;
+    if (ts.isPropertyAccessExpression(parent.expression)) {
+      return parent.expression.expression === node || parent.expression.name === node;
+    }
+  }
+  if (ts.isPropertyAccessExpression(parent)) return parent.expression === node;
+  if (ts.isElementAccessExpression(parent) && parent.expression === node) return true;
+  if (ts.isBinaryExpression(parent) && parent.right === node && parent.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword) return true;
+  if (ts.isTaggedTemplateExpression(parent) && parent.tag === node) return true;
+  if (ts.isPropertyAssignment(parent) && parent.initializer === node) return true;
+  if (ts.isArrayLiteralExpression(parent)) return true;
+  if (ts.isReturnStatement(parent) && parent.expression === node) return true;
+  if (ts.isSpreadElement(parent) && parent.expression === node) return true;
+  return false;
 }
 
 const numericScaleNames = new Set<string>();
@@ -183,16 +206,10 @@ function analyzeFunction(node: any, kind: FunctionShape["kind"]): FunctionShape 
 
 function collectFunctions(node: any, result: FunctionShape[] = []): FunctionShape[] {
   if (ts.isFunctionDeclaration(node) && node.body) {
-    const shape = analyzeFunction(node, "function");
-    result.push(shape);
-    return collectFunctions(node.body, result);
-  }
-  if (ts.isMethodDeclaration(node) && node.body) {
-    const shape = analyzeFunction(node, "method");
-    result.push(shape);
-    return collectFunctions(node.body, result);
-  }
-  if (ts.isVariableStatement(node)) {
+    result.push(analyzeFunction(node, "function"));
+  } else if (ts.isMethodDeclaration(node) && node.body) {
+    result.push(analyzeFunction(node, "method"));
+  } else if (ts.isVariableStatement(node)) {
     for (const declaration of node.declarationList.declarations) {
       const initializer = declaration.initializer;
       if (initializer && (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer))) {
@@ -231,6 +248,7 @@ async function loadSource(root: string, path: string): Promise<SourceFileShape> 
   const stringLiterals = new Set<string>();
   const propertyNames = new Set<string>();
   const identifiers = new Set<string>();
+  const valueUses = new Set<string>();
   let hasFetchCall = false;
   let hasProviderSdkImport = false;
 
@@ -247,7 +265,14 @@ async function loadSource(root: string, path: string): Promise<SourceFileShape> 
       if (node.moduleSpecifier.text === "openai" || node.moduleSpecifier.text.startsWith("@anthropic-ai/sdk")) hasProviderSdkImport = true;
     }
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) stringLiterals.add(node.text);
+    if (ts.isTemplateExpression(node)) {
+      const templatePieces = [node.head, ...node.templateSpans.map((span: any) => span.literal)];
+      for (const piece of templatePieces) {
+        if (piece && typeof piece.text === "string") stringLiterals.add(piece.text);
+      }
+    }
     if (ts.isIdentifier(node)) identifiers.add(node.text);
+    if (ts.isIdentifier(node) && isValueIdentifierUse(node)) valueUses.add(node.text);
     if (ts.isPropertyAccessExpression(node) || ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node) || ts.isMethodDeclaration(node) || ts.isMethodSignature(node)) {
       const name = propertyNameOf(node);
       if (name) propertyNames.add(name);
@@ -267,6 +292,7 @@ async function loadSource(root: string, path: string): Promise<SourceFileShape> 
     stringLiterals,
     propertyNames,
     identifiers,
+    valueUses,
     hasFetchCall,
     hasProviderSdkImport,
     functions: collectFunctions(source),
@@ -327,14 +353,29 @@ function isServerFile(source: SourceFileShape): boolean {
   return source.stringLiterals.has("/api/chat") || source.stringLiterals.has("/api/usage") || source.identifiers.has("createServer");
 }
 
-function isAdapterFile(source: SourceFileShape): boolean {
-  if (!source.hasFetchCall) return false;
+function hasWireProtocolMarker(source: SourceFileShape): boolean {
   return [...source.stringLiterals].some((value) => [
     "/chat/completions",
     "/v1/messages",
     "x-nebula-key",
     "x-api-key",
   ].includes(value));
+}
+
+function adapterModule(source: SourceFileShape): boolean {
+  if (isServerFile(source)) return false;
+  if (source.hasFetchCall && hasWireProtocolMarker(source)) return true;
+  // A shared transport helper may own fetch while peer modules own each
+  // provider's wire protocol. The adapter boundary still exists when those
+  // wire modules import the fetch helper and remain outside the HTTP handler.
+  return hasWireProtocolMarker(source) &&
+    transitiveImports(source).some((imported) =>
+      imported.hasFetchCall && !isServerFile(imported)
+    );
+}
+
+function adapterModules(files: SourceFileShape[]): SourceFileShape[] {
+  return files.filter(adapterModule);
 }
 
 function hasContractLikeDeclaration(source: SourceFileShape): boolean {
@@ -394,7 +435,7 @@ function policyFunction(source: SourceFileShape): FunctionShape | undefined {
 
 function ledgerEvidence(source: SourceFileShape): string | undefined {
   const hasRecordWrite = source.functions.some((fn) => source.stateNames.some((state) => fn.mutatesState.includes(state)));
-  const hasRecordRead = source.functions.some((fn) => fn.iteratesState.some((name) => fn.readsState.includes(name)));
+  const hasRecordRead = source.functions.some((fn) => source.stateNames.some((state) => fn.readsState.includes(state)));
   const hasPersistence = source.identifiers.has("appendFile") || source.identifiers.has("appendFileSync") || source.identifiers.has("append");
   return hasRecordWrite && hasRecordRead && hasPersistence ? source.path : undefined;
 }
@@ -423,7 +464,7 @@ function hasPolicyOwnershipEvidence(source: SourceFileShape): boolean {
 }
 
 function costEvidence(source: SourceFileShape): string | undefined {
-  return source.functions.some((fn) => fn.hasCostArithmetic) ? source.path : undefined;
+  return source.functions.some((fn) => fn.hasCostArithmetic && !fn.hasRequestOrResponseUse) ? source.path : undefined;
 }
 
 function directValueImports(source: SourceFileShape): Array<{ source: SourceFileShape; symbols: string[] }> {
@@ -442,7 +483,8 @@ function functionUsesImportedValue(fn: FunctionShape, symbols: string[]): boolea
 }
 
 function callsImportedSymbols(source: SourceFileShape, symbols: string[]): boolean {
-  return source.functions.some((fn) => functionUsesImportedValue(fn, symbols));
+  return source.functions.some((fn) => functionUsesImportedValue(fn, symbols)) ||
+    symbols.some((symbol) => source.valueUses.has(symbol));
 }
 
 function hasExecutionPath(server: SourceFileShape, target: SourceFileShape): boolean {
@@ -468,13 +510,18 @@ function failuresFor(files: SourceFileShape[]): { failures: string[]; evidence?:
   if (!server) return { failures: ["未找到包含 /api/chat、/api/usage 或 createServer 的 handler 模块"] };
 
   const reachable = transitiveImports(server);
-  const boundary = reachable.filter((source) => source.path !== server.path && !isAdapterFile(source));
-  const adapters = files.filter(isAdapterFile);
+  const boundary = reachable.filter((source) => source.path !== server.path && !adapterModule(source));
+  const adapters = adapterModules(files);
   const contract = boundary.find(hasContractLikeDeclaration);
+  const serverOwnsPolicyState = sharedCrossRequestState(server) || ledgerEvidence(server) !== undefined;
+  const policyBoundaryOwnership = !serverOwnsPolicyState && boundary.some((source) =>
+    hasExecutionPath(server, source) &&
+    (ledgerEvidence(source) !== undefined || sharedCrossRequestState(source) || delegatesToLedgerBoundary(source))
+  );
   const policyModule = boundary.find((source) =>
     policyFunction(source) !== undefined &&
     hasExecutionPath(server, source) &&
-    hasPolicyOwnershipEvidence(source)
+    (hasPolicyOwnershipEvidence(source) || policyBoundaryOwnership)
   );
   const policy = policyModule ? policyFunction(policyModule) : undefined;
   const ledgerPath = boundary.filter((source) => hasExecutionPath(server, source)).map(ledgerEvidence).find(Boolean);

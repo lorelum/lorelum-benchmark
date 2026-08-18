@@ -17,7 +17,7 @@ conditions:
   - { id: baseline, status: declared, practice: none }
   - id: oracle-practice
     status: declared
-    practice: { path: private/practices/llm.provider-gateway.v2.md, injection_channel: condition-scoped-private-runtime, sha256: f80fca8157c6f0edeaa48b2858d14b99e9dffe23b06e5993625aa8a9b448f4a6 }
+    practice: { path: private/practices/llm.provider-gateway.v2.md, injection_channel: condition-scoped-private-runtime, sha256: e71a2ee13f1acc3efa15a3039ecfded1f52fd9d64df81367dd339628396457a4 }
   - id: irrelevant-practice
     status: declared
     practice: { path: private/practices/irrelevant.pagination.v1.md, injection_channel: condition-scoped-private-runtime, sha256: 2919f1e5c6bfdeb36549813a1e68f08a82dabf9d53e3f08703e579a483787d9f }
