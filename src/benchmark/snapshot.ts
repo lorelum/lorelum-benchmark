@@ -7,6 +7,7 @@ import { isGeneratedOutput } from "./kernel/core/v1/types";
 import { materializeNodeTs, materializeReactVite, nodeTsKind, reactViteKind } from "./kernel/materializers";
 import { resolveInjectionCalibration as resolveInjectionCalibrationV1 } from "./kernel/profiles/injection-calibration/v1/runtime";
 import { resolveInjectionCalibration as resolveInjectionCalibrationV2 } from "./kernel/profiles/injection-calibration/v2/runtime";
+import { resolveSkillTrigger } from "./kernel/profiles/skill-trigger-orchestration/v1/runtime";
 import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256File, sha256Text, workspaceRoot } from "./fs";
 import { discoverTasks, type TaskLocation } from "./task-discovery";
 
@@ -179,7 +180,7 @@ async function readKernelDeclaration(target: SnapshotTarget): Promise<KernelReso
   if (!isRecord(doc.kernel)) throw new Error(`Invalid kernel declaration in ${relativePath(manifestPath)}`);
   const kernel = doc.kernel;
   if (kernel.core !== "v1") throw new Error(`Unsupported kernel core in ${relativePath(manifestPath)}: ${String(kernel.core)}`);
-  if (kernel.profile !== "injection-calibration/v1" && kernel.profile !== "injection-calibration/v2" && kernel.profile !== "treatment-comparison/v1") throw new Error(`Unsupported kernel profile in ${relativePath(manifestPath)}: ${String(kernel.profile)}`);
+  if (kernel.profile !== "injection-calibration/v1" && kernel.profile !== "injection-calibration/v2" && kernel.profile !== "treatment-comparison/v1" && kernel.profile !== "skill-trigger-orchestration/v1") throw new Error(`Unsupported kernel profile in ${relativePath(manifestPath)}: ${String(kernel.profile)}`);
   if (kernel.materializer_kind !== reactViteKind && kernel.materializer_kind !== nodeTsKind) throw new Error(`Unsupported materializer_kind in ${relativePath(manifestPath)}: ${String(kernel.materializer_kind)}`);
   return {
     declaration: { core: "v1", profile: kernel.profile, materializer_kind: kernel.materializer_kind },
@@ -216,7 +217,9 @@ async function computeResolvedSnapshot(target: SnapshotTarget, resolution: Kerne
     });
     const profileInputHash = declaration.profile === "injection-calibration/v1" || declaration.profile === "injection-calibration/v2"
       ? (await (declaration.profile === "injection-calibration/v2" ? resolveInjectionCalibrationV2 : resolveInjectionCalibrationV1)(target.path)).profile_input_hash
-      : undefined;
+      : declaration.profile === "skill-trigger-orchestration/v1"
+        ? (await resolveSkillTrigger(target.path)).profile_input_hash
+        : undefined;
     return {
       core_version: resolved.coreVersion,
       core_hash: resolved.coreHash,

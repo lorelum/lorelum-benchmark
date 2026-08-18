@@ -66,9 +66,11 @@ export async function scoreCandidate(input: {
   inputHash: string;
   judge: { id: string; version: string };
   complete: JudgeCompletion;
+  /** Optional custom scoring system prompt; defaults to the generic reviewer prompt. */
+  systemPrompt?: string;
 }): Promise<JudgeResultV1> {
   const prompt = scorePromptText(input.taskMd, input.candidateDiff, input.rubricText);
-  const parsed = (await input.complete(scoreSystemPrompt(), prompt)) as unknown;
+  const parsed = (await input.complete(input.systemPrompt ?? scoreSystemPrompt(), prompt)) as unknown;
   const scored = assertScoredCandidate(parsed);
   const promptHash = await sha256Text(prompt);
   if (scored.state === "indeterminate") {

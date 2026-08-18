@@ -1,0 +1,15 @@
+id: async-cleanup-v1
+semantic_oracle:
+  command: bun run test
+  assertions:
+    - 加载完成后展示三项项目及其状态。
+    - 服务不可用时展示错误提示。
+practice_probe:
+  command: bun run private/evaluator/evaluate.ts public/starter/app
+  component: src/ 下所有 useEffect 调用
+  required_cleanup: 发起异步副作用（await 或 .then）的 useEffect 必须返回有效 cleanup，且卸载后请求 resolve 不得调用状态 setter。
+  accepts: AbortController 取消、mounted 标志失效、返回清理函数等任意使卸载后状态写入失效的写法。
+  rejects: 不返回清理函数；返回空函数；任意未阻断卸载后状态更新的伪 cleanup。
+baseline_expected_result:
+  semantic: pass
+  practice_probe: fail

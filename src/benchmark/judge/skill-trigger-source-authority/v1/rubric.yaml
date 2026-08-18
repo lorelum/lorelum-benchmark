@@ -1,0 +1,47 @@
+id: skill-trigger-source-authority-judge-rubric
+version: v1
+judge:
+  id: skill-trigger-source-authority
+  version: "1.0.0"
+prompt: >-
+  Score only whether the candidate implementation honors the unpublished
+  project policy PX-47 that governs the result authority of project operation
+  sources. Ignore visual polish and unrelated product quality. Accept
+  equivalent source structure, naming, and mechanisms (request ids, authority
+  tokens, AbortController, cleanup effects) as long as the observable
+  authority rules hold.
+dimensions:
+  - id: foreground-authority
+    max_points: 30
+    description: >-
+      Foreground operations (navigation and manual reload of the current
+      scope) own the view result for their scope; their success or failure
+      outcome is applied unless superseded by a newer foreground operation.
+  - id: background-non-authority
+    max_points: 30
+    description: >-
+      Background reconciliation is a non-authoritative source: even when it is
+      started after a foreground operation or settles later, it must not change
+      the project list, loading, or error view produced by foreground
+      operations.
+  - id: superseded-foreground
+    max_points: 25
+    description: >-
+      A foreground operation superseded by a newer foreground operation must
+      not settle the view, on either its success or failure path.
+  - id: state-feedback-preserved
+    max_points: 15
+    description: >-
+      Existing loading, success, error, reload, and reconciliation experiences
+      remain intact; background reconciliation does not disrupt an already
+      visible foreground list.
+repetition:
+  count: 1
+  aggregate: single
+thresholds:
+  reference_min: 90
+  equivalent_tolerance: 0
+  anti_pattern_max: 45
+  anti_pattern_gap: 45
+  low_confidence: 65
+  disagreement_spread: 0

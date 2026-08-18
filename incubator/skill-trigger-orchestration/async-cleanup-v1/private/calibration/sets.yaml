@@ -1,0 +1,28 @@
+version: 1
+sets:
+  - id: cleanup-probe
+    version: v1
+    trees:
+      shared-react-vite:
+        base:
+          ref: incubator/calibration-bases/skill-trigger-orchestration/v1/react-vite/app-shell/v1/source
+          sha256: 1505a866ccd4ecde07fa0befc59916e8e95c4fdd6985fe36df2f14d88821545f
+      reference-tree:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/cleanup-probe/v1/overlays/reference
+          sha256: e7c65e11d4c7997e04327937bf3139e665b465c39dda99d7f8344b570101957f
+      equivalent-tree:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/cleanup-probe/v1/overlays/equivalent
+          sha256: 3378d7bbce8af4d4ac14f9f06e820e01f31b33d36b51c2be575b6e732d0803e0
+      anti-pattern-tree:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/cleanup-probe/v1/overlays/anti-pattern
+          sha256: a65392518df6b0cd02175c1c1507ebfe44bd3147aea21cc7ffe40000fde2ba1f
+    fixtures:
+      reference: reference-tree
+      equivalent: equivalent-tree
+      anti-pattern: anti-pattern-tree

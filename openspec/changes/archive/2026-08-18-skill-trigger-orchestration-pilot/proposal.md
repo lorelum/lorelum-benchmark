@@ -1,0 +1,42 @@
+## Why
+
+Issue #96 需要一条独立轨道，验证 coding agent 在工程任务中会不会主动用上 Lorelum--即自主发现并加载 Skill、主动查询 Practice、按约束实现。现有两条轨道都不覆盖这个命题：`react-skill-comparison` 显式注入 vercel skill 测其有无用处；`practice-injection`（`incubator/practice-injection/login-page-layered-api-v1`）显式注入 Practice 测其内容效力。区别在 Practice 怎么来：前两条都把东西塞给 agent 看效果，本轨道看 agent 会不会自己去找。
+
+本 change 只支持 mock 阶段的方向性观察，不验证真实检索质量，不把结果升级为 benchmark 或产品结论。
+
+## What Changes
+
+- 新增 `incubator/skill-trigger-orchestration/` 候选工作区，承载 mock 阶段 Skill 触发编排验证。
+- 第一个任务场景：异步副作用生命周期超出组件（useEffect 发请求，组件卸载后 setState）。技术栈 Vite + React 19 + TS（SPA），与 practice-injection 一致。
+- mock 返回三字段结构：范围约束、命中 Practice（可审计来源）、行为约束（非指令）。
+- 注入放 prompt 层，不放 harness，保留 agent 会不会听作为待验证变量。
+- 新建 `skill-trigger-orchestration/v1` kernel profile，不复用 injection-calibration/v1（其 lorelum-retrieval 为 unavailable、Practice 显式注入）；本轨道 lorelum-retrieval 为 declared 实验组，走 agent 真实调用的 mock-retrieval-tool-call 通道。
+- candidate 声明 kernel（core v1 / 新 profile / materializer react-vite），复用共享 react-vite calibration base + overlay 机制。
+- 三个 condition 对照：baseline（地板）、lorelum-retrieval（实验组，走完整链路）、irrelevant-practice（盲从检测）。不设 oracle-practice 天花板。
+- candidate 先跑本地 pilot 确认 baseline 下 agent 确实会失败，再正式用作对照。
+- `async-cleanup-v1` 的 `pilot-r5` 因 Pi extension 在 `tool_execution_end` 中读取不存在的 `args.path` 而失效；它只保留为无效运行证据，后续修复与方向性观察均在冻结的下一 revision `async-cleanup-v2` 完成。
+- v2 用快速导航故障报告提供真实修改动机，并以运行有效性门隔离 extension 错误、trace/audit 不一致和 private 泄露；每条件执行三次，不创建正式 record。
+- `pilot-r7` 证明该题面对 `deepseek/deepseek-v4-pro` 没有区分度，且没有上下文检索动机时不会自行查询。v2 后续直接改为快速范围切换下的异步结果归属故障，并仅在公开事故材料中提供不解释的 `ui.response-ownership` 分类标识；不在 runner prompt 中要求 Skill 调用，也不注入行为约束。该轮只测上下文驱动的自主发现，不能覆盖或推翻 r7 对强自主发现的负结论。
+- `pilot-r8-contextual` 证明单独的未解释分类标识既未触发查询，也没有让 baseline 稳定失败。v2 后续改为“公开政策缺口驱动的自主发现”：用不泄露语义的政策编号与通用项目指导目录形成可选的信息寻路线索，并以跨范围切换和同范围重载的异步操作归属作为私有质量门。该修订不要求调用工具，不注入 Lorelum、行为约束或实现方式；它只测 agent 是否能在公开信息无法消解政策语义时主动查询可用能力。
+- `pilot-r9` 证明仅有政策编号仍不足以构成信息缺口：模型可用通用“最新请求获胜”实现直接修复。v2 后续改为“来源权威政策缺口”：公开代码含前台导航、手动重载与后台协调，`PX-47` 定义三者的结果权威但不公开规则。工具仅准确描述解析已读公开文件中的项目政策引用这一可选能力；runner 不要求调用，也不预注入约束。一个强制调用的真实 Pi canary 只验证工具注册可达性，不进入发现门或效果统计。
+- `pilot-r10` 的初始 canary 只暴露了两项 harness 缺陷：opaque 政策标识未进入公开锚点集合，以及 qualification 路径漏传 extension；二者均以隔离测试修复，不作模型能力证据。修复后的真实 canary 完成了完整、带公开锚点的工具链且无泄露。随后三次无提示 attempt 均有效，但均未调用 `skills_list`，故发现门失败、九次质量 pilot 被阻止，结论保持 `diagnostic-only`。
+
+## Capabilities
+
+### New Capabilities
+
+- `skill-trigger-orchestration-pilot`：为 mock 阶段 Skill 触发编排验证定义 candidate 结构、mock 查询契约、三条件对照与本地执行治理。
+
+### Modified Capabilities
+
+无。本 change 不改写既有 stable spec。
+
+## Impact
+
+- 关联 issue：#96。
+- 工作区：`incubator/skill-trigger-orchestration/`，候选阶段，不进 `suites/`。
+- 参考 practice-injection 的执行治理模式，但新建 skill-trigger-orchestration/v1 profile 契约（conditions/channel/trace 与 injection-calibration 不同）；复用现有 Pi v2 runner 与 tool-policy 机制。
+- 不依赖真实 Lorelum CLI/检索引擎。
+- 不创建 `results/records/`、不升级 suite revision、不变更活跃 runner/treatment/schema/environment。
+- 私有材料不得进入 agent 工作区或模型输入。
+- 解耦决策：本轨道结论限定为发现层（lorelum-retrieval 是否形成完整真实查询链路），约束采纳由 practice-injection（login-page-layered-api-v1）验证。r17c 显示发现门 3/3 通过但 judge 3/3 不符合（43/41/40）——查询到约束却未完整采纳，恰证明两目标在测量上冲突；本轨道只取发现层正信号。

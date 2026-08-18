@@ -1,0 +1,28 @@
+version: 1
+sets:
+  - id: operation-authority
+    version: v1
+    trees:
+      shared-react-vite:
+        base:
+          ref: incubator/calibration-bases/skill-trigger-orchestration/v1/react-vite/app-shell/v2/source
+          sha256: a2161731d0b9efa0e1411b5078d333fe6ab9a21e9e4a73b3e8b52c27ce4fc561
+      reference-tree:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/operation-authority/v1/overlays/reference
+          sha256: 85dc1e0adcef8647791630625ac78defeffa4b6fec26beff406e3783d609b8f2
+      equivalent-tree:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/operation-authority/v1/overlays/equivalent
+          sha256: 7116436b4b52a7eaa8114f97dc85b3aa798042d250168d08db04e86d430adc65
+      anti-pattern-tree:
+        extends: shared-react-vite
+        overlay:
+          path: private/calibration/sets/operation-authority/v1/overlays/anti-pattern
+          sha256: 4efc6b11b7bfdaf038a29fb498ae8971129597668308227c96bdca3324634f39
+    fixtures:
+      reference: reference-tree
+      equivalent: equivalent-tree
+      anti-pattern: anti-pattern-tree

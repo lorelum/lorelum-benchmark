@@ -1,0 +1,11 @@
+version: v1
+workspace_policy:
+  mode: clean-copy-per-attempt
+  agent_visible:
+    - public/task.md
+    - public/starter/
+  prohibited:
+    - private/
+mock_retrieval:
+  channel: mock-retrieval-tool-call
+  trace_policy: 只记录公开输入哈希、真实工具调用、Practice id/version/SHA-256 与约束哈希，不记录卡文本或私有路径。

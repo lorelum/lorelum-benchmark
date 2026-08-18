@@ -1,0 +1,44 @@
+id: async-cleanup-v2
+lifecycle_stage: candidate
+kernel:
+  core: v1
+  profile: skill-trigger-orchestration/v1
+  materializer_kind: react-vite
+calibration_roles:
+  - id: operation-authority-matrix
+    command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
+    expect: { kind: pass }
+calibration_sets:
+  manifest: private/calibration/sets.yaml
+source:
+  kind: repository-local-starter
+  repository: lorelum/lorelum-benchmark
+  base_commit: ee69b926b0a54acaa1ee33da09eebc57734376a8
+  public_root: public/starter/app
+  immutable_by: private/snapshot.json
+runtime:
+  package_manager: bun
+  node: 22.19.x
+  frontend:
+    vite: 7.1.7
+    react: 19.2.3
+    typescript: 5.9.3
+  browser_test:
+    playwright: 1.61.1
+public_behavior:
+  loading_message: 加载中…
+  active_project_count: 2
+  archived_project_count: 1
+  active_label: 进行中
+  archived_label: 已归档
+  unavailable_message: 项目列表暂时不可用
+  request_delay_ms: 300
+public_boundary:
+  excludes:
+    - Practice 卡文本与标识
+    - 异步生命周期清理验收断言
+    - 私有评测器与 Oracle
+baseline_expectation:
+  functional: false
+  practice_adherence: false
+  reason: Dashboard 将后台协调与前台操作同等处理，且范围切换或同范围重新加载后仍处理较早操作终态；公开回归与私有六路径质量门均应失败。
