@@ -1,0 +1,10 @@
+version: v1
+package_manager: bun
+dependencies:
+  typescript: "5.9.3"
+lock_input:
+  package_json_sha256: "da71ac16a971bde1d5e2910d534d27212030ed281c52912b8e53ce9e399ca9af"
+  bun_lock_sha256: "5dbdeaec4ac2f02fb0457e8c5070f1b2a708719dffa07ab43957a911c5c7bd7f"
+integrity:
+  algorithm: sha256
+  typescript_sha256: "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675"
