@@ -22,7 +22,7 @@ export function runtimeFor(profile: string): RuntimeModule {
   return (profile === "injection-calibration/v2" ? v2Runtime : v1Runtime) as unknown as RuntimeModule;
 }
 import { fail, piCommand, preflightPiAndModel, run, type CommandResult, type CommandRunner } from "./preflight";
-import { configureLocalPiModelCatalog } from "./local-pi-model-catalog";
+import { configureLocalPiModelCatalog, localPiApiKey } from "./local-pi-model-catalog";
 import { allocateFreePort, realWebServerStarter, type WebServerStarter } from "./webserver-supervisor";
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
 import { buildJudgeInput } from "../../../judge/input";
@@ -933,8 +933,16 @@ if (Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("Profile diagnostics require 
 const localPiCatalog = await configureLocalPiModelCatalog();
 if (localPiCatalog) {
   Bun.env.PI_CODING_AGENT_DIR = localPiCatalog.directory;
+  // Keep the catalog baseUrl override pinned to the .env internal endpoint:
+  // PI_OFFLINE=1 disables Pi's startup remote-catalog refresh, which would
+  // otherwise rewrite the temporary models-store baseUrl back to the public
+  // api.deepseek.com address. Model inference still runs (network is only
+  // gated for the catalog refresh).
+  Bun.env.PI_OFFLINE = "1";
   process.on("exit", localPiCatalog.cleanup);
 }
+const localPiKey = localPiApiKey();
+if (localPiKey) Bun.env.DEEPSEEK_API_KEY = localPiKey;
 
 const command = await piCommand(workspaceRoot);
 

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   configureLocalPiModelCatalog,
+  localPiApiKey,
   localPiModelBaseUrl,
   modelCatalogWithDeepSeekBaseUrl,
 } from "./local-pi-model-catalog";
@@ -31,6 +32,16 @@ test("catalog override changes only DeepSeek model base URLs", () => {
   const result = modelCatalogWithDeepSeekBaseUrl(catalog, "https://new.example/v1") as typeof catalog;
   expect(result.deepseek.models[0].baseUrl).toBe("https://new.example/v1");
   expect(result.deepseek.models[1].baseUrl).toBe("https://other.example");
+});
+
+
+test("local Pi API key prefers the explicit variable and falls back to judge/deepseek config", () => {
+  expect(localPiApiKey({})).toBeUndefined();
+  expect(localPiApiKey({ LORELUM_PI_API_KEY: "pi-key" })).toBe("pi-key");
+  expect(localPiApiKey({ LORELUM_PI_API_KEY: "  pi-key  " })).toBe("pi-key");
+  expect(localPiApiKey({ LORELUM_JUDGE_API_KEY: "judge-key" })).toBe("judge-key");
+  expect(localPiApiKey({ LORELUM_JUDGE_API_KEY: "judge-key", LORELUM_PI_API_KEY: "pi-key" })).toBe("pi-key");
+  expect(localPiApiKey({ DEEPSEEK_API_KEY: "deepseek-key" })).toBe("deepseek-key");
 });
 
 test("temporary local catalog is isolated and cleanup removes it", async () => {
