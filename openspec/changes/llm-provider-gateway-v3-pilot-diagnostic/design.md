@@ -62,4 +62,8 @@
 
 ## Planning Confirmation
 
-（待需求方在 #178 规划澄清确认后写回。）
+2026-08-19（需求方在 #178 规划澄清确认三项推荐口径）：
+
+1. 每条件重复次数：n=3（共 9 attempts），与 v2 pilot 先例一致。
+2. oracle 预算：保持 25 分钟与三条件一致，保证对照公平；若 oracle 超时，用公开测试 + 探针复核 workspace 作为附加观察证据，formal 记录仍按 runner 为准。
+3. judge 通道：保持关闭，`judge-agent/generic/v2` 为冻结 soft sidecar（judge 硬化由 #174 独立承接），`judge-unavailable` 可接受，方向性结论只依据 semantic 与 practice_observation。

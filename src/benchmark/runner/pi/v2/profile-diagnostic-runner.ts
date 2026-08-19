@@ -22,7 +22,7 @@ export function runtimeFor(profile: string): RuntimeModule {
   return (profile === "injection-calibration/v2" ? v2Runtime : v1Runtime) as unknown as RuntimeModule;
 }
 import { fail, piCommand, preflightPiAndModel, run, type CommandResult, type CommandRunner } from "./preflight";
-import { configureLocalPiModelCatalog } from "./local-pi-model-catalog";
+import { configureLocalPiModelCatalog, localPiApiKey } from "./local-pi-model-catalog";
 import { allocateFreePort, realWebServerStarter, type WebServerStarter } from "./webserver-supervisor";
 import { buildSchedule, diagnosticConditions, readDiagnosticPlan, summarizePlan, type DiagnosticPlan, type ScheduledAttempt } from "./profile-diagnostic-plan";
 import { buildJudgeInput } from "../../../judge/input";
@@ -935,6 +935,8 @@ if (localPiCatalog) {
   Bun.env.PI_CODING_AGENT_DIR = localPiCatalog.directory;
   process.on("exit", localPiCatalog.cleanup);
 }
+const localPiKey = localPiApiKey();
+if (localPiKey) Bun.env.DEEPSEEK_API_KEY = localPiKey;
 
 const command = await piCommand(workspaceRoot);
 

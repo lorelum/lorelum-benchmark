@@ -1,7 +1,7 @@
 ## 1. OpenSpec 与规划门禁
 
-- [ ] 1.1 创建 OpenSpec change 与 proposal/specs/design/tasks，关联 #178。
-- [ ] 1.2 与需求方确认规划澄清：仅 `deepseek/deepseek-v4-flash`；n=3；judge 保持关闭；预算 25min；写回 #178 与 design.md Planning Confirmation。
+- [x] 1.1 创建 OpenSpec change 与 proposal/specs/design/tasks，关联 #178。
+- [x] 1.2 与需求方确认规划澄清：仅 `deepseek/deepseek-v4-flash`；n=3；judge 保持关闭；预算 25min；写回 #178 与 design.md Planning Confirmation。
 - [ ] 1.3 运行 `openspec validate llm-provider-gateway-v3-pilot-diagnostic --type change --strict`。
 - [ ] 1.4 提交仅含 OpenSpec artifacts 的变更并创建初始 PR（引用 #178）。
 
