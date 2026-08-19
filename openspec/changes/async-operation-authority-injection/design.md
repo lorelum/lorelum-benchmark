@@ -95,4 +95,14 @@ specs。
 
 ## Planning Confirmation
 
-待需求方在 #180 规划澄清中确认上述四项推荐口径后回写此处。
+2026-08-19，需求方在 #180 规划澄清中确认四项推荐口径：
+
+1. 被测行为严格复用 skill-trigger v4 的 Dashboard 场景（后台协调 + 前台导航/重载 +
+   500ms 窗口），不改公开题面，唯一因变量是「注入通道下的采纳」。
+2. 对照组复用 skill-trigger v4 现有 `irrelevant.form-validation.v1` 卡（已等长、已校准，
+   语义无关），不新建无关卡。
+3. 私有质量门只采用 judge v2 语义验收（reference_min=90）+ 公开测试通过，不引入额外
+   结构探针；evaluate.ts 以公开测试语义作为 practice_observation 证据，政策符合性由
+   judge v2 判定。
+4. 模型/预算沿用 practice-injection 最近先例：`deepseek/deepseek-v4-flash`、25 分钟、
+   5 次 repetition、盲评（judge 只看 diff 不看 condition），全程 diagnostic-only。

@@ -1,0 +1,19 @@
+id: async-operation-authority-v1
+semantic_oracle:
+  command: bun run test
+  assertions:
+    - 加载完成后展示当前进行中范围的项目及其状态。
+    - 当前范围服务不可用时展示错误提示。
+    - 快速切换范围后，旧范围响应不会覆盖当前范围内容。
+    - 可以重新加载当前范围。
+    - 可以运行后台协调。
+    - 前台操作后短时间内后台协调不得改变已展示结果。
+practice_observation:
+  command: bun run test
+  signal_only: true
+  responsibilities:
+    - 公开语义测试通过作为采纳层的可观察证据。
+    - 政策符合性（窗口起点 + 前台在途语义）由 skill-trigger-source-authority/v2 judge 语义验收。
+baseline_expected_result:
+  semantic: fail
+  practice_observation: not-observed

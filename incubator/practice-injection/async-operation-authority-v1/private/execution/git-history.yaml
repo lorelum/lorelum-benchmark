@@ -1,0 +1,30 @@
+# Per-condition git history materialized by the diagnostic runner.
+# The final commit is an add -A catch-all covering every remaining file.
+# The baseline workspace has no injected Practice document and therefore a
+# slightly different (smaller) history; oracle-practice/irrelevant-practice
+# are injected as practice-card via the system prompt, not as a workspace file.
+identity:
+  name: ops-admin
+  email: ops@meridian.internal
+commits:
+  - message: "chore: scaffold Vite React project overview"
+    files:
+      - index.html
+      - package.json
+      - bun.lock
+      - tsconfig.json
+      - tsconfig.app.json
+      - tsconfig.node.json
+      - vite.config.ts
+      - playwright.config.ts
+      - .gitignore
+      - src/main.tsx
+      - src/styles.css
+  - message: "feat: add project list client"
+    files:
+      - src/services/projects.ts
+  - message: "test: cover the project overview with Playwright"
+    files:
+      - tests/dashboard.spec.ts
+  - message: "feat: project overview page shell awaiting wiring"
+    files: []
