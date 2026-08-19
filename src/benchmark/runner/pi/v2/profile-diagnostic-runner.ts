@@ -933,6 +933,12 @@ if (Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("Profile diagnostics require 
 const localPiCatalog = await configureLocalPiModelCatalog();
 if (localPiCatalog) {
   Bun.env.PI_CODING_AGENT_DIR = localPiCatalog.directory;
+  // Keep the catalog baseUrl override pinned to the .env internal endpoint:
+  // PI_OFFLINE=1 disables Pi's startup remote-catalog refresh, which would
+  // otherwise rewrite the temporary models-store baseUrl back to the public
+  // api.deepseek.com address. Model inference still runs (network is only
+  // gated for the catalog refresh).
+  Bun.env.PI_OFFLINE = "1";
   process.on("exit", localPiCatalog.cleanup);
 }
 const localPiKey = localPiApiKey();
