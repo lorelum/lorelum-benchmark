@@ -29,6 +29,10 @@ export function localPiModelBaseUrl(env: EnvLike = Bun.env): string | undefined 
   return normalizedBaseUrl(env.LORELUM_PI_BASE_URL) ?? normalizedBaseUrl(env.LORELUM_JUDGE_BASE_URL);
 }
 
+export function localPiApiKey(env: EnvLike = Bun.env): string | undefined {
+  return env.LORELUM_PI_API_KEY?.trim() || env.LORELUM_JUDGE_API_KEY?.trim() || env.DEEPSEEK_API_KEY?.trim() || undefined;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
