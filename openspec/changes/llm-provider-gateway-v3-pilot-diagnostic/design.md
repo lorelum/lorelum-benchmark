@@ -67,3 +67,14 @@
 1. 每条件重复次数：n=3（共 9 attempts），与 v2 pilot 先例一致。
 2. oracle 预算：保持 25 分钟与三条件一致，保证对照公平；若 oracle 超时，用公开测试 + 探针复核 workspace 作为附加观察证据，formal 记录仍按 runner 为准。
 3. judge 通道：保持关闭，`judge-agent/generic/v2` 为冻结 soft sidecar（judge 硬化由 #174 独立承接），`judge-unavailable` 可接受，方向性结论只依据 semantic 与 practice_observation。
+
+## Decision Update（2026-08-19）
+
+需求方在 pilot 结果后确认：**judge 评分作为主判据**（看注入 Practice 后评分是否更高），结构探针/`observed` 退化为旁证。据此对已保存的 9 个 attempt workspace 补跑 judge 评分（内部 endpoint，`LORELUM_JUDGE_REAL=1`，同一 rubric hash `65c73f5d…`）。
+
+结果（n=3）：
+- oracle-practice：100 / 100 / 100（3/3 满分）
+- irrelevant-practice：100 / 100 / 100（3/3 满分）
+- baseline：0 / 100 / indeterminate（真 stub 0 分 / 完整实现 100 分 / stub 无法评分）
+
+解读：judge 评的是实现质量/功能完成度，不是"是否遵循注入的 Practice"。真实模型输出 attempt 间波动大——oracle/irrelevant 各 attempt 都写出了完整实现（本地 22/22 通过），baseline 也有 attempt 写出完整实现。judge 对"完成 vs stub"有清晰判别（0 vs 100），但无法证明 oracle Practice 带来更高评分（irrelevant 同样满分）。探针旁证 oracle/irrelevant 各 1/3 observed，也无方向差异。综合结论保持 `diagnostic-only`。

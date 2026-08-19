@@ -2,60 +2,62 @@
 
 - 计划：`incubator/practice-injection-plans/llm-provider-gateway-v3-three-condition-diagnostic-flash.yaml`
 - repetitions：3（9 attempts），cyclic-latin-square/v1，schedule_seed `llm-provider-gateway-v3-diagnostic-flash-2026-08-19`。
-- 模型：`deepseek/deepseek-v4-flash`；judge：`judge-agent/generic/v2` 冻结 soft sidecar，`LORELUM_JUDGE_REAL` 关闭。
+- 模型：`deepseek/deepseek-v4-flash`；judge：`judge-agent/generic/v2`。
 - 路由：`.env` `LORELUM_PI_BASE_URL` = 内部 endpoint `jugaigiawp-internal.lorelum.com/v1`，`PI_OFFLINE=1` + `PI_CODING_AGENT_DIR` catalog 覆盖固定 baseUrl；未走官方 `api.deepseek.com`。
 - 输出：`scratch/v3-three-condition-pilot`（interrupted=false，9/9 attempts）。
 - candidate 冻结：snapshot `e42a836c`、profile_input_hash `e5c4c971`、source_commit `b9f206e6`；题面/starter/evaluator/practices 未改动。
 
-## 人可读原始结果表（n=3）
+## 决策口径（2026-08-19 更新）
 
-| 条件 | 注入内容 | evaluated | 语义通过 | Practice observed | joint_pass |
-| --- | --- | --- | --- | --- | --- |
-| baseline | 无 | 0/3 | 0/3（未评测） | 0/3（未评测） | 0/3 |
-| oracle-practice | llm.provider-gateway.v2 | 3/3 | 3/3 | 1/3 | 1/3 |
-| irrelevant-practice | backend.pagination | 3/3 | 3/3 | 1/3 | 1/3 |
+需求方确认：**judge 评分作为主判据**（看注入 Practice 后评分是否更高），结构探针/`observed` 退化为旁证。judge 补判对已保存的 9 个 attempt workspace 执行（内部 endpoint，`LORELUM_JUDGE_REAL=1`），全部 9 个 attempt 使用同一 rubric（rubric_hash `65c73f5d7b3c3c0c438800a3a77dfbee9576f36c0473ad304fc3be5bf9f8bdea`，judge 依 task.md 动态生成，task.md 冻结故三条件同尺子）。
 
-> baseline 三次均为 `execution-failed`（`Pi timed out`，25 分钟预算硬超时，pi.stdout/stderr 为空）。oracle/irrelevant 全部 evaluated（语义 3/3 通过）。
+## judge 评分结果（主判据，n=3）
 
-## 逐 attempt
+| 条件 | rep1 | rep2 | rep3 | 均值 |
+| --- | --- | --- | --- | --- |
+| oracle-practice | 100 | 100 | 100 | 100 |
+| irrelevant-practice | 100 | 100 | 100 | 100 |
+| baseline | 0 | 100 | indeterminate | — |
 
-| 条件 | rep | evaluation_status | semantic | practice_observation | joint_pass | 备注 |
-| --- | --- | --- | --- | --- | --- | --- |
-| oracle-practice | 1 | evaluated | pass | observed | true | |
-| irrelevant-practice | 1 | evaluated | pass | observed | true | |
-| baseline | 1 | execution-failed | — | — | — | Pi timed out（25min） |
-| irrelevant-practice | 2 | evaluated | pass | not-observed | false | |
-| baseline | 2 | execution-failed | — | — | — | Pi timed out（25min） |
-| oracle-practice | 2 | evaluated | pass | not-observed | false | |
-| baseline | 3 | execution-failed | — | — | — | Pi timed out（25min） |
-| oracle-practice | 3 | evaluated | pass | not-observed | false | |
-| irrelevant-practice | 3 | evaluated | pass | not-observed | false | |
+- judge state：oracle/irrelevant 各 3/3 `observed`；baseline 2/3 `observed`（0/100）、1/3 `indeterminate`（源码缺失，无法按 rubric 评分）。
+- 同一 rubric：`65c73f5d…`（9 attempts 一致），input_hash 按 candidate-diff 逐 attempt 不同。
 
-执行时长（task.md 生成 → pi 结束）：
-- baseline：25.0 / 25.1 / 25.0 分钟（全部命中 `max_duration_minutes: 25` 硬超时）
-- oracle-practice：7.7 / 15.9 / 14.1 分钟
-- irrelevant-practice：8.9 / 24.6 / 11.5 分钟
+### 逐 attempt 评分与 criterion
 
-## judge soft sidecar（关闭）
+| 条件 | rep | score | criteria 摘要 |
+| --- | --- | --- | --- |
+| oracle-practice | 1 | 100 | provider-protocol-mapping 20/20、fallback-retry-accounting 20/20、budget-atomicity 20/20、idempotency 15/15、streaming-error-usage 10/10、observability 15/15 |
+| oracle-practice | 2 | 100 | 同上（全部满分） |
+| oracle-practice | 3 | 100 | 同上（全部满分） |
+| irrelevant-practice | 1 | 100 | 同上（全部满分） |
+| irrelevant-practice | 2 | 100 | 同上（全部满分） |
+| irrelevant-practice | 3 | 100 | 同上（全部满分） |
+| baseline | 1 | 0 | 六项全部 0/…（真 stub：无 Nebula adapter、无 fallback/budget/idempotency/streaming/observability） |
+| baseline | 2 | 100 | 全部满分（该 attempt 在预算内写出了完整实现） |
+| baseline | 3 | indeterminate | 源码缺失（stub），无法按 rubric 评分 |
 
-- `LORELUM_JUDGE_REAL` 清空，`judge-agent/generic/v2` 全部 `judge-unavailable`（reason: requires LORELUM_JUDGE_REAL=1 or rubric text），indeterminate_rate=0。
-- judge 不参与 joint-pass 派生；方向性结论只依据 semantic 与 practice_observation。
+## 探针/observed 结果（旁证，n=3）
 
-## baseline 超时根因与旁证
+| 条件 | evaluated | 语义通过 | Practice observed | joint_pass |
+| --- | --- | --- | --- | --- |
+| baseline | 0/3 | — | — | 0/3 |
+| oracle-practice | 3/3 | 3/3 | 1/3 | 1/3 |
+| irrelevant-practice | 3/3 | 3/3 | 1/3 | 1/3 |
 
-- 三次 baseline 均命中 25 分钟硬超时、pi.stdout/stderr 为空，与 or/irrelevant 正常收尾不同。
-- 关键旁证：baseline attempt-2 的工作区实际包含**完整实现**（`src/providers.ts` 11,270B、`src/server.ts` 11,609B、`src/store.ts` 5,451B），本地重放 `bun test tests/` 22/22 pass、`tsc --noEmit` 干净——说明模型在该 attempt 内已实质完成任务，Pi 进程因达到预算上限被 runner 强杀，未输出最终总结文本。
-- baseline attempt-1 仅 4 个 src 文件（openai.ts/server.ts/types.ts + 标记文件），attempt-3 未产出实现（仅 toolprobe 文件）——attempt 间波动大，符合 flash 模型能力噪声。
-- 处理口径（与 #175 一致，已写入 #178 规划澄清）：保留 workspace，用公开测试 + 探针复核作为附加观察证据；formal 记录仍按 runner 的 evaluated/execution-failed 为准，不补推结论。
+- baseline 3/3 `execution-failed`（Pi timed out @25min 硬超时，空 stdout）。旁证：baseline attempt-2 工作区为完整实现（本地 22/22 pass），说明模型在预算内已实质完成任务、进程被强杀。
+- oracle/irrelevant 各 3/3 semantic pass、各 1/3 probe observed。
 
 ## 决策
 
-- `overall_conclusion_grade = diagnostic-only`。
-- 判定：oracle joint_pass 1/3，baseline 0/3（execution-failed），irrelevant-practice 1/3。oracle 与 irrelevant 对照相等，不满足 `strictly-greater-than-each-control` → 记录 `diagnostic-only`，不扩大为方向性结论。
-- 观察：oracle 与 irrelevant 均出现 1/3 observed；oracle 未形成严格领先。v3 泛化探针在真实 flash 输出上的 attempt 间判别不稳定，与 v2 先例一致（#168：oracle 1/3 observed、irrelevant 1/3 observed）。
+- **judge 评分主判据解读**：
+  - oracle-practice 注入后评分 3/3 满分（100），irrelevant-practice 也 3/3 满分（100），baseline 分化（0 / 100 / indeterminate）。
+  - judge 评的是**实现质量/功能完成度**，不是"是否遵循注入的 Practice"。真实模型输出本身存在 attempt 间波动：oracle/irrelevant 各 attempt 都写出了完整实现（本地 22/22 通过），baseline 有 attempt 也写出了完整实现（100）。
+  - 因此 judge 评分**不能证明 oracle Practice 带来更高评分**——irrelevant 对照同样满分。能证明的是：该任务在 flash 模型下具备充足可达的实现空间，且 judge 对"完成 vs stub"有清晰判别（0 vs 100）。
+- **探针旁证**：oracle/irrelevant 各 1/3 observed，无法区分方向。
+- 综合结论：`diagnostic-only`。judge 主判据下 oracle 与 irrelevant 无差异（都 100），探针旁证也无差异（都 1/3），不满足任何方向性领先。
 
 ## 边界
 
 - 未创建正式 record、未升级 suite revision；candidate 题面/starter/evaluator/practices 未改动。
-- 模型调用仅限本诊断执行；`git diff origin/main...HEAD` 仅含 runner key 映射修复 + OpenSpec change + 诊断 plan，`suites/ treatments/ records/ experiments/` 无 diff。
+- judge 补判为对已保存 workspace 的离线评分（模型调用仅限内部 judge endpoint），未重跑 Pi。
 - 结果仅作单候选本地诊断，不扩大到产品效果或模型泛化。
