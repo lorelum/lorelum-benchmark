@@ -1,10 +1,10 @@
 ## 1. Issue、OpenSpec 与初始 PR
 
-- [ ] 1.1 确认 issue #182 存在且范围单一。
-- [ ] 1.2 创建 `llm-provider-gateway-v3-practice-judge` change，补齐 proposal/specs/design/tasks。
-- [ ] 1.3 运行 `openspec validate llm-provider-gateway-v3-practice-judge --type change --strict`，修正至通过。
-- [ ] 1.4 从最新 main 创建 `codex/llm-provider-gateway-v3-practice-judge` 分支，提交仅含 OpenSpec artifacts 的变更并创建初始 PR（引用 #182）。
-- [ ] 1.5 完成规划澄清，将需求方对接口形态、同尺子方式与 judge 授权的回答写回 #182 与 design Planning Confirmation。
+- [x] 1.1 确认 issue #182 存在且范围单一。
+- [x] 1.2 创建 `llm-provider-gateway-v3-practice-judge` change，补齐 proposal/specs/design/tasks。
+- [x] 1.3 运行 `openspec validate llm-provider-gateway-v3-practice-judge --type change --strict`，修正至通过。
+- [x] 1.4 从最新 main 创建 `codex/llm-provider-gateway-v3-practice-judge` 分支，提交仅含 OpenSpec artifacts 的变更并创建初始 PR（引用 #182）。
+- [x] 1.5 完成规划澄清，将需求方对接口形态、同尺子方式与 judge 授权的回答写回 #182 与 design Planning Confirmation。
 
 ## 2. Practice-aware judge provider v1
 

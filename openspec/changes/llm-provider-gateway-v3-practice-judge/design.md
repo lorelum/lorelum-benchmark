@@ -62,8 +62,17 @@
 
 ## Planning Confirmation
 
-待需求方确认以下口径后写回：
+2026-08-21，需求方确认全部口径：
 
-1. Practice 文本传入 rubric 生成的具体接口形态（扩展 `rubricText` 可选参数 vs 新增专用方法）。
-2. 三条件同尺子的实现方式（以 oracle Practice 为唯一生成输入 vs 固定 rubric env）。
-3. 本次 candidate 交付前的确定性验证是否授权真实 judge 调用（内部 endpoint，显式 opt-in）。
+1. **接口形态**：扩展 `JudgeProvider.rubricText` 可选参数为 `{ task_md, practice_text? }`，向后兼容。
+2. **同尺子**：以 oracle Practice 文本作为唯一 rubric 生成输入，三条件共用同一 rubric hash。
+3. **judge 授权**：授权对 calibration 夹具离线打分（内部 endpoint，`LORELUM_JUDGE_REAL=1` opt-in）。
+4. **task.md 粒度**：最小行为声明，不预写分层/边界/集中政策细节。
+5. **starter 缺口**：保留传输 adapter 与 API 文档，移除预置领域翻译/策略/账本边界。
+6. **irrelevant 对照**：沿用 pagination。
+7. **探针**：保留 v3 结构探针作为旁证，judge 分数为主判据。
+8. **模型/预算**：deepseek/deepseek-v4-flash，25 分钟/attempt。
+9. **盲评边界**：维持现有 project-convention/v1 注入。
+10. **决策规则**：strictly-greater-than-each-control。
+11. **starter 提交**：不可变源码提交。
+
