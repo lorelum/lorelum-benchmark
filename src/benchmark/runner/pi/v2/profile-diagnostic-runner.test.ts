@@ -6,6 +6,8 @@ import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionT
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
 import { expansionDecisions, materializeConventionDoc, materializeGitHistory, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, runJudgeProvider, summarizeJudge, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary, type RunnerPracticePayload } from "./profile-diagnostic-runner";
 import { run } from "./preflight";
+import { judgeProviders } from "../../../judge/providers";
+import type { JudgeRubricContext } from "../../../judge/provider";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 
 const fixturePath = join(import.meta.dir, "..", "..", "..", "kernel", "fixtures", "neutral");
@@ -199,6 +201,54 @@ export async function login(email: string, password: string) {
     const unknown = await runJudgeProvider(attempt, workspace, { pi_version: "0.80.10", model: { id: "m" }, budget: { max_duration_minutes: 1 }, repetitions: 1, judge: { provider: "nope" } });
     expect(unknown.state).toBe("judge-unavailable");
   } finally {
+    await rm(attempt, { force: true, recursive: true });
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("runJudgeProvider passes the oracle Practice text to practice-aware rubric generation", async () => {
+  const attempt = await mkdtemp(join(tmpdir(), "lorelum-judge-attempt-"));
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-judge-ws-"));
+  const contexts: Array<JudgeRubricContext | undefined> = [];
+  judgeProviders["spy-practice-aware"] = {
+    id: "spy-practice-aware",
+    version: "v1",
+    async rubricText(input?) {
+      contexts.push(input);
+      return JSON.stringify({ dimensions: [{ id: "policy-centralization", name: "policy", description: "centralized policy", max_points: 100 }] });
+    },
+    async score(_input, context) {
+      return {
+        schema_version: "judge-result/v1",
+        judge_version: 1,
+        judge: context.judge,
+        state: "indeterminate",
+        score: 0,
+        criteria: [],
+        prompt_hash: context.prompt_hash,
+        rubric_hash: context.rubric_hash,
+        input_hash: "a".repeat(64),
+        confidence: 50,
+        reason: "spy provider",
+      };
+    },
+  };
+  try {
+    const app = join(workspace, "app");
+    await mkdir(join(app, "src"), { recursive: true });
+    await Bun.write(join(workspace, "task.md"), "接通网关。\n");
+    await Bun.write(join(app, "src", "server.ts"), "export const handler = 'delegates';\n");
+    const shared = { pi_version: "0.80.10", model: { id: "m" }, budget: { max_duration_minutes: 1 }, repetitions: 1, judge: { provider: "spy-practice-aware" } };
+    const entry = await runJudgeProvider(attempt, workspace, shared, "集中边界政策 Practice");
+    expect(entry.state).toBe("indeterminate");
+    expect(contexts).toHaveLength(1);
+    expect(contexts[0]).toEqual({ task_md: "接通网关。\n", practice_text: "集中边界政策 Practice" });
+
+    await runJudgeProvider(attempt, workspace, shared);
+    expect(contexts).toHaveLength(2);
+    expect(contexts[1]).toEqual({ task_md: "接通网关。\n" });
+  } finally {
+    delete judgeProviders["spy-practice-aware"];
     await rm(attempt, { force: true, recursive: true });
     await rm(workspace, { force: true, recursive: true });
   }

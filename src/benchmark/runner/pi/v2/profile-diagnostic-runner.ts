@@ -75,6 +75,7 @@ export async function runJudgeProvider(
   attemptPath: string,
   workspace: string,
   shared: SharedExecution,
+  oraclePracticeText?: string,
 ): Promise<JudgeEntry> {
   const providerId = shared.judge?.provider;
   if (!providerId) return { provider_id: "none", provider_version: "", state: "not-run", reason: "no judge provider declared" };
@@ -84,7 +85,9 @@ export async function runJudgeProvider(
     const files = await sourceMapFromWorkspace(resolve(workspace, "app"));
     const candidateDiff = sourceMapToDiff(files);
     const taskMd = await Bun.file(resolve(workspace, "task.md")).text();
-    const rubric = await provider.rubricText({ task_md: taskMd });
+    const rubric = await provider.rubricText(
+      oraclePracticeText === undefined ? { task_md: taskMd } : { task_md: taskMd, practice_text: oraclePracticeText },
+    );
     const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric });
     const prompt = provider.promptFor
       ? await provider.promptFor(input, rubric)
@@ -789,7 +792,12 @@ export async function runAttempt(
   }
   Object.assign(entry, classifyEvaluatorResult(evaluation));
   if (entry.evaluation_status === "evaluated") {
-    entry.judge = await runJudgeProvider(attemptPath, workspace, shared);
+    // All conditions share one practice-aware rubric: the oracle Practice text
+    // is the sole rubric input, even for baseline/irrelevant attempts.
+    const oraclePayload = shared.judge?.provider
+      ? await runtime.resolvePracticePayload(candidatePath, profile, "oracle-practice")
+      : undefined;
+    entry.judge = await runJudgeProvider(attemptPath, workspace, shared, oraclePayload?.practice?.text);
   }
   return entry;
 }

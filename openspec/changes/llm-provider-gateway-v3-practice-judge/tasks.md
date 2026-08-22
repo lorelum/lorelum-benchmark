@@ -8,10 +8,10 @@
 
 ## 2. Practice-aware judge provider v1
 
-- [ ] 2.1 新建 `src/benchmark/judge/judge-agent/practice-aware/v1/`（provider/rubric/score/llm），rubric 生成 prompt 同时包含 task.md 与 Practice 文本。
-- [ ] 2.2 扩展 `JudgeProvider.rubricText` 可选参数为 `{ task_md, practice_text? }`，向后兼容。
-- [ ] 2.3 添加单元测试：Practice 输入生效、无 Practice 向后兼容、私有输入 fail closed、generic/v2 不变。
-- [ ] 2.4 在 runner 中传入 oracle Practice 文本；三条件使用同一 rubric hash。
+- [x] 2.1 新建 `src/benchmark/judge/judge-agent/practice-aware/v1/`（provider/rubric/score/llm），rubric 生成 prompt 同时包含 task.md 与 Practice 文本。
+- [x] 2.2 扩展 `JudgeProvider.rubricText` 可选参数为 `{ task_md, practice_text? }`，向后兼容。
+- [x] 2.3 添加单元测试：Practice 输入生效、无 Practice 向后兼容、私有输入 fail closed、generic/v2 不变。
+- [x] 2.4 在 runner 中传入 oracle Practice 文本；三条件使用同一 rubric hash。
 
 ## 3. 重做 v3 candidate
 
