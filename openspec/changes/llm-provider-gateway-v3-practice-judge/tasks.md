@@ -18,12 +18,12 @@
 - [x] 3.1 重写 `public/task.md` 只声明基本行为要求，不预写 Practice 结构纪律细节。
 - [x] 3.2 重做 `public/starter` 留结构缺口：保留传输 adapter 与 API 文档，移除预置领域翻译/策略/账本边界。
 - [x] 3.3 更新公开测试经 stub 拦截，不依赖产品内埋点。
-- [ ] 3.4 更新 private conditions.yaml 的 judge 声明为 `judge-agent/practice-aware/v1`。
-- [ ] 3.5 更新 private practices/metadata/oracle/calibration matrix/snapshot。
+- [x] 3.4 更新 private conditions.yaml 的 judge 声明为 `judge-agent/practice-aware/v1`。
+- [x] 3.5 更新 private practices/metadata/oracle/calibration matrix/snapshot。
 
 ## 4. 校准与判别力验证
 
-- [ ] 4.1 运行 kernel calibration（无模型）确认探针矩阵仍通过。
+- [x] 4.1 运行 kernel calibration（无模型）确认探针矩阵仍通过。
 - [ ] 4.2 用 practice-aware judge 对 calibration 夹具离线打分（显式 opt-in，仅内部 endpoint）。
 - [ ] 4.3 验证 reference/equivalent 高分、anti-pattern/docs-present 低分且有判别差距。
 - [ ] 4.4 记录判别力证据到 verification/。

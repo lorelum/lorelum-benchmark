@@ -1,6 +1,6 @@
 version: v1
 candidate_snapshot_manifest: private/snapshot.json
-source_commit: b9f206e6e319a71fe80946fbb1d1ffe2a836d304
+source_commit: 2bf3d2edae91b943bac176dec2ac78c56b2a5075
 shared_execution:
   agent: { id: local-pi, version: v2 }
   pi_version: 0.80.10
@@ -12,7 +12,7 @@ shared_execution:
   budget: { max_duration_minutes: 25 }
   workspace: clean-copy-per-attempt
   repetitions: 5
-  judge: { provider: judge-agent/generic/v2, indeterminate_budget: 0.25 }
+  judge: { provider: judge-agent/practice-aware/v1, indeterminate_budget: 0.25 }
 conditions:
   - { id: baseline, status: declared, practice: none }
   - id: oracle-practice

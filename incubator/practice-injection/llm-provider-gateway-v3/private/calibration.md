@@ -21,6 +21,10 @@
 
 标签口径：人工源码复核为最终 oracle；#168 的 judge v2 criterion rationale 只作为交叉证据，不参与探针判定。
 
+## Fixture 输入边界
+
+`candidate-v3` 与公开 starter 同步，只保留最小消息类型；私有 `fixture-foundation` 在其上叠加 `contract-types-v3`，仅为既有校准夹具恢复完整编译契约。该 overlay 只存在于 private calibration staging，不进入 public agent workspace，也不改变 candidate 的公开结构缺口。
+
 ## 探针职责（verify-provider-gateway-v3.ts）
 
 - 构建 TypeScript import graph，并沿相对 import 从 handler 闭包筛选非 transport 边界候选；仅 import 可达不足以下结论。
@@ -32,6 +36,12 @@
 
 重放：`bun run src/benchmark/kernel/kernel.ts calibrate incubator/practice-injection/llm-provider-gateway-v3 --output <empty-temp>`。无模型调用、无真实网络；本地 stub 服务器仅模拟公开语义测试声明的供应商协议。
 
-## Judge 边界
+## Judge 边界（judge-agent/practice-aware/v1）
 
-本 candidate 不修改 `judge-agent/generic/v2`，仅将其保持为冻结软 sidecar。真实 judge 校准未执行；generic judge 的 evidence rationale 与 naming-variant 校准硬化由 #174 独立承接。后续三条件 pilot 必须另立 issue，且在 v3 calibration、泄露审计与生命周期门禁通过后再显式授权。
+- candidate 声明独立版本 `judge-agent/practice-aware/v1`，不修改冻结 `judge-agent/generic/v1/v2`。
+- rubric 生成输入为 public `task.md` + oracle Practice 文本；baseline / oracle-practice / irrelevant-practice 三条件复用同一 rubric hash。
+- Practice 文本先通过公开/私有边界 fail-closed 检查；judge 分数仍是软信号，不改变 semantic 或 practice_observation。
+- 离线校准命令要求 internal endpoint、`LORELUM_JUDGE_REAL=1`，并对 reference / equivalent / anti-pattern / docs-present / public-starter 取样打分；不得调用 candidate 模型。
+- 2026-08-22 已显式 opt-in 尝试真实校准：第一笔 rubric 生成请求收到 endpoint HTTP 429（weekly usage limit，提示 1 天后重置）。未执行任何 fixture 打分或 candidate 模型调用；该运行是执行失败，不构成判别力证据。endpoint 配额恢复后需重跑并记录分数、samples、rubric hash 与阈值。
+
+后续三条件 pilot 必须另立 issue，且在 v3 judge calibration、泄露审计与生命周期门禁通过后再显式授权。

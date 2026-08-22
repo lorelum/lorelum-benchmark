@@ -15,7 +15,7 @@ commits:
       - tsconfig.json
       - .gitignore
       - src/types.ts
-  - message: "feat(api): add OpenAI chat path and gateway API docs"
+  - message: "feat(api): expose minimal OpenAI chat scaffold and gateway API docs"
     files:
       - src/openai.ts
       - src/server.ts

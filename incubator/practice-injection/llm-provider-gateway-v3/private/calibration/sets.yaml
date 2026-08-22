@@ -11,49 +11,54 @@ sets:
         extends: shared-node-ts
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/candidate-v3
-          sha256: 3bf832b6238e44c83c43c75430e69b0164be16d98647579f7aa7903afcfcdd69
-      reference-tree:
+          sha256: d3ea8ce34484691e18dc76246c47d75a0e8d4bd664b70af1271351a1951e44d9
+      fixture-foundation:
         extends: candidate-foundation
+        overlay:
+          path: private/calibration/sets/quality-probe/v3/overlays/contract-types-v3
+          sha256: 6c9604704f2f97b2c4e3de4353208ce56e7b5f09220880fadd9d9c84425acf7f
+      reference-tree:
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/reference-v3
           sha256: 3371e7ca4811b2e1843003e04f19ba5390a3c2d199062d48c612a9a40e2056c9
       equivalent-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/equivalent-v3
           sha256: c2d812c2191530f82555ef0422e9799a47e6feb0bc854e64800d7eb74182af63
       type-based-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/type-based-v3
           sha256: 25562d71dfc2c6f79a68344fb3aa0a8eef8801c296ea0a4feb0086c5f0ccef96
       anti-pattern-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/anti-pattern-v3
           sha256: 0203bd73ce4a4d3b56aad4bdfcf94c5d5a4eb2404d61f724148726802cc31a9b
       docs-present-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/docs-present-v3
           sha256: 3f23eb110e036858c062e2ef236f7ed1903371fedeb97a1fb17188f76c8b05bd
       oracle-naming-variant-a-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/oracle-naming-variant-a
           sha256: 4f4567ded34a16365ac2bb2844a9fe1df6c99e84f7005be0fde40cc5f7825fbd
       oracle-naming-variant-b-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/oracle-naming-variant-b
           sha256: ba6f1a076badb53e4481157f1b68bf1e28414d3dcc7b0f4c733714cf2579361d
       different-layout-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/different-layout-variant
           sha256: d5348f9e8028ed3f914f9580314dc177ccd429269816e4ec87bb9bf487d58e6e
       irrelevant-naming-collision-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/irrelevant-naming-collision
           sha256: a25b2a2774d089545e65779fecdb5a015e15f17fcd7f98062d10c6744be71296
@@ -63,17 +68,17 @@ sets:
           path: private/calibration/sets/quality-probe/v3/overlays/unused-boundary-modules
           sha256: 442b616f5aca329a4d9a8c881d213e06432443983f0eed102959598e62998f7d
       baseline-policy-scatter-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/baseline-policy-scatter
           sha256: 4c615623c2b8d6f9e8cc09b7719154ba191b53b41cd680c2e91ff5cc85a88257
       oracle-sync-ledger-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/oracle-sync-ledger
           sha256: 59fcff455d78c084d405bc252b549e3971231d663ca61bafef4e7f0540b7a20b
       ledger-naming-variant-tree:
-        extends: candidate-foundation
+        extends: fixture-foundation
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/ledger-naming-variant
           sha256: f5b38b282eb2885d6b53d2e6168e879e1d5d8ec24b97ebb7545accd3e4c158a8

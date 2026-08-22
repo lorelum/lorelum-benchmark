@@ -7,7 +7,7 @@ kernel:
 source:
   kind: repository-local-starter
   repository: lorelum/lorelum-benchmark
-  source_commit: b9f206e6e319a71fe80946fbb1d1ffe2a836d304
+  source_commit: 2bf3d2edae91b943bac176dec2ac78c56b2a5075
   public_root: public/starter/app
   immutable_by: private/snapshot.json
 calibration_roles:
@@ -23,4 +23,4 @@ runtime:
 baseline_expectation:
   functional: false
   practice_adherence: false
-  reason: v3 与 v2 共用公开真占位 starter：仅硬编码 OpenAI 非流式直连路径，无注册表/适配器/fallback/retry/租户预算/幂等/JSONL 账本/usage 查询，公开测试未通过。
+  reason: v3 公开 starter 只保留 OpenAI 非流式直连路径与最小消息类型；未预置统一模型契约、供应商注册表、领域错误、集中政策或账本边界，公开测试未通过。
