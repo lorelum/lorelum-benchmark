@@ -8,14 +8,14 @@ identity:
   name: ops-admin
   email: ops@meridian.internal
 commits:
-  - message: "chore: scaffold AI gateway service"
+  - message: "chore: initialize AI gateway service"
     files:
       - package.json
       - bun.lock
       - tsconfig.json
       - .gitignore
       - src/types.ts
-  - message: "feat(api): expose minimal OpenAI chat scaffold and gateway API docs"
+  - message: "feat(api): add OpenAI chat endpoint and gateway API docs"
     files:
       - src/openai.ts
       - src/server.ts
@@ -24,5 +24,5 @@ commits:
     files:
       - tests/stubs.ts
       - tests/gateway.spec.ts
-  - message: "feat: gateway shell awaiting wiring"
+  - message: "chore: prepare workspace for provider integration"
     files: []

@@ -11,7 +11,7 @@ sets:
         extends: shared-node-ts
         overlay:
           path: private/calibration/sets/quality-probe/v3/overlays/candidate-v3
-          sha256: d3ea8ce34484691e18dc76246c47d75a0e8d4bd664b70af1271351a1951e44d9
+          sha256: f7e5ad6201c16ea62117bfe4d964405132ceafe0f1f8ac0ef8ba480ff37be9d3
       fixture-foundation:
         extends: candidate-foundation
         overlay:

@@ -37,10 +37,9 @@ const responses = {
 
 /**
  * Local provider stub used by the public test suite. It serves four wire
- * protocols with fixed deterministic responses, SSE included. Nebula looks
- * like an OpenAI-compatible endpoint path but uses different auth headers and
- * field names, so the candidate must implement its wire contract rather than
- * reuse the OpenAI-compatible adapter by name.
+ * protocols with fixed deterministic responses, SSE included. Nebula uses an
+ * OpenAI-like endpoint path, but its auth headers and response/stream field
+ * names differ from OpenAI.
  */
 export async function createStub(kind: StubKind): Promise<Stub> {
   const validKey = `test-${kind}-key`;
