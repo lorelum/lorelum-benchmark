@@ -104,6 +104,10 @@ skill-trigger-orchestration 轨道（#96）在 r17c 达成发现层 3/3：agent 
 - 处置：candidate 不升级；需任务重设计（目标行为不可仅由公开测试推导，例如将窗口语义
   改为无法从测试边界推断的私有规则）后重新执行三条件诊断。全程未创建正式 record、未
   升级 suite revision。
+- 决策（2026-08-24，需求方）：放弃本诊断方向，采纳层测量暂停。candidate 不重设计、不升级，
+  不再投入；回到 skill-trigger 原任务（t100237 系列）核心交付收尾。#180/#181 按决策关闭，
+  本 change 归档；分支上保留的 runner/extension 修复（temp 文件注入、workspace-confined
+  工具、进程清理）供未来诊断按需复用。
 ## Migration Plan
 
 1. 创建 issue #180、分支与 OpenSpec change；提交仅含 OpenSpec artifacts 的初始 PR。
