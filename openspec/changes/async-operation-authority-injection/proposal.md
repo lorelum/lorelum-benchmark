@@ -15,13 +15,17 @@ skill-trigger-orchestration 轨道（#96 / PR #113）解耦后，发现层（age
   `injection-calibration/v2` profile + `react-vite` materializer，三条件 `baseline /
   oracle-practice / irrelevant-practice`，`lorelum-retrieval` 显式 `unavailable`。
 - `oracle-practice` 通过 `practice-card/v1` 运行时注入 `react.project-operation-authority`
-  卡（条件作用域私有运行时通道，不物化进 agent workspace）；`irrelevant-practice` 注入
-  等长无关卡；`baseline` 无注入。
+  卡（条件作用域私有运行时通道，不物化进 agent workspace）；卡正文写入一次性 OS temp
+  文件，Pi argv 只传文件路径、退出后删除，公开 trace 仅含 practice id/version/hash；
+  `irrelevant-practice` 注入等长无关卡；`baseline` 无注入。
 - 复用 skill-trigger v4 的公开行为题面与 `dashboard.spec.ts`（含「前台在途 + 后台协调」
   第 8 条可观察回归），`task.md`/starter 不含 PX-47 规则正文。
 - 复用 `skill-trigger-source-authority/v2` judge 与校准矩阵（reference 90+ /
   anti-pattern ≤75 / never-apply 失败），新增 `injection-calibration/v2` 兼容的
   react-vite app-shell/v2 calibration base 共享声明并绑定 digest。
+- 本地三条件诊断使用 workspace-confined Pi extension：文件型工具拒绝 workspace 外路径与
+  外部 symlink，bash 仅允许固定依赖/测试/构建命令；evaluator web server 单进程化并以
+  TerminateProcess 兜底清理，保证诊断执行边界与可复现的进程/端口清理。
 - 不改写任何冻结资产：skill-trigger v4 的 Practice 卡、judge v2、公开测试、校准矩阵、
   snapshot 保持不动；共享 judge provider 不改签名。
 

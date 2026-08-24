@@ -1,5 +1,6 @@
-import { cp, lstat, mkdir, realpath, rm } from "node:fs/promises";
-import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { cp, lstat, mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { joinPath, relativePath, sha256Directory, sha256File, workspaceRoot } from "../../../fs";
 import * as v1Runtime from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import * as v2Runtime from "../../../kernel/profiles/injection-calibration/v2/runtime";
@@ -33,6 +34,7 @@ import { sourceMapFromWorkspace, sourceMapToDiff } from "../../../judge/source-m
 
 const scratchRoot = resolve(workspaceRoot, "scratch");
 const publicDependencyProvisioningTimeoutMs = 120_000;
+const workspaceToolsExtensionPath = resolve(dirname(import.meta.path), "workspace-tools-extension.ts");
 
 export type SharedExecution = {
   pi_version: string;
@@ -546,19 +548,32 @@ async function replayCandidateHistory(historyRoot: string, candidatePath: string
   }
 }
 
-export function piArgs(modelId: string, payload: RunnerPracticePayload): string[] {
+export function piArgs(modelId: string, payload: RunnerPracticePayload, runtimePracticePath?: string): string[] {
   const args = [
     "--print", "--no-session", "--no-context-files", "--no-extensions",
     "--no-skills", "--no-prompt-templates",
+    "--no-builtin-tools", "--extension", workspaceToolsExtensionPath,
     "--tools", "read,bash,edit,write,grep,find,ls",
     "--model", modelId,
     "@task.md",
     "Complete the coding task. Work only inside app/."
   ];
   if (payload.practice && payload.practice.delivery_template !== "project-convention/v1") {
-    args.push("--append-system-prompt", `Apply this Practice while completing the task:\n\n${payload.practice.text}`);
+    if (!runtimePracticePath) fail("practice-card runtime prompt requires a private temporary file");
+    args.push("--append-system-prompt", runtimePracticePath);
   }
   return args;
+}
+
+/** Writes a condition-scoped practice-card prompt outside the agent workspace. */
+export async function materializePracticeRuntimePrompt(payload: RunnerPracticePayload): Promise<{ path: string; cleanup: () => Promise<void> }> {
+  if (!payload.practice || payload.practice.delivery_template === "project-convention/v1") {
+    return { path: "", cleanup: async () => undefined };
+  }
+  const directory = await mkdtemp(join(tmpdir(), "lorelum-practice-prompt-"));
+  const path = join(directory, "practice-card.md");
+  await Bun.write(path, `Apply this Practice while completing the task:\n\n${payload.practice.text}`);
+  return { path, cleanup: () => rm(directory, { recursive: true, force: true }) };
 }
 
 /** Writes a project-convention Practice into the agent workspace as a doc file (oracle/irrelevant only). */
@@ -711,7 +726,13 @@ export async function runAttempt(
     return entry;
   }
 
-  const pi = await commandRunner([command, ...piArgs(shared.model.id, payload)], workspace, shared.budget.max_duration_minutes * 60_000);
+  const runtimePractice = await materializePracticeRuntimePrompt(payload);
+  let pi;
+  try {
+    pi = await commandRunner([command, ...piArgs(shared.model.id, payload, runtimePractice.path)], workspace, shared.budget.max_duration_minutes * 60_000);
+  } finally {
+    await runtimePractice.cleanup();
+  }
   await Bun.write(resolve(attemptPath, "pi.stdout.log"), pi.stdout);
   await Bun.write(resolve(attemptPath, "pi.stderr.log"), pi.stderr);
 

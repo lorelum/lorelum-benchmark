@@ -6,7 +6,9 @@
 // Candidate public files are never modified; the server URL is passed to the
 // evaluator through PLAYWRIGHT_BASE_URL.
 
+import { existsSync } from "node:fs";
 import { createServer } from "node:net";
+import { join } from "node:path";
 import { terminateProcessTree } from "./process-tree";
 
 export type WebServerFailureCategory =
@@ -61,6 +63,7 @@ function defaultSpawn(command: string[], cwd: string, env: Record<string, string
     exited: child.exited,
     stop: async () => {
       await terminateProcessTree(child.pid);
+      try { process.kill(child.pid, "SIGKILL"); } catch { }
       try { child.kill(); } catch { }
       return true;
     }
@@ -105,7 +108,14 @@ export async function startWebServer(input: {
   const probe = input.probe ?? defaultProbe;
   const readinessTimeoutMs = input.readinessTimeoutMs ?? 30_000;
   const cleanupTimeoutMs = input.cleanupTimeoutMs ?? 5_000;
-  const command = [process.execPath, "run", "dev", "--", "--host", "127.0.0.1", "--port", String(input.port)];
+  // Run vite directly (instead of `bun run dev`) when possible. On Windows the
+  // bun -> vite child tree cannot be torn down reliably (taskkill is denied in
+  // some sandboxes), so a single process keeps `stop()` able to release the
+  // port and lets the evaluator cleanup be verified.
+  const viteBin = join(input.cwd, "node_modules", "vite", "bin", "vite.js");
+  const command = existsSync(viteBin)
+    ? [process.execPath, viteBin, "--host", "127.0.0.1", "--port", String(input.port)]
+    : [process.execPath, "run", "dev", "--", "--host", "127.0.0.1", "--port", String(input.port)];
   const url = `http://127.0.0.1:${input.port}`;
   let spawned: SpawnedServer;
   try {

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveInjectionCalibration, resolvePracticePayload, redactedInjectionTrace } from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import type { InjectionConditionId } from "../../../kernel/profiles/injection-calibration/v1/types";
-import { expansionDecisions, materializeConventionDoc, materializeGitHistory, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, runJudgeProvider, summarizeJudge, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary, type RunnerPracticePayload } from "./profile-diagnostic-runner";
+import { expansionDecisions, materializeConventionDoc, materializeGitHistory, materializePracticeRuntimePrompt, piArgs, classifyEvaluatorResult, evaluatorResult, isRecord, parseHistoricalSummary, replayHistoricalWorkspace, runAttempt, runJudgeProvider, summarizeJudge, verifyCandidateDeclaration, verifySnapshotIdentity, workspaceFiles, writeHistoricalReplaySummary, type RunnerPracticePayload } from "./profile-diagnostic-runner";
 import { run } from "./preflight";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
 
@@ -71,18 +71,28 @@ test("baseline piArgs never includes --append-system-prompt", async () => {
   const args = piArgs("test-model", baseline);
   expect(baseline.practice).toBeUndefined();
   expect(args).not.toContain("--append-system-prompt");
+  expect(args).toContain("--no-builtin-tools");
+  expect(args[args.indexOf("--extension") + 1]).toContain("workspace-tools-extension.ts");
   expect(args).toContain("--model");
   expect(args).toContain("test-model");
 });
 
-test("oracle and irrelevant piArgs include --append-system-prompt with card text", async () => {
+test("oracle and irrelevant piArgs pass a temporary runtime prompt path, never card text", async () => {
   const profile = await resolveInjectionCalibration(fixturePath);
   for (const conditionId of ["oracle-practice", "irrelevant-practice"] as InjectionConditionId[]) {
     const payload = await resolvePracticePayload(fixturePath, profile, conditionId);
-    const args = piArgs("test-model", payload);
+    const runtime = await materializePracticeRuntimePrompt(payload);
+    try {
+      const args = piArgs("test-model", payload, runtime.path);
     const promptIndex = args.indexOf("--append-system-prompt");
     expect(promptIndex).toBeGreaterThan(-1);
-    expect(args[promptIndex + 1]).toContain("Apply this Practice");
+      expect(args[promptIndex + 1]).toBe(runtime.path);
+      expect(JSON.stringify(args)).not.toContain("Apply this Practice");
+      expect(runtime.path).not.toContain("workspace");
+      expect(await Bun.file(runtime.path).text()).toContain("Apply this Practice");
+    } finally {
+      await runtime.cleanup();
+    }
   }
 });
 

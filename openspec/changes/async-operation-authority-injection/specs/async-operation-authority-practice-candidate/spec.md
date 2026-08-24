@@ -30,7 +30,8 @@ skill-trigger 的 `react.project-operation-authority` Practice 卡与
 
 `oracle-practice` 条件 MUST 通过 `condition-scoped-private-runtime` 注入
 `react.project-operation-authority` Practice 卡，投递模板为 `practice-card/v1`，卡文本
-MUST NOT 被物化进 agent workspace、MUST NOT 出现在公开 task.md 或 starter。注入内容只包含
+MUST NOT 被物化进 agent workspace、MUST NOT 出现在公开 task.md、starter、Pi 进程参数或
+公开 trace。注入内容只包含
 已声明的 Practice 卡（后台协调仅在无前台在途且距最近一次前台操作启动超过 500ms 时生效），
 不含 evaluator、oracle、scoring 或校准材料。
 
@@ -39,11 +40,34 @@ MUST NOT 被物化进 agent workspace、MUST NOT 出现在公开 task.md 或 sta
 - **WHEN** 审计 agent workspace 与公开 task.md/starter
 - **THEN** 不包含 `react.project-operation-authority` 卡正文、窗口阈值或生效条件的任何文本
 
+#### Scenario: 运行时注入不进入进程参数
+
+- **WHEN** 检查 profile diagnostic runner 启动 Pi 的 argv 与公开 trace
+- **THEN** Practice 卡只以一次性私有临时文件路径传递，argv/trace 仅含该路径或
+  practice id/version/hash，不含卡正文；临时文件在 Pi 退出后删除
+
 #### Scenario: 运行时注入可被消费
 
 - **WHEN** 以 oracle-practice 条件运行 candidate
 - **THEN** agent 在条件作用域内收到 practice-card 注入并可按约束实现，注入本身不作为
   evaluator/oracle/scoring 材料
+
+### Requirement: 本地诊断工具保持 public-workspace 隔离
+
+本地 profile diagnostic MUST 通过 workspace-confined tool extension 执行 Pi：文件型工具
+MUST 拒绝 workspace 外路径与指向外部的 symlink；bash MUST 仅允许固定依赖/测试/构建命令。
+诊断 trace MUST NOT 记录 Practice 卡正文或 private 路径。
+
+#### Scenario: 文件工具不能逃逸 workspace
+
+- **WHEN** 模型请求读取、列出、搜索或修改 `..`、绝对宿主路径或指向 workspace 外的 symlink
+- **THEN** 工具调用失败并被限制在诊断 workspace 内
+
+#### Scenario: bash 不能扫描宿主文件系统
+
+- **WHEN** 模型请求任意 shell 命令（例如扫描 `/`）
+- **THEN** 命令被拒绝；仅固定 allowlist 中的 `bun install`、`bun run test`、
+  `bun run build` 或 `pwd` 可执行
 
 ### Requirement: 采纳层以 judge v2 语义验收
 

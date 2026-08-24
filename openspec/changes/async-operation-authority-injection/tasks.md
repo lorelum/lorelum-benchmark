@@ -24,7 +24,18 @@
 
 ## 4. 诊断验证（用户授权）
 
-- [ ] 4.1 用户授权后执行三条件诊断性注入验证：oracle-practice 3 次完整采纳（judge v2
-  ≥90 + 公开测试通过），baseline / irrelevant-practice 失败；不创建正式 record、不升级
-  suite。
-- [ ] 4.2 记录结果、更新 design/tasks 与 issue，保留验证证据与未执行原因。
+- [x] 4.0 修复 practice-card argv 泄露与本地工具隔离：runtime prompt 改为一次性
+  私有 temp 文件；Pi 禁用内置工具并启用 workspace-confined extension；`bun run test`
+  由 extension 以外部 vite server 运行避免挂起；evaluator web server 单进程化并用
+  TerminateProcess 兜底清理；补充合同测试、OpenSpec strict、泄露审计与最小 smoke。
+- [x] 4.1 用户授权后执行三条件诊断性注入验证：r5（2026-08-21）因 DeepSeek 账户周配额
+  429（GoUsageLimitError）作废；r6（2026-08-24，新 key）9/9 attempts 全部 evaluated，
+  deepseek-v4-flash、25 分钟预算、cyclic-latin-square/v1。结果未达验收口径：baseline /
+  irrelevant-practice / oracle-practice 各 3 次全部 judge v2=100 + 公开测试通过 +
+  practice_observation=observed（oracle_deltas raw=0，bootstrap 95% CI=[0,0]），
+  candidate 不具区分度。全程 diagnostic-only，未创建正式 record、未升级 suite。
+- [x] 4.2 记录结果：注入机制正常（irrelevant-practice 卡被 agent 看到并忽略；oracle 卡经
+  一次性私有 temp 文件路径注入，argv/trace 无卡正文）；根因是公开测试套件完整编码
+  PX-47 可观测行为（200ms/600ms 窗口），无实践卡亦可测试驱动复现，故三条件零区分度。
+  结论写入 design/tasks 与 issue #180/#181；诊断产物仅存 scratch/（不入库）；candidate
+  暂不升级，需任务重设计（目标行为不可仅由公开测试推导）后重新诊断。

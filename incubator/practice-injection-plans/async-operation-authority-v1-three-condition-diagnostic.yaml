@@ -1,0 +1,15 @@
+# 三条件诊断：baseline / oracle-practice / irrelevant-practice，每条件 3 次（共 9 attempts）。
+# skill-trigger 解耦后的采纳层承接：#180。全程 diagnostic-only，不创建正式 record。
+schema_version: profile-diagnostic-plan/v2
+id: async-operation-authority-v1-three-condition-diagnostic
+schedule_seed: async-operation-authority-v1-diagnostic-2026-08-19
+schedule_algorithm: cyclic-latin-square/v1
+repetitions: 3
+independent_candidate_threshold: 1
+conditions: [baseline, oracle-practice, irrelevant-practice]
+candidates:
+  - id: async-operation-authority-v1
+    path: incubator/practice-injection/async-operation-authority-v1
+    source_commit: 16241b0266b758ec98ca0df5f15e1d81890dced5
+    snapshot_id: 35a87155c8e14e7c33221d2342221b1128e729a7d9b1eb8d00253c5e3bfe6141
+    profile_input_hash: 85585e410dfd0129649a38788f18110edc0c1a055781c7d0ca081a16ba88e626

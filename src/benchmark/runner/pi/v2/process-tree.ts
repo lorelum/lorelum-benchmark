@@ -16,6 +16,9 @@ export async function terminateProcessTree(pid: number): Promise<void> {
   if (process.platform === "win32") {
     const killer = Bun.spawn(["taskkill", "/PID", String(pid), "/T", "/F"], { stdout: "ignore", stderr: "ignore" });
     await killer.exited;
+    // taskkill can be denied by sandboxes that still allow TerminateProcess;
+    // fall back to killing the direct process so cleanup is not skipped.
+    try { process.kill(pid, "SIGKILL"); } catch { }
     return;
   }
   for (const childPid of (await descendantPids(pid)).reverse()) {

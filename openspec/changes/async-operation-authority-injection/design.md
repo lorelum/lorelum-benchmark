@@ -38,9 +38,23 @@ skill-trigger-orchestration 轨道（#96）在 r17c 达成发现层 3/3：agent 
 
 - `oracle-practice` 用 `condition-scoped-private-runtime` + `practice-card/v1` 运行时注入
   `react.project-operation-authority` 卡；卡文本不物化进 agent workspace。
+- practice-card 正文写入一次性 OS temp 文件，Pi argv 只传该文件路径；Pi 退出后删除临时
+  文件。公开 trace 只记录 practice id/version/hash，不记录正文或 temp 路径。
 - `irrelevant-practice` 注入等长无关卡（rendered character 相对差 ≤10%），不提供可用约束。
 - `baseline` 无注入。全部 Practice/对照卡位于 `private/practices/`，公开 task.md/starter
   不含 PX-47 规则正文。
+
+### 本地诊断隔离
+
+- 本地 profile diagnostic 用显式 Pi extension 替换内置工具。文件型工具将请求路径解析到
+  真实路径并拒绝 workspace 外目标或外部 symlink；bash 仅允许固定依赖、测试、构建命令。
+- 该 extension 是诊断执行边界，不改变 candidate 公开题面、practice 内容、judge 语义或
+  scorer；条件间工具能力保持一致。
+- `bun run test` 由 extension 在 app/ 下以外部 vite server + `PLAYWRIGHT_BASE_URL` 运行，
+  规避 Windows 上 playwright 无法回收 bun→vite 进程树导致的挂起；`bun install`/`bun run
+  build` 同样定向到 app/。
+- 诊断 evaluator 的 web server 直接以 node/vite 单进程启动，stop 用 TerminateProcess
+  兜底，避免 taskkill 被沙箱拒绝后端口无法释放（`evaluator-cleanup-unverified`）。
 
 ### 采纳判定
 
@@ -66,9 +80,30 @@ skill-trigger-orchestration 轨道（#96）在 r17c 达成发现层 3/3：agent 
   证据；两者同时满足才视为完整采纳，避免近似实现漏网。
 - [injection-calibration/v2 的 react-vite base 共享需要 digest 绑定] → 在 sets.yaml 显式
   声明跨 profile 共享并绑定 digest，避免 profile 不匹配。
+- [本地 Pi 可用宿主 shell 访问 private] → 禁用内置工具并启用 workspace-confined
+  extension；诊断后再审计 argv、workspace 与 trace。
 - [等长无关卡难以完全等价] → 以 rendered character 相对差 ≤10% 为门槛，并在 calibration
   中验证无关卡不提供可用约束。
 
+## 诊断结果（r5/r6，diagnostic-only）
+
+- r5（2026-08-21）：9/9 attempts `execution-failed`，全部为 DeepSeek 账户周配额 429
+  （GoUsageLimitError），agent 未产生任何实现；证据 `scratch/async-operation-authority-diagnostic-r5/`。
+- r6（2026-08-24，更换 API key 后重跑）：9/9 attempts 全部 `evaluated`，证据
+  `scratch/async-operation-authority-diagnostic-r6/summary.json`。
+- 结果：baseline / irrelevant-practice / oracle-practice 各 3 次全部 judge v2=100 +
+  公开测试通过 + practice_observation=observed；oracle_deltas（baseline 与
+  irrelevant-practice）raw=0、bootstrap 95% CI=[0,0]，零区分度。
+- 结论：candidate 未达验收口径（baseline / irrelevant-practice 应失败），不具区分度。
+  注入机制本身正常：irrelevant-practice 卡被 agent 看到并忽略；oracle 卡经一次性私有
+  temp 文件路径注入，argv/trace 无卡正文。根因是公开 `dashboard.spec.ts` 完整编码了
+  PX-47 的可观测行为（测试 7/8 以 600ms/200ms 界定静默窗口，测试 5/6 编码陈旧前台
+  结果丢弃与后台失败静默），无实践卡亦可测试驱动复现，故 baseline / irrelevant-practice
+  同样完整采纳。公开 task.md 仅声明「符合 PX-47，规范正文作为项目资料提供，请勿假定其
+  内容」，不含规则正文，public/private 边界未破坏。
+- 处置：candidate 不升级；需任务重设计（目标行为不可仅由公开测试推导，例如将窗口语义
+  改为无法从测试边界推断的私有规则）后重新执行三条件诊断。全程未创建正式 record、未
+  升级 suite revision。
 ## Migration Plan
 
 1. 创建 issue #180、分支与 OpenSpec change；提交仅含 OpenSpec artifacts 的初始 PR。
