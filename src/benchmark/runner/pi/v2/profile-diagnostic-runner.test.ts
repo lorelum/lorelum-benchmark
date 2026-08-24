@@ -267,6 +267,46 @@ test("summarizeJudge aggregates redacted per-condition counts", () => {
   expect(summary.by_condition["oracle-practice"]).toMatchObject({ observed: 0, indeterminate: 1 });
 });
 
+test("summarizeJudge marks practice-aware results diagnostic-only when rubric hashes are mixed or missing", () => {
+  const base = { candidate: "c", condition: "baseline", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "baseline" as const, channel: "none" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
+  const judgeBase = { provider_id: "judge-agent/practice-aware", provider_version: "v1" };
+  const mixed = summarizeJudge([
+    { ...base, judge: { ...judgeBase, state: "observed" as const, score: 90, rubric_hash: "a".repeat(64) } },
+    { ...base, condition: "oracle-practice", trace: { condition_id: "oracle-practice" as const, channel: "x" as const, profile_input_hash: "h" }, judge: { ...judgeBase, state: "observed" as const, score: 95, rubric_hash: "b".repeat(64) } },
+  ]);
+  expect(mixed.rubric_hash_consistent).toBe(false);
+  expect(mixed.rubric_hash).toBeUndefined();
+  expect(mixed.diagnostic_only).toBe(true);
+
+  const missing = summarizeJudge([
+    { ...base, condition: "oracle-practice", trace: { condition_id: "oracle-practice" as const, channel: "x" as const, profile_input_hash: "h" }, judge: { ...judgeBase, state: "judge-unavailable" as const, reason: "rubric mismatch" } },
+  ]);
+  expect(missing.rubric_hash_consistent).toBe(false);
+  expect(missing.rubric_hash).toBeUndefined();
+  expect(missing.diagnostic_only).toBe(true);
+});
+
+test("runJudgeProvider fails closed for practice-aware judge without an oracle Practice payload", async () => {
+  const attempt = await mkdtemp(join(tmpdir(), "lorelum-judge-missing-"));
+  const workspace = await mkdtemp(join(tmpdir(), "lorelum-judge-ws-"));
+  try {
+    await mkdir(join(workspace, "app"), { recursive: true });
+    await Bun.write(join(workspace, "task.md"), "接通网关。\n");
+    const entry = await runJudgeProvider(attempt, workspace, {
+      pi_version: "0.80.10",
+      model: { id: "m" },
+      budget: { max_duration_minutes: 1 },
+      repetitions: 1,
+      judge: { provider: "judge-agent/practice-aware/v1" },
+    });
+    expect(entry.state).toBe("judge-unavailable");
+    expect(entry.reason).toContain("declared oracle Practice payload");
+  } finally {
+    await rm(attempt, { force: true, recursive: true });
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
 test("summarizeJudge marks a condition diagnostic-only when the indeterminate rate exceeds the budget", () => {
   const base = { candidate: "c", condition: "oracle-practice", repeat: 1, evaluation_status: "evaluated" as const, trace: { condition_id: "oracle-practice" as const, channel: "x" as const, profile_input_hash: "h" }, source_commit: "s", snapshot_id: "s", profile_input_hash: "h" };
   const entries = [

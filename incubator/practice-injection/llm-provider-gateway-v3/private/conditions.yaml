@@ -12,7 +12,12 @@ shared_execution:
   budget: { max_duration_minutes: 25 }
   workspace: clean-copy-per-attempt
   repetitions: 5
-  judge: { provider: judge-agent/practice-aware/v1, indeterminate_budget: 0.25 }
+  judge:
+    provider: judge-agent/practice-aware/v1
+    indeterminate_budget: 0.25
+    rubric:
+      path: private/calibration/practice-aware-rubric.v2.json
+      sha256: 91d81b39d69e736171190749f883b419ed49b975cde27f7cf6e44183f1d0ce96
 conditions:
   - { id: baseline, status: declared, practice: none }
   - id: oracle-practice

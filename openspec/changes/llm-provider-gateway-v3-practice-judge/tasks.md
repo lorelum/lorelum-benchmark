@@ -33,3 +33,11 @@
 - [x] 5.1 运行 `bun run validate`、OpenSpec strict、泄露审计、`git diff --check`。
 - [x] 5.2 确认未调用模型（除授权的 judge 校准）、未创建正式 record、未升级 suite revision。
 - [x] 5.3 确认 v1/v2 candidate、其 snapshot、已有 pilot 结果、suite/treatment/record 无 diff。
+## 6. Review 修复与复验
+
+- [x] 6.1 增加 stable judge capability MODIFIED requirement 与协议/runner 文档，绑定声明 Practice 与 rubric hash。
+- [x] 6.2 修复 calibration fail-closed、baseline-policy-scatter 判据、criterion 级证据与固定 rubric 绑定。
+- [x] 6.3 强制 practice-aware 三条件 rubric hash 一致并覆盖 mixed/missing 测试。
+- [x] 6.4 统一 baseline、candidate model、decision rule 口径并修正 traceability / trailing blank line。
+- [x] 6.5 重跑授权真实 judge calibration、全部最终门禁、泄露审计与 protected-path diff。
+- [x] 6.6 将 Practice 结构评分固化为 full/partial/zero anchors：模型仅输出逐 anchor 证据，provider 机械推导 partial/zero 上限分数，并保留失败校准记录。

@@ -90,7 +90,7 @@ JudgeAgent/Practice 质量信号是独立软指标，与 `evaluator-result/v2` �
 
 JudgeAgent 能力（`src/benchmark/judge/`）遵循以下边界：
 
-- 输入只允许公开材料：`public/task.md`、`public/starter/`、candidate diff/source 与显式声明的公开运行材料；包含 condition、Practice、Oracle、私有 evaluator、私有路径或 calibration 的输入被拒绝并 fail closed。
+- 默认输入只允许公开材料：`public/task.md`、`public/starter/`、candidate diff/source 与显式声明的公开运行材料；包含 condition、Practice、Oracle、私有 evaluator、私有路径或 calibration 的输入被拒绝并 fail closed。唯一例外是 `judge-agent/practice-aware/v1` 可在路径与 SHA-256 均与 candidate `private/conditions.yaml` 声明一致时，读取 oracle-practice Practice 文本，仅用于为同一 diagnostic 的所有条件生成/绑定同一 rubric；undeclared、路径替换、hash mismatch 或把 private evaluator/oracle verdict 送入 judge 均 fail closed。该 provider 的 Practice rubric dimensions 必须携带 full/partial/zero scoring anchors：模型必须穷举输出逐 anchor satisfied/evidence 且不得输出 criterion points；provider 机械推导分数，partial anchor 满足时该维度不得超过半分，zero anchor 满足时必须 0 分，满分必须满足全部 full anchors 且不满足 partial/zero anchors。anchor 缺失/重复/未声明或模型携带 points 时 fail closed。
 - 结果携带完整 provenance：judge model/version、prompt hash、rubric hash、input hash、状态、维度分数、理由和 confidence；缺失 hash 或非法结构化输出 fail closed，不伪造低分。
 - rubric 以独立文件 + rubric hash 引用；judge 结果作为可选 quality sidecar artifact 引用，不改 run record 契约。
 - 默认使用确定性 mock provider（CI 不调用外部模型）；真实 provider 需显式 opt-in 且不在 CI 执行。

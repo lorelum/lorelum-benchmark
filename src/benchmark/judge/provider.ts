@@ -13,6 +13,8 @@ export type JudgeRubricContext = {
   task_md: string;
   /** Optional declared Practice text used by practice-aware rubric generation. */
   practice_text?: string;
+  /** Candidate-declared fixed rubric text, verified by the runner/calibrator before this call. */
+  fixed_rubric_text?: string;
   material?: PublicRunMaterial[];
 };
 

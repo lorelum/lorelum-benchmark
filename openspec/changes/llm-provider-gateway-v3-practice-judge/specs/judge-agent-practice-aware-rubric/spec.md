@@ -20,6 +20,25 @@ Practice-aware judge provider MUST 支持可选 `practice_text` 输入；提供�
 - **WHEN** candidate 未注入 Practice（baseline）或 provider 未收到 practice_text
 - **THEN** rubric 生成行为与通用 rubric 一致，仍按 task.md 产出结构合法 rubric
 
+### Requirement: Practice-aware scoring anchors
+
+Practice-aware rubric dimensions MUST carry explicit full/partial/zero scoring anchors. The model MUST return exhaustive per-anchor satisfied/evidence output and MUST NOT return criterion points. The provider MUST derive points deterministically: a satisfied zero anchor produces zero; a satisfied partial anchor caps the dimension at floor(max_points/2); full points require every full anchor satisfied and no partial/zero anchor satisfied. Missing, duplicate, undeclared, non-exhaustive anchor output, or model-supplied points MUST fail closed after an identical-prompt retry rather than being repaired or defaulted. Functional correctness MUST NOT compensate for an unmet structural anchor.
+
+#### Scenario: 结构性部分满足不能拿满分
+
+- **WHEN** retry/fallback 已抽出，但 budget、idempotency 或 metering 仍由 handler/scattered modules 持有
+- **THEN** provider 按 partial anchor 机械结算该维度，不得超过满分的一半
+
+#### Scenario: anchor 输出不完整或携带分数
+
+- **WHEN** scorer 缺少/重复/未声明 anchor，或在模型输出中携带 criterion points
+- **THEN** 该样本按 malformed scorer contract 使用相同 prompt 重试；仍失败则 fail closed，不修复、不默认
+
+#### Scenario: 无 Practice 输入保持兼容
+
+- **WHEN** rubric 没有 Practice/scoring anchors
+- **THEN** provider 使用 generic-compatible scoring 路径，不修改 generic/v1/v2 helper
+
 ### Requirement: 三条件同尺子
 
 同一 diagnostic 的三个条件 MUST 使用同一 rubric hash；Practice-aware provider MUST 以 candidate 声明的 oracle Practice 文本（或固定 rubric）作为唯一 rubric 生成输入，MUST NOT 按条件切换 rubric。
@@ -47,11 +66,21 @@ Practice-aware judge 分数 MUST NOT 改变 semantic 或 practice_observation �
 - **WHEN** candidate 通过公开语义测试但 judge 低分
 - **THEN** semantic 仍为 pass，judge 分数作为独立软信号记录
 
-### Requirement: 输入只含公开材料
+### Requirement: 声明的 oracle Practice 窄例外
 
-Practice 文本 MUST 来自 candidate 声明的 condition-scoped private runtime channel，且在传入 rubric 生成前 MUST 通过与 `buildJudgeInput` 相同的公开/私有边界检查；含私有路径、oracle 或 evaluator 材料的输入 MUST fail closed。
+Practice-aware provider MAY 只把 candidate `private/conditions.yaml` 中 `oracle-practice` 声明的 Practice 文本用于 rubric 生成或固定 rubric 绑定；声明路径、Practice SHA-256、固定 rubric 路径与 rubric SHA-256 MUST 全部验证一致。irrelevant Practice、baseline payload、任意替代路径、private evaluator、oracle verdict 或 scoring secret MUST NOT 进入 judge 输入；不匹配或未声明时 MUST fail closed。
 
-#### Scenario: 私有输入被拒绝
+#### Scenario: 私有或未声明输入被拒绝
 
-- **WHEN** practice_text 含私有路径或 oracle 内容
+- **WHEN** practice_text 含私有路径、oracle/evaluator 内容，或路径与声明不一致
 - **THEN** 构造器以脱敏原因拒绝，不调用 provider
+
+#### Scenario: 固定 rubric 绑定
+
+- **WHEN** practice-aware provider 为 candidate 评分
+- **THEN** runner 只加载 conditions 声明的固定 rubric，验证 SHA-256，并把该 rubric hash 用于所有条件
+
+#### Scenario: 声明缺失或 hash 不匹配
+
+- **WHEN** oracle Practice 或 rubric 声明缺失、路径替换或 SHA-256 不匹配
+- **THEN** judge 通道记录 unavailable/diagnostic-only 原因，不产出可比较分数

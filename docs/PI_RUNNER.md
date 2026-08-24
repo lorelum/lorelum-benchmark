@@ -39,11 +39,14 @@ Pi record 会保存完整 evaluator result 与 `quality_score`，供后续质量
 `evaluator-result/v2` 的语义硬门槛决定，质量分为独立软指标；JudgeAgent 等独立判分结果使用 sidecar
 `judge-result/v1` 表达，不改写 `evaluator-result/v2`；`joint_pass` 仅为派生报告字段，禁止引入隐藏
 加权总分。
-JudgeAgent 评分通过 `src/benchmark/judge/` 提供：输入仅限公开 task、candidate
+JudgeAgent 评分通过 `src/benchmark/judge/` 提供：默认输入仅限公开 task、candidate
 diff/source 与声明的公开运行材料，结果带 judge model/version、prompt/rubric/input
 hash、状态、维度分数、理由与 confidence。默认 mock provider，CI 不调用外部模型；
 rubric 以独立文件 + rubric hash 引用，judge 结果作为可选 quality sidecar artifact
-保存，不修改 `evaluator-result/v2` 与任务完成判定。
+保存，不修改 `evaluator-result/v2` 与任务完成判定。`judge-agent/practice-aware/v1`
+的窄例外是：runner 读取 candidate conditions 声明的 oracle Practice 与固定 rubric，
+验证两者 SHA-256 后，仅为同一 diagnostic 的 baseline/oracle/irrelevant 条件绑定同一
+rubric；声明缺失、路径替换或 hash mismatch 时 judge 通道失败关闭并标记 diagnostic-only。Practice rubric 还必须包含 full/partial/zero scoring anchors；模型穷举输出逐 anchor 结论与证据且不输出分数，provider 机械推导 partial/zero 上限分数，不完整或携带分数的响应不修复、不默认。
 
 `pi:requests` 会将 experiment ID、计划 hash 和 `smoke`/`pilot`/`official` run kind 写入请求，并按实验计划中的 task、condition 与重复次数生成稳定 run ID。`pilot` 记录只用于验证注入、方差和 evaluator 链路，永不进入正式比较或发布结论；`pi:coordinate`
 先执行 adapter preflight，再运行 Pi、以 `CANDIDATE_PATH` 桥接私有 evaluator，并捕获 Pi

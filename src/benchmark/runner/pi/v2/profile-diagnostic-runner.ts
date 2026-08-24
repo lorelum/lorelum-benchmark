@@ -30,6 +30,7 @@ import { sha256Text } from "../../../fs";
 import { classifyProviderResult } from "../../../judge/classify";
 import { resolveJudgeProvider } from "../../../judge/providers";
 import { sourceMapFromWorkspace, sourceMapToDiff } from "../../../judge/source-map";
+import { resolveDeclaredPracticeAwareMaterials } from "../../../judge/judge-agent/practice-aware/v1/declaration";
 
 const scratchRoot = resolve(workspaceRoot, "scratch");
 const publicDependencyProvisioningTimeoutMs = 120_000;
@@ -39,7 +40,11 @@ export type SharedExecution = {
   model: { id: string };
   budget: { max_duration_minutes: number };
   repetitions: number;
-  judge?: { provider?: string; indeterminate_budget?: number };
+  judge?: {
+    provider?: string;
+    indeterminate_budget?: number;
+    rubric?: { path: string; sha256: string };
+  };
 };
 type Condition = { id: string; status: string; practice: unknown };
 export type Conditions = { shared_execution: SharedExecution; conditions: Condition[] };
@@ -75,7 +80,8 @@ export async function runJudgeProvider(
   attemptPath: string,
   workspace: string,
   shared: SharedExecution,
-  oraclePracticeText?: string,
+  oraclePracticeText?: string | { text: string; sha256: string },
+  fixedRubricText?: string,
 ): Promise<JudgeEntry> {
   const providerId = shared.judge?.provider;
   if (!providerId) return { provider_id: "none", provider_version: "", state: "not-run", reason: "no judge provider declared" };
@@ -85,9 +91,24 @@ export async function runJudgeProvider(
     const files = await sourceMapFromWorkspace(resolve(workspace, "app"));
     const candidateDiff = sourceMapToDiff(files);
     const taskMd = await Bun.file(resolve(workspace, "task.md")).text();
-    const rubric = await provider.rubricText(
-      oraclePracticeText === undefined ? { task_md: taskMd } : { task_md: taskMd, practice_text: oraclePracticeText },
-    );
+    const practicePayload = typeof oraclePracticeText === "string"
+      ? { text: oraclePracticeText, sha256: await sha256Text(oraclePracticeText) }
+      : oraclePracticeText;
+    if (practicePayload && await sha256Text(practicePayload.text) !== practicePayload.sha256) {
+      throw new Error("oracle Practice payload sha256 mismatch");
+    }
+    const practiceAware = provider.id === "judge-agent/practice-aware";
+    if (practiceAware && !practicePayload) throw new Error("practice-aware judge requires the declared oracle Practice payload");
+    const rubric = await provider.rubricText({
+      task_md: taskMd,
+      ...(practicePayload ? { practice_text: practicePayload.text } : {}),
+      ...(fixedRubricText !== undefined ? { fixed_rubric_text: fixedRubricText } : {}),
+    });
+    const actualRubricHash = await sha256Text(rubric);
+    const expectedRubricHash = shared.judge?.rubric?.sha256;
+    if (expectedRubricHash !== undefined && actualRubricHash !== expectedRubricHash) {
+      throw new Error(`practice-aware rubric sha256 mismatch: expected ${expectedRubricHash}, received ${actualRubricHash}`);
+    }
     const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric });
     const prompt = provider.promptFor
       ? await provider.promptFor(input, rubric)
@@ -96,7 +117,7 @@ export async function runJudgeProvider(
       judge: { id: provider.id, version: provider.version },
       prompt,
       prompt_hash: await sha256Text(prompt),
-      rubric_hash: await sha256Text(rubric),
+      rubric_hash: actualRubricHash,
     };
     const outcome = classifyProviderResult(await provider.score(input, context));
     if (!outcome.ok) return { provider_id: providerId, provider_version: provider.version, state: outcome.state, reason: outcome.reason };
@@ -147,10 +168,23 @@ export function summarizeJudge(entries: DiagnosticEntry[], options?: { indetermi
   const indeterminateBudget = options?.indeterminate_budget ?? 0.25;
   const byCondition: Record<string, JudgeConditionSummary> = {};
   let rubricHash: string | undefined;
+  let practiceAwareRubricConsistent = true;
+  let sawPracticeAwareRubric = false;
   for (const entry of entries) {
     const judge = entry.judge;
     if (!judge) continue;
-    if (judge.rubric_hash) rubricHash = judge.rubric_hash;
+    if (judge.provider_id === "judge-agent/practice-aware") {
+      sawPracticeAwareRubric = true;
+      if (!judge.rubric_hash) {
+        practiceAwareRubricConsistent = false;
+      } else if (rubricHash !== undefined && judge.rubric_hash !== rubricHash) {
+        practiceAwareRubricConsistent = false;
+      } else if (rubricHash === undefined) {
+        rubricHash = judge.rubric_hash;
+      }
+    } else if (judge.rubric_hash && rubricHash === undefined) {
+      rubricHash = judge.rubric_hash;
+    }
     const counts = byCondition[entry.condition] ??= { observed: 0, indeterminate: 0, "judge-unavailable": 0, "not-run": 0, scores: [] };
     if (judge.state === "observed") counts.observed += 1;
     else if (judge.state === "indeterminate") counts.indeterminate += 1;
@@ -159,6 +193,7 @@ export function summarizeJudge(entries: DiagnosticEntry[], options?: { indetermi
     if (typeof judge.score === "number") counts.scores.push(judge.score);
   }
   let anyDiagnosticOnly = false;
+  if (sawPracticeAwareRubric && !practiceAwareRubricConsistent) anyDiagnosticOnly = true;
   for (const counts of Object.values(byCondition)) {
     const judged = counts.observed + counts.indeterminate + counts["judge-unavailable"] + counts["not-run"];
     if (judged > 0) {
@@ -171,7 +206,8 @@ export function summarizeJudge(entries: DiagnosticEntry[], options?: { indetermi
     }
   }
   return {
-    ...(rubricHash ? { rubric_hash: rubricHash } : {}),
+    ...((rubricHash && practiceAwareRubricConsistent) || (rubricHash && !sawPracticeAwareRubric) ? { rubric_hash: rubricHash } : {}),
+    ...(sawPracticeAwareRubric ? { rubric_hash_consistent: practiceAwareRubricConsistent } : {}),
     indeterminate_budget: indeterminateBudget,
     ...(anyDiagnosticOnly ? { diagnostic_only: true } : {}),
     by_condition: byCondition,
@@ -794,10 +830,19 @@ export async function runAttempt(
   if (entry.evaluation_status === "evaluated") {
     // All conditions share one practice-aware rubric: the oracle Practice text
     // is the sole rubric input, even for baseline/irrelevant attempts.
+    const judgeMaterials = shared.judge?.provider === "judge-agent/practice-aware/v1"
+      ? await resolveDeclaredPracticeAwareMaterials(candidatePath)
+      : undefined;
     const oraclePayload = shared.judge?.provider
       ? await runtime.resolvePracticePayload(candidatePath, profile, "oracle-practice")
       : undefined;
-    entry.judge = await runJudgeProvider(attemptPath, workspace, shared, oraclePayload?.practice?.text);
+    entry.judge = await runJudgeProvider(
+      attemptPath,
+      workspace,
+      shared,
+      oraclePayload?.practice,
+      judgeMaterials?.rubric.text,
+    );
   }
   return entry;
 }

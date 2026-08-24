@@ -1,0 +1,106 @@
+{
+  "dimensions": [
+    {
+      "id": "contract-normalization",
+      "name": "统一契约与归一化",
+      "description": "接口层只依赖统一模型客户端契约，请求、回复与 token 用量归一；供应商适配器输出规范化 usage 与类型化错误。",
+      "max_points": 20,
+      "scoring_anchors": {
+        "full": [
+          "Interface modules depend only on the unified request, reply, usage, and typed-error contract, and adapters normalize every protocol-specific field before returning it."
+        ],
+        "partial": [
+          "The main request or non-stream reply path is normalized, but provider-specific stream payloads, usage fields, or raw error shapes still leak across the interface boundary."
+        ],
+        "zero": [
+          "The interface directly consumes provider-specific response bodies, raw usage objects, or untyped upstream errors."
+        ]
+      }
+    },
+    {
+      "id": "adapter-isolation",
+      "name": "供应商适配器隔离",
+      "description": "每个供应商协议独立适配，只翻译线协议并输出规范化 usage 与类型化错误；接口层不按供应商名分支。",
+      "max_points": 20,
+      "scoring_anchors": {
+        "full": [
+          "Each provider protocol has an isolated adapter that owns wire translation and returns normalized usage and typed errors, while interface and policy modules dispatch only on protocol or configuration."
+        ],
+        "partial": [
+          "Multiple adapters exist, but a pseudo-compatible provider is reused through the wrong adapter, or interface/policy code branches on provider name."
+        ],
+        "zero": [
+          "Provider transport or wire translation is implemented directly in the HTTP handler, or all providers share one adapter without actual protocol translation."
+        ]
+      }
+    },
+    {
+      "id": "policy-centralization",
+      "name": "边界政策集中",
+      "description": "HTTP handler 只解析请求、调用非 HTTP 边界政策并返回响应；fallback、重试、预算、幂等与计量由边界政策/账本统一拥有或委托。",
+      "max_points": 20,
+      "scoring_anchors": {
+        "full": [
+          "The HTTP handler only parses and validates requests, delegates to non-HTTP policy/ledger boundaries, and serializes responses; retry, fallback, budget, idempotency, and metering ownership and orchestration do not remain in the handler or transport adapter."
+        ],
+        "partial": [
+          "Some cross-request policy is extracted, but handler, executor, config, store, or adapter modules split ownership, or the handler retains idempotency, budget, or metering state/orchestration."
+        ],
+        "zero": [
+          "The HTTP handler or transport adapter directly owns cross-request retry, fallback, budget, idempotency, or metering policy without delegation to a non-HTTP boundary."
+        ]
+      }
+    },
+    {
+      "id": "single-billing-atomicity",
+      "name": "单次记账与预算原子性",
+      "description": "一个逻辑请求只产生一条账本记录；重试/降级不双计费；幂等重复请求返回首次结果且不重复记账；租户预算先占后结算，并发不超支。",
+      "max_points": 20,
+      "scoring_anchors": {
+        "full": [
+          "Each logical request produces exactly one durable usage record across retries and fallback, idempotent replay returns the first result without another record, and budget reservation and settlement are atomic and concurrently enforced."
+        ],
+        "partial": [
+          "Most logical requests bill once and budget checks exist, but a retry/fallback/idempotency/stream edge can duplicate, omit, misattribute, or race a record or reservation."
+        ],
+        "zero": [
+          "Retry, fallback, idempotency, or concurrent requests can double-bill, overspend, or leave the primary logical-request path unrecorded."
+        ]
+      }
+    },
+    {
+      "id": "streaming-accounting",
+      "name": "流式失败与用量记账",
+      "description": "流式失败按接口文档终止并只记上游已报用量；不遗漏账本记录，不虚构未报用量。",
+      "max_points": 10,
+      "scoring_anchors": {
+        "full": [
+          "A failed stream terminates according to the documented contract and records exactly the usage actually reported by upstream, with no fabricated usage and no missing logical-request record."
+        ],
+        "partial": [
+          "Stream failures terminate or account for partial usage, but one path can omit the record, fabricate usage, or report an undocumented terminal event."
+        ],
+        "zero": [
+          "Stream failures can end silently, omit the accounting record, or invent usage that upstream did not report."
+        ]
+      }
+    },
+    {
+      "id": "query-and-error-contract",
+      "name": "用量查询与错误契约",
+      "description": "用量支持按租户、模型、状态查询；错误按接口文档返回，不泄露原始上游错误或内部细节。",
+      "max_points": 10,
+      "scoring_anchors": {
+        "full": [
+          "Usage queries filter by tenant, model, and status, and every error response uses the documented typed code without exposing upstream payloads or internal details."
+        ],
+        "partial": [
+          "The primary query and error paths follow the contract, but a filter or error path returns the wrong shape, missing filter, or internal/upstream detail."
+        ],
+        "zero": [
+          "Usage querying is absent or error responses regularly expose raw upstream payloads, stack/internal details, or undocumented codes."
+        ]
+      }
+    }
+  ]
+}
