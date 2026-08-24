@@ -41,3 +41,14 @@
 - [x] 6.4 统一 baseline、candidate model、decision rule 口径并修正 traceability / trailing blank line。
 - [x] 6.5 重跑授权真实 judge calibration、全部最终门禁、泄露审计与 protected-path diff。
 - [x] 6.6 将 Practice 结构评分固化为 full/partial/zero anchors：模型仅输出逐 anchor 证据，provider 机械推导 partial/zero 上限分数，并保留失败校准记录。
+
+## 7. Structure-fact discriminability follow-up
+
+- [x] 7.1 Record the v2-e failure taxonomy and an expected sanitized fixture/dimension label matrix without changing fixtures or thresholds.
+- [x] 7.2 Define a versioned structure-fact extraction schema whose model output contains only exhaustive source facts, evidence, and source references—never labels or points.
+- [x] 7.3 Implement deterministic, mutually exclusive full/partial/zero predicates plus fail-closed ambiguity and malformed-output handling.
+- [x] 7.4 Implement dimension-level confusion-matrix calibration in addition to aggregate score checks.
+- [x] 7.5 Define the optional blinded pairwise contract and cover it with offline stub tests.
+- [x] 7.6 Implement offline tests with stub structure facts and run focused tests plus `bun run validate`; make no candidate or judge model calls.
+- [ ] 7.7 After explicit authorization, run judge-model-only calibration with three samples per fixture, retaining fact errors, dimension confusion matrices, totals, and optional pairwise results.
+- [ ] 7.8 Only if expected dimension labels are correct and positive/negative totals separate, promote the structure-fact contract to the global judge norm; otherwise retain diagnostic-only evidence without threshold or fixture changes.

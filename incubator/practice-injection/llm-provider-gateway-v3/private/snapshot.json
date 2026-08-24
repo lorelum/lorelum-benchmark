@@ -1,9 +1,9 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "95897ab92dbd55554bacb5977c814f40fbc662e83ed851020980cf87ded4538c",
+  "snapshot_id": "6475cf8176fbae2febeaed8aa60eff1d16b55d3a29ee95bf35ec298224db165b",
   "files": {
-    "private/calibration.md": "2e244f8bed81686b68e8780e2a37c1b588ca90e8062d89ed28634e1c262d51e6",
+    "private/calibration.md": "ef9d1d0a3933062059eab6f91b46e6cd19617ff03b29e29220cba754be3919c1",
     "private/calibration/practice-aware-rubric.v1.json": "d953feb759c814707473858abb2c37f09579b341b25e9a7165e576b979280ad3",
     "private/calibration/practice-aware-rubric.v2.json": "91d81b39d69e736171190749f883b419ed49b975cde27f7cf6e44183f1d0ce96",
     "private/calibration/run.ts": "b56f01029cafe13f5adfd96b57ef7eb43b6e439f16b214e2f7b401c9a1576a66",
@@ -91,7 +91,7 @@
     "private/calibration/sets/quality-probe/v3/overlays/unused-boundary-modules/src/policy.ts": "0e74bf0fab4b774245799fd9ff7f2b67d1c47aa10afc4fc74884ecd11901c10c",
     "private/calibration/sets/quality-probe/v3/overlays/unused-boundary-modules/src/server.ts": "94854d78bd1972bc3b102e215fa14513c6e6fc4987dca032cf71ad97b9e706f8",
     "private/candidate.yaml": "5eabefd41ba08dd804004b3c466d92e2c0fc08b24b89830cf21bae8616ad5f47",
-    "private/conditions.yaml": "df4a654cbb2f35abeed9721d8d91111e309068626dbd653b643d92332f721cc3",
+    "private/conditions.yaml": "91a4ec0465fdae0280f5bd6ea279d4c8c4bae554209385bd8ab4d06031e53b39",
     "private/evaluator/evaluate.ts": "64764a2e90f0192137815537f568e239bc7027ade739e1252265c7fc1ae48a14",
     "private/evaluator/runtime-closure.yaml": "82e3192b1142ca3c13c3e5520f8f8e73c3b403e5c3ee4d5e17d644db60c7ecf5",
     "private/evaluator/runtime-closure/bun.lock": "5dbdeaec4ac2f02fb0457e8c5070f1b2a708719dffa07ab43957a911c5c7bd7f",

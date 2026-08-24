@@ -13,7 +13,7 @@ shared_execution:
   workspace: clean-copy-per-attempt
   repetitions: 5
   judge:
-    provider: judge-agent/practice-aware/v1
+    provider: judge-agent/practice-aware/v2
     indeterminate_budget: 0.25
     rubric:
       path: private/calibration/practice-aware-rubric.v2.json

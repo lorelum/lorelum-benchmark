@@ -84,3 +84,32 @@ Practice-aware provider MAY 只把 candidate `private/conditions.yaml` 中 `orac
 
 - **WHEN** oracle Practice 或 rubric 声明缺失、路径替换或 SHA-256 不匹配
 - **THEN** judge 通道记录 unavailable/diagnostic-only 原因，不产出可比较分数
+
+### Requirement: Structure-fact extraction and deterministic derivation
+
+A follow-up practice-aware judge version MUST separate model source-fact extraction from deterministic label and score derivation. The model MUST return only an exhaustive, declared set of boolean source facts with concrete evidence and source references; it MUST NOT return dimension labels, criterion points, aggregate scores, or expected fixture identity. The provider MUST derive mutually exclusive full/partial/zero labels by precedence, and calibration MUST report a per-dimension expected-versus-predicted confusion matrix as well as totals. Malformed, ambiguous, extra-field, non-boolean, undocumented-source, or incomplete fact output MUST fail closed after identical-prompt retries rather than being repaired or defaulted.
+
+#### Scenario: fact extraction does not adjudicate dimensions
+
+- **WHEN** the extraction model returns `dimension_label`, `points`, or an aggregate preference alongside source facts
+- **THEN** the provider rejects the output as malformed and retries the identical prompt before failing closed
+
+#### Scenario: label derivation is deterministic
+
+- **WHEN** the same validated fact vector is supplied more than once
+- **THEN** every dimension receives the same full/partial/zero label and point value, with zero predicates taking precedence over full predicates and the remaining reachable case classified as partial
+
+#### Scenario: dimension errors are visible
+
+- **WHEN** calibration totals separate but one fixture has an unexpected dimension label
+- **THEN** the confusion matrix and label-accuracy check fail and the result remains diagnostic-only
+
+#### Scenario: documentation cannot impersonate structure
+
+- **WHEN** a fixture adds a guide that describes the intended boundary but does not change production source
+- **THEN** extracted facts and derived labels remain based only on source references and do not improve solely because documentation is present
+
+#### Scenario: optional pairwise check remains blinded and secondary
+
+- **WHEN** pairwise discrimination is enabled
+- **THEN** the judge receives anonymized positive/negative sources without fixture names or expected labels, and an incorrect preference cannot repair a failed dimension-label or total-score check

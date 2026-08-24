@@ -58,6 +58,19 @@ The first fixed-rubric rerun showed that prose such as "policy is centralized" w
 - judge 通过检查要求 reference/equivalent 高分且接近，anti-pattern/docs-present 低分且分离，baseline-policy-scatter observed 且低于 reference。
 - 探针校准仍按 `practice-structure-probe-calibration` stable spec 执行。
 
+### Structure-fact derivation follow-up (2026-08-24)
+
+The valid anchor-aware v2-e calibration remained diagnostic-only: broad prose anchors collapsed most dimensions to half credit, reference scored 50 while equivalent scored 100, and anti-pattern/docs-present/baseline controls were not separated from reference. The follow-up therefore moves model responsibility one level earlier:
+
+1. The judge model extracts an exhaustive, versioned set of boolean source facts with concrete evidence and source references. It must not return dimension labels, points, preferences, recommendations, or confidence-like scores for the source.
+2. The provider derives each dimension label deterministically. Zero predicates take precedence, full predicates are conjunctions of required facts and absence of forbidden facts, and the remaining reachable case is partial. The three labels are mutually exclusive by construction.
+3. Calibration compares predicted and expected labels in a per-dimension full/partial/zero confusion matrix before interpreting totals. Aggregate separation with label errors cannot be reported as repaired discriminability.
+4. An optional, blinded pairwise check may present one positive and one negative source with names/expected labels removed. It is diagnostic only and cannot repair a failed label matrix or total-score check.
+
+The expected offline matrix is sanitized to dimension IDs and labels: reference and equivalent are full on all six dimensions; anti-pattern and docs-present are full on contract/billing/streaming/query, zero on adapter and policy; baseline-policy-scatter is full on contract/adapter/query and partial on policy/billing/streaming; public-starter is zero on all six. Under the unchanged fixed-rubric weights this yields 100, 100, 60, 60, 55, and 0 respectively. Documentation files and tests are not structural evidence, so docs-present must remain identical to anti-pattern.
+
+The new scoring contract is `judge-agent/practice-aware/v2`; failed v1 calibration evidence remains immutable. Fact output is fail-closed on missing, duplicate, unknown, or non-boolean facts; empty or non-concrete evidence; source references outside the shown canonical source map; direct labels or points; or malformed confidence. Identical-prompt retries are permitted, after which the sample fails closed. No candidate model call, formal experiment, formal record, suite revision, task/starter/oracle/fixture change, or threshold change is authorized by this design.
+
 ## Risks / Trade-offs
 
 - [Practice 文本进入 rubric 生成可能引入私有材料] → 只允许 conditions 声明的 oracle Practice，路径与 SHA-256 双绑定；irrelevant/baseline payload、evaluator 与 oracle verdict 永不进入。

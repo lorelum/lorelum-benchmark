@@ -36,12 +36,10 @@
 
 重放：`bun run src/benchmark/kernel/kernel.ts calibrate incubator/practice-injection/llm-provider-gateway-v3 --output <empty-temp>`。无模型调用、无真实网络；本地 stub 服务器仅模拟公开语义测试声明的供应商协议。
 
-## Judge 边界（judge-agent/practice-aware/v1）
+## Judge 边界（practice-aware）
 
-- candidate 声明独立版本 `judge-agent/practice-aware/v1`，不修改冻结 `judge-agent/generic/v1/v2`。
-- rubric 生成输入为 public `task.md` + oracle Practice 文本；baseline / oracle-practice / irrelevant-practice 三条件复用同一 rubric hash。
-- Practice 文本先通过公开/私有边界 fail-closed 检查；judge 分数仍是软信号，不改变 semantic 或 practice_observation。
-- 离线校准命令要求 internal endpoint、`LORELUM_JUDGE_REAL=1`，并对 reference / equivalent / anti-pattern / docs-present / public-starter 取样打分；不得调用 candidate 模型。
-- 2026-08-22 已显式 opt-in 尝试真实校准：第一笔 rubric 生成请求收到 endpoint HTTP 429（weekly usage limit，提示 1 天后重置）。未执行任何 fixture 打分或 candidate 模型调用；该运行是执行失败，不构成判别力证据。endpoint 配额恢复后需重跑并记录分数、samples、rubric hash 与阈值。
-
-后续三条件 pilot 必须另立 issue，且在 v3 judge calibration、泄露审计与生命周期门禁通过后再显式授权。
+- v1 是已失败的 anchor-aware 诊断通道；其真实校准证据保留在 OpenSpec verification，不用于方向性结论。
+- candidate 当前声明 `judge-agent/practice-aware/v2`，复用同一固定 rubric v2 hash；v2 将模型职责限定为抽取 exhaustive structure facts，由 provider 确定性推导 full/partial/zero。
+- v2 校准必须输出 fact schema hash、维度级 expected/predicted confusion matrix、总分与原阈值结果；可选 blinded pairwise 只作二级诊断，不能修复标签或总分失败。
+- 文档与测试不是结构证据；malformed/ambiguous fact、非 `src/` 引用、直接标签或分数输出均 fail closed。
+- 2026-08-24 v2 仅完成 offline design/stub tests，未执行真实 judge calibration、candidate model call、formal experiment/record 或 suite revision；真实复测需另行显式授权。

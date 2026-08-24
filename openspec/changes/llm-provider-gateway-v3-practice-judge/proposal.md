@@ -15,6 +15,7 @@ Implements #182.
 - 修改 stable `judge-agent-rubric-scoring` 输入契约：保留默认 public-only fail-closed 规则，新增仅限 practice-aware v1 的 oracle Practice / fixed rubric 窄例外；路径与 hash 必须与 `private/conditions.yaml` 一致。
 - 重做 `incubator/practice-injection/llm-provider-gateway-v3/`：公开题面只声明基本行为；starter 保留结构缺口；public starter 作为 semantic-fail/indeterminate 诊断样本，judge 判别使用 semantic-pass 的 `baseline-policy-scatter` fixture。
 - 校准输出保留 sample state、criterion 分数、anchor 证据与 rationale，不把 indeterminate 合成 0 分；固定 rubric artifact 与 hash 用于未来运行绑定。
+- v2-e 判别力失败后的后续研究采用 judge-agent/practice-aware/v2：模型只抽取声明绑定的结构事实，provider 确定性推导 full/partial/zero，并以维度级 confusion matrix 和可选盲评 pairwise 作为诊断；未获授权前不执行真实 judge 复测。
 - 不调用 candidate 模型、不创建正式 record、不升级 suite revision、不修改 v1/v2 candidate 与历史结果；显式 opt-in 的真实 judge 校准是唯一模型调用例外。
 
 ## Capabilities
