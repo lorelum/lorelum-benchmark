@@ -1,7 +1,7 @@
 import type { JudgeContext, JudgeProvider } from "../../../provider";
 import type { JudgeInput } from "../../../input";
 import { judgeLlmEnv, httpJudgeCompletion, type JudgeCompletion } from "./llm";
-import { scoreCandidate, scorePromptText } from "./score";
+import { scoreCandidateWithContractRetry, scorePromptText } from "./score";
 import {
   assertPublicPracticeText,
   fixedRubricText,
@@ -43,7 +43,7 @@ export function createPracticeAwareJudgeProvider(
     async score(input: JudgeInput, context: JudgeContext) {
       if (!judgeLlmEnv(env).real) throw new Error("judge-agent/practice-aware/v1 requires LORELUM_JUDGE_REAL=1");
       const rubric = parseRubricText(input.rubric);
-      return scoreCandidate({
+      return scoreCandidateWithContractRetry({
         taskMd: input.task_md,
         candidateDiff: input.candidate_diff,
         rubric,

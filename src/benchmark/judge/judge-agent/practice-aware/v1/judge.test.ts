@@ -134,6 +134,32 @@ test("provider scores through the shared v2 pipeline with judge-result/v1 output
   expect(result.judge).toEqual({ id: "judge-agent/practice-aware", version: "v1" });
 });
 
+test("score retries an identical prompt after a malformed model contract response", async () => {
+  const rubricText = serializeRubric(validRubric);
+  const valid = {
+    criteria: validRubric.dimensions.map((dimension) => ({ id: dimension.id, points: dimension.max_points, rationale: "concrete evidence" })),
+    confidence: 91,
+  };
+  const complete = stubCompletion([{ criteria: valid.criteria }, valid]);
+  const provider = createPracticeAwareJudgeProvider({ LORELUM_JUDGE_REAL: "1" }, { complete });
+  const result = await provider.score({
+    task_md: taskMd,
+    candidate_diff: "src/server.ts\016\export const handler = 'delegates';\n",
+    rubric: rubricText,
+    input_hash: "b".repeat(64),
+  }, {
+    judge: { id: provider.id, version: provider.version },
+    prompt: "prompt",
+    prompt_hash: "a".repeat(64),
+    rubric_hash: await sha256Text(rubricText),
+  });
+  expect(result.score).toBe(100);
+  const [first, second] = complete.captured();
+  expect(second?.system).toBe(first?.system);
+  expect(second?.user).toBe(first?.user);
+  expect(complete.captured()).toHaveLength(2);
+});
+
 test("registry resolves practice-aware v1 without replacing generic v2", () => {
   const practice = resolveJudgeProvider("judge-agent/practice-aware/v1");
   const generic = resolveJudgeProvider("judge-agent/generic/v2");

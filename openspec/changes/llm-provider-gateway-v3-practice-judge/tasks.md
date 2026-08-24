@@ -24,12 +24,12 @@
 ## 4. 校准与判别力验证
 
 - [x] 4.1 运行 kernel calibration（无模型）确认探针矩阵仍通过。
-- [ ] 4.2 用 practice-aware judge 对 calibration 夹具离线打分（显式 opt-in，仅内部 endpoint）。
-- [ ] 4.3 验证 reference/equivalent 高分、anti-pattern/docs-present 低分且有判别差距。
-- [ ] 4.4 记录判别力证据到 verification/。
+- [x] 4.2 用 practice-aware judge 对 calibration 夹具离线打分（显式 opt-in，仅内部 endpoint）。
+- [x] 4.3 验证 reference/equivalent 高分、anti-pattern/docs-present 低分且有判别差距。
+- [x] 4.4 记录判别力证据到 verification/。
 
 ## 5. 最终门禁
 
-- [ ] 5.1 运行 `bun run validate`、OpenSpec strict、泄露审计、`git diff --check`。
-- [ ] 5.2 确认未调用模型（除授权的 judge 校准）、未创建正式 record、未升级 suite revision。
-- [ ] 5.3 确认 v1/v2 candidate、其 snapshot、已有 pilot 结果、suite/treatment/record 无 diff。
+- [x] 5.1 运行 `bun run validate`、OpenSpec strict、泄露审计、`git diff --check`。
+- [x] 5.2 确认未调用模型（除授权的 judge 校准）、未创建正式 record、未升级 suite revision。
+- [x] 5.3 确认 v1/v2 candidate、其 snapshot、已有 pilot 结果、suite/treatment/record 无 diff。

@@ -11,7 +11,7 @@ import {
   generatePracticeAwareRubricCached,
   parseRubricText,
 } from "./rubric";
-import { scoreCandidate } from "./score";
+import { scoreCandidateWithContractRetry } from "./score";
 
 const candidateRoot = resolve(Bun.argv[2] ?? process.env.LORELUM_CALIBRATION_CANDIDATE_PATH ?? ".");
 const declaredPracticePath = Bun.argv[3] ?? process.env.LORELUM_CALIBRATION_PRACTICE_PATH ?? "";
@@ -76,6 +76,10 @@ try {
   const staged = await stageCalibrationSets(resolvedSets, stagingPath, {
     publicStarterPath: join(candidateRoot, "public", "starter"),
   });
+  const stagedManifest = JSON.parse(await Bun.file(staged.manifestPath).text()) as {
+    public_starter?: { path: string; tree_hash: string };
+    sets: Record<string, { fixtures: Record<string, { path: string; tree_hash: string }> }>;
+  };
   const results: Record<string, FixtureResult> = {};
 
   async function scoreFixture(fixtureName: string, path: string, treeHash: string): Promise<void> {
@@ -85,7 +89,7 @@ try {
     const samples: number[] = [];
     let last: { state: string; score: number; reason?: string } | undefined;
     for (let index = 0; index < repetitions; index += 1) {
-      const result = await scoreCandidate({
+      const result = await scoreCandidateWithContractRetry({
         taskMd,
         candidateDiff,
         rubric: parseRubricText(rubricText),
@@ -114,12 +118,10 @@ try {
   for (const fixtureName of fixtureOrder) {
     const fixture = set.fixtures[fixtureName];
     if (!fixture) throw new Error(`Missing staged calibration fixture: ${fixtureName}`);
-    await scoreFixture(fixtureName, staged.sets[setKey]!.fixtures[fixtureName]!.path, staged.sets[setKey]!.fixtures[fixtureName]!.tree_hash);
+    await scoreFixture(fixtureName, stagedManifest.sets[setKey]!.fixtures[fixtureName]!.path, stagedManifest.sets[setKey]!.fixtures[fixtureName]!.tree_hash);
   }
   if (staged.publicStarterPath) {
-    const publicStarter = JSON.parse(await Bun.file(staged.manifestPath).text()) as {
-      public_starter?: { path: string; tree_hash: string };
-    };
+    const publicStarter = stagedManifest;
     if (!publicStarter.public_starter) throw new Error("Staged calibration manifest has no public starter");
     await scoreFixture("public-starter", publicStarter.public_starter.path, publicStarter.public_starter.tree_hash);
   }
