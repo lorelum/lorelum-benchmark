@@ -60,16 +60,16 @@ The first fixed-rubric rerun showed that prose such as "policy is centralized" w
 
 ### Structure-fact derivation follow-up (2026-08-24)
 
-The valid anchor-aware v2-e calibration remained diagnostic-only: broad prose anchors collapsed most dimensions to half credit, reference scored 50 while equivalent scored 100, and anti-pattern/docs-present/baseline controls were not separated from reference. The follow-up therefore moves model responsibility one level earlier:
+有效的 anchor-aware v2-e 校准仍是 `diagnostic-only`：粗粒度的 full/partial/zero 文案把多个源代码事实压成一个模型判断，导致 reference 50、equivalent 100，而 anti-pattern/docs-present/baseline-controls 都没有与 reference 分离。后续研究把模型职责前移：
 
-1. The judge model extracts an exhaustive, versioned set of boolean source facts with concrete evidence and source references. It must not return dimension labels, points, preferences, recommendations, or confidence-like scores for the source.
-2. The provider derives each dimension label deterministically. Zero predicates take precedence, full predicates are conjunctions of required facts and absence of forbidden facts, and the remaining reachable case is partial. The three labels are mutually exclusive by construction.
-3. Calibration compares predicted and expected labels in a per-dimension full/partial/zero confusion matrix before interpreting totals. Aggregate separation with label errors cannot be reported as repaired discriminability.
-4. An optional, blinded pairwise check may present one positive and one negative source with names/expected labels removed. It is diagnostic only and cannot repair a failed label matrix or total-score check.
+1. **结构事实抽取（structure fact）**：judge model 只输出一张预先声明的布尔事实表。每条事实必须附带具体证据和 `src/` 源引用；不得输出 full/partial/zero、分数、总分、偏好、建议或夹具身份。
+2. **确定性推导（deterministic derivation）**：provider 根据事实角色机械推导标签。`forbidden=true` 或 `zero_if_false=false` 优先得到 zero；full 要求所有 `required=true` 且所有 `forbidden=false`；两者都不是的可达状态是 partial。三个标签互斥，不靠模型自由裁量。
+3. **维度级混淆矩阵（dimension confusion matrix）**：校准先比较每个 fixture、每个维度的 expected/predicted 标签，再解释总分。总分分离不能掩盖任何标签错误；有错误就继续 `diagnostic-only`。
+4. **可选盲评 pairwise**：只在匿名正/负样本之间做二级诊断，不暴露夹具名或 expected label。pairwise 赢不能修复标签错误或总分分离失败。
 
-The expected offline matrix is sanitized to dimension IDs and labels: reference and equivalent are full on all six dimensions; anti-pattern and docs-present are full on contract/billing/streaming/query, zero on adapter and policy; baseline-policy-scatter is full on contract/adapter/query and partial on policy/billing/streaming; public-starter is zero on all six. Under the unchanged fixed-rubric weights this yields 100, 100, 60, 60, 55, and 0 respectively. Documentation files and tests are not structural evidence, so docs-present must remain identical to anti-pattern.
+离线期望矩阵（已脱敏，仅含维度和标签）为：reference/equivalent 六维 full；anti-pattern/docs-present 在 adapter 与 policy 为 zero，其余 full；baseline-policy-scatter 在 contract/adapter/query 为 full，在 policy/billing/streaming 为 partial；public-starter 六维 zero。沿用固定权重（contract 20、adapter 20、policy 20、billing 20、streaming 10、query/error 10），总分分别是 100、100、60、60、**75**、0。baseline 的算式是 20+20+10+10+5+10=75，不是 55；此前把失败观测值 55 误写成了期望值。文档与测试不是生产源证据，所以 docs-present 必须与 anti-pattern 同标签。
 
-The new scoring contract is `judge-agent/practice-aware/v2`; failed v1 calibration evidence remains immutable. Fact output is fail-closed on missing, duplicate, unknown, or non-boolean facts; empty or non-concrete evidence; source references outside the shown canonical source map; direct labels or points; or malformed confidence. Identical-prompt retries are permitted, after which the sample fails closed. No candidate model call, formal experiment, formal record, suite revision, task/starter/oracle/fixture change, or threshold change is authorized by this design.
+新评分契约是 `judge-agent/practice-aware/v2`；失败的 v1 校准证据保持不可变。事实输出对缺失、重复、未知、非布尔、多余字段、空泛证据、源引用不在 shown canonical source map、直接输出标签/分数或 confidence 畸形均 fail closed。允许同一 prompt 重试，重试后仍失败则样本失败关闭。本设计不授权 candidate model 调用、formal experiment、formal record、suite revision、task/starter/oracle/fixture 变更或 threshold 变更。
 
 ## Risks / Trade-offs
 

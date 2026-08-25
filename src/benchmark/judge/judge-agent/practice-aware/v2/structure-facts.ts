@@ -23,13 +23,13 @@ export type StructureFactId =
   | "non_http_policy_boundary"
   | "policy_owns_retry_fallback"
   | "policy_or_ledger_owns_budget_idempotency_metering"
-  | "handler_or_scattered_modules_own_cross_request_policy"
+  | "cross_request_policy_kept_out_of_handler_and_scattered_modules"
   | "handler_directly_owns_cross_request_policy"
   | "logical_request_accounting"
   | "idempotent_replay_without_rebill"
   | "atomic_budget_reserve_and_settle"
   | "billing_duplicate_omit_misattribute_or_race"
-  | "billing_ownership_scattered"
+  | "billing_ownership_kept_in_policy_or_ledger_boundary"
   | "stream_failure_accounting"
   | "only_reported_stream_usage_recorded"
   | "stream_policy_or_ledger_ownership"
@@ -71,13 +71,13 @@ export const providerGatewayStructureFactSchema: FactDefinition[] = [
   { fact_id: "non_http_policy_boundary", dimension_id: "policy-centralization", role: "zero_if_false", question: "Is there a non-HTTP, non-adapter policy/ledger boundary used by the request path?" },
   { fact_id: "policy_owns_retry_fallback", dimension_id: "policy-centralization", role: "required", question: "Does the non-HTTP policy boundary own retry and fallback orchestration?" },
   { fact_id: "policy_or_ledger_owns_budget_idempotency_metering", dimension_id: "policy-centralization", role: "required", question: "Do the policy/ledger boundaries own budget, idempotency, and metering orchestration?" },
-  { fact_id: "handler_or_scattered_modules_own_cross_request_policy", dimension_id: "policy-centralization", role: "required", question: "Are cross-request policies kept out of the handler and unrelated scattered modules?" },
+  { fact_id: "cross_request_policy_kept_out_of_handler_and_scattered_modules", dimension_id: "policy-centralization", role: "required", question: "Are cross-request policies kept out of the handler and unrelated scattered modules?" },
   { fact_id: "handler_directly_owns_cross_request_policy", dimension_id: "policy-centralization", role: "forbidden", question: "Does the HTTP handler directly own cross-request retry, fallback, budget, idempotency, or metering policy?" },
   { fact_id: "logical_request_accounting", dimension_id: "single-billing-atomicity", role: "zero_if_false", question: "Does each logical request have exactly one durable accounting record across retries and fallback?" },
   { fact_id: "idempotent_replay_without_rebill", dimension_id: "single-billing-atomicity", role: "required", question: "Does idempotent replay return the first result without another record?" },
   { fact_id: "atomic_budget_reserve_and_settle", dimension_id: "single-billing-atomicity", role: "required", question: "Are budget reservation and settlement atomic and concurrently enforced?" },
   { fact_id: "billing_duplicate_omit_misattribute_or_race", dimension_id: "single-billing-atomicity", role: "forbidden", question: "Can an edge path duplicate, omit, misattribute, or race a usage record or reservation?" },
-  { fact_id: "billing_ownership_scattered", dimension_id: "single-billing-atomicity", role: "required", question: "Is billing/budget/idempotency ownership kept in the policy/ledger boundary rather than scattered across unrelated modules?" },
+  { fact_id: "billing_ownership_kept_in_policy_or_ledger_boundary", dimension_id: "single-billing-atomicity", role: "required", question: "Is billing/budget/idempotency ownership kept in the policy/ledger boundary rather than scattered across unrelated modules?" },
   { fact_id: "stream_failure_accounting", dimension_id: "streaming-accounting", role: "zero_if_false", question: "Does a failed stream terminate under the documented contract and retain a logical-request record?" },
   { fact_id: "only_reported_stream_usage_recorded", dimension_id: "streaming-accounting", role: "required", question: "Does the stream path record only usage actually reported by upstream?" },
   { fact_id: "stream_policy_or_ledger_ownership", dimension_id: "streaming-accounting", role: "required", question: "Do the policy/ledger boundaries own stream accounting orchestration?" },

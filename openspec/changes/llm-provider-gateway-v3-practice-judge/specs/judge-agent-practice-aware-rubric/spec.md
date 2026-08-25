@@ -87,29 +87,29 @@ Practice-aware provider MAY 只把 candidate `private/conditions.yaml` 中 `orac
 
 ### Requirement: Structure-fact extraction and deterministic derivation
 
-A follow-up practice-aware judge version MUST separate model source-fact extraction from deterministic label and score derivation. The model MUST return only an exhaustive, declared set of boolean source facts with concrete evidence and source references; it MUST NOT return dimension labels, criterion points, aggregate scores, or expected fixture identity. The provider MUST derive mutually exclusive full/partial/zero labels by precedence, and calibration MUST report a per-dimension expected-versus-predicted confusion matrix as well as totals. Malformed, ambiguous, extra-field, non-boolean, undocumented-source, or incomplete fact output MUST fail closed after identical-prompt retries rather than being repaired or defaulted.
+后续 practice-aware judge 版本 MUST 把模型职责限定为源代码结构事实抽取，并把 full/partial/zero 与分数推导留给 provider。模型 MUST 只返回预先声明且穷尽的布尔源事实、具体证据和源引用；MUST NOT 返回维度标签、criterion 分数、总分或 expected fixture 身份。provider MUST 按互斥优先级推导 full/partial/zero，校准 MUST 同时报告每个维度的 expected/predicted 混淆矩阵和总分。事实输出若缺失、重复、未知、含额外字段、非布尔、证据不具体、引用未展示源、含歧义或不完整，MUST 在相同 prompt 重试后失败关闭，MUST NOT 修复或默认给分。
 
-#### Scenario: fact extraction does not adjudicate dimensions
+#### Scenario: 事实抽取不能裁决维度
 
-- **WHEN** the extraction model returns `dimension_label`, `points`, or an aggregate preference alongside source facts
-- **THEN** the provider rejects the output as malformed and retries the identical prompt before failing closed
+- **WHEN** 抽取模型在事实表外返回 `dimension_label`、`points` 或总体偏好
+- **THEN** provider 判定输出 malformed，用相同 prompt 重试，仍失败则 fail closed
 
-#### Scenario: label derivation is deterministic
+#### Scenario: 标签推导是确定性的
 
-- **WHEN** the same validated fact vector is supplied more than once
-- **THEN** every dimension receives the same full/partial/zero label and point value, with zero predicates taking precedence over full predicates and the remaining reachable case classified as partial
+- **WHEN** 同一已验证事实向量被输入多次
+- **THEN** 每个维度得到相同 full/partial/zero 和分数；zero 谓词优先于 full 谓词，其余可达状态为 partial
 
-#### Scenario: dimension errors are visible
+#### Scenario: 维度错误必须可见
 
-- **WHEN** calibration totals separate but one fixture has an unexpected dimension label
-- **THEN** the confusion matrix and label-accuracy check fail and the result remains diagnostic-only
+- **WHEN** 校准总分分离，但任一夹具维度标签与期望不一致
+- **THEN** confusion matrix 与标签准确性检查失败，结果保持 diagnostic-only
 
-#### Scenario: documentation cannot impersonate structure
+#### Scenario: 文档不能冒充结构
 
-- **WHEN** a fixture adds a guide that describes the intended boundary but does not change production source
-- **THEN** extracted facts and derived labels remain based only on source references and do not improve solely because documentation is present
+- **WHEN** 夹具添加描述目标边界的指南，但不修改生产源代码
+- **THEN** 抽取事实与推导标签只基于源引用，不能仅因文档存在而提升
 
-#### Scenario: optional pairwise check remains blinded and secondary
+#### Scenario: 可选 pairwise 保持盲评且只是二级信号
 
-- **WHEN** pairwise discrimination is enabled
-- **THEN** the judge receives anonymized positive/negative sources without fixture names or expected labels, and an incorrect preference cannot repair a failed dimension-label or total-score check
+- **WHEN** 启用 pairwise 判别检查
+- **THEN** judge 只收到匿名的正/负源代码，不含夹具名或期望标签；错误偏好不能修复已失败的维度标签或总分检查

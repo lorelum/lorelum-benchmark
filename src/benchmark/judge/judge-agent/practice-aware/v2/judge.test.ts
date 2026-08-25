@@ -108,8 +108,8 @@ test("deterministic labels reproduce the expected fixture matrix", () => {
   expect(deriveDimensionLabels(facts({
     policy_owns_retry_fallback: false,
     policy_or_ledger_owns_budget_idempotency_metering: false,
-    handler_or_scattered_modules_own_cross_request_policy: true,
-    billing_ownership_scattered: false,
+    cross_request_policy_kept_out_of_handler_and_scattered_modules: true,
+    billing_ownership_kept_in_policy_or_ledger_boundary: false,
     stream_policy_or_ledger_ownership: false,
   }))).toEqual(baselineLabels);
   const starterOverrides = Object.fromEntries(providerGatewayStructureFactSchema.map((definition) => [
@@ -150,6 +150,25 @@ test("source-fact scoring derives points and preserves fact evidence", async () 
   expect(partial.dimension_labels["policy-centralization"]).toBe("zero");
   expect(partial.result.criteria[2]?.points).toBe(0);
   expect(derivedLabelPoints("partial", 20)).toBe(10);
+
+  const baseline = await scoreStructureAwareWithRetry({
+    taskMd,
+    candidateDiff,
+    rubric,
+    rubricText: JSON.stringify(rubric),
+    rubricHash: "a".repeat(64),
+    inputHash: "b".repeat(64),
+    judge: { id: "judge-agent/practice-aware", version: "v2" },
+    complete: stubCompletion([facts({
+      policy_owns_retry_fallback: false,
+      policy_or_ledger_owns_budget_idempotency_metering: false,
+      billing_ownership_kept_in_policy_or_ledger_boundary: false,
+      stream_policy_or_ledger_ownership: false,
+    })]),
+  });
+  expect(baseline.dimension_labels).toEqual(baselineLabels);
+  expect(baseline.result.criteria.map((criterion) => criterion.points)).toEqual([20, 20, 10, 10, 5, 10]);
+  expect(baseline.result.score).toBe(75);
 });
 
 test("malformed, ambiguous, or unverifiable facts fail closed after identical retries", async () => {
@@ -182,7 +201,7 @@ function resultsWithAntiPredictedReference() {
     equivalent: fixtureResult(expectedDimensionLabels.equivalent!, 100),
     "anti-pattern": fixtureResult(expectedDimensionLabels.reference!, 100),
     "docs-present": fixtureResult(expectedDimensionLabels["docs-present"]!, 60),
-    "baseline-policy-scatter": fixtureResult(expectedDimensionLabels["baseline-policy-scatter"]!, 55),
+    "baseline-policy-scatter": fixtureResult(expectedDimensionLabels["baseline-policy-scatter"]!, 75),
   };
 }
 
