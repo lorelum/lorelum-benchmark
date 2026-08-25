@@ -50,5 +50,5 @@
 - [x] 7.4 Implement dimension-level confusion-matrix calibration in addition to aggregate score checks.
 - [x] 7.5 Define the optional blinded pairwise contract and cover it with offline stub tests.
 - [x] 7.6 Implement offline tests with stub structure facts and run focused tests plus `bun run validate`; make no candidate or judge model calls.
-- [ ] 7.7 After explicit authorization, run judge-model-only calibration with three samples per fixture, retaining fact errors, dimension confusion matrices, totals, and optional pairwise results.
+- [x] 7.7 After explicit authorization, run judge-model-only calibration with three samples per fixture, retaining fact errors, dimension confusion matrices, totals, and optional pairwise results.
 - [ ] 7.8 Only if expected dimension labels are correct and positive/negative totals separate, promote the structure-fact contract to the global judge norm; otherwise retain diagnostic-only evidence without threshold or fixture changes.

@@ -1,6 +1,6 @@
-# Structure-fact 判别力研究（当前为离线设计）
+# Structure-fact 判别力研究（diagnostic-only）
 
-本文件解释 v2-e 校准失败后的研究方案，并记录尚未调用模型时的离线实现证据。它不是修复成功的声明。
+本文件解释 v2-e 校准失败后的研究方案、离线实现证据，以及 2026-08-25 授权 judge-model-only 复测的入口。它不是修复成功的声明。
 
 ## 为什么不再让模型直接给结构分
 
@@ -71,9 +71,17 @@ docs-present 与 anti-pattern 有意相同：只有生产 `src/` 事实能证明
 5. 只有全部 expected 标签正确且总分满足既有分离检查，才可讨论判别力修复；
 6. optional blinded pairwise 只能作为二级诊断，赢了也不能修复标签或总分失败。
 
-## 执行边界
+## 授权 judge-model-only 复测结果
 
-本阶段只做离线设计和 stub 测试。尚未调用 candidate model 或 judge model，尚未运行 formal experiment，尚未创建 formal record，尚未升级 suite revision，也未修改 task/starter/oracle/fixtures/threshold。
+2026-08-25 已按用户显式授权运行 `judge-agent/practice-aware/v2`：仅调用 judge model，每个 fixture 3 个计划样本；未调用 candidate model，未运行 formal experiment，未创建 formal record，未升级 suite revision，未修改 task/starter/oracle/fixtures/threshold。
+
+结果仍为 **`diagnostic-only / calibration failed`**：18 个计划样本中 12 个 observed、6 个 HTTP 524 transport unavailable；已完成抽取虽全部通过 25 项 schema，但 partial 结构不稳定，dimension labels 与 strict checks 未通过。Blinded pairwise 未运行，因为主校准失败且它不能修复标签或总分失败。
+
+脱敏证据：`structure-fact-judge-calibration-2026-08-25.md`
+
+## 原离线阶段执行边界
+
+2026-08-25 真实复测前的离线阶段只做设计和 stub 测试：candidate model calls 0；judge model calls 0；formal experiment/record/suite revision none；task/starter/oracle/fixtures/threshold 未修改。
 
 ## 离线实现验证（2026-08-25 更新）
 
@@ -89,4 +97,5 @@ docs-present 与 anti-pattern 有意相同：只有生产 `src/` 事实能证明
 - `bun run validate`：workspace layout 与 snapshots 通过。
 - `openspec validate llm-provider-gateway-v3-practice-judge --type change --strict`：通过。
 - Offline stubs 覆盖期望标签矩阵、总分算术、deterministic points、malformed/unknown/missing/unverifiable fact fail-closed retries、confusion-matrix blocking、blinded pairwise parsing/evaluation、provider v2 wiring，以及与 v1/generic-v2 的 registry 隔离。
-- Candidate model calls：0；judge model calls：0；formal experiment/record/suite revision：none。
+- 离线阶段 candidate model calls：0；judge model calls：0；formal experiment/record/suite revision：none。
+- 2026-08-25 授权复测：candidate model calls 0；仅 judge model 样本请求；formal experiment/record/suite revision 仍为 none。

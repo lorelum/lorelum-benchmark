@@ -7,7 +7,7 @@ import { sourceMapFromWorkspace, sourceMapToDiff } from "../../../source-map";
 import { httpJudgeCompletion, judgeLlmEnv } from "../v1/llm";
 import { parsePracticeAwareRubricText } from "../v1/rubric";
 import { hasPracticeStructureDimension } from "../v1/calibration-result";
-import { resolveDeclaredPracticeAwareMaterials } from "../v1/declaration";
+import { resolveDeclaredPracticeAwareMaterials } from "./declaration";
 import { scoreStructureAwareWithRetry } from "./score";
 import { structureFactSchemaHash } from "./structure-facts";
 import {
@@ -39,7 +39,10 @@ function threshold(name: string, fallback: number): number {
 
 const repetitions = Number(process.env.LORELUM_JUDGE_REPETITIONS || 3);
 if (!Number.isInteger(repetitions) || repetitions < 1) throw new Error("LORELUM_JUDGE_REPETITIONS must be a positive integer");
-throw new Error("structure-fact calibration is not yet authorized; explicit user authorization is required before any judge-model call");
+if (!judgeLlmEnv().real) throw new Error("real structure-fact calibration requires LORELUM_JUDGE_REAL=1");
+if (process.env.LORELUM_STRUCTURE_FACT_CALIBRATION_AUTHORIZATION !== "judge-model-only/3-samples") {
+  throw new Error("structure-fact calibration requires explicit judge-model-only/3-samples authorization");
+}
 
 const taskMd = await Bun.file(join(candidateRoot, "public", "task.md")).text();
 const declared = await resolveDeclaredPracticeAwareMaterials(
@@ -76,25 +79,41 @@ try {
     const candidateDiff = sourceMapToDiff(files);
     const input = await buildJudgeInput({ task_md: taskMd, candidate_diff: candidateDiff, rubric: rubricText });
     const samples: CalibrationSample[] = [];
+    const complete = httpJudgeCompletion();
     for (let index = 0; index < repetitions; index += 1) {
-      const scored = await scoreStructureAwareWithRetry({
-        taskMd,
-        candidateDiff,
-        rubric,
-        rubricText,
-        rubricHash: declared.rubric.sha256,
-        inputHash: input.input_hash,
-        judge: { id: "judge-agent/practice-aware", version: "v2" },
-        complete: httpJudgeCompletion(),
-      });
-      samples.push({
-        state: scored.result.state,
-        score: scored.result.score,
-        criteria: scored.result.criteria,
-        confidence: scored.result.confidence,
-        dimension_labels: scored.dimension_labels,
-        facts: scored.extraction.facts,
-      });
+      try {
+        const scored = await scoreStructureAwareWithRetry({
+          taskMd,
+          candidateDiff,
+          rubric,
+          rubricText,
+          rubricHash: declared.rubric.sha256,
+          inputHash: input.input_hash,
+          judge: { id: "judge-agent/practice-aware", version: "v2" },
+          complete,
+        });
+        samples.push({
+          state: scored.result.state,
+          score: scored.result.score,
+          criteria: scored.result.criteria,
+          confidence: scored.result.confidence,
+          dimension_labels: scored.dimension_labels,
+          facts: scored.extraction.facts,
+        });
+      } catch (error) {
+        // A malformed or unavailable judge sample is evidence, not a reason to
+        // fabricate a score or stop the remaining authorized calibration samples.
+        // Keep the reason bounded to one sanitized line so upstream HTML or other
+        // verbose transport bodies cannot enter calibration evidence.
+        const message = error instanceof Error ? error.message : String(error);
+        samples.push({
+          state: "judge-unavailable",
+          score: 0,
+          criteria: [],
+          confidence: 0,
+          reason: message.split(/\r?\n/, 1)[0]!.slice(0, 300) || "judge sample failed without a reason",
+        });
+      }
     }
     results[fixtureName] = aggregateCalibrationSamples({
       samples,

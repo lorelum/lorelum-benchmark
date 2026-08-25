@@ -87,7 +87,7 @@ Practice-aware provider MAY 只把 candidate `private/conditions.yaml` 中 `orac
 
 ### Requirement: Structure-fact extraction and deterministic derivation
 
-后续 practice-aware judge 版本 MUST 把模型职责限定为源代码结构事实抽取，并把 full/partial/zero 与分数推导留给 provider。模型 MUST 只返回预先声明且穷尽的布尔源事实、具体证据和源引用；MUST NOT 返回维度标签、criterion 分数、总分或 expected fixture 身份。provider MUST 按互斥优先级推导 full/partial/zero，校准 MUST 同时报告每个维度的 expected/predicted 混淆矩阵和总分。事实输出若缺失、重复、未知、含额外字段、非布尔、证据不具体、引用未展示源、含歧义或不完整，MUST 在相同 prompt 重试后失败关闭，MUST NOT 修复或默认给分。
+后续 practice-aware judge 版本 MUST 把模型职责限定为源代码结构事实抽取，并把 full/partial/zero 与分数推导留给 provider。模型 MUST 只返回预先声明且穷尽的布尔源事实、具体证据和源引用；MUST NOT 返回维度标签、criterion 分数、总分或 expected fixture 身份。provider MUST 按互斥优先级推导 full/partial/zero，校准 MUST 同时报告每个维度的 expected/predicted 混淆矩阵和总分；混淆矩阵 MUST 逐样本计数，不能用一个 fixture 的多数结果掩盖样本间分歧。事实输出若缺失、重复、未知、含额外字段、非布尔、证据不具体、引用未展示源、含歧义或不完整，MUST 在相同 prompt 重试后失败关闭，MUST NOT 修复或默认给分。
 
 #### Scenario: 事实抽取不能裁决维度
 
@@ -103,6 +103,11 @@ Practice-aware provider MAY 只把 candidate `private/conditions.yaml` 中 `orac
 
 - **WHEN** 校准总分分离，但任一夹具维度标签与期望不一致
 - **THEN** confusion matrix 与标签准确性检查失败，结果保持 diagnostic-only
+
+#### Scenario: 样本分歧不能被聚合掩盖
+
+- **WHEN** 同一 fixture 的三个样本给出不同维度标签，或任一样本 unavailable
+- **THEN** 混淆矩阵保留每个已完成样本的预测，标签准确性检查仍失败，不得用多数票或中位数改写样本事实
 
 #### Scenario: 文档不能冒充结构
 

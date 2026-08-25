@@ -71,6 +71,8 @@ The first fixed-rubric rerun showed that prose such as "policy is centralized" w
 
 新评分契约是 `judge-agent/practice-aware/v2`；失败的 v1 校准证据保持不可变。事实输出对缺失、重复、未知、非布尔、多余字段、空泛证据、源引用不在 shown canonical source map、直接输出标签/分数或 confidence 畸形均 fail closed。允许同一 prompt 重试，重试后仍失败则样本失败关闭。本设计不授权 candidate model 调用、formal experiment、formal record、suite revision、task/starter/oracle/fixture 变更或 threshold 变更。
 
+2026-08-25 的授权 judge-model-only 复测已完成：18 个计划样本中 12 个 observed、6 个 HTTP 524 unavailable；已完成样本全部通过 25 项 fact schema，但 partial 结构在 full/zero 间漂移，strict dimension-label 与 total-separation checks 均失败。结论保持 `diagnostic-only / calibration failed`，不执行 7.8 全局规范晋级，也不修改阈值或夹具。证据见 `verification/structure-fact-judge-calibration-2026-08-25.md`。
+
 ## Risks / Trade-offs
 
 - [Practice 文本进入 rubric 生成可能引入私有材料] → 只允许 conditions 声明的 oracle Practice，路径与 SHA-256 双绑定；irrelevant/baseline payload、evaluator 与 oracle verdict 永不进入。

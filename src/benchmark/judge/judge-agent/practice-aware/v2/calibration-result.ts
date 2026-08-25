@@ -143,8 +143,17 @@ export function dimensionLabelChecks(input: { results: Record<string, Calibratio
 
 export function dimensionConfusion(input: { results: Record<string, CalibrationFixtureResult>; fixtures?: string[] }): DimensionConfusionMatrix {
   const matrix = emptyDimensionConfusion();
-  for (const check of dimensionLabelChecks(input)) {
-    if (check.predicted) matrix[check.dimension][check.expected][check.predicted] += 1;
+  const fixtures = input.fixtures ?? Object.keys(expectedDimensionLabels);
+  for (const fixture of fixtures) {
+    const expected = expectedDimensionLabels[fixture];
+    for (const sample of input.results[fixture]?.samples ?? []) {
+      for (const dimension of calibrationDimensions) {
+        const predicted = sample.dimension_labels?.[dimension];
+        if (predicted === "full" || predicted === "partial" || predicted === "zero") {
+          matrix[dimension][expected[dimension]][predicted] += 1;
+        }
+      }
+    }
   }
   return matrix;
 }

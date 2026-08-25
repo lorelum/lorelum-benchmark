@@ -195,23 +195,31 @@ test("malformed, ambiguous, or unverifiable facts fail closed after identical re
   }
 });
 
-function resultsWithAntiPredictedReference() {
+function resultsWithAntiSampleDisagreement() {
+  const antiResult = fixtureResult(antiLabels, 80);
+  antiResult.samples = antiResult.samples.map((sample, index) => ({
+    ...sample,
+    score: index === 1 ? 60 : 100,
+    dimension_labels: index === 1 ? antiLabels : expectedDimensionLabels.reference!,
+  }));
   return {
     reference: fixtureResult(expectedDimensionLabels.reference!, 100),
     equivalent: fixtureResult(expectedDimensionLabels.equivalent!, 100),
-    "anti-pattern": fixtureResult(expectedDimensionLabels.reference!, 100),
+    "anti-pattern": antiResult,
     "docs-present": fixtureResult(expectedDimensionLabels["docs-present"]!, 60),
     "baseline-policy-scatter": fixtureResult(expectedDimensionLabels["baseline-policy-scatter"]!, 75),
   };
 }
 
 test("dimension confusion matrix blocks total-only false positives", () => {
-  const results = resultsWithAntiPredictedReference();
+  const results = resultsWithAntiSampleDisagreement();
   const labels = dimensionLabelChecks({ results, fixtures: Object.keys(results) });
   const confusion = dimensionConfusion({ results, fixtures: Object.keys(results) });
   expect(labels.filter((check) => !check.correct)).toHaveLength(2);
-  expect(confusion["adapter-isolation"].zero.full).toBe(1);
-  expect(confusion["policy-centralization"].zero.full).toBe(1);
+  expect(confusion["adapter-isolation"].zero.full).toBe(2);
+  expect(confusion["policy-centralization"].zero.full).toBe(2);
+  expect(confusion["adapter-isolation"].zero.zero).toBe(4);
+  expect(confusion["policy-centralization"].zero.zero).toBe(4);
   const checks = practiceAwareStructureCalibrationChecks({
     results,
     rubricHash: "a".repeat(64),
@@ -240,7 +248,7 @@ test("blinded pairwise is fail-closed and cannot repair label confusion", () => 
   expect(() => assertBlindedPairwiseVerdict({ ...verdict, fixture: "reference" })).toThrow("root fields");
   expect(() => assertBlindedPairwiseVerdict({ ...verdict, preference: "tie" })).not.toThrow();
 
-  const results = resultsWithAntiPredictedReference();
+  const results = resultsWithAntiSampleDisagreement();
   const checks = practiceAwareStructureCalibrationChecks({
     results,
     rubricHash: "a".repeat(64),
