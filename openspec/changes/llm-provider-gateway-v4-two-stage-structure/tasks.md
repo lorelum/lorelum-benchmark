@@ -5,8 +5,8 @@
 - [x] 1.1 Confirm issue #185 is the single traceable scope for this change.
 - [x] 1.2 Keep this branch based on latest `origin/main` and use only `codex/llm-provider-gateway-v4-two-stage-structure`.
 - [x] 1.3 Validate the OpenSpec change strictly before creating the initial PR.
-- [ ] 1.4 Create the initial PR containing only OpenSpec artifacts and required process constraints, referencing #185.
-- [ ] 1.5 Verify that the initial PR contains no candidate fixture, starter, runner, evaluator code, model run, result record, or suite revision.
+- [x] 1.4 Create the initial PR containing only OpenSpec artifacts and required process constraints, referencing #185.
+- [x] 1.5 Verify that the initial PR contains no candidate fixture, starter, runner, evaluator code, model run, result record, or suite revision.
 
 ## 2. Planning clarification gate
 
