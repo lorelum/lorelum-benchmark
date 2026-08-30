@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "two-stage-conditions.schema.json",
+  "title": "Two-stage Practice conditions",
+  "type": "object",
+  "required": ["schema_version", "shared_execution", "conditions", "decision_rule"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "two-stage-conditions/v1" },
+    "shared_execution": {
+      "type": "object",
+      "required": ["agent", "pi_version", "model", "additional_shared_system_prompt", "additional_shared_system_prompt_sha256", "tool_policy", "tool_policy_sha256", "workspace", "repetitions", "budgets", "judge"],
+      "additionalProperties": false,
+      "properties": {
+        "agent": { "type": "object", "required": ["id", "version"], "additionalProperties": false, "properties": { "id": { "type": "string" }, "version": { "type": "string" } } },
+        "pi_version": { "type": "string" },
+        "model": { "type": "object", "required": ["id"], "additionalProperties": false, "properties": { "id": { "type": "string" } } },
+        "additional_shared_system_prompt": { "const": "none" },
+        "additional_shared_system_prompt_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "tool_policy": { "type": "string" },
+        "tool_policy_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "workspace": { "const": "clean-copy-per-attempt" },
+        "repetitions": { "type": "integer", "minimum": 1 },
+        "budgets": {
+          "type": "object", "additionalProperties": false,
+          "required": ["stage_1_max_duration_minutes", "stage_2_max_duration_minutes", "evaluator_time_counted"],
+          "properties": { "stage_1_max_duration_minutes": { "const": 15 }, "stage_2_max_duration_minutes": { "const": 15 }, "evaluator_time_counted": { "const": false } }
+        },
+        "judge": { "const": "none" }
+      }
+    },
+    "conditions": { "type": "array", "minItems": 3, "maxItems": 3 },
+    "decision_rule": {
+      "type": "object", "required": ["metric", "oracle_relation", "controls", "directional_stability", "otherwise"], "additionalProperties": false,
+      "properties": {
+        "metric": { "const": "structure-pass-count" },
+        "oracle_relation": { "const": "strictly-greater-than-each-control" },
+        "controls": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "enum": ["baseline", "irrelevant-practice"] } },
+        "directional_stability": { "const": "majority-of-paired-blocks" },
+        "otherwise": { "const": "diagnostic-only" }
+      }
+    }
+  }
+}

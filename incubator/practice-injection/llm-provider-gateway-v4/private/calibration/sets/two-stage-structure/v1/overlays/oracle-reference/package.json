@@ -1,0 +1,6 @@
+{
+  "name": "llm-provider-gateway-v4-starter",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "bun test" }
+}

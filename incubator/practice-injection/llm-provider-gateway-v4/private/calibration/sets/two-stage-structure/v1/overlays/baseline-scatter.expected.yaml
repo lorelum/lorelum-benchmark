@@ -1,0 +1,14 @@
+id: baseline-scatter
+semantic:
+  stage_1: pass
+  stage_2: pass
+expected:
+  diff-classifiability: pass
+  handler-stability: fail
+  ledger-continuity: fail
+  policy-continuity: fail
+  provider-extension-locality: fail
+  stage-1-semantic: pass
+  stage-1-snapshot-integrity: pass
+  stage-2-semantic: pass
+  transport-isolation: fail

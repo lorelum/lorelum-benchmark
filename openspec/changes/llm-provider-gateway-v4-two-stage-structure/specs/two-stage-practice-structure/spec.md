@@ -2,17 +2,17 @@
 
 ### Requirement: Staged execution preserves workspace isolation
 
-The system MUST execute exactly two agent stages in the same app workspace, while keeping private evaluator, oracle, scoring configuration, and Stage 2 prompt outside the Stage 1 agent workspace. Stage 2 MUST run as a fresh no-session invocation and MUST NOT receive the Stage 1 conversation transcript. Every condition MUST start from the same Stage 1 public starter and task input.
+The system MUST execute exactly two agent stages in the same app workspace, while keeping private evaluator, oracle, scoring configuration, and Stage 2 prompt outside the Stage 1 agent workspace. Stage 2 MUST continue the exact Stage 1 Pi session in the same app workspace. The Stage 1 session transcript MUST remain an attempt artifact outside the agent workspace and MUST NOT be copied into the workspace or committed. Every condition MUST start from the same Stage 1 public starter and task input.
 
 #### Scenario: Stage 1 cannot observe Stage 2
 
 - **WHEN** the runner materializes the Stage 1 workspace
 - **THEN** the workspace contains only the declared Stage 1 public task and starter plus condition-scoped Practice delivery, and contains neither the Stage 2 prompt nor private calibration, evaluator, oracle, scoring, credential, or endpoint material
 
-#### Scenario: Stage 2 reuses the artifact but not the conversation
+#### Scenario: Stage 2 continues the same session
 
 - **WHEN** Stage 1 succeeds and passes its semantic gate
-- **THEN** Stage 2 starts in the same app workspace as a fresh no-session invocation with the Stage 2 prompt and does not receive Stage 1 conversation state
+- **THEN** Stage 2 resumes the exact Stage 1 Pi session, receives the Stage 2 prompt, and the transcript remains outside the agent workspace
 
 ### Requirement: Stage 1 snapshot is immutable and outside the agent input
 
@@ -78,3 +78,26 @@ This change MUST NOT call candidate models or judge models, run formal experimen
 
 - **WHEN** the change is implemented and validated
 - **THEN** candidate model calls and judge model calls are zero, and no formal experiment, formal record, or suite revision exists
+
+### Requirement: Session continuation fails closed
+
+The runner MUST persist the Stage 1 Pi session outside the agent workspace and MUST resume that exact session for Stage 2. Session loss, invalid session metadata, cross-attempt reuse, or resume failure MUST mark the attempt execution unhealthy. The runner MUST NOT silently downgrade Stage 2 to a no-session invocation.
+
+#### Scenario: Exact session is resumed
+
+- **WHEN** Stage 1 succeeds and the runner starts Stage 2 with the recorded session binding
+- **THEN** Stage 2 continues the same Pi session and the workspace prompt is the Stage 2 maintenance request
+
+#### Scenario: Resume failure is unhealthy
+
+- **WHEN** the Stage 1 session is missing, invalid, reused from another attempt, or cannot be resumed
+- **THEN** Stage 2 does not run, the attempt is marked execution unhealthy, and the report retains a redacted reason
+
+### Requirement: Session artifacts stay out of public summaries
+
+The runner MUST keep Pi session files and conversation transcripts outside the agent workspace and outside committed repository files. Public summaries MUST NOT include transcript text, tool payloads, provider credentials, endpoint URLs, Practice text, evaluator material, or oracle material. They MAY record only session-binding state, attempt/run identifiers, hashes, and execution-health metadata.
+
+#### Scenario: Transcript is not exposed
+
+- **WHEN** a staged attempt is summarized
+- **THEN** the public summary contains no conversation transcript and no copied session file path into the agent workspace, while retaining whether Stage 2 resumed the recorded session

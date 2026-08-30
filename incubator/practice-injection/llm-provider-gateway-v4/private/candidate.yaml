@@ -1,0 +1,23 @@
+id: llm-provider-gateway-v4
+lifecycle_stage: candidate
+kernel:
+  core: v1
+  profile: two-stage-injection-calibration/v1
+  materializer_kind: node-ts
+source:
+  kind: repository-local-starter
+  repository: lorelum/lorelum-benchmark
+  source_commit: 1b36016a6ba489f23fb8b01dc01bf29d5bfe430c
+  public_root: public/starter/app
+  immutable_by: private/snapshot.json
+calibration_roles:
+  - id: two-stage-structure
+    command: [bun, run, "{{candidate_path}}/private/calibration/run.ts"]
+    expect: { kind: pass }
+calibration_sets:
+  manifest: private/calibration/sets.yaml
+runtime: { package_manager: bun, node: 22.19.x, backend: { typescript: 5.9.3 } }
+baseline_expectation: { functional: false, practice_adherence: false, reason: 公开 starter 只包含单 provider 骨架，缺少完整 Stage 1 语义。 }
+version: v1
+candidate_snapshot_manifest: private/snapshot.json
+source_commit: 1b36016a6ba489f23fb8b01dc01bf29d5bfe430c

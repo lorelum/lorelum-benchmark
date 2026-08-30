@@ -1,0 +1,14 @@
+id: docs-present
+semantic:
+  stage_1: pass
+  stage_2: pass
+expected:
+  diff-classifiability: pass
+  handler-stability: pass
+  ledger-continuity: pass
+  policy-continuity: pass
+  provider-extension-locality: fail
+  stage-1-semantic: pass
+  stage-1-snapshot-integrity: pass
+  stage-2-semantic: pass
+  transport-isolation: fail

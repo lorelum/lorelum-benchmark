@@ -38,7 +38,7 @@ Create `incubator/practice-injection/llm-provider-gateway-v4/` with its own sour
 
 Stage 1 exposes only the initial functional requirements and public tests needed to build an initial implementation. Stage 2 exposes a maintenance change that preserves the public API and accounting semantics while adding a provider whose wire protocol differs from the existing provider.
 
-Stage 1 and Stage 2 run in the same app workspace, but as fresh no-session invocations. Stage 2 therefore observes the Stage 1 artifact, not the Stage 1 conversation transcript. The runner replaces the workspace prompt before Stage 2 and audits that Stage 2 was not materialized in Stage 1.
+Stage 1 and Stage 2 run in the same app workspace and continue the exact same Pi session. Stage 2 therefore observes both the Stage 1 artifact and the Stage 1 conversation state. The runner stores the transcript outside the workspace, replaces the prompt before Stage 2, and audits that Stage 2 was not materialized in Stage 1.
 
 ### Stage 1 snapshot
 
@@ -82,14 +82,18 @@ Record complete planned denominators and unhealthy or indeterminate attempts sep
 
 Rollback before merge removes the new OpenSpec artifacts only. No historical candidate, frozen revision, record, or shared judge contract is affected.
 
+## Planning Confirmation
+
+2026-08-29, the requester confirmed all implementation gates recorded in [#185](https://github.com/lorelum/lorelum-benchmark/issues/185#issuecomment-5461471038): the stage scopes, 15 + 15 minute model budgets, same-workspace/same-session Stage 2 with fail-closed resume, audit-first Practice reuse, 80% saturation threshold, majority pair-block directional rule, and the zero-model-call boundary for this change.
+
 ## Open Questions / Planning Gate
 
 The following must be answered by the requester and written back to issue #185, design, and tasks before candidate fixture, runner, or evaluator implementation:
 
-1. Confirm Stage 1 scope: single provider, chat, retry, and basic usage/billing.
-2. Confirm Stage 2 scope: add a different-wire-protocol provider while preserving public API and billing semantics.
-3. Confirm Stage 1 / Stage 2 budgets, for example 18 + 12 minutes or 15 + 15 minutes.
-4. Confirm fresh no-session Stage 2 invocation with the same workspace and no Stage 1 conversation transcript.
-5. Confirm whether the existing oracle Practice is reusable after a Stage 2 leakage audit, or requires a new Practice version.
-6. Confirm the pre-registered saturation threshold, with 80% as the proposed default.
-7. Confirm later pilot repetitions and directional-stability rules; such a pilot remains outside this change and requires explicit authorization.
+1. Confirmed Stage 1 scope: single provider, chat, retry, and basic usage/billing.
+2. Confirmed Stage 2 scope: add a different-wire-protocol provider while preserving public API, usage, and billing semantics.
+3. Confirmed 15 minutes of model execution per stage; offline evaluator time is excluded from stage model budgets.
+4. Confirmed same-workspace, same-Pi-session Stage 2 invocation; resume failure is execution unhealthy and must not downgrade to no-session.
+5. Confirmed audit-first Practice policy: reuse the existing oracle Practice only after a Stage 2 leakage audit; derive a new version if it leaks.
+6. Confirmed the pre-registered saturation threshold as 80%.
+7. Confirmed directional-screen stability as strict rate improvement over each control plus majority pair-block advantage; pilot repetition remains a separately authorized decision.
