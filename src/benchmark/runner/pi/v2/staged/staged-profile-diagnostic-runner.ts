@@ -48,9 +48,10 @@ export type StagedAttemptReport = {
   session_id?: string;
   stage_1_snapshot?: Stage1Snapshot;
   structure?: StructureEvaluationResult;
-  termination?: "stage-1-semantic" | "dependency-mutation" | "stage-1-snapshot-mismatch" | "session-resume";
+  termination?: "prompt-binding" | "stage-1-semantic" | "dependency-mutation" | "stage-1-snapshot-mismatch" | "session-resume";
   planned_denominator: number;
   transcript_in_workspace?: boolean;
+  redacted_trace?: RedactedTwoStageTrace;
 };
 
 const generated = new Set(["node_modules", "dist", ".git", "coverage", "test-results"]);
@@ -91,12 +92,26 @@ async function contains(workspace: string, needle: string): Promise<boolean> {
   return false;
 }
 
+function normalizePromptText(value: string): string { return value.replaceAll("\r\n", "\n"); }
+
 export async function runStagedDiagnosticAttempt(options: StagedAttemptOptions): Promise<StagedAttemptReport> {
+  const stage1PromptPath = basename(options.profile.execution.stage_1.prompt_path);
+  const stage2PromptPath = basename(options.profile.execution.stage_2.prompt_path);
+  const declaredPrompts = await Promise.all([
+    readFile(join(options.candidate_path, options.profile.execution.stage_1.prompt_path), "utf8").catch(() => null),
+    readFile(join(options.candidate_path, options.profile.execution.stage_2.prompt_path), "utf8").catch(() => null),
+  ]);
+  const promptBindingValid = declaredPrompts[0] != null && declaredPrompts[1] != null
+    && normalizePromptText(options.stage_1_prompt) === normalizePromptText(declaredPrompts[0])
+    && normalizePromptText(options.stage_2_prompt) === normalizePromptText(declaredPrompts[1]);
+  if (!promptBindingValid) {
+    return { schema_version: "staged-runner-attempt/v1", execution_health: "execution-unhealthy", stage_1_semantic: "not-run", stage_2_semantic: "not-run", session_binding: "not-started", planned_denominator: 1, termination: "prompt-binding", transcript_in_workspace: false, redacted_trace: options.redacted_trace };
+  }
   const app = join(options.workspace, "app");
   await rm(options.workspace, { recursive: true, force: true });
   await mkdir(app, { recursive: true });
   await cp(join(options.candidate_path, "public/starter/app"), app, { recursive: true });
-  await Bun.write(join(options.workspace, "task.md"), options.stage_1_prompt);
+  await Bun.write(join(options.workspace, stage1PromptPath), options.stage_1_prompt);
   if (options.practice_text && options.practice_target_path) {
     const target = resolve(app, options.practice_target_path);
     if (!target.startsWith(resolve(app))) throw new Error("practice target escapes workspace");
@@ -118,7 +133,7 @@ export async function runStagedDiagnosticAttempt(options: StagedAttemptOptions):
   const immutable = ["package.json", "bun.lock"];
   const before = await Promise.all(immutable.map(async (file) => hash(await readFile(join(app, file)).catch(() => ""))));
   const sessionDir = join(options.artifacts, "sessions");
-  const stage1 = await pi.start({ stage: 1, workspace: options.workspace, app, prompt_path: "task.md", session_dir: sessionDir });
+  const stage1 = await pi.start({ stage: 1, workspace: options.workspace, app, prompt_path: stage1PromptPath, session_dir: sessionDir });
   const manifest = await snapshot(app, options.profile.execution.snapshot.exclude);
   const stage1Root = join(options.artifacts, "stage-1");
   await rm(stage1Root, { recursive: true, force: true });
@@ -127,7 +142,7 @@ export async function runStagedDiagnosticAttempt(options: StagedAttemptOptions):
   if (stage1Semantic !== "pass") {
     return { schema_version: "staged-runner-attempt/v1", execution_health: "evaluated", stage_1_semantic: stage1Semantic, stage_2_semantic: "not-run", session_binding: "same-session", session_id: stage1.session_id, planned_denominator: 1, termination: "stage-1-semantic", transcript_in_workspace: false, redacted_trace: options.redacted_trace };
   }
-  await Bun.write(join(options.workspace, "task.md"), options.stage_2_prompt);
+  await Bun.write(join(options.workspace, stage2PromptPath), options.stage_2_prompt);
   const after = await Promise.all(immutable.map(async (file) => hash(await readFile(join(app, file)).catch(() => ""))));
   const dependencyLabel = before.every((value, index) => value === after[index]) ? "pass" : "fail";
   const beforeResumeValid = await verifySnapshot(app, manifest);
@@ -136,7 +151,7 @@ export async function runStagedDiagnosticAttempt(options: StagedAttemptOptions):
   }
   let stage2;
   try {
-    stage2 = await pi.resume({ stage: 2, workspace: options.workspace, app, prompt_path: "task.md", session_dir: sessionDir, session_id: stage1.session_id });
+    stage2 = await pi.resume({ stage: 2, workspace: options.workspace, app, prompt_path: stage2PromptPath, session_dir: sessionDir, session_id: stage1.session_id });
   } catch {
     return { schema_version: "staged-runner-attempt/v1", execution_health: "execution-unhealthy", stage_1_semantic: stage1Semantic, stage_2_semantic: "not-run", session_binding: "resume-failed", session_id: stage1.session_id, stage_1_snapshot: manifest, planned_denominator: 1, termination: "session-resume", transcript_in_workspace: false, redacted_trace: options.redacted_trace };
   }

@@ -18,12 +18,27 @@ test("staged plan builds a cyclic Latin square and fails closed on escape or imb
   const schedule = buildStagedSchedule(plan);
   expect(schedule.map((entry) => entry.condition)).toEqual(["baseline", "oracle-practice", "irrelevant-practice"]);
   expect(() => parseStagedDiagnosticPlan({ ...document, repetitions: 2 })).toThrow("positive multiple of 3");
+  const otherSeed = buildStagedSchedule(parseStagedDiagnosticPlan({ ...document, schedule_seed: "rotation" }));
+  expect(otherSeed.map((entry) => entry.condition)).not.toEqual(schedule.map((entry) => entry.condition));
+  for (const seededSchedule of [schedule, otherSeed]) {
+    expect(new Set(seededSchedule.map((entry) => entry.condition))).toEqual(new Set(stagedConditions));
+  }
+  const candidates = [
+    identity,
+    { ...identity, id: "candidate-b" },
+    { ...identity, id: "candidate-c" },
+  ];
+  const balanced = buildStagedSchedule(parseStagedDiagnosticPlan({ ...document, schedule_seed: "rotation", candidates }));
+  expect(balanced.filter((entry) => entry.block === 1).map((entry) => entry.condition).sort()).toEqual([...stagedConditions].sort());
   expect(() => parseStagedDiagnosticPlan({ ...document, candidates: [{ ...identity, path: "../outside" }] })).toThrow("escapes workspace");
 });
 
 async function candidateFixture(): Promise<string> {
   const root = await temp(); const candidatePath = join(root, "candidate");
   await mkdir(join(candidatePath, "public/starter/app/src"), { recursive: true });
+  await mkdir(join(candidatePath, "public/stage-2"), { recursive: true });
+  await writeFile(join(candidatePath, "public/task.md"), stage1Prompt);
+  await writeFile(join(candidatePath, "public/stage-2/task.md"), stage2Prompt);
   await writeFile(join(candidatePath, "public/starter/app/package.json"), "{}\n");
   await writeFile(join(candidatePath, "public/starter/app/bun.lock"), "lock\n");
   await writeFile(join(candidatePath, "public/starter/app/src/first.ts"), "export const first = 1;\n");
@@ -52,11 +67,20 @@ test("dry-run provisions both staged prompts without invoking model adapters", a
   expect(await Bun.file(join(workspace, "task.md")).text()).toContain("Build a single-provider");
 });
 
+test("prompt text is bound to the declared public prompt paths", async () => {
+  const candidatePath = await candidateFixture(); const workspace = await temp(); const artifacts = await temp();
+  let modelCalls = 0; const controlled = adapters(async () => { modelCalls++; });
+  const report = await runStagedDiagnosticAttempt({ candidate_path: candidatePath, workspace, artifacts, profile: profile(), stage_1_prompt: "different from declared prompt", stage_2_prompt: stage2Prompt, dry_run: true, pi: controlled.pi, semantics: controlled.semantics });
+  expect(report.execution_health).toBe("execution-unhealthy");
+  expect(report.termination).toBe("prompt-binding");
+  expect(modelCalls).toBe(0);
+});
+
 test("passes when Stage 2 resumes the exact session and preserves dependencies", async () => {
   const candidatePath = await candidateFixture(); const workspace = await temp(); const artifacts = await temp();
   const controlled = adapters();
   const report = await runStagedDiagnosticAttempt({ candidate_path: candidatePath, workspace, artifacts, profile: profile(), stage_1_prompt: stage1Prompt, stage_2_prompt: stage2Prompt, dry_run: false, pi: controlled.pi, semantics: controlled.semantics });
-  expect(controlled.resumed[0]).toMatchObject({ stage: 2, session_id: "same", workspace });
+  expect(controlled.resumed[0]).toMatchObject({ stage: 2, session_id: "same", workspace, prompt_path: "task.md" });
   expect(report.session_binding).toBe("same-session"); expect(report.stage_1_semantic).toBe("pass"); expect(report.execution_health).toBe("evaluated");
   expect(report.structure?.checks.some((entry) => entry.id === "diff-classifiability")).toBe(true);
 });

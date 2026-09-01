@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { isAbsolute, resolve, sep } from "node:path";
 import { workspaceRoot } from "../../../../fs";
 
@@ -79,9 +80,10 @@ export function parseStagedDiagnosticPlan(value: unknown, planPath = "staged pla
 
 export function buildStagedSchedule(plan: StagedDiagnosticPlan): ScheduledStagedAttempt[] {
   const attempts: ScheduledStagedAttempt[] = [];
+  const seedOffset = Number.parseInt(createHash("sha256").update(plan.schedule_seed).digest("hex").slice(0, 8), 16) % stagedConditions.length;
   for (let block = 1; block <= plan.repetitions; block++) {
     plan.candidates.forEach((candidate, candidateIndex) => {
-      const position = (block - 1 + candidateIndex) % stagedConditions.length;
+      const position = (block - 1 + candidateIndex + seedOffset) % stagedConditions.length;
       attempts.push({
         id: candidate.id,
         source_commit: candidate.source_commit,

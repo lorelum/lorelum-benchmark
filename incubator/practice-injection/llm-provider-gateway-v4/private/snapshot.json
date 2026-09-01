@@ -1,7 +1,7 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "e8c5d0f0eca2b16f962536b9c0f8186b00c4a106de4e762d999cacf50c1562bd",
+  "snapshot_id": "599bf9f10a07d5e8ae70cb89de1d01368e14bae934be9898f0a59773c64f1211",
   "files": {
     "private/calibration/results.json": "e498735533fe8dfbd39e00e65f4db26274090a0d36e6139fd0cc95c9a7037e95",
     "private/calibration/run.ts": "925f4c0f289ebafe6f32a4550560723a33cbbd3c4bee044e1fa683c3b2ed23a8",
@@ -90,8 +90,8 @@
     "private/evaluator/evaluate.ts": "993fb3dea25db8cadfbfa4859673ccb43d122c34470ee8cb4d51a3f29a087cbb",
     "private/execution/tool-policy.yaml": "6acd34a225913fd789a5b00003e103b239bbcd3afd876d35117d67062a72d11a",
     "private/execution/two-stage.yaml": "c35e9918ca1dd6443499a2a6a4cf304ffb562bc2bee88b7233bf05496eae7c4e",
-    "private/oracle.yaml": "863ad318fcac80c03d67bb5d50bbb5c05acf1c0f14257e991a0409d6941a1b04",
-    "public/stage-2/task.md": "41d42a9bd504923614ee2e75f2c5a0a462299bcc3b63d78abd2642fde229ae51",
+    "private/oracle.yaml": "5351abbfde44232e9b8a337a638e0b8b6cf01ed99740612b69a9726658b0a306",
+    "public/stage-2/task.md": "5fff9f533a00a1b130a76e6386cd7ba6d5d6b7db631e6937c78b919f1e5cb873",
     "public/starter/app/bun.lock": "ef1c7d6972eb67dd39a9ac66ffe7cbd09a6e1e193006bb1ed086622386d072d5",
     "public/starter/app/docs/api.md": "2ca8faadc3585d1a94b61124da9e28469391b3465055c60c075dbcb7c922c381",
     "public/starter/app/package.json": "29ec14e16146c7e314d8cd6ff1a03eb3ab8fcbdc2760d8cb0afb93366ae82d94",

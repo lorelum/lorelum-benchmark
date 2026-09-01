@@ -77,3 +77,10 @@
 - [x] 8.7 Confirm candidate model calls and judge model calls are zero.
 - [x] 8.8 Confirm that no formal experiment, formal record, suite revision, generated workspace, log, `node_modules/`, or model transcript is committed.
 - [x] 8.9 Update PR evidence with commands, outcomes, offline matrix summary, and explicit statement that passing offline calibration does not establish a Practice effect.
+
+## 9. Review hardening
+
+- [x] 9.1 Make the declared semantic oracle commands executable and cover both real CLI invocations without model calls.
+- [x] 9.2 Remove private acceptance vocabulary from the Stage 2 agent-visible prompt and refresh candidate identity.
+- [x] 9.3 Apply `schedule_seed` as the deterministic cyclic rotation input and test seed sensitivity plus balance.
+- [x] 9.4 Bind runner prompt text and invocation prompt paths to the declared public prompt paths and fail execution health on mismatch.

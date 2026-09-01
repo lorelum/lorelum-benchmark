@@ -38,7 +38,7 @@ Create `incubator/practice-injection/llm-provider-gateway-v4/` with its own sour
 
 Stage 1 exposes only the initial functional requirements and public tests needed to build an initial implementation. Stage 2 exposes a maintenance change that preserves the public API and accounting semantics while adding a provider whose wire protocol differs from the existing provider.
 
-Stage 1 and Stage 2 run in the same app workspace and continue the exact same Pi session. Stage 2 therefore observes both the Stage 1 artifact and the Stage 1 conversation state. The runner stores the transcript outside the workspace, replaces the prompt before Stage 2, and audits that Stage 2 was not materialized in Stage 1.
+Stage 1 and Stage 2 run in the same app workspace and continue the exact same Pi session. Stage 2 therefore observes both the Stage 1 artifact and the Stage 1 conversation state. The runner stores the transcript outside the workspace, replaces the prompt before Stage 2, and audits that Stage 2 was not materialized in Stage 1. The runner must bind each supplied prompt text and invocation prompt path to the profile-declared public prompt path; a mismatch fails execution health before model invocation. Agent-visible stage prompts may reference only public workspace material, not private acceptance artifacts.
 
 ### Stage 1 snapshot
 
@@ -97,3 +97,7 @@ The following must be answered by the requester and written back to issue #185, 
 5. Confirmed audit-first Practice policy: reuse the existing oracle Practice only after a Stage 2 leakage audit; derive a new version if it leaks.
 6. Confirmed the pre-registered saturation threshold as 80%.
 7. Confirmed directional-screen stability as strict rate improvement over each control plus majority pair-block advantage; pilot repetition remains a separately authorized decision.
+
+### Review hardening
+
+The declared semantic oracle commands execute from the candidate root with positional stage arguments. The staged cyclic Latin square consumes `schedule_seed` as a deterministic rotation input while preserving per-candidate condition balance.

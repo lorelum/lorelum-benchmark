@@ -2,7 +2,7 @@
 
 ### Requirement: Staged execution preserves workspace isolation
 
-The system MUST execute exactly two agent stages in the same app workspace, while keeping private evaluator, oracle, scoring configuration, and Stage 2 prompt outside the Stage 1 agent workspace. Stage 2 MUST continue the exact Stage 1 Pi session in the same app workspace. The Stage 1 session transcript MUST remain an attempt artifact outside the agent workspace and MUST NOT be copied into the workspace or committed. Every condition MUST start from the same Stage 1 public starter and task input.
+The system MUST execute exactly two agent stages in the same app workspace, while keeping private evaluator, oracle, scoring configuration, and Stage 2 prompt outside the Stage 1 agent workspace. Stage 2 MUST continue the exact Stage 1 Pi session in the same app workspace. The Stage 1 session transcript MUST remain an attempt artifact outside the agent workspace and MUST NOT be copied into the workspace or committed. Every condition MUST start from the same Stage 1 public starter and task input. The runner MUST bind each supplied prompt text and invocation prompt path to the profile-declared public prompt path, and a mismatch MUST be execution unhealthy before model invocation.
 
 #### Scenario: Stage 1 cannot observe Stage 2
 
@@ -13,6 +13,16 @@ The system MUST execute exactly two agent stages in the same app workspace, whil
 
 - **WHEN** Stage 1 succeeds and passes its semantic gate
 - **THEN** Stage 2 resumes the exact Stage 1 Pi session, receives the Stage 2 prompt, and the transcript remains outside the agent workspace
+
+#### Scenario: Prompt declaration and execution agree
+
+- **WHEN** supplied prompt text differs from its declared public prompt file
+- **THEN** the attempt is execution unhealthy before any Pi invocation
+
+#### Scenario: Seeded schedule remains balanced
+
+- **WHEN** the declared schedule seed changes
+- **THEN** the deterministic cyclic rotation changes while preserving the Latin-square condition balance
 
 ### Requirement: Stage 1 snapshot is immutable and outside the agent input
 
