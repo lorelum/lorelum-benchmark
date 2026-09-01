@@ -18,5 +18,5 @@
 
 ## 授权执行（#188，仅 preflight 全通过后）
 
-- [ ] 4.0 执行一个 block：3 attempts × { baseline, oracle-practice, irrelevant-practice }，每 stage ≤15 分钟模型执行，no judge、no retry
-- [ ] 4.1 产出 redacted 中文 diagnostic summary（逐 attempt condition / health / session binding / semantic labels、九项 structure check labels、raw concentration metrics、descriptive 对比、indeterminate 与 unhealthy 原因、diagnostic-only 声明）与 artifact 位置；不提交 run workspace、transcript 或 formal record
+- [x] 4.0 执行一个 block：3 attempts × { baseline, oracle-practice, irrelevant-practice }，每 stage ≤15 分钟模型执行，no judge、no retry
+- [x] 4.1 产出 redacted 中文 diagnostic summary（逐 attempt condition / health / session binding / semantic labels、九项 structure check labels、raw concentration metrics、descriptive 对比、indeterminate 与 unhealthy 原因、diagnostic-only 声明）与 artifact 位置；不提交 run workspace、transcript 或 formal record
