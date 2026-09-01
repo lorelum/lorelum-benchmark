@@ -20,3 +20,11 @@
 
 - [x] 4.0 执行一个 block：3 attempts × { baseline, oracle-practice, irrelevant-practice }，每 stage ≤15 分钟模型执行，no judge、no retry
 - [x] 4.1 产出 redacted 中文 diagnostic summary（逐 attempt condition / health / session binding / semantic labels、九项 structure check labels、raw concentration metrics、descriptive 对比、indeterminate 与 unhealthy 原因、diagnostic-only 声明）与 artifact 位置；不提交 run workspace、transcript 或 formal record
+
+## 诊断扩展（#188 授权的 r2：解决有效观测不足）
+
+- [x] 5.0 诊断 r1 两个无效观测根因：irrelevant-practice 为真实 Stage 1 语义失败（titan 记账字段错误）；baseline 为模型将预算耗在全盘探索后超时（write scope: verification.md）
+- [x] 5.1 修复 runner 隔离缺陷：attempt artifacts 与 workspace 分离到不同 sibling 根目录，agent 的 `..` 不再直接暴露 transcript（write scope: `src/benchmark/runner/pi/v2/staged/`）
+- [x] 5.2 driver 支持 `--blocks N` 多 diagnostic block，按 3 的倍数扩展 Latin-square（write scope: 同上）
+- [ ] 5.3 跑 focused tests / contracts / validate / strict / diff 检查并执行 r2（2 blocks，6 attempts，不重跑 r1）
+- [ ] 5.4 汇总 r1+r2 全部 attempt 的 redacted diagnostic summary

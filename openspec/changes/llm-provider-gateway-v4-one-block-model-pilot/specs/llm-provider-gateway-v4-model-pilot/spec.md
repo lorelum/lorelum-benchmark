@@ -12,11 +12,11 @@ The pilot driver MUST NOT invoke any candidate or judge model call until every p
 #### Scenario: Dry-run covers one block with zero model calls
 
 - **WHEN** the pilot runs in dry-run mode
-- **THEN** the schedule contains exactly one block of three attempts covering baseline, oracle-practice, and irrelevant-practice exactly once each, and no Pi subprocess is started
+- **THEN** the schedule contains whole blocks of three attempts covering baseline, oracle-practice, and irrelevant-practice exactly once per block, and no Pi subprocess is started
 
-### Requirement: One block, three conditions, deterministic schedule
+### Requirement: Whole diagnostic blocks, three conditions, deterministic schedule
 
-The pilot MUST execute exactly one block of three attempts derived from the existing `staged-profile-diagnostic-plan/v1` contract with `cyclic-latin-square/v1` and the declared `schedule_seed`, covering each of the three conditions exactly once. The pilot MUST NOT rerun failed or unhealthy attempts and MUST keep every planned attempt in the denominator.
+Each authorized pilot run MUST execute whole blocks of three attempts derived from the existing `staged-profile-diagnostic-plan/v1` contract with `cyclic-latin-square/v1` and the declared `schedule_seed`, covering each of the three conditions exactly once per block. The initial authorization covers one block; additional diagnostic blocks require an explicit scope extension recorded on the authorizing issue. The pilot MUST NOT rerun failed or unhealthy attempts and MUST keep every planned attempt in the denominator.
 
 #### Scenario: Unhealthy attempt stays in the denominator
 
@@ -36,6 +36,11 @@ Each attempt MUST allow at most the profile-declared model execution budget per 
 
 Stage 2 MUST continue the exact Stage 1 Pi session in the same app workspace. Session resume failure, session id mismatch, or transcript materialization inside the agent workspace MUST be recorded as execution unhealthy or the staged runner's fail-closed binding, and MUST NOT be downgraded to a no-session execution.
 
+#### Scenario: Transcripts stay outside agent reach
+
+- **WHEN** the driver provisions an attempt
+- **THEN** the workspace and the transcript/session/log artifact roots are separate sibling directories, so the agent's own working directory does not directly expose session material
+
 #### Scenario: Resume mismatch fails closed
 
 - **WHEN** the resumed session id differs from the Stage 1 session id or resume throws
@@ -52,7 +57,7 @@ The pilot MUST NOT invoke any judge model, MUST NOT compute or report a weighted
 
 ### Requirement: Artifacts and public summary are redacted
 
-Transcripts, run workspaces, session directories, snapshots, and stage copies MUST live outside the repository or in explicitly git-ignored artifact areas and MUST NOT be committed. The public summary MUST contain only run and attempt ids, condition, session binding state, necessary hashes, execution health, stage semantic labels, deterministic structure check labels, and raw metrics, and MUST state that the one-block smoke does not constitute a directional-screen, Practice effect, or formal benchmark conclusion.
+Transcripts, run workspaces, session directories, snapshots, and stage copies MUST live outside the repository or in explicitly git-ignored artifact areas and MUST NOT be committed. Attempt artifacts MUST NOT be placed inside or directly adjacent to the agent workspace directory. The public summary MUST contain only run and attempt ids, condition, session binding state, necessary hashes, execution health, stage semantic labels, deterministic structure check labels, and raw metrics, and MUST state that the one-block smoke does not constitute a directional-screen, Practice effect, or formal benchmark conclusion.
 
 #### Scenario: Summary stays redacted
 

@@ -68,20 +68,23 @@ export async function inspectStagedPilotCandidate(): Promise<CandidateFacts> {
   };
 }
 
-export function stagedPilotPlan(facts: CandidateFacts): ScheduledStagedAttempt[] {
+export function stagedPilotPlan(facts: CandidateFacts, blocks = 1): ScheduledStagedAttempt[] {
+  if (!Number.isInteger(blocks) || blocks < 1) fail("blocks must be a positive integer");
   const schedule = buildStagedSchedule(parseStagedDiagnosticPlan({
     schema_version: "staged-profile-diagnostic-plan/v1",
     id: "llm-provider-gateway-v4-one-block-model-pilot",
     schedule_seed: stagedPilotScheduleSeed,
     schedule_algorithm: "cyclic-latin-square/v1",
     dry_run: false,
-    repetitions: 3,
+    repetitions: 3 * blocks,
     conditions: [...stagedConditions],
     candidates: [{ id: "llm-provider-gateway-v4", path: stagedPilotCandidate, source_commit: facts.source_commit, snapshot_id: facts.snapshot_id, profile_input_hash: facts.profile.profile_input_hash }],
   }));
-  const blockOne = schedule.filter((attempt) => attempt.block >= 1);
-  if (blockOne.length !== 3 || new Set(blockOne.map((attempt) => attempt.condition)).size !== 3) fail("one-block schedule must cover each condition exactly once");
-  return blockOne;
+  if (schedule.length !== 3 * blocks || new Set(schedule.map((attempt) => attempt.condition)).size !== 3) fail("schedule must cover the three conditions");
+  for (const condition of stagedConditions) {
+    if (schedule.filter((attempt) => attempt.condition === condition).length !== blocks) fail(`schedule must repeat each condition exactly ${blocks} times`);
+  }
+  return schedule;
 }
 
 export type StagedPilotPreflight = {
@@ -99,10 +102,15 @@ export type StagedPilotContext = {
 };
 
 async function attemptDirectories(outputRoot: string, attempt: ScheduledStagedAttempt, index: number): Promise<{ workspace: string; artifacts: string }> {
-  const base = join(outputRoot, "attempts", `${String(index + 1).padStart(2, "0")}-${attempt.condition}`);
-  const workspace = join(base, "workspace");
-  const artifacts = join(base, "artifacts");
-  await rm(base, { recursive: true, force: true });
+  // Workspaces and attempt artifacts live in separate sibling roots so the
+  // agent's own `..` does not directly expose transcripts or stage logs. Local
+  // Pi has no path sandbox; this keeps private material out of accidental
+  // reach without claiming containment.
+  const name = `${String(index + 1).padStart(2, "0")}-${attempt.condition}`;
+  const workspace = join(outputRoot, "attempt-workspaces", name);
+  const artifacts = join(outputRoot, "attempt-artifacts", name);
+  await rm(workspace, { recursive: true, force: true });
+  await rm(artifacts, { recursive: true, force: true });
   await mkdir(join(artifacts, "sessions"), { recursive: true });
   return { workspace, artifacts };
 }
@@ -197,7 +205,7 @@ export type StagedPilotRun = {
   schema_version: "staged-pilot-run/v1";
   run_id: string;
   schedule_seed: string;
-  block: 1;
+  blocks: number;
   dry_run: boolean;
   preflight: StagedPilotPreflight | null;
   attempts: Array<StagedAttemptReport & { attempt_id: string; error?: string }>;
@@ -205,12 +213,13 @@ export type StagedPilotRun = {
   disclaimer: string;
 };
 
-export async function executeStagedPilot(options: { mode: "preflight" | "dry-run" | "run"; run_id: string; outputRoot: string }): Promise<StagedPilotRun> {
+export async function executeStagedPilot(options: { mode: "preflight" | "dry-run" | "run"; run_id: string; outputRoot: string; blocks?: number }): Promise<StagedPilotRun> {
+  const blocks = options.blocks ?? 1;
   const facts = await inspectStagedPilotCandidate();
   const command = await piCommand(workspaceRoot);
   const context: StagedPilotContext = {
     facts,
-    attempts: stagedPilotPlan(facts),
+    attempts: stagedPilotPlan(facts, blocks),
     command,
     piConfig: (logDirectory) => ({
       command,
@@ -224,7 +233,7 @@ export async function executeStagedPilot(options: { mode: "preflight" | "dry-run
   if (options.mode === "preflight") {
     const preflight = await runStagedPilotPreflight(context, options.outputRoot);
     if (!preflight.passed) fail(`preflight failed: ${preflight.checks.filter((check) => !check.passed).map((check) => `${check.id} (${check.detail})`).join("; ")}`);
-    return { schema_version: "staged-pilot-run/v1", run_id: options.run_id, schedule_seed: stagedPilotScheduleSeed, block: 1, dry_run: false, preflight, attempts: [], summary: summarizeStagedReports([]), disclaimer: pilotDisclaimer };
+    return { schema_version: "staged-pilot-run/v1", run_id: options.run_id, schedule_seed: stagedPilotScheduleSeed, blocks, dry_run: false, preflight, attempts: [], summary: summarizeStagedReports([]), disclaimer: pilotDisclaimer };
   }
   const preflight = options.mode === "run" ? await runStagedPilotPreflight(context, options.outputRoot) : null;
   if (preflight && !preflight.passed) fail(`preflight failed; no model attempts started: ${preflight.checks.filter((check) => !check.passed).map((check) => `${check.id} (${check.detail})`).join("; ")}`);
@@ -237,7 +246,7 @@ export async function executeStagedPilot(options: { mode: "preflight" | "dry-run
     schema_version: "staged-pilot-run/v1",
     run_id: options.run_id,
     schedule_seed: stagedPilotScheduleSeed,
-    block: 1,
+    blocks,
     dry_run: options.mode === "dry-run",
     preflight,
     attempts: reports,
@@ -252,10 +261,12 @@ if (import.meta.main) {
   const mode = Bun.argv[2] as "preflight" | "dry-run" | "run" | undefined;
   const runIdArgument = Bun.argv.indexOf("--run-id");
   const runId = runIdArgument !== -1 && Bun.argv[runIdArgument + 1] ? Bun.argv[runIdArgument + 1] : `v4-one-block-${new Date().toISOString().replaceAll(/[:.]/g, "-")}`;
+  const blocksArgument = Bun.argv.indexOf("--blocks");
+  const blocks = blocksArgument !== -1 && Number.isInteger(Number(Bun.argv[blocksArgument + 1])) ? Number(Bun.argv[blocksArgument + 1]) : 1;
   const outputArgument = Bun.argv.indexOf("--output");
   const outputRoot = resolve(outputArgument !== -1 && Bun.argv[outputArgument + 1] ? Bun.argv[outputArgument + 1] : join(workspaceRoot, "scratch", "llm-provider-gateway-v4-model-pilot", runId));
   if (mode !== "preflight" && mode !== "dry-run" && mode !== "run") {
-    console.error("Usage: bun run staged-pilot-driver.ts <preflight|dry-run|run> [--run-id id] [--output dir]");
+    console.error("Usage: bun run staged-pilot-driver.ts <preflight|dry-run|run> [--run-id id] [--output dir] [--blocks n]");
     process.exit(1);
   }
   if (mode !== "dry-run" && Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("real-model pilot modes require LORELUM_LOCAL_EXPERIMENT=1");
@@ -271,7 +282,7 @@ if (import.meta.main) {
   }
   try {
     await mkdir(outputRoot, { recursive: true });
-    const result = await executeStagedPilot({ mode, run_id: runId, outputRoot });
+    const result = await executeStagedPilot({ mode, run_id: runId, outputRoot, blocks });
     await Bun.write(join(outputRoot, "redacted-summary.json"), `${JSON.stringify(result, null, 2)}\n`);
     console.log(JSON.stringify(result));
     process.exit(result.preflight?.passed === false ? 1 : 0);

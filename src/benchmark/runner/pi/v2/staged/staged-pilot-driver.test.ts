@@ -86,6 +86,11 @@ test("v4 candidate identity resolves and the one-block plan covers each conditio
   const plan = stagedPilotPlan(facts);
   expect(plan).toHaveLength(3);
   expect(plan.every((attempt) => attempt.block >= 1)).toBe(true);
+  const twoBlocks = stagedPilotPlan(facts, 2);
+  expect(twoBlocks).toHaveLength(6);
+  for (const condition of ["baseline", "oracle-practice", "irrelevant-practice"]) {
+    expect(twoBlocks.filter((attempt) => attempt.condition === condition)).toHaveLength(2);
+  }
   expect(new Set(plan.map((attempt) => attempt.condition)).size).toBe(3);
   expect(plan.every((attempt) => attempt.source_commit === facts.source_commit && attempt.snapshot_id === facts.snapshot_id)).toBe(true);
   expect(stagedPilotScheduleSeed).toMatch(/^llm-provider-gateway-v4-one-block-model-pilot\/v1$/);
