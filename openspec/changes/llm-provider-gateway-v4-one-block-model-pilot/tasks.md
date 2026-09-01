@@ -6,15 +6,15 @@
 
 ## Pi adapter 与 pilot driver
 
-- [ ] 2.0 实现 production `StagedPiAdapter`：本地 `pi` 子进程 start/resume、session dir 在 scratch artifact 区、每 stage 15 分钟预算与进程树终止（write scope: `src/benchmark/runner/pi/v2/staged/`）
-- [ ] 2.1 实现 semantic adapter：调用 candidate 声明的 `private/evaluator/evaluate.ts` oracle 命令，offline 时间不计入模型预算（write scope: 同上）
-- [ ] 2.2 实现 one-block pilot driver CLI：加载 v4 candidate 身份（snapshot_id / source_commit / profile_input_hash / offline calibration qualified）、构建 `staged-profile-diagnostic-plan/v1` 单 block 计划、组装 attempt options、汇总 redacted summary（write scope: 同上）
-- [ ] 2.3 focused tests：adapter 超时终止、session id mismatch fail-closed、summary redaction、dry-run zero model calls（write scope: 同上 `*.test.ts`）
+- [x] 2.0 实现 production `StagedPiAdapter`：本地 `pi` 子进程 start/resume、session dir 在 scratch artifact 区、每 stage 15 分钟预算与进程树终止（write scope: `src/benchmark/runner/pi/v2/staged/`）
+- [x] 2.1 实现 semantic adapter：调用 candidate 声明的 `private/evaluator/evaluate.ts` oracle 命令，offline 时间不计入模型预算（write scope: 同上）
+- [x] 2.2 实现 one-block pilot driver CLI：加载 v4 candidate 身份（snapshot_id / source_commit / profile_input_hash / offline calibration qualified）、构建 `staged-profile-diagnostic-plan/v1` 单 block 计划、组装 attempt options、汇总 redacted summary（write scope: 同上）
+- [x] 2.3 focused tests：adapter 超时终止、session id mismatch fail-closed、summary redaction、dry-run zero model calls（write scope: 同上 `*.test.ts`）
 
 ## Preflight 与验证
 
-- [ ] 3.0 preflight 模式：candidate snapshot / profile identity 校验、`pi --version` 匹配、credential 存在性（不回显）、timeout/cancellation 演练、Stage 1 leakage audit、三条件 dry-run 计划（write scope: 同上）
-- [ ] 3.1 运行 focused tests、`bun run test:contracts`、`bun run validate`、OpenSpec strict、protected-path audit、credential/endpoint audit、`git diff --check`，并在 verification 记录结果
+- [x] 3.0 preflight 模式：candidate snapshot / profile identity 校验、`pi --version` 匹配、credential 存在性（不回显）、timeout/cancellation 演练、Stage 1 leakage audit、三条件 dry-run 计划（write scope: 同上）
+- [x] 3.1 运行 focused tests、`bun run test:contracts`、`bun run validate`、OpenSpec strict、protected-path audit、credential/endpoint audit、`git diff --check`，并在 verification 记录结果
 
 ## 授权执行（#188，仅 preflight 全通过后）
 

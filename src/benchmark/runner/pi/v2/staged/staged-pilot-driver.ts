@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { workspaceRoot } from "../../../../fs";
 import { resolveTwoStageInjectionCalibration, resolveTwoStagePracticePayload, redactedTwoStageTrace } from "../../../../kernel/profiles/two-stage-injection-calibration/v1/runtime";
 import type { RedactedTwoStageTrace, ResolvedTwoStageProfile } from "../../../../kernel/profiles/two-stage-injection-calibration/v1/types";
+import { configureLocalPiModelCatalog, localPiApiKey } from "../local-pi-model-catalog";
 import { piCommand, preflightPiAndModel, run } from "../preflight";
 import { demonstrateTimeoutTermination, productionStagedPiAdapter, productionStagedSemanticAdapter, type StagedPilotPiConfig } from "./staged-pilot-pi-adapter";
 import { buildStagedSchedule, parseStagedDiagnosticPlan, stagedConditions, type ScheduledStagedAttempt } from "./staged-profile-diagnostic-plan";
@@ -181,7 +182,7 @@ export async function runStagedPilotPreflight(context: StagedPilotContext, outpu
     for (const [index, attempt] of context.attempts.entries()) reports.push(await runScheduledAttempt(context, attempt, index, outputRoot, true));
     const unhealthy = reports.filter((report) => report.execution_health !== "dry-run");
     if (unhealthy.length > 0) fail(`dry-run leakage audit failed for ${unhealthy.map((report) => `${report.condition_id}:${report.termination ?? report.execution_health}`).join(", ")}`);
-    if (context.attempts.map((attempt) => attempt.condition).join() !== stagedConditions.join()) fail("dry-run schedule does not cover the three conditions exactly once");
+    if (new Set(context.attempts.map((attempt) => attempt.condition)).size !== stagedConditions.length || !stagedConditions.every((id) => context.attempts.some((attempt) => attempt.condition === id))) fail("dry-run schedule does not cover the three conditions exactly once");
     return "three-condition plan materialized with zero model calls";
   });
   return {
@@ -256,6 +257,17 @@ if (import.meta.main) {
   if (mode !== "preflight" && mode !== "dry-run" && mode !== "run") {
     console.error("Usage: bun run staged-pilot-driver.ts <preflight|dry-run|run> [--run-id id] [--output dir]");
     process.exit(1);
+  }
+  if (mode !== "dry-run" && Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("real-model pilot modes require LORELUM_LOCAL_EXPERIMENT=1");
+  if (mode !== "dry-run") {
+    const localPiCatalog = await configureLocalPiModelCatalog();
+    if (localPiCatalog) {
+      Bun.env.PI_CODING_AGENT_DIR = localPiCatalog.directory;
+      Bun.env.PI_OFFLINE = "1";
+      process.on("exit", localPiCatalog.cleanup);
+    }
+    const localPiKey = localPiApiKey();
+    if (localPiKey) Bun.env.DEEPSEEK_API_KEY = localPiKey;
   }
   try {
     await mkdir(outputRoot, { recursive: true });
