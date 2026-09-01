@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "staged-profile-evaluator-result.schema.json",
+  "title": "Deterministic two-stage structure result",
+  "type": "object",
+  "required": ["schema_version", "execution_health", "checks", "metrics", "structure_pass"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "two-stage-structure-result/v1" },
+    "execution_health": { "enum": ["evaluated", "execution-unhealthy"] },
+    "checks": {
+      "type": "array", "minItems": 9, "maxItems": 9,
+      "items": {
+        "type": "object", "required": ["id", "state", "reason"], "additionalProperties": false,
+        "properties": {
+          "id": { "enum": ["stage-1-semantic", "stage-2-semantic", "stage-1-snapshot-integrity", "handler-stability", "transport-isolation", "policy-continuity", "ledger-continuity", "provider-extension-locality", "diff-classifiability"] },
+          "state": { "enum": ["pass", "fail", "indeterminate"] }, "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object", "minProperties": 10, "maxProperties": 10,
+      "required": ["changed_production_files", "changed_declarations", "handler_changed_declarations", "policy_changed_declarations", "ledger_changed_declarations", "transport_changed_declarations", "deleted_stage_1_declarations", "replaced_stage_1_declarations", "normalized_changed_ast_nodes", "maximum_single_file_edit_share"],
+      "additionalProperties": false,
+      "properties": {
+        "changed_production_files": { "type": "integer", "minimum": 0 }, "changed_declarations": { "type": "integer", "minimum": 0 },
+        "handler_changed_declarations": { "type": "integer", "minimum": 0 }, "policy_changed_declarations": { "type": "integer", "minimum": 0 },
+        "ledger_changed_declarations": { "type": "integer", "minimum": 0 }, "transport_changed_declarations": { "type": "integer", "minimum": 0 },
+        "deleted_stage_1_declarations": { "type": "integer", "minimum": 0 }, "replaced_stage_1_declarations": { "type": "integer", "minimum": 0 },
+        "normalized_changed_ast_nodes": { "type": "integer", "minimum": 0 }, "maximum_single_file_edit_share": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "structure_pass": { "type": "boolean" }
+  }
+}

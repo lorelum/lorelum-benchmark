@@ -1,0 +1,190 @@
+{
+  "schema_version": "two-stage-offline-calibration/v1",
+  "candidate_model_calls": 0,
+  "judge_model_calls": 0,
+  "qualified": true,
+  "calibration": [
+    {
+      "id": "ambiguous-code",
+      "passed": true,
+      "observed": {
+        "stage-1-semantic": "pass",
+        "stage-2-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "handler-stability": "indeterminate",
+        "transport-isolation": "indeterminate",
+        "policy-continuity": "indeterminate",
+        "ledger-continuity": "indeterminate",
+        "provider-extension-locality": "indeterminate",
+        "diff-classifiability": "indeterminate"
+      },
+      "expected": {
+        "diff-classifiability": "indeterminate",
+        "handler-stability": "indeterminate",
+        "ledger-continuity": "indeterminate",
+        "policy-continuity": "indeterminate",
+        "provider-extension-locality": "indeterminate",
+        "stage-1-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "stage-2-semantic": "pass",
+        "transport-isolation": "indeterminate"
+      }
+    },
+    {
+      "id": "anti-pattern",
+      "passed": true,
+      "observed": {
+        "stage-1-semantic": "pass",
+        "stage-2-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "handler-stability": "fail",
+        "transport-isolation": "fail",
+        "policy-continuity": "pass",
+        "ledger-continuity": "pass",
+        "provider-extension-locality": "pass",
+        "diff-classifiability": "pass"
+      },
+      "expected": {
+        "diff-classifiability": "pass",
+        "handler-stability": "fail",
+        "ledger-continuity": "pass",
+        "policy-continuity": "pass",
+        "provider-extension-locality": "pass",
+        "stage-1-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "stage-2-semantic": "pass",
+        "transport-isolation": "fail"
+      }
+    },
+    {
+      "id": "baseline-scatter",
+      "passed": true,
+      "observed": {
+        "stage-1-semantic": "pass",
+        "stage-2-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "handler-stability": "fail",
+        "transport-isolation": "fail",
+        "policy-continuity": "fail",
+        "ledger-continuity": "fail",
+        "provider-extension-locality": "fail",
+        "diff-classifiability": "pass"
+      },
+      "expected": {
+        "diff-classifiability": "pass",
+        "handler-stability": "fail",
+        "ledger-continuity": "fail",
+        "policy-continuity": "fail",
+        "provider-extension-locality": "fail",
+        "stage-1-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "stage-2-semantic": "pass",
+        "transport-isolation": "fail"
+      }
+    },
+    {
+      "id": "docs-present",
+      "passed": true,
+      "observed": {
+        "stage-1-semantic": "pass",
+        "stage-2-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "handler-stability": "pass",
+        "transport-isolation": "fail",
+        "policy-continuity": "pass",
+        "ledger-continuity": "pass",
+        "provider-extension-locality": "fail",
+        "diff-classifiability": "pass"
+      },
+      "expected": {
+        "diff-classifiability": "pass",
+        "handler-stability": "pass",
+        "ledger-continuity": "pass",
+        "policy-continuity": "pass",
+        "provider-extension-locality": "fail",
+        "stage-1-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "stage-2-semantic": "pass",
+        "transport-isolation": "fail"
+      }
+    },
+    {
+      "id": "equivalent-reference",
+      "passed": true,
+      "observed": {
+        "stage-1-semantic": "pass",
+        "stage-2-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "handler-stability": "pass",
+        "transport-isolation": "pass",
+        "policy-continuity": "pass",
+        "ledger-continuity": "pass",
+        "provider-extension-locality": "pass",
+        "diff-classifiability": "pass"
+      },
+      "expected": {
+        "diff-classifiability": "pass",
+        "handler-stability": "pass",
+        "ledger-continuity": "pass",
+        "policy-continuity": "pass",
+        "provider-extension-locality": "pass",
+        "stage-1-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "stage-2-semantic": "pass",
+        "transport-isolation": "pass"
+      }
+    },
+    {
+      "id": "oracle-reference",
+      "passed": true,
+      "observed": {
+        "stage-1-semantic": "pass",
+        "stage-2-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "handler-stability": "pass",
+        "transport-isolation": "pass",
+        "policy-continuity": "pass",
+        "ledger-continuity": "pass",
+        "provider-extension-locality": "pass",
+        "diff-classifiability": "pass"
+      },
+      "expected": {
+        "diff-classifiability": "pass",
+        "handler-stability": "pass",
+        "ledger-continuity": "pass",
+        "policy-continuity": "pass",
+        "provider-extension-locality": "pass",
+        "stage-1-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "stage-2-semantic": "pass",
+        "transport-isolation": "pass"
+      }
+    },
+    {
+      "id": "public-starter",
+      "passed": true,
+      "observed": {
+        "stage-1-semantic": "pass",
+        "stage-2-semantic": "fail",
+        "stage-1-snapshot-integrity": "pass",
+        "handler-stability": "pass",
+        "transport-isolation": "fail",
+        "policy-continuity": "pass",
+        "ledger-continuity": "pass",
+        "provider-extension-locality": "fail",
+        "diff-classifiability": "pass"
+      },
+      "expected": {
+        "diff-classifiability": "pass",
+        "handler-stability": "pass",
+        "ledger-continuity": "pass",
+        "policy-continuity": "pass",
+        "provider-extension-locality": "fail",
+        "stage-1-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "stage-2-semantic": "fail",
+        "transport-isolation": "fail"
+      }
+    }
+  ]
+}

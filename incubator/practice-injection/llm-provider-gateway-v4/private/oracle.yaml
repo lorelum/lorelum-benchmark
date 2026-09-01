@@ -1,0 +1,9 @@
+id: llm-provider-gateway-v4
+semantic_oracle:
+  stage_1: { command: bun run private/evaluator/evaluate.ts 1 <workspace>/app, expected: pass }
+  stage_2: { command: bun run private/evaluator/evaluate.ts 2 <workspace>/app, expected: pass }
+  assertions:
+    - Stage 1 chat、retry、账本和租户费用字段可用
+    - Stage 2 新线协议 provider 可用且 usage 映射正确
+    - public API、重试、账本和费用语义保持不变
+structure_observation: { kind: deterministic-two-stage-structure/v1, signal_only: true, judge: none }

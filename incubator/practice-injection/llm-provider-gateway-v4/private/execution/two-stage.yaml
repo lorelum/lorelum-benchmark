@@ -1,0 +1,13 @@
+schema_version: two-stage-execution/v1
+session:
+  mode: same-workspace-same-pi-session
+  transcript_materialization: forbidden
+  resume_failure: execution-unhealthy
+stage_1: { prompt_path: public/task.md, max_duration_minutes: 15 }
+stage_2: { prompt_path: public/stage-2/task.md, max_duration_minutes: 15 }
+snapshot:
+  root: app
+  exclude: [node_modules, dist, test-results, logs]
+  hash_algorithm: sha256
+dependencies: { immutable_inputs: [package.json, bun.lock] }
+saturation: { high_pass_rate: 0.8, conclusion: saturated/no-discriminability }

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "two-stage-execution.schema.json",
+  "title": "Private two-stage execution declaration",
+  "type": "object",
+  "required": ["schema_version", "session", "stage_1", "stage_2", "snapshot", "dependencies", "saturation"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "two-stage-execution/v1" },
+    "session": {
+      "type": "object", "required": ["mode", "transcript_materialization", "resume_failure"], "additionalProperties": false,
+      "properties": { "mode": { "const": "same-workspace-same-pi-session" }, "transcript_materialization": { "const": "forbidden" }, "resume_failure": { "const": "execution-unhealthy" } }
+    },
+    "stage_1": { "$ref": "#/$defs/stage" },
+    "stage_2": { "$ref": "#/$defs/stage" },
+    "snapshot": {
+      "type": "object", "required": ["root", "exclude", "hash_algorithm"], "additionalProperties": false,
+      "properties": { "root": { "const": "app" }, "exclude": { "type": "array", "items": { "type": "string" } }, "hash_algorithm": { "const": "sha256" } }
+    },
+    "dependencies": {
+      "type": "object", "required": ["immutable_inputs"], "additionalProperties": false,
+      "properties": { "immutable_inputs": { "type": "array", "items": { "enum": ["package.json", "bun.lock"] } } }
+    },
+    "saturation": {
+      "type": "object", "required": ["high_pass_rate", "conclusion"], "additionalProperties": false,
+      "properties": { "high_pass_rate": { "const": 0.8 }, "conclusion": { "const": "saturated/no-discriminability" } }
+    }
+  },
+  "$defs": { "stage": { "type": "object", "required": ["prompt_path", "max_duration_minutes"], "additionalProperties": false, "properties": { "prompt_path": { "type": "string", "pattern": "^public/" }, "max_duration_minutes": { "const": 15 } } } }
+}

@@ -4,10 +4,12 @@ import { isAbsolute, join } from "node:path";
 import { hash, materialize, registerMaterializer } from "./kernel/core/v1/core";
 import { resolveCalibrationSets } from "./kernel/core/v1/calibration-fixtures";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
+import { isGeneratedWorkspacePath } from "./kernel/profiles/shared/workspace-generated/v1";
 import { materializeNodeTs, materializeReactVite, nodeTsKind, reactViteKind } from "./kernel/materializers";
 import { resolveInjectionCalibration as resolveInjectionCalibrationV1 } from "./kernel/profiles/injection-calibration/v1/runtime";
 import { resolveInjectionCalibration as resolveInjectionCalibrationV2 } from "./kernel/profiles/injection-calibration/v2/runtime";
 import { resolveSkillTrigger } from "./kernel/profiles/skill-trigger-orchestration/v1/runtime";
+import { resolveTwoStageInjectionCalibration } from "./kernel/profiles/two-stage-injection-calibration/v1/runtime";
 import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256File, sha256Text, workspaceRoot } from "./fs";
 import { discoverTasks, type TaskLocation } from "./task-discovery";
 
@@ -96,8 +98,8 @@ async function snapshotFiles(target: SnapshotTarget, profile?: string): Promise<
   const included = files.filter((file) => {
     if (file === "private/snapshot.json") return false;
     const segments = file.split("/");
-    if (isGeneratedOutput(segments)) return false;
-    if ((profile === "injection-calibration/v1" || profile === "injection-calibration/v2") && file.startsWith("private/practices/")) return false;
+    if (profile === "two-stage-injection-calibration/v1" ? isGeneratedWorkspacePath(segments.join("/")) : isGeneratedOutput(segments)) return false;
+    if ((profile === "injection-calibration/v1" || profile === "injection-calibration/v2" || profile === "two-stage-injection-calibration/v1") && file.startsWith("private/practices/")) return false;
     // 证据索引在候选输入执行后才写入，不得使该输入对应的快照失效。
     return target.kind !== "incubator-candidate" || !file.startsWith("private/evidence-index/");
   }).sort();
@@ -180,7 +182,7 @@ async function readKernelDeclaration(target: SnapshotTarget): Promise<KernelReso
   if (!isRecord(doc.kernel)) throw new Error(`Invalid kernel declaration in ${relativePath(manifestPath)}`);
   const kernel = doc.kernel;
   if (kernel.core !== "v1") throw new Error(`Unsupported kernel core in ${relativePath(manifestPath)}: ${String(kernel.core)}`);
-  if (kernel.profile !== "injection-calibration/v1" && kernel.profile !== "injection-calibration/v2" && kernel.profile !== "treatment-comparison/v1" && kernel.profile !== "skill-trigger-orchestration/v1") throw new Error(`Unsupported kernel profile in ${relativePath(manifestPath)}: ${String(kernel.profile)}`);
+  if (kernel.profile !== "injection-calibration/v1" && kernel.profile !== "injection-calibration/v2" && kernel.profile !== "treatment-comparison/v1" && kernel.profile !== "skill-trigger-orchestration/v1" && kernel.profile !== "two-stage-injection-calibration/v1") throw new Error(`Unsupported kernel profile in ${relativePath(manifestPath)}: ${String(kernel.profile)}`);
   if (kernel.materializer_kind !== reactViteKind && kernel.materializer_kind !== nodeTsKind) throw new Error(`Unsupported materializer_kind in ${relativePath(manifestPath)}: ${String(kernel.materializer_kind)}`);
   return {
     declaration: { core: "v1", profile: kernel.profile, materializer_kind: kernel.materializer_kind },
@@ -219,7 +221,9 @@ async function computeResolvedSnapshot(target: SnapshotTarget, resolution: Kerne
       ? (await (declaration.profile === "injection-calibration/v2" ? resolveInjectionCalibrationV2 : resolveInjectionCalibrationV1)(target.path)).profile_input_hash
       : declaration.profile === "skill-trigger-orchestration/v1"
         ? (await resolveSkillTrigger(target.path)).profile_input_hash
-        : undefined;
+        : declaration.profile === "two-stage-injection-calibration/v1"
+          ? (await resolveTwoStageInjectionCalibration(target.path)).profile_input_hash
+          : undefined;
     return {
       core_version: resolved.coreVersion,
       core_hash: resolved.coreHash,

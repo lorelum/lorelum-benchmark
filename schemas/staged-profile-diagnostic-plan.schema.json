@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "staged-profile-diagnostic-plan.schema.json",
+  "title": "Staged profile diagnostic plan",
+  "type": "object",
+  "required": ["schema_version", "id", "schedule_seed", "schedule_algorithm", "dry_run", "repetitions", "conditions", "candidates"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "staged-profile-diagnostic-plan/v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "schedule_seed": { "type": "string", "minLength": 1 },
+    "schedule_algorithm": { "const": "cyclic-latin-square/v1" },
+    "dry_run": { "type": "boolean" },
+    "repetitions": { "type": "integer", "multipleOf": 3, "minimum": 3 },
+    "conditions": { "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true, "items": { "enum": ["baseline", "oracle-practice", "irrelevant-practice"] } },
+    "candidates": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["id", "path", "source_commit", "snapshot_id", "profile_input_hash"], "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 }, "path": { "type": "string", "pattern": "^incubator/" },
+          "source_commit": { "type": "string", "minLength": 1 }, "snapshot_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "profile_input_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    }
+  }
+}
