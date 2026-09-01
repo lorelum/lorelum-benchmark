@@ -1,4 +1,5 @@
-import { readdir, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run, type CommandResult } from "../preflight";
 import type { SemanticLabel } from "../../../../evaluator/two-stage-structure/v1/types";
@@ -75,24 +76,31 @@ export type StagedPilotSemanticConfig = {
   timeout_ms: number;
 };
 
-/** Semantic adapter invoking the candidate-declared offline oracle; its runtime is excluded from stage model budgets. */
+/** Semantic adapter invoking the candidate-declared offline oracle; its runtime is excluded from stage model budgets. The oracle runs `bun test` inside the app, which may append runtime artifacts (e.g. ledger journals), so it evaluates a throwaway copy to keep the workspace byte-identical for the Stage 1 snapshot contract. */
 export function productionStagedSemanticAdapter(config: StagedPilotSemanticConfig, commandRunner: (command: string[], cwd: string, timeoutMs?: number) => Promise<CommandResult> = run): StagedSemanticAdapter {
   return {
     evaluate: async (stage, app): Promise<SemanticLabel> => {
-      const result = await commandRunner(
-        ["bun", "run", config.evaluator_path, String(stage), app],
-        config.candidate_path,
-        config.timeout_ms,
-      );
-      if (result.code === 0) {
-        for (const line of result.stdout.split(/\r?\n/).reverse()) {
-          try {
-            const value = JSON.parse(line) as unknown;
-            if (value && typeof value === "object" && (value as Record<string, unknown>).semantic === "pass") return "pass";
-          } catch { /* trailing non-JSON output */ }
+      const staging = await mkdtemp(join(tmpdir(), "staged-semantic-"));
+      try {
+        const evaluatedApp = join(staging, "app");
+        await cp(app, evaluatedApp, { recursive: true });
+        const result = await commandRunner(
+          ["bun", "run", config.evaluator_path, String(stage), evaluatedApp],
+          config.candidate_path,
+          config.timeout_ms,
+        );
+        if (result.code === 0) {
+          for (const line of result.stdout.split(/\r?\n/).reverse()) {
+            try {
+              const value = JSON.parse(line) as unknown;
+              if (value && typeof value === "object" && (value as Record<string, unknown>).semantic === "pass") return "pass";
+            } catch { /* trailing non-JSON output */ }
+          }
         }
+        return "fail";
+      } finally {
+        await rm(staging, { recursive: true, force: true });
       }
-      return "fail";
     },
   };
 }

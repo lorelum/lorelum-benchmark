@@ -66,12 +66,35 @@ test("adapter fails closed on resume id mismatch, non-zero exit, and timeout", a
 
 test("semantic adapter maps oracle success to pass and everything else to fail", async () => {
   const root = await temp();
+  const app = join(root, "app");
+  await mkdir(app, { recursive: true });
+  await writeFile(join(app, "src.ts"), "export const app = 1;\n");
   const pass = productionStagedSemanticAdapter({ candidate_path: root, evaluator_path: "evaluate.ts", timeout_ms: 1_000 }, fakeRunner(() => '{"stage":1,"semantic":"pass"}\n').runner);
   expect(await pass.evaluate(1, join(root, "app"))).toBe("pass");
   const failing = productionStagedSemanticAdapter({ candidate_path: root, evaluator_path: "evaluate.ts", timeout_ms: 1_000 }, fakeRunner(() => "stage 1 public tests failed\n", { code: 1 }).runner);
   expect(await failing.evaluate(1, join(root, "app"))).toBe("fail");
   const silent = productionStagedSemanticAdapter({ candidate_path: root, evaluator_path: "evaluate.ts", timeout_ms: 1_000 }, fakeRunner(() => "").runner);
   expect(await silent.evaluate(2, join(root, "app"))).toBe("fail");
+});
+
+test("semantic adapter evaluates a throwaway copy and never mutates the app", async () => {
+  const root = await temp();
+  const app = join(root, "app");
+  await mkdir(app, { recursive: true });
+  await writeFile(join(app, "usage.jsonl"), "");
+  const before = (await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: app, onlyFiles: true }))).sort();
+  let evaluatedPath = "";
+  const runner = (async (command: string[]) => {
+    evaluatedPath = command[command.length - 1];
+    // Simulate the oracle's `bun test` appending a runtime artifact.
+    await writeFile(join(evaluatedPath, "usage.jsonl"), "ledger-entry\n");
+    return { code: 0, stdout: '{"stage":1,"semantic":"pass"}\n', stderr: "", timedOut: false, durationMs: 1 };
+  }) as unknown as (command: string[], cwd: string, timeoutMs?: number) => Promise<CommandResult>;
+  const adapter = productionStagedSemanticAdapter({ candidate_path: root, evaluator_path: "evaluate.ts", timeout_ms: 1_000 }, runner);
+  expect(await adapter.evaluate(1, app)).toBe("pass");
+  expect(evaluatedPath).not.toStartWith(app);
+  expect(await Bun.file(join(app, "usage.jsonl")).text()).toBe("");
+  expect((await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: app, onlyFiles: true }))).sort()).toEqual(before);
 });
 
 test("timeout drill reports termination only when the runner times out", async () => {

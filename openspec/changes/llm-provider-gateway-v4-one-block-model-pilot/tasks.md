@@ -26,5 +26,7 @@
 - [x] 5.0 诊断 r1 两个无效观测根因：irrelevant-practice 为真实 Stage 1 语义失败（titan 记账字段错误）；baseline 为模型将预算耗在全盘探索后超时（write scope: verification.md）
 - [x] 5.1 修复 runner 隔离缺陷：attempt artifacts 与 workspace 分离到不同 sibling 根目录，agent 的 `..` 不再直接暴露 transcript（write scope: `src/benchmark/runner/pi/v2/staged/`）
 - [x] 5.2 driver 支持 `--blocks N` 多 diagnostic block，按 3 的倍数扩展 Latin-square（write scope: 同上）
-- [ ] 5.3 跑 focused tests / contracts / validate / strict / diff 检查并执行 r2（2 blocks，6 attempts，不重跑 r1）
-- [ ] 5.4 汇总 r1+r2 全部 attempt 的 redacted diagnostic summary
+- [x] 5.3 跑 focused tests / contracts / validate / strict / diff 检查并执行 r2（2 blocks，6 attempts，不重跑 r1）
+- [x] 5.4 诊断 r2 的 stage-1-snapshot-mismatch 根因：semantic oracle 的 `bun test` 在 snapshot 后向 app 追加 `usage.jsonl` 运行时账本；修复为 semantic adapter 在一次性副本上评估（write scope: `src/benchmark/runner/pi/v2/staged/staged-pilot-pi-adapter.ts`）
+- [ ] 5.5 执行 r3（2 blocks，6 attempts，验证修复后的执行健康；r1/r2 结果保留不重跑）
+- [ ] 5.6 汇总 r1+r2+r3 全部 attempt 的 redacted diagnostic summary
