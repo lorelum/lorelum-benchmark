@@ -90,5 +90,7 @@ test("rejects stale hash, stale length, escaping target, and changed session sem
 
 test("generated path helper excludes runner artifacts", () => {
   expect(isGeneratedTwoStagePath("app/node_modules/package/index.js")).toBe(true);
+  expect(isGeneratedTwoStagePath("app/coverage/lcov.info")).toBe(true);
+  expect(isGeneratedTwoStagePath("app/logs/run.log")).toBe(true);
   expect(isGeneratedTwoStagePath("app/src/server.ts")).toBe(false);
 });

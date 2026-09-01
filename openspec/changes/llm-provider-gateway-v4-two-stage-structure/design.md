@@ -101,3 +101,7 @@ The following must be answered by the requester and written back to issue #185, 
 ### Review hardening
 
 The declared semantic oracle commands execute from the candidate root with positional stage arguments. The staged cyclic Latin square consumes `schedule_seed` as a deterministic rotation input while preserving per-candidate condition balance.
+
+### Second-round quality hardening
+
+Review hardening introduced two versioned shared helpers for new profile runtimes: primitive/YAML/path validation and the canonical generated-workspace directory contract. Frozen `injection-calibration/v1|v2` runtimes remain unchanged. The two-stage snapshot, leakage scan, structure scan, and profile snapshot policy now use that canonical contract, while attempt summaries carry explicit condition identity and staged fail-closed reports use one report factory. Offline calibration now executes its declared `extends` inheritance and keeps fixture overlays as true deltas; SHA-256 handling reuses the canonical benchmark filesystem helpers.

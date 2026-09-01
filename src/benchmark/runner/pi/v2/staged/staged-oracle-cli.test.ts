@@ -11,14 +11,32 @@ test("declared Stage 1 and Stage 2 oracle commands execute without model calls",
   const oracle = Bun.YAML.parse(await Bun.file(join(candidate, "private/oracle.yaml")).text()) as {
     semantic_oracle: Record<"stage_1" | "stage_2", { command: string; expected: string }>;
   };
-  const workspace = await mkdtemp(join(tmpdir(), "staged-oracle-cli-"));
+  const workspace = await mkdtemp(join(tmpdir(), "staged oracle cli spaces-"));
   roots.push(workspace);
 
   await cp(join(candidate, "public/starter/app"), join(workspace, "stage-1", "app"), { recursive: true });
+  await cp(resolve("incubator/calibration-bases/two-stage-injection-calibration/v1/node-ts/app-shell/v1/source"), join(workspace, "stage-2", "app"), { recursive: true });
   await cp(join(candidate, "private/calibration/sets/two-stage-structure/v1/overlays/oracle-reference"), join(workspace, "stage-2", "app"), { recursive: true });
+  function commandArgv(command: string): string[] {
+    const arguments_: string[] = [];
+    let current = "";
+    let quote: string | null = null;
+    for (const character of command) {
+      if (quote) {
+        if (character === quote) quote = null;
+        else current += character;
+      } else if (character === "\"" || character === "'") quote = character;
+      else if (character === " ") {
+        if (current) arguments_.push(current);
+        current = "";
+      } else current += character;
+    }
+    if (current) arguments_.push(current);
+    return arguments_;
+  }
   const run = (command: string, stage: string) => {
-    const argv = command.replaceAll("<workspace>", join(workspace, stage)).split(" ");
-    return Bun.spawnSync(argv, { cwd: candidate, stdout: "pipe", stderr: "pipe" });
+    const workspacePath = join(workspace, stage).replaceAll("'", "'\\''");
+    return Bun.spawnSync(commandArgv(command.replaceAll("<workspace>", `'${workspacePath}'`)), { cwd: candidate, stdout: "pipe", stderr: "pipe" });
   };
   const stage1 = run(oracle.semantic_oracle.stage_1.command, "stage-1");
   const stage2 = run(oracle.semantic_oracle.stage_2.command, "stage-2");

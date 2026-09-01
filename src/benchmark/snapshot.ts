@@ -4,6 +4,7 @@ import { isAbsolute, join } from "node:path";
 import { hash, materialize, registerMaterializer } from "./kernel/core/v1/core";
 import { resolveCalibrationSets } from "./kernel/core/v1/calibration-fixtures";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
+import { isGeneratedWorkspacePath } from "./kernel/profiles/shared/workspace-generated/v1";
 import { materializeNodeTs, materializeReactVite, nodeTsKind, reactViteKind } from "./kernel/materializers";
 import { resolveInjectionCalibration as resolveInjectionCalibrationV1 } from "./kernel/profiles/injection-calibration/v1/runtime";
 import { resolveInjectionCalibration as resolveInjectionCalibrationV2 } from "./kernel/profiles/injection-calibration/v2/runtime";
@@ -97,7 +98,7 @@ async function snapshotFiles(target: SnapshotTarget, profile?: string): Promise<
   const included = files.filter((file) => {
     if (file === "private/snapshot.json") return false;
     const segments = file.split("/");
-    if (isGeneratedOutput(segments)) return false;
+    if (profile === "two-stage-injection-calibration/v1" ? isGeneratedWorkspacePath(segments.join("/")) : isGeneratedOutput(segments)) return false;
     if ((profile === "injection-calibration/v1" || profile === "injection-calibration/v2" || profile === "two-stage-injection-calibration/v1") && file.startsWith("private/practices/")) return false;
     // 证据索引在候选输入执行后才写入，不得使该输入对应的快照失效。
     return target.kind !== "incubator-candidate" || !file.startsWith("private/evidence-index/");

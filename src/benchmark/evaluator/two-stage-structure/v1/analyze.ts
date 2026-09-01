@@ -1,7 +1,8 @@
-import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
 import ts from "typescript";
+import { sha256File, sha256Text } from "../../../fs";
+import { isGeneratedWorkspacePath } from "../../../kernel/profiles/shared/workspace-generated/v1";
 import type {
   StructureCheck,
   StructureCheckId,
@@ -25,7 +26,6 @@ type Declaration = {
   evidence: Set<string>;
 };
 
-const generated = new Set(["node_modules", "dist", ".git", "coverage", "test-results"]);
 const networkSignals = ["fetch(", "http.request", "https.request", "new request", "xmlhttprequest", "axios"];
 const ledgerSignals = [".jsonl", "appendfile", "usage", "cost", "billing", "charge", "latency_ms", "trace_id"];
 const policySignals = ["retry", "fallback", "timeout", "budget", "idempot", "semaphore", "mutex", "reservation", "concurren"];
@@ -35,16 +35,12 @@ function normalized(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function hashText(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
-
 async function productionFiles(root: string): Promise<string[]> {
   const output: string[] = [];
   async function walk(current: string): Promise<void> {
     const entries = await readdir(current, { withFileTypes: true });
     for (const entry of entries) {
-      if (generated.has(entry.name)) continue;
+      if (isGeneratedWorkspacePath(entry.name)) continue;
       const path = join(current, entry.name);
       if (entry.isDirectory()) await walk(path);
       else if (entry.isFile() && /\.(ts|tsx)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) output.push(path);
@@ -71,7 +67,7 @@ function declarationIdentity(node: ts.Node, file: string, source: ts.SourceFile)
   return `${file}::<${line + 1}:${character + 1}>`;
 }
 
-function collectDeclaration(node: ts.Node, file: string, source: ts.SourceFile): Declaration | null {
+async function collectDeclaration(node: ts.Node, file: string, source: ts.SourceFile): Promise<Declaration | null> {
   const isDeclaration = ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isMethodDeclaration(node)
     || ts.isVariableStatement(node) || ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)
     || ts.isEnumDeclaration(node);
@@ -112,7 +108,7 @@ function collectDeclaration(node: ts.Node, file: string, source: ts.SourceFile):
   };
   visit(node);
   const stripped = node.getText(source).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
-  declaration.normalizedHash = hashText(normalized(stripped));
+  declaration.normalizedHash = await sha256Text(normalized(stripped));
   if (declaration.roles.size === 0) declaration.roles.add("unknown");
   return declaration;
 }
@@ -132,16 +128,18 @@ export async function analyzeSource(root: string): Promise<{ files: string[]; de
       continue;
     }
     if (source.parseDiagnostics.length > 0) reasons.push(`parse-error:${file}`);
-    const collect = (node: ts.Node): void => {
-      const declaration = collectDeclaration(node, file, source);
+    const collect = async (node: ts.Node): Promise<void> => {
+      const declaration = await collectDeclaration(node, file, source);
       if (declaration) declarations.push(declaration);
     };
-    source.forEachChild((statement) => {
-      collect(statement);
-      if (ts.isClassDeclaration(statement)) statement.forEachChild((member) => {
-        if (ts.isMethodDeclaration(member)) collect(member);
-      });
-    });
+    for (const statement of source.statements) {
+      await collect(statement);
+      if (ts.isClassDeclaration(statement)) {
+        for (const member of statement.members) {
+          if (ts.isMethodDeclaration(member)) await collect(member);
+        }
+      }
+    }
   }
   return { files, declarations, reasons };
 }
@@ -196,7 +194,9 @@ function dominantRole(declaration: Declaration): Role {
   return "unknown";
 }
 
-function structuralChecks(stage1: ReturnType<typeof analyzeSource> extends Promise<infer T> ? T : never, stage2: ReturnType<typeof analyzeSource> extends Promise<infer T> ? T : never): StructureCheck[] {
+type SourceAnalysis = Awaited<ReturnType<typeof analyzeSource>>;
+
+function structuralChecks(stage1: SourceAnalysis, stage2: SourceAnalysis, structureMetrics: StructureMetrics): StructureCheck[] {
   if (stage1.reasons.length > 0 || stage2.reasons.length > 0) {
     return ["handler-stability", "transport-isolation", "policy-continuity", "ledger-continuity", "provider-extension-locality", "diff-classifiability"]
       .map((id) => check(id as StructureCheckId, "indeterminate", "source classification ambiguity"));
@@ -218,7 +218,7 @@ function structuralChecks(stage1: ReturnType<typeof analyzeSource> extends Promi
   ));
   const transportIsolated = transports(stage2).length >= 2 && crossedBoundary.length === 0 && handlerStable;
   const locality = transports(stage2).length >= 2 && changed.every((declaration) => ["transport", "registry", "handler"].includes(dominantRole(declaration)));
-  const share = metrics(stage1.declarations, stage2.declarations).maximum_single_file_edit_share;
+  const share = structureMetrics.maximum_single_file_edit_share;
   const roleEvidence = new Set(changed.map((declaration) => dominantRole(declaration)));
   const classifiable = changed.length === 0 || !roleEvidence.has("unknown");
   return [
@@ -235,7 +235,7 @@ async function verifySnapshot(root: string, files: { path: string; sha256: strin
   for (const expected of files) {
     try {
       const content = await readFile(join(root, expected.path));
-      if (createHash("sha256").update(content).digest("hex") !== expected.sha256) return false;
+      if (await sha256File(join(root, expected.path)) !== expected.sha256) return false;
     } catch {
       return false;
     }
@@ -246,21 +246,21 @@ async function verifySnapshot(root: string, files: { path: string; sha256: strin
 export async function evaluateTwoStageStructure(input: StructureEvaluationInput): Promise<StructureEvaluationResult> {
   const [stage1, stage2] = await Promise.all([analyzeSource(input.stage_1_root), analyzeSource(input.stage_2_root)]);
   const snapshotValid = await verifySnapshot(input.stage_1_root, input.stage_1_snapshot.files);
+  const structureMetrics = metrics(stage1.declarations, stage2.declarations);
   const checks: StructureCheck[] = [
     check("stage-1-semantic", input.semantic.stage_1 === "pass" ? "pass" : input.semantic.stage_1 === "fail" ? "fail" : "indeterminate", "stage 1 semantic gate"),
     check("stage-2-semantic", input.semantic.stage_2 === "pass" ? "pass" : input.semantic.stage_2 === "fail" ? "fail" : "indeterminate", "stage 2 semantic gate"),
     check("stage-1-snapshot-integrity", snapshotValid ? "pass" : "fail", snapshotValid ? "stage 1 snapshot matches immutable inputs" : "stage 1 snapshot mismatch"),
-    ...structuralChecks(stage1, stage2),
+    ...structuralChecks(stage1, stage2, structureMetrics),
   ];
   const snapshotUnhealthy = !snapshotValid;
   const structuralAmbiguous = checks.slice(3).some((entry) => entry.state === "indeterminate");
-  const structurePass = !snapshotUnhealthy && !structuralAmbiguous && input.semantic.stage_1 === "pass" && input.semantic.stage_2 === "pass"
-    && checks.filter((entry) => entry.id !== "stage-2-semantic" || input.semantic.stage_2 === "pass").every((entry) => entry.state === "pass");
+  const structurePass = checks.every((entry) => entry.state === "pass");
   return {
     schema_version: "two-stage-structure-result/v1",
     execution_health: snapshotUnhealthy ? "execution-unhealthy" : "evaluated",
     checks,
-    metrics: metrics(stage1.declarations, stage2.declarations),
+    metrics: structureMetrics,
     structure_pass: structurePass,
   };
 }

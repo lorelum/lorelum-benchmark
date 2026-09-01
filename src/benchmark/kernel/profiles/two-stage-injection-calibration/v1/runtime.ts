@@ -1,5 +1,7 @@
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { sha256File, sha256Text } from "../../../../fs";
+import { profileValidator } from "../../shared/profile-validation/v1";
+import { isGeneratedWorkspacePath } from "../../shared/workspace-generated/v1";
 import type {
   DeclaredCondition,
   DeliveryTemplate,
@@ -18,49 +20,14 @@ import type {
 } from "./types";
 
 const conditionIds: TwoStageConditionId[] = ["baseline", "oracle-practice", "irrelevant-practice"];
-const generatedDirectories = new Set(["node_modules", "dist", "test-results", "playwright-report", ".git", ".vite", ".run-workspaces", "logs"]);
-
-function fail(message: string): never {
-  throw new Error(`Invalid two-stage-injection-calibration/v1 profile: ${message}`);
-}
-
-function record(value: unknown, label: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) fail(`${label} must be an object`);
-  return value as Record<string, unknown>;
-}
-
-function text(value: unknown, label: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) fail(`${label} must be a non-empty string`);
-  return value;
-}
-
-function number(value: unknown, label: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) fail(`${label} must be a finite number`);
-  return value;
-}
-
-function stringArray(value: unknown, label: string): string[] {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.length === 0)) fail(`${label} must be a string array`);
-  return value as string[];
-}
-
-async function readYaml<T>(path: string, label: string): Promise<T> {
-  const file = Bun.file(path);
-  if (!(await file.exists())) fail(`${label} is missing`);
-  try {
-    return Bun.YAML.parse(await file.text()) as T;
-  } catch (error) {
-    fail(`${label} is invalid YAML: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-function relativeCandidatePath(candidatePath: string, declared: string, label: string): string {
-  if (isAbsolute(declared) || declared.includes("\\")) fail(`${label} must be a relative POSIX path`);
-  const resolvedPath = resolve(candidatePath, declared);
-  const candidateRelative = relative(candidatePath, resolvedPath);
-  if (!candidateRelative || candidateRelative.startsWith("..") || isAbsolute(candidateRelative)) fail(`${label} escapes the candidate`);
-  return resolvedPath;
-}
+const validator = profileValidator("two-stage-injection-calibration/v1");
+const fail = validator.fail;
+const record = validator.record;
+const text = validator.text;
+const number = validator.number;
+const stringArray = validator.stringArray;
+const readYaml = validator.readYaml;
+const relativeCandidatePath = validator.relativeInside;
 
 function validateReferencePath(candidatePath: string, referencePath: string): string {
   const resolved = relativeCandidatePath(candidatePath, referencePath, "practice path");
@@ -245,5 +212,5 @@ export function redactedTwoStageTrace(profile: ResolvedTwoStageProfile, payload:
 }
 
 export function isGeneratedTwoStagePath(relativePath: string): boolean {
-  return relativePath.split("/").some((segment) => generatedDirectories.has(segment));
+  return isGeneratedWorkspacePath(relativePath);
 }

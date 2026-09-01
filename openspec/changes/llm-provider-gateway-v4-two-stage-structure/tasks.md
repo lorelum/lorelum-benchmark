@@ -84,3 +84,12 @@
 - [x] 9.2 Remove private acceptance vocabulary from the Stage 2 agent-visible prompt and refresh candidate identity.
 - [x] 9.3 Apply `schedule_seed` as the deterministic cyclic rotation input and test seed sensitivity plus balance.
 - [x] 9.4 Bind runner prompt text and invocation prompt paths to the declared public prompt paths and fail execution health on mismatch.
+
+## 10. Second-round quality hardening
+
+- [x] 10.1 Extract a versioned shared profile validator without modifying frozen injection profiles.
+- [x] 10.2 Canonicalize generated workspace paths across profile, snapshot, leakage scan, and structure scan.
+- [x] 10.3 Make staged condition identity explicit in attempt reports and summaries.
+- [x] 10.4 Replace repeated staged report literals with a single report factory.
+- [x] 10.5 Execute calibration inheritance and reduce overlays to true deltas.
+- [x] 10.6 Reuse canonical SHA-256 helpers and harden declared CLI execution tests.
