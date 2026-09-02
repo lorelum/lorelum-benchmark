@@ -14,8 +14,8 @@ export const stagedPilotScheduleSeed = "llm-provider-gateway-v4-one-block-model-
 const stagedPilotTools = "read,bash,edit,write,grep,find,ls";
 const semanticTimeoutMs = 10 * 60_000;
 const stageInstruction: Record<1 | 2, string> = {
-  1: "Complete the Stage 1 coding task described in @task.md. Work only inside app/.",
-  2: "Complete the Stage 2 maintenance change described in @task.md. Work only inside app/ and preserve the public API and accounting semantics.",
+  1: "Complete the Stage 1 coding task described in @task.md. Everything you need (docs, source, tests) is already inside app/. Work only inside app/: do not read, list, or search anything outside app/, do not modify package.json or bun.lock, and do not run package installs. Dependencies are already satisfied; run the tests with `bun test` inside app/.",
+  2: "Complete the Stage 2 maintenance change described in @task.md. Preserve the public API and accounting semantics. Work only inside app/: do not read, list, or search anything outside app/, do not modify package.json or bun.lock, and do not run package installs. Dependencies are already satisfied; run the tests with `bun test` inside app/.",
 };
 
 type CandidateFacts = {
