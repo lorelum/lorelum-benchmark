@@ -15,5 +15,5 @@
 
 ## 授权执行（#192，仅 preflight 全通过后）
 
-- [ ] 4.0 执行一次 `--blocks 5` 真实模型 screen（15 attempts，flash 档，no judge / no retry / no rerun），产出 redacted summary、per-block 配对表与四值结论，回写 verification 与 #192
-- [ ] 4.1 中文判读 summary（含各条件逐 attempt 结果、配对表、结论与其依据、diagnostic-only 声明与下一步建议）
+- [x] 4.0 执行一次 `--blocks 5` 真实模型 screen（15 attempts，flash 档，no judge / no retry / no rerun），产出 redacted summary、per-block 配对表与四值结论，回写 verification 与 #192
+- [x] 4.1 中文判读 summary（含各条件逐 attempt 结果、配对表、结论与其依据、diagnostic-only 声明与下一步建议）

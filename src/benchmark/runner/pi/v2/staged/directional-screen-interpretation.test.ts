@@ -79,6 +79,17 @@ test("indeterminate and unhealthy attempts stay in the denominator as non-pass",
   expect(result.conclusion).toBe("directional");
 });
 
+test("natural blocks are consecutive-repetition triples covering each condition once", () => {
+  const attempts = screen([[true, false, false], [true, false, false], [true, false, false], [true, false, false], [true, false, false]])
+    .map((attempt, index) => ({ ...attempt, block: Math.ceil((index + 1) / 3) }));
+  const result = interpretDirectionalScreen(attempts as never);
+  expect(result.blocks.map((entry) => entry.block)).toEqual([1, 2, 3, 4, 5]);
+  expect(result.conclusion).toBe("directional");
+  for (const entry of result.blocks) {
+    expect([entry.oracle_structure_pass, entry.baseline_structure_pass, entry.irrelevant_structure_pass]).toEqual([true, false, false]);
+  }
+});
+
 test("unknown conditions are rejected", () => {
   expect(() => interpretDirectionalScreen([{ ...attempt({ condition_id: "baseline", block: 1 }, true), condition_id: "surprise" as never }])).toThrow("unknown screen condition");
   expect(screenConditions).toEqual(["baseline", "oracle-practice", "irrelevant-practice"]);

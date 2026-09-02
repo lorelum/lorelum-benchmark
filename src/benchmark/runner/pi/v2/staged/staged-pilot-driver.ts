@@ -237,7 +237,10 @@ export async function executeStagedPilot(options: { mode: "preflight" | "dry-run
   const reports: StagedPilotRun["attempts"] = [];
   for (const [index, attempt] of context.attempts.entries()) {
     const report = await runScheduledAttempt(context, attempt, index, options.outputRoot, options.mode === "dry-run");
-    reports.push({ ...report, attempt_id: `${options.run_id}-${String(index + 1).padStart(2, "0")}-${attempt.condition}`, block: attempt.block });
+    // The plan numbers each repetition as a "block"; for a single candidate the
+    // natural screen block is three consecutive repetitions covering each
+    // condition exactly once under the cyclic rotation.
+    reports.push({ ...report, attempt_id: `${options.run_id}-${String(index + 1).padStart(2, "0")}-${attempt.condition}`, block: Math.ceil(attempt.block / stagedConditions.length) });
   }
   return {
     schema_version: "staged-pilot-run/v1",
