@@ -185,6 +185,32 @@
         "stage-2-semantic": "fail",
         "transport-isolation": "fail"
       }
+    },
+    {
+      "id": "registry-map-extension",
+      "passed": true,
+      "observed": {
+        "stage-1-semantic": "pass",
+        "stage-2-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "handler-stability": "pass",
+        "transport-isolation": "pass",
+        "policy-continuity": "pass",
+        "ledger-continuity": "pass",
+        "provider-extension-locality": "pass",
+        "diff-classifiability": "pass"
+      },
+      "expected": {
+        "diff-classifiability": "pass",
+        "handler-stability": "pass",
+        "ledger-continuity": "pass",
+        "policy-continuity": "pass",
+        "provider-extension-locality": "pass",
+        "stage-1-semantic": "pass",
+        "stage-1-snapshot-integrity": "pass",
+        "stage-2-semantic": "pass",
+        "transport-isolation": "pass"
+      }
     }
   ]
 }

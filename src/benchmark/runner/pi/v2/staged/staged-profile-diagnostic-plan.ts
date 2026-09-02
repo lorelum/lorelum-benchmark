@@ -31,11 +31,11 @@ export type ScheduledStagedAttempt = Omit<StagedPlanCandidate, "path"> & {
   condition: StagedCondition;
 };
 
-function record(value: unknown, label: string): Record<string, unknown> {
+export function record(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object`);
   return value as Record<string, unknown>;
 }
-function text(value: unknown, label: string): string {
+export function text(value: unknown, label: string): string {
   if (typeof value !== "string" || value.length === 0) throw new Error(`${label} must be a non-empty string`);
   return value;
 }

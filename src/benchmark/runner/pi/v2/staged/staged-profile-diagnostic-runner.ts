@@ -51,7 +51,7 @@ export type StagedAttemptReport = {
   session_id?: string;
   stage_1_snapshot?: Stage1Snapshot;
   structure?: StructureEvaluationResult;
-  termination?: "condition-binding" | "prompt-binding" | "stage-1-semantic" | "dependency-mutation" | "stage-1-snapshot-mismatch" | "session-resume";
+  termination?: "condition-binding" | "prompt-binding" | "stage-1-semantic" | "dependency-mutation" | "stage-1-snapshot-mismatch" | "session-resume" | "pi-execution";
   planned_denominator: number;
   transcript_in_workspace?: boolean;
   redacted_trace?: RedactedTwoStageTrace;
@@ -187,6 +187,28 @@ export async function runStagedDiagnosticAttempt(options: StagedAttemptOptions):
     transcript_in_workspace: await contains(app, "session-header"),
   });
 }
+export type StagedAttemptTermination = NonNullable<StagedAttemptReport["termination"]>;
+
+/** Single owner of the failure-report shape for staged attempts, so callers recording execution failures (for example a pilot driver whose Pi adapter throws) cannot drift from the runner's own report factory. */
+export function stagedAttemptFailureReport(
+  condition_id: TwoStageConditionId,
+  termination: StagedAttemptTermination,
+  redacted_trace?: RedactedTwoStageTrace,
+): StagedAttemptReport {
+  return {
+    schema_version: "staged-runner-attempt/v1",
+    condition_id,
+    execution_health: "execution-unhealthy",
+    stage_1_semantic: "not-run",
+    stage_2_semantic: "not-run",
+    session_binding: "not-started",
+    termination,
+    planned_denominator: 1,
+    transcript_in_workspace: false,
+    ...(redacted_trace ? { redacted_trace } : {}),
+  };
+}
+
 export type StagedConditionSummary = {
   condition: TwoStageConditionId;
   planned: number;

@@ -10,7 +10,7 @@ import type { Stage1Snapshot } from "../../../../../src/benchmark/evaluator/two-
 const candidate = resolve(import.meta.dirname, "..", "..");
 const stage1Root = join(candidate, "public/starter/app");
 const expectedRoot = join(candidate, "private/calibration/sets/two-stage-structure/v1/overlays");
-const fixtureIds = ["ambiguous-code", "anti-pattern", "baseline-scatter", "docs-present", "equivalent-reference", "oracle-reference", "public-starter"];
+const fixtureIds = ["ambiguous-code", "anti-pattern", "baseline-scatter", "docs-present", "equivalent-reference", "oracle-reference", "public-starter", "registry-map-extension"];
 
 async function manifest(): Promise<Stage1Snapshot> {
   const paths = (await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: stage1Root, onlyFiles: true }))).sort().filter(path => !isGeneratedWorkspacePath(path));
