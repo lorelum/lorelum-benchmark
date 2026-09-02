@@ -29,3 +29,18 @@ schedule_seed `llm-provider-gateway-v4-one-block-model-pilot/v1`，cyclic-latin-
 - 未调用 judge model；未重跑任何 attempt；3/3 attempts 保留在 planned denominator
 
 结论边界：one-block diagnostic smoke；不构成 directional-screen、Practice effect 或正式 benchmark 结论。
+
+## r2（run id `v4-blocks-r2-2026-09-01`，2 blocks / 6 attempts）
+
+- 4/6 以 `stage-1-snapshot-mismatch` 终止：根因是 semantic oracle 的 `bun test` 在 snapshot 之后向 app 追加 `usage.jsonl` 运行时账本（infra 缺陷，非模型行为）。1 个 oracle Stage 1 超时、1 个 baseline Stage 1 语义失败。
+- 修复：semantic adapter 改为在一次性副本上运行 oracle（`staged-pilot-pi-adapter.ts`），回归测试锁定「评估不改 workspace」。
+- 另修复：attempt artifacts 与 workspace 分离为独立 sibling 根目录（r1 中 baseline 模型曾尝试读取 `../artifacts/sessions/*.jsonl`）。
+
+## r3（run id `v4-blocks-r3-2026-09-01`，2 blocks / 6 attempts，修复后）
+
+- 5/6 evaluated、1 个 oracle Stage 1 超时（15 分钟预算终止）；session 全部 same-session；无 snapshot-mismatch。
+- 逐 attempt：
+  - 01 oracle / 02 irrelevant / 03 baseline：两阶段语义全 pass；checks：semantic/snapshot/handler/transport/policy/ledger 全 pass，`provider-extension-locality` fail，`diff-classifiability` indeterminate；metrics 均为 files=2、decls=3、handler=1、ledger=1、transport=1、replaced=1、ast=235、share=0.67；structure_pass=false。
+  - 05 irrelevant / 06 baseline：Stage 2 语义 fail（0 个生产文件变更，模型未实施维护变更）；diff-classifiability pass、transport-isolation fail、provider-extension-locality fail。
+- r1+r2+r3 合计 15 attempts：evaluated 10、execution-unhealthy 5（3 个 Stage 1 超时、1 个 r2 基线语义失败计入 evaluated、4 个 r2 snapshot-mismatch infra 缺陷）。结构全 pass 仅 r1-01（oracle）；无 indeterminate 被强行归一。
+- 结论边界不变：diagnostic-only；三条件间无可读结构差异信号（oracle 与对照在 r3 中结构画像一致），不构成 directional-screen / Practice effect / 正式结论。
