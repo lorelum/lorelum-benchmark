@@ -79,6 +79,30 @@ test("docs-only and unchanged starters cannot pass structure", async () => {
   expect(failed.structure_pass).toBe(false);
 });
 
+test("registry data tables and endpoint constants classify from executable use", async () => {
+  const first = await root(stage1);
+  const second = await root({
+    ...stage1,
+    "src/adapters/second.ts": `const SECOND_URL = "https://second.example";
+export async function callSecond(input: { message: string }): Promise<{ content: string }> {
+  const upstream = await fetch(SECOND_URL);
+  return { content: await upstream.text() };
+}
+`,
+    "src/adapters/registry.ts": `import { callFirst } from "./first";
+import { callSecond } from "./second";
+export const clients = {
+  first: { chat: callFirst },
+  second: { chat: callSecond },
+};
+`,
+  });
+  const result = await evaluate(first, second);
+  expect(result.checks.find((entry) => entry.id === "provider-extension-locality")?.state).toBe("pass");
+  expect(result.checks.find((entry) => entry.id === "diff-classifiability")?.state).toBe("pass");
+  expect(result.structure_pass).toBe(true);
+});
+
 test("malformed source is indeterminate, not forced pass or fail", async () => {
   const first = await root(stage1); const second = await root({ ...stage1, "src/adapters/second.ts": "export function broken(" });
   const result = await evaluate(first, second);

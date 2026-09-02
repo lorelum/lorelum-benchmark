@@ -44,3 +44,14 @@ schedule_seed `llm-provider-gateway-v4-one-block-model-pilot/v1`，cyclic-latin-
   - 05 irrelevant / 06 baseline：Stage 2 语义 fail（0 个生产文件变更，模型未实施维护变更）；diff-classifiability pass、transport-isolation fail、provider-extension-locality fail。
 - r1+r2+r3 合计 15 attempts：evaluated 10、execution-unhealthy 5（3 个 Stage 1 超时、1 个 r2 基线语义失败计入 evaluated、4 个 r2 snapshot-mismatch infra 缺陷）。结构全 pass 仅 r1-01（oracle）；无 indeterminate 被强行归一。
 - 结论边界不变：diagnostic-only；三条件间无可读结构差异信号（oracle 与对照在 r3 中结构画像一致），不构成 directional-screen / Practice effect / 正式结论。
+
+## r3 后续：两项前置问题的 bug 修复（需求方授权，按 bug 类直接修复，不另立 issue/change）
+
+1. **Stage 1 超时缓解（driver 级）**：收紧两阶段共享 stage instruction——禁止读写/搜索 app/ 之外、禁止改 package.json/bun.lock、禁止 install，明确依赖已就绪、用 `bun test` 验证。该 instruction 是 pilot driver 的执行约定（与 v2 runner 先例同层），非 candidate 题面，且三条件共享，不影响条件间对比。
+2. **structure analyzer 角色推断盲区（evaluator bug 修复）**：r3 所有完成两阶段的 attempt 均 locality fail / diff indeterminate。离线重放定位：`src/registry.ts::providers`（对象字面量值为含函数成员的对象）与 `src/halo-provider.ts::HALO_URL`（endpoint 常量）被推断为 `unknown`。修复（`two-stage-structure/v1/analyze.ts`，增量式，不改变既有判定路径）：
+   - client-table 规则：对象字面量 ≥2 属性、每属性值为标识符或「含函数成员标识符的对象」→ registry；
+   - network-usage 规则：出站调用参数中引用的同文件标识符 → 传给仅含 unknown 角色的声明 transport 角色。
+   - 新增校准 fixture `registry-map-extension`（真实 r3 模式：providers map 修改 + endpoint 常量），期望 locality/diff pass；既有 7 个 fixture 期望标签不变，校准 8/8 qualified，candidate snapshot 已重新生成。
+   - r3 三个完成两阶段的 attempt 离线重放：locality 与 diff-classifiability 由 fail/indeterminate 转为 pass，semantic/snapshot 判定不变；analyzer 回归测试新增于 `analyze.test.ts`。
+
+修复验证：focused staged tests 16/16、analyzer tests 8/8、`bun run test:contracts` 217/217、`bun run validate`、OpenSpec strict、`git diff --check` 全部通过。

@@ -1,11 +1,11 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "a4836afcb2fdb584867c90d6b123a8af200ebd79a8ae1a8e71f6176e305e24a9",
+  "snapshot_id": "d82a5f29b42e83023fbe4120664ffcc8c60be7a4883572eb6eae09b523f02766",
   "files": {
-    "private/calibration/results.json": "e498735533fe8dfbd39e00e65f4db26274090a0d36e6139fd0cc95c9a7037e95",
-    "private/calibration/run.ts": "88ecee075d186b0920b8ec13d1e33e04be0cc20de740a0ece6804f962df50db7",
-    "private/calibration/sets.yaml": "0c6df108bcad1765541b1b56b0e97d4c6cb3d044484e6e70516e98f7bafd5231",
+    "private/calibration/results.json": "1f5a5e07472f2316737a01637d952e17b1510d0ea6881ad0ccd1e6934de56a99",
+    "private/calibration/run.ts": "7076e1a5d839f10160f8af18991c9b2faaf626798ec12f221e45fea016889aef",
+    "private/calibration/sets.yaml": "64d3d23d76cb0a3391b8db7e0483152deac19a35f28585dd20685a941be864a6",
     "private/calibration/sets/two-stage-structure/v1/base.yaml": "b484b75d5bf79b4e0b78cf567ab9c4106a25fa1aa133167758ca3a08ad7668af",
     "private/calibration/sets/two-stage-structure/v1/overlays/ambiguous-code.expected.yaml": "432221b5350c264653d0ae855f7c27179f5c07ef71107fe9d3a074cd575bf25d",
     "private/calibration/sets/two-stage-structure/v1/overlays/ambiguous-code/src/halo-provider.ts": "46cafd298d716e65193b2fd2ec7bb60d6040c376affb46882caa108a02203b2a",
@@ -26,6 +26,9 @@
     "private/calibration/sets/two-stage-structure/v1/overlays/oracle-reference/src/halo-provider.ts": "3b46865f8a8e6c71086c66c1d3a6a7166a7e59f03a1cd609dec8b48093f43810",
     "private/calibration/sets/two-stage-structure/v1/overlays/oracle-reference/src/registry.ts": "983da88d64696f3fee3e3200a0366913832c18e4b80ee1e844791448c67d5e9e",
     "private/calibration/sets/two-stage-structure/v1/overlays/public-starter.expected.yaml": "331096323d1d098abd5c09429e9885795b0b1396b681d3f25f181ac61f2b6a54",
+    "private/calibration/sets/two-stage-structure/v1/overlays/registry-map-extension.expected.yaml": "3d5c644251759fb27adb1d1e4e8cad7b3d754b343d7f01b24f397873796aa3fd",
+    "private/calibration/sets/two-stage-structure/v1/overlays/registry-map-extension/src/halo-provider.ts": "7ff899de570b48f9cb914e486528949cc237fb4bac12f8d565a833faf3ed3689",
+    "private/calibration/sets/two-stage-structure/v1/overlays/registry-map-extension/src/registry.ts": "76ee325d233f0705bfc0d79196450080cc9e6fb94cfc137ecc07e93ae46817ba",
     "private/candidate.yaml": "fcb38fd2c3da4abc6b375f3cc83685050a2024c73a40cacec581e61f5a32bfdb",
     "private/conditions.yaml": "18c4d530a95397a922f7abf7637347fa8b6579f43110d4d428da47bc11a6061e",
     "private/evaluator/evaluate.ts": "993fb3dea25db8cadfbfa4859673ccb43d122c34470ee8cb4d51a3f29a087cbb",
@@ -52,6 +55,6 @@
     "input_hash": "a7db9d122417fa47cbd6c67621c35e3c6bbedfa36c93c240a071fcae8fa88214",
     "materialized_output_hash": "25bc811a92e5be60a96500719b9b35dbd22d685741c338ca025ccb96894923ff",
     "profile_input_hash": "7699abf7d8eb276898da7a30c5376967834d11114c7bab28493662cbbf83400b",
-    "calibration_sets_hash": "4b73a62903222a16b666f1b38312669339ecbb1cf5a07ab023009dd1149af329"
+    "calibration_sets_hash": "81be560a27857326f8b003c4ea01f69658307799d1f49a1b854263c51aa2bb00"
   }
 }

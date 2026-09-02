@@ -35,6 +35,16 @@ function normalized(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function collectIdentifiers(node: ts.Node): string[] {
+  const identifiers: string[] = [];
+  const visit = (child: ts.Node): void => {
+    if (ts.isIdentifier(child)) identifiers.push(child.text);
+    child.forEachChild(visit);
+  };
+  visit(node);
+  return identifiers;
+}
+
 async function productionFiles(root: string): Promise<string[]> {
   const output: string[] = [];
   async function walk(current: string): Promise<void> {
@@ -67,7 +77,22 @@ function declarationIdentity(node: ts.Node, file: string, source: ts.SourceFile)
   return `${file}::<${line + 1}:${character + 1}>`;
 }
 
-async function collectDeclaration(node: ts.Node, file: string, source: ts.SourceFile): Promise<Declaration | null> {
+function clientTableEntries(node: ts.ObjectLiteralExpression): boolean {
+  return node.properties.length >= 2 && node.properties.every((property) => {
+    const initializer = (property as ts.PropertyAssignment).initializer;
+    if (!initializer) return false;
+    if (ts.isIdentifier(initializer)) return true;
+    // A per-provider client object must bind at least one callable member by
+    // identifier (for example `{ chat: chatWithHalo }`), keeping the table an
+    // executable dispatch surface rather than passive configuration.
+    return ts.isObjectLiteralExpression(initializer) && initializer.properties.some((member) => {
+      const value = (member as ts.PropertyAssignment).initializer;
+      return value !== undefined && ts.isIdentifier(value);
+    });
+  });
+}
+
+async function collectDeclaration(node: ts.Node, file: string, source: ts.SourceFile, transportUsage: Map<string, Set<string>>): Promise<Declaration | null> {
   const isDeclaration = ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isMethodDeclaration(node)
     || ts.isVariableStatement(node) || ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)
     || ts.isEnumDeclaration(node);
@@ -91,11 +116,20 @@ async function collectDeclaration(node: ts.Node, file: string, source: ts.Source
     for (const signal of ledgerSignals) if (lower.includes(signal)) { declaration.roles.add("ledger"); declaration.evidence.add(`ledger:${signal}`); }
     for (const signal of policySignals) if (lower.includes(signal)) { declaration.roles.add("policy"); declaration.evidence.add(`policy:${signal}`); }
     for (const signal of handlerSignals) if (lower.includes(signal)) { declaration.roles.add("handler"); declaration.evidence.add(`handler:${signal}`); }
-    const dispatchEntries = ts.isObjectLiteralExpression(child) && child.properties.length >= 2 && child.properties.every((property) => (property as ts.PropertyAssignment).initializer?.kind === ts.SyntaxKind.Identifier);
+    const dispatchEntries = ts.isObjectLiteralExpression(child) && clientTableEntries(child);
     if (dispatchEntries || (ts.isSwitchStatement(child) && child.caseBlock.clauses.length >= 2)) {
       declaration.roles.add("registry"); declaration.evidence.add("multi-entry dispatch");
     }
     if (ts.isCallExpression(child)) declaration.calls.add(normalized(child.expression.getText(source)));
+    if (ts.isCallExpression(child) && networkSignals.some((signal) => ` ${normalized(child.expression.getText(source)).toLowerCase()}(`.includes(signal))) {
+      // Endpoint/base-URL constants passed into an outbound call inherit the
+      // transport role from their executable use site; the declaration itself
+      // stays passive data and has no other role evidence.
+      collectIdentifiers(child).forEach((identifier) => {
+        if (!transportUsage.has(identifier)) transportUsage.set(identifier, new Set());
+        transportUsage.get(identifier)!.add(file);
+      });
+    }
     if (ts.isNewExpression(child)) declaration.calls.add(normalized(`new ${child.expression.getText(source)}`));
     if (ts.isImportDeclaration(child) && child.importClause) {
       declaration.imports.add(child.moduleSpecifier.getText(source).replace(/["']/g, ""));
@@ -117,6 +151,7 @@ export async function analyzeSource(root: string): Promise<{ files: string[]; de
   const reasons: string[] = [];
   const files = await productionFiles(root);
   const declarations: Declaration[] = [];
+  const transportUsage = new Map<string, Set<string>>();
   for (const path of files) {
     const file = relative(resolve(root), path).split(sep).join("/");
     let source: ts.SourceFile;
@@ -129,7 +164,7 @@ export async function analyzeSource(root: string): Promise<{ files: string[]; de
     }
     if (source.parseDiagnostics.length > 0) reasons.push(`parse-error:${file}`);
     const collect = async (node: ts.Node): Promise<void> => {
-      const declaration = await collectDeclaration(node, file, source);
+      const declaration = await collectDeclaration(node, file, source, transportUsage);
       if (declaration) declarations.push(declaration);
     };
     for (const statement of source.statements) {
@@ -139,6 +174,14 @@ export async function analyzeSource(root: string): Promise<{ files: string[]; de
           if (ts.isMethodDeclaration(member)) await collect(member);
         }
       }
+    }
+  }
+  for (const declaration of declarations) {
+    if (declaration.roles.size !== 1 || !declaration.roles.has("unknown")) continue;
+    const usedInFiles = transportUsage.get(declaration.name);
+    if (usedInFiles && usedInFiles.has(declaration.file)) {
+      declaration.roles.add("transport");
+      declaration.evidence.add("transport:endpoint-argument");
     }
   }
   return { files, declarations, reasons };
