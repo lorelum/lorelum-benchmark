@@ -2,7 +2,7 @@
 
 ## 契约与 OpenSpec
 
-- [ ] 1.0 初始 PR：OpenSpec artifacts（proposal / design / specs / tasks）引用 #188，通过 `openspec validate llm-provider-gateway-v4-one-block-model-pilot --type change --strict`（write scope: `openspec/changes/llm-provider-gateway-v4-one-block-model-pilot/`）
+- [x] 1.0 初始 PR：OpenSpec artifacts（proposal / design / specs / tasks）引用 #188，通过 `openspec validate llm-provider-gateway-v4-one-block-model-pilot --type change --strict`（write scope: `openspec/changes/llm-provider-gateway-v4-one-block-model-pilot/`）
 
 ## Pi adapter 与 pilot driver
 
