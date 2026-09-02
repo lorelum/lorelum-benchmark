@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { evaluateTwoStageStructure } from "./analyze";
+import { analyzeSource, evaluateTwoStageStructure } from "./analyze";
 import type { Stage1Snapshot } from "./types";
 
 const roots: string[] = [];
@@ -101,6 +101,23 @@ export const clients = {
   expect(result.checks.find((entry) => entry.id === "provider-extension-locality")?.state).toBe("pass");
   expect(result.checks.find((entry) => entry.id === "diff-classifiability")?.state).toBe("pass");
   expect(result.structure_pass).toBe(true);
+});
+
+test("property names in outbound call arguments do not upgrade like-named declarations", async () => {
+  const path = await root({
+    "src/adapters/second.ts": `const method = "standalone";
+const headers = { "x-k": "v" };
+export async function callSecond(input: { message: string }): Promise<{ content: string }> {
+  const upstream = await fetch("https://second.example", { method: "POST", headers });
+  return { content: await upstream.text() };
+}
+`,
+  });
+  const analysis = await analyzeSource(path);
+  const roleOf = (name: string) => analysis.declarations.find((declaration) => declaration.name === name)?.roles;
+  expect(roleOf("callSecond")?.has("transport")).toBe(true);
+  expect(roleOf("method")).toEqual(new Set(["unknown"]));
+  expect(roleOf("headers")).toEqual(new Set(["unknown"]));
 });
 
 test("malformed source is indeterminate, not forced pass or fail", async () => {

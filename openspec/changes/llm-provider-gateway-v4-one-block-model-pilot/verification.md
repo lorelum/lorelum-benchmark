@@ -78,3 +78,11 @@ planned 21 / evaluated 16 / execution-unhealthy 5（4 次 Stage 1 超时均发�
 - **helper 版本化承诺（finding 2）**：`src/benchmark/evaluator/two-stage-structure/v1/analyze.ts` 的增量修复发生在 candidate 孵化期（无 formal record / suite revision 引用它）。承诺：一旦 v4（或任何任务）升级 suite revision 或产生 formal record，该 helper v1 即冻结；后续任何分类规则变更必须以 `two-stage-structure/v2` 新版本目录交付并保留 v1 可复现旧结论。
 - **错误类别区分（finding 3）**：driver 的 attempt catch 现以 `error_kind: "pi-execution" | "driver-infra"` 区分 Pi 链路失败（`PiStageError`：超时、非零退出、session 身份）与 driver 基础设施错误；focused test 断言两类标签。unhealthy 仍全部保留在 denominator。
 - **设计文字滞后（finding 4）**：design.md 已按实现修订（Stage 1 新 session + Stage 2 `--session` resume、`--blocks N`）；credential-present 检查列出 LORELUM_JUDGE_API_KEY 仅作为 fallback env 名称探测（来自共享 local-pi-model-catalog），pilot 全程 judge 调用为 0。
+
+## 第二轮 thermo-nuclear-code-quality-review 处置
+
+- **B1（must-fix）**：`pi-execution` 加入 `StagedAttemptReport` termination union；runner 导出 `stagedAttemptFailureReport` 作为失败 report shape 的唯一所有者；driver catch 改为调用工厂并删除 `as` 强转（返回类型为 `ScheduledAttemptOutcome` 结构化扩展，无 cast）。
+- **S1**：`collectIdentifiers` 跳过 property 名（PropertyAssignment / PropertyAccessExpression / ShorthandPropertyAssignment 的 name），仅收集值位置标识符；新增回归测试锁定「property 名不触发 transport 升级」；两个相邻 `ts.isCallExpression` 分支合并；离线校准 8/8 复跑无回归。
+- **S2**：`stagedPilotPlan` 删除 buildStagedSchedule 之后的逐条件复查（Latin-square 平衡由确定性调度 + parse 校验 + focused tests 保证）；`record`/`text` 校验器从 plan 模块导出，driver 删除本地 `isRecord`。
+- 记录项（顺序执行、findTranscript 模糊匹配）按 review 结论不做变更。
+- 验证：staged tests 17/17、analyzer tests 9/9（analyze 8+1 新增）、contracts 218/218、validate、OpenSpec strict、`git diff --check` 通过。

@@ -6,8 +6,8 @@ import type { RedactedTwoStageTrace, ResolvedTwoStageProfile } from "../../../..
 import { configureLocalPiModelCatalog, localPiApiKey } from "../local-pi-model-catalog";
 import { piCommand, preflightPiAndModel, run } from "../preflight";
 import { demonstrateTimeoutTermination, PiStageError, productionStagedPiAdapter, productionStagedSemanticAdapter, type StagedPilotPiConfig } from "./staged-pilot-pi-adapter";
-import { buildStagedSchedule, parseStagedDiagnosticPlan, stagedConditions, type ScheduledStagedAttempt } from "./staged-profile-diagnostic-plan";
-import { runStagedDiagnosticAttempt, summarizeStagedReports, type StagedAttemptReport } from "./staged-profile-diagnostic-runner";
+import { buildStagedSchedule, parseStagedDiagnosticPlan, record, stagedConditions, text, type ScheduledStagedAttempt } from "./staged-profile-diagnostic-plan";
+import { runStagedDiagnosticAttempt, stagedAttemptFailureReport, summarizeStagedReports, type StagedAttemptReport } from "./staged-profile-diagnostic-runner";
 
 export const stagedPilotCandidate = "incubator/practice-injection/llm-provider-gateway-v4";
 export const stagedPilotScheduleSeed = "llm-provider-gateway-v4-one-block-model-pilot/v1";
@@ -33,24 +33,23 @@ function fail(message: string): never {
   throw new Error(message);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
 export async function inspectStagedPilotCandidate(): Promise<CandidateFacts> {
   const candidatePath = resolve(workspaceRoot, stagedPilotCandidate);
   const manifest = Bun.YAML.parse(await Bun.file(join(candidatePath, "private/candidate.yaml")).text()) as unknown;
   const snapshot = JSON.parse(await Bun.file(join(candidatePath, "private/snapshot.json")).text()) as unknown;
   const conditions = Bun.YAML.parse(await Bun.file(join(candidatePath, "private/conditions.yaml")).text()) as unknown;
   const calibration = JSON.parse(await Bun.file(join(candidatePath, "private/calibration/results.json")).text()) as unknown;
-  if (!isRecord(manifest) || !isRecord(snapshot) || !isRecord(conditions) || !isRecord(calibration)) fail("v4 candidate manifests must be objects");
-  const source = isRecord(manifest.source) && typeof manifest.source.source_commit === "string" ? manifest.source.source_commit : fail("candidate.yaml must declare source.source_commit");
+  record(manifest, "candidate.yaml");
+  record(snapshot, "snapshot.json");
+  record(conditions, "conditions.yaml");
+  record(calibration, "calibration results.json");
+  const source = text(record(manifest.source, "candidate.yaml source").source_commit, "candidate.yaml source.source_commit");
   if (manifest.source_commit !== source) fail("candidate.yaml source_commit declarations disagree");
   if (typeof snapshot.snapshot_id !== "string" || !/^[0-9a-f]{64}$/.test(snapshot.snapshot_id)) fail("snapshot.json must declare a sha256 snapshot_id");
   if (calibration.qualified !== true || calibration.candidate_model_calls !== 0 || calibration.judge_model_calls !== 0) fail("offline calibration must be qualified with zero recorded model calls");
-  const shared = isRecord(conditions.shared_execution) ? conditions.shared_execution : fail("conditions.yaml must declare shared_execution");
-  const budgets = isRecord(shared.budgets) ? shared.budgets : fail("shared_execution must declare budgets");
-  const model = isRecord(shared.model) && typeof shared.model.id === "string" ? shared.model.id : fail("shared_execution must declare a model id");
+  const shared = record(conditions.shared_execution, "conditions.yaml shared_execution");
+  const budgets = record(shared.budgets, "shared_execution budgets");
+  const model = text(record(shared.model, "shared_execution model").id, "shared_execution model.id");
   const stage1Minutes = Number(budgets.stage_1_max_duration_minutes);
   const stage2Minutes = Number(budgets.stage_2_max_duration_minutes);
   if (stage1Minutes !== 15 || stage2Minutes !== 15 || budgets.evaluator_time_counted !== false) fail("shared budgets must be 15+15 minutes with evaluator time excluded");
@@ -80,10 +79,7 @@ export function stagedPilotPlan(facts: CandidateFacts, blocks = 1): ScheduledSta
     conditions: [...stagedConditions],
     candidates: [{ id: "llm-provider-gateway-v4", path: stagedPilotCandidate, source_commit: facts.source_commit, snapshot_id: facts.snapshot_id, profile_input_hash: facts.profile.profile_input_hash }],
   }));
-  if (schedule.length !== 3 * blocks || new Set(schedule.map((attempt) => attempt.condition)).size !== 3) fail("schedule must cover the three conditions");
-  for (const condition of stagedConditions) {
-    if (schedule.filter((attempt) => attempt.condition === condition).length !== blocks) fail(`schedule must repeat each condition exactly ${blocks} times`);
-  }
+  if (schedule.length !== 3 * blocks) fail("schedule must produce exactly one attempt per candidate per repetition");
   return schedule;
 }
 
@@ -115,7 +111,8 @@ async function attemptDirectories(outputRoot: string, attempt: ScheduledStagedAt
   return { workspace, artifacts };
 }
 
-async function runScheduledAttempt(context: StagedPilotContext, attempt: ScheduledStagedAttempt, index: number, outputRoot: string, dryRun: boolean): Promise<StagedAttemptReport> {
+type ScheduledAttemptOutcome = StagedAttemptReport & { error_kind?: StagedAttemptErrorKind; error?: string };
+async function runScheduledAttempt(context: StagedPilotContext, attempt: ScheduledStagedAttempt, index: number, outputRoot: string, dryRun: boolean): Promise<ScheduledAttemptOutcome> {
   const { workspace, artifacts } = await attemptDirectories(outputRoot, attempt, index);
   const payload = await resolveTwoStagePracticePayload(context.facts.candidate_path, context.facts.profile, attempt.condition);
   const trace: RedactedTwoStageTrace = redactedTwoStageTrace(context.facts.profile, payload);
@@ -138,25 +135,14 @@ async function runScheduledAttempt(context: StagedPilotContext, attempt: Schedul
       redacted_trace: trace,
     });
   } catch (error) {
-    // Pi stage failures (timeout, non-zero exit, session identity) are execution
-    // health failures: the attempt stays in the denominator and is never retried.
-    // Everything else is driver infrastructure and is labeled separately so
-    // summary consumers can distinguish model/chain failures from driver bugs.
-    const kind = classifyAttemptError(error);
+    // Pi stage failures (timeout, non-zero exit, session identity) and driver
+    // infrastructure faults are both execution-unhealthy and stay in the
+    // denominator; error_kind separates model/chain failures from driver bugs.
     return {
-      schema_version: "staged-runner-attempt/v1",
-      condition_id: attempt.condition,
-      execution_health: "execution-unhealthy",
-      stage_1_semantic: "not-run",
-      stage_2_semantic: "not-run",
-      session_binding: "not-started",
-      termination: "pi-execution",
-      planned_denominator: 1,
-      transcript_in_workspace: false,
-      redacted_trace: trace,
-      error_kind: kind,
-      ...(error instanceof Error ? { error: error.message } : { error: String(error) }),
-    } as StagedAttemptReport & { error_kind: StagedAttemptErrorKind };
+      ...stagedAttemptFailureReport(attempt.condition, "pi-execution", trace),
+      error_kind: classifyAttemptError(error),
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -217,7 +203,7 @@ export type StagedPilotRun = {
   blocks: number;
   dry_run: boolean;
   preflight: StagedPilotPreflight | null;
-  attempts: Array<StagedAttemptReport & { attempt_id: string; error?: string; error_kind?: StagedAttemptErrorKind }>;
+  attempts: Array<ScheduledAttemptOutcome & { attempt_id: string }>;
   summary: ReturnType<typeof summarizeStagedReports>;
   disclaimer: string;
 };

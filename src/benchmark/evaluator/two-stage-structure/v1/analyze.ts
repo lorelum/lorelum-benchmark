@@ -37,11 +37,15 @@ function normalized(value: string): string {
 
 function collectIdentifiers(node: ts.Node): string[] {
   const identifiers: string[] = [];
-  const visit = (child: ts.Node): void => {
-    if (ts.isIdentifier(child)) identifiers.push(child.text);
-    child.forEachChild(visit);
+  // Only value-position identifiers count as references: property names in
+  // object literals (`{ method: "POST" }`) and member accesses (`x.headers`)
+  // are labels, not bindings, and must not upgrade like-named declarations.
+  const visit = (child: ts.Node, parent: ts.Node): void => {
+    const isPropertyName = (ts.isPropertyAssignment(parent) || ts.isPropertyAccessExpression(parent) || ts.isShorthandPropertyAssignment(parent)) && parent.name === child;
+    if (!isPropertyName && ts.isIdentifier(child)) identifiers.push(child.text);
+    child.forEachChild((grandchild) => visit(grandchild, child));
   };
-  visit(node);
+  node.forEachChild((child) => visit(child, node));
   return identifiers;
 }
 
@@ -120,15 +124,17 @@ async function collectDeclaration(node: ts.Node, file: string, source: ts.Source
     if (dispatchEntries || (ts.isSwitchStatement(child) && child.caseBlock.clauses.length >= 2)) {
       declaration.roles.add("registry"); declaration.evidence.add("multi-entry dispatch");
     }
-    if (ts.isCallExpression(child)) declaration.calls.add(normalized(child.expression.getText(source)));
-    if (ts.isCallExpression(child) && networkSignals.some((signal) => ` ${normalized(child.expression.getText(source)).toLowerCase()}(`.includes(signal))) {
+    if (ts.isCallExpression(child)) {
+      declaration.calls.add(normalized(child.expression.getText(source)));
+      if (networkSignals.some((signal) => ` ${normalized(child.expression.getText(source)).toLowerCase()}(`.includes(signal))) {
       // Endpoint/base-URL constants passed into an outbound call inherit the
       // transport role from their executable use site; the declaration itself
       // stays passive data and has no other role evidence.
-      collectIdentifiers(child).forEach((identifier) => {
-        if (!transportUsage.has(identifier)) transportUsage.set(identifier, new Set());
-        transportUsage.get(identifier)!.add(file);
-      });
+        collectIdentifiers(child).forEach((identifier) => {
+          if (!transportUsage.has(identifier)) transportUsage.set(identifier, new Set());
+          transportUsage.get(identifier)!.add(file);
+        });
+      }
     }
     if (ts.isNewExpression(child)) declaration.calls.add(normalized(`new ${child.expression.getText(source)}`));
     if (ts.isImportDeclaration(child) && child.importClause) {
