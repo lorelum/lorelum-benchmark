@@ -12,6 +12,10 @@
 - 新增 preflight 模式：candidate snapshot / profile identity 校验、Pi adapter 与 credential/endpoint 审计（不提交 secret）、timeout/cancellation 演练、Stage 1 leakage audit、dry-run 三条件计划（zero model calls）。
 - transcript 与 run workspace 存放在仓库外（scratch 目录，git ignored），绝不提交；public summary 仅含 run/attempt id、condition、session binding state、必要 hash、execution health、semantic label、structure check labels、raw metrics。
 - 不修改 v4 candidate 的题面、oracle、Practice、evaluator 语义、snapshot identity、conditions 语义或 offline calibration 结论；不创建 formal record、不升级 suite revision、不出 Practice effect 或 directional-screen 结论。
+- 授权例外（bug 类修复，#188 需求方在 review 期间追加授权，未另立 issue/change，#190 已按同一决定关闭）：允许以最小增量方式修复 pilot 期间发现的两类缺陷，并相应更新 candidate 私有区身份：
+  1. structure analyzer 角色推断盲区（registry 数据表与 endpoint 常量被判 `unknown`）——修复保持既有 7 个校准 fixture 标签不变，新增 `registry-map-extension` fixture 后重跑离线校准（8/8 qualified）并重新生成 `private/snapshot.json`；
+  2. Stage 1 超时缓解——仅收紧 driver 级、三条件共享的 stage instruction，不触碰 candidate public 题面。
+  上述修改不改变 candidate 的题面、oracle 命令、Practice、conditions 语义；r1–r3 基于旧 snapshot/旧 evaluator 的观测在 verification.md 中按修复前口径原样保留。
 
 ## Capabilities
 
@@ -25,7 +29,7 @@
 
 ## Impact
 
-- 只读复用：`incubator/practice-injection/llm-provider-gateway-v4/` 冻结不动；`src/benchmark/runner/pi/v2/staged/` 的 fail-closed attempt 语义不改。
+- 复用（含授权例外范围内的最小修改）：`incubator/practice-injection/llm-provider-gateway-v4/` 在 pilot 主体阶段冻结只读；review 期间经 #188 追加授权的 bug 类修复按上文「授权例外」更新了 analyzer、校准 fixture 与 candidate snapshot 身份，r1–r3 观测按修复前口径保留。`src/benchmark/runner/pi/v2/staged/` 的 fail-closed attempt 语义不改。
 - 新增代码：production Pi adapter（session start/resume、超时终止）、pilot driver CLI（preflight / dry-run / one-block 执行）、focused tests。
 - 依赖：#188 的 one-block model-call 授权（仅 preflight 全通过后执行）；本地 `pi` 0.80.10、`deepseek/deepseek-v4-flash`、DeepSeek API credential 环境变量。
 - 产出：redacted diagnostic summary 与 run artifacts（`scratch/`，不提交）；不进入 `results/records`，不升级 suite revision。

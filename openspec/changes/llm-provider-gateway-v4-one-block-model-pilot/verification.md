@@ -71,3 +71,10 @@ schedule_seed `llm-provider-gateway-v4-one-block-model-pilot/v1`，cyclic-latin-
 ## 四轮合计（r1+r2+r3+r4，21 attempts）
 
 planned 21 / evaluated 16 / execution-unhealthy 5（4 次 Stage 1 超时均发生在修复前；1×r2 snapshot-mismatch infra 缺陷共 4 次亦在修复前）。修复后（r4）执行健康 6/6。结构观测共 10 个；oracle-practice 完成 5 次两阶段（4 个结构观测），baseline 4 次（3 个），irrelevant 5 次（3 个）。仍为 diagnostic-only：三条件间的描述性差异不构成 directional / Practice effect / 正式结论。
+
+## Review 期间追加记录（第一轮 ai-code-review findings 处置）
+
+- **授权可追溯性（finding 1）**：bug 类修复的需求方授权记录于本对话（2026-09-02「两个前置问题还是得解决」+「别建新issue，这属于bug类修复，不用新建issue」），并同步留痕于 #188 评论（lorelum/lorelum-benchmark#issuecomment-5491296303、PR #189 评论 #issuecomment-5503049920）与 #190 关闭说明。proposal.md 的 Non-Goals/Impact 已修订为「授权例外」口径，消除与 diff 的矛盾。
+- **helper 版本化承诺（finding 2）**：`src/benchmark/evaluator/two-stage-structure/v1/analyze.ts` 的增量修复发生在 candidate 孵化期（无 formal record / suite revision 引用它）。承诺：一旦 v4（或任何任务）升级 suite revision 或产生 formal record，该 helper v1 即冻结；后续任何分类规则变更必须以 `two-stage-structure/v2` 新版本目录交付并保留 v1 可复现旧结论。
+- **错误类别区分（finding 3）**：driver 的 attempt catch 现以 `error_kind: "pi-execution" | "driver-infra"` 区分 Pi 链路失败（`PiStageError`：超时、非零退出、session 身份）与 driver 基础设施错误；focused test 断言两类标签。unhealthy 仍全部保留在 denominator。
+- **设计文字滞后（finding 4）**：design.md 已按实现修订（Stage 1 新 session + Stage 2 `--session` resume、`--blocks N`）；credential-present 检查列出 LORELUM_JUDGE_API_KEY 仅作为 fallback env 名称探测（来自共享 local-pi-model-catalog），pilot 全程 judge 调用为 0。

@@ -28,7 +28,7 @@
 
 ### Production Pi adapter
 
-Adapter 以子进程运行本地 `pi`（版本钉在 conditions.yaml 的 `pi_version: 0.80.10`），Stage 1 以 `--session`（session dir 位于 attempt artifact 区）启动，Stage 2 以同一 session id resume。每个 stage 以 profile 声明的 `max_duration_minutes`（15）为上限，超时用进程树终止（Windows `taskkill /T /F`，POSIX 递归 SIGTERM），终止即该 stage 失败并按 staged runner 规则记 execution unhealthy。模型与 endpoint 通过 `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` 环境变量传入，绝不写入仓库或 summary。transcript 写入 session dir（scratch），不进入 agent workspace。
+Adapter 以子进程运行本地 `pi`（版本钉在 conditions.yaml 的 `pi_version: 0.80.10`）。Stage 1 以新 session 启动（`--session-dir` 指向 attempt artifact 区，与 workspace 分离的 sibling 根目录）；Stage 2 通过 `--session <stage-1 session id>` 恢复同一 session，session id 不一致即 fail-closed。多 block 扩展（`--blocks N`，3 的倍数）复用同一 `cyclic-latin-square/v1` 口径。每个 stage 以 profile 声明的 `max_duration_minutes`（15）为上限，超时用进程树终止（Windows `taskkill /T /F`，POSIX 递归 SIGTERM），终止即该 stage 失败并按 staged runner 规则记 execution unhealthy。模型与 endpoint 通过 `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` 环境变量传入，绝不写入仓库或 summary。transcript 写入 session dir（scratch），不进入 agent workspace。
 
 ### Semantic adapter
 
@@ -69,7 +69,7 @@ run workspace、session dir、snapshot、stage-1 副本和 transcript 全部放�
 3. preflight 全通过后执行一个 block，产出 redacted summary 与 artifact 位置记录（不提交 payload）。
 4. 多 block directional screen 另立 issue/OpenSpec change。
 
-Rollback：合并前撤除即仅删除新增 adapter/driver 代码与 OpenSpec artifacts；无任何冻结对象被触碰。
+Rollback：合并前撤除即删除新增 adapter/driver 代码与 OpenSpec artifacts；review 期间经 #188 追加授权的 bug 类修复（analyzer 增量规则、registry-map-extension fixture、candidate snapshot 重生成）在 proposal「授权例外」口径内，r1–r3 修复前观测原样保留于 verification。
 
 ## Open Questions / Planning Gate
 

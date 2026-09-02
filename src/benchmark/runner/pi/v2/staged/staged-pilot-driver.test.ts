@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "bun:test";
 import type { CommandResult } from "../preflight";
-import { demonstrateTimeoutTermination, parseSessionHeader, productionStagedPiAdapter, productionStagedSemanticAdapter, type StagedPilotPiConfig } from "./staged-pilot-pi-adapter";
-import { inspectStagedPilotCandidate, stagedPilotPlan, stagedPilotScheduleSeed } from "./staged-pilot-driver";
+import { demonstrateTimeoutTermination, parseSessionHeader, PiStageError, productionStagedPiAdapter, productionStagedSemanticAdapter, type StagedPilotPiConfig } from "./staged-pilot-pi-adapter";
+import { classifyAttemptError, inspectStagedPilotCandidate, stagedPilotPlan, stagedPilotScheduleSeed } from "./staged-pilot-driver";
 
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map((path) => rm(path, { recursive: true, force: true }))); });
@@ -100,6 +100,14 @@ test("semantic adapter evaluates a throwaway copy and never mutates the app", as
 test("timeout drill reports termination only when the runner times out", async () => {
   expect(await demonstrateTimeoutTermination(async () => ({ code: null, stdout: "", stderr: "", timedOut: true, durationMs: 2 }) as CommandResult)).toBe(true);
   await expect(demonstrateTimeoutTermination(async () => ({ code: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 }) as CommandResult)).rejects.toThrow("did not report a timeout");
+});
+
+test("attempt errors are classified as pi-execution or driver-infra", () => {
+  expect(classifyAttemptError(new PiStageError("Pi stage 1 exceeded its 900000ms execution budget"))).toBe("pi-execution");
+  expect(classifyAttemptError(new PiStageError("Pi stage 2 resumed session b instead of a"))).toBe("pi-execution");
+  expect(classifyAttemptError(new Error("ENOENT: no such file or directory, copyfile"))).toBe("driver-infra");
+  expect(classifyAttemptError(new TypeError("cannot read properties of undefined"))).toBe("driver-infra");
+  expect(classifyAttemptError("string failure")).toBe("driver-infra");
 });
 
 test("v4 candidate identity resolves and the one-block plan covers each condition once", async () => {

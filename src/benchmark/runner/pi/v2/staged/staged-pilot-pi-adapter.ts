@@ -14,6 +14,9 @@ export type StagedPilotPiConfig = {
   log_directory: string;
 };
 
+/** Thrown for Pi stage-level execution failures (timeout, exit code, session identity). Infrastructure faults outside the Pi invocation stay untagged so the driver can label them driver-infra. */
+export class PiStageError extends Error {}
+
 export function parseSessionHeader(stdout: string): string {
   for (const line of stdout.split(/\r?\n/)) {
     try {
@@ -25,7 +28,7 @@ export function parseSessionHeader(stdout: string): string {
       // Non-JSON diagnostic lines before the session header are expected.
     }
   }
-  throw new Error("Pi JSON stream did not open with a session header");
+  throw new PiStageError("Pi JSON stream did not open with a session header");
 }
 
 async function findTranscript(sessionDir: string, sessionId: string): Promise<string> {
@@ -39,7 +42,7 @@ async function findTranscript(sessionDir: string, sessionId: string): Promise<st
   };
   await walk(sessionDir).catch(() => undefined);
   const exact = candidates.find((path) => path.includes(sessionId));
-  if (!exact) throw new Error(`Pi session transcript not found for ${sessionId}`);
+  if (!exact) throw new PiStageError(`Pi session transcript not found for ${sessionId}`);
   return exact;
 }
 
@@ -55,16 +58,16 @@ export function productionStagedPiAdapter(config: StagedPilotPiConfig, commandRu
     const result: CommandResult = await commandRunner([config.command, ...base], invocation.workspace, config.stage_budget_ms[invocation.stage]);
     await writeFile(join(config.log_directory, `stage-${invocation.stage}.stdout.jsonl`), result.stdout);
     await writeFile(join(config.log_directory, `stage-${invocation.stage}.stderr.log`), `${result.stderr}${result.timedOut ? "\nstage execution budget exceeded\n" : ""}\n`);
-    if (result.timedOut) throw new Error(`Pi stage ${invocation.stage} exceeded its ${config.stage_budget_ms[invocation.stage]}ms execution budget`);
-    if (result.code !== 0) throw new Error(`Pi stage ${invocation.stage} exited with code ${result.code}`);
+    if (result.timedOut) throw new PiStageError(`Pi stage ${invocation.stage} exceeded its ${config.stage_budget_ms[invocation.stage]}ms execution budget`);
+    if (result.code !== 0) throw new PiStageError(`Pi stage ${invocation.stage} exited with code ${result.code}`);
     const header = parseSessionHeader(result.stdout);
-    if (sessionId && header !== sessionId) throw new Error(`Pi stage 2 resumed session ${header} instead of ${sessionId}`);
+    if (sessionId && header !== sessionId) throw new PiStageError(`Pi stage 2 resumed session ${header} instead of ${sessionId}`);
     return { session_id: header, transcript_path: await findTranscript(invocation.session_dir, header) };
   };
   return {
     start: async (invocation) => invoke(invocation),
     resume: async (invocation) => {
-      if (!invocation.session_id) throw new Error("Pi stage 2 resume requires the stage 1 session id");
+      if (!invocation.session_id) throw new PiStageError("Pi stage 2 resume requires the stage 1 session id");
       return invoke(invocation, invocation.session_id);
     },
   };

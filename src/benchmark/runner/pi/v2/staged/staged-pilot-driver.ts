@@ -5,7 +5,7 @@ import { resolveTwoStageInjectionCalibration, resolveTwoStagePracticePayload, re
 import type { RedactedTwoStageTrace, ResolvedTwoStageProfile } from "../../../../kernel/profiles/two-stage-injection-calibration/v1/types";
 import { configureLocalPiModelCatalog, localPiApiKey } from "../local-pi-model-catalog";
 import { piCommand, preflightPiAndModel, run } from "../preflight";
-import { demonstrateTimeoutTermination, productionStagedPiAdapter, productionStagedSemanticAdapter, type StagedPilotPiConfig } from "./staged-pilot-pi-adapter";
+import { demonstrateTimeoutTermination, PiStageError, productionStagedPiAdapter, productionStagedSemanticAdapter, type StagedPilotPiConfig } from "./staged-pilot-pi-adapter";
 import { buildStagedSchedule, parseStagedDiagnosticPlan, stagedConditions, type ScheduledStagedAttempt } from "./staged-profile-diagnostic-plan";
 import { runStagedDiagnosticAttempt, summarizeStagedReports, type StagedAttemptReport } from "./staged-profile-diagnostic-runner";
 
@@ -138,8 +138,11 @@ async function runScheduledAttempt(context: StagedPilotContext, attempt: Schedul
       redacted_trace: trace,
     });
   } catch (error) {
-    // Adapter failures (timeout, non-zero exit, missing session header) are execution
+    // Pi stage failures (timeout, non-zero exit, session identity) are execution
     // health failures: the attempt stays in the denominator and is never retried.
+    // Everything else is driver infrastructure and is labeled separately so
+    // summary consumers can distinguish model/chain failures from driver bugs.
+    const kind = classifyAttemptError(error);
     return {
       schema_version: "staged-runner-attempt/v1",
       condition_id: attempt.condition,
@@ -151,9 +154,15 @@ async function runScheduledAttempt(context: StagedPilotContext, attempt: Schedul
       planned_denominator: 1,
       transcript_in_workspace: false,
       redacted_trace: trace,
+      error_kind: kind,
       ...(error instanceof Error ? { error: error.message } : { error: String(error) }),
-    } as StagedAttemptReport;
+    } as StagedAttemptReport & { error_kind: StagedAttemptErrorKind };
   }
+}
+
+export type StagedAttemptErrorKind = "pi-execution" | "driver-infra";
+export function classifyAttemptError(error: unknown): StagedAttemptErrorKind {
+  return error instanceof PiStageError ? "pi-execution" : "driver-infra";
 }
 
 export async function runStagedPilotPreflight(context: StagedPilotContext, outputRoot: string): Promise<StagedPilotPreflight> {
@@ -208,7 +217,7 @@ export type StagedPilotRun = {
   blocks: number;
   dry_run: boolean;
   preflight: StagedPilotPreflight | null;
-  attempts: Array<StagedAttemptReport & { attempt_id: string; error?: string }>;
+  attempts: Array<StagedAttemptReport & { attempt_id: string; error?: string; error_kind?: StagedAttemptErrorKind }>;
   summary: ReturnType<typeof summarizeStagedReports>;
   disclaimer: string;
 };
