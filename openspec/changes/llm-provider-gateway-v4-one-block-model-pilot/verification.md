@@ -55,3 +55,19 @@ schedule_seed `llm-provider-gateway-v4-one-block-model-pilot/v1`，cyclic-latin-
    - r3 三个完成两阶段的 attempt 离线重放：locality 与 diff-classifiability 由 fail/indeterminate 转为 pass，semantic/snapshot 判定不变；analyzer 回归测试新增于 `analyze.test.ts`。
 
 修复验证：focused staged tests 16/16、analyzer tests 8/8、`bun run test:contracts` 217/217、`bun run validate`、OpenSpec strict、`git diff --check` 全部通过。
+
+## r4（run id `v4-blocks-r4-2026-09-02`，2 blocks / 6 attempts，两项修复后）
+
+- 6/6 evaluated、0 个 pi-execution 超时（r1–r3 共 4 次 Stage 1 超时，收紧 instruction 后归零）、session 全部 same-session、无 snapshot/dependency fail-closed。
+- 逐 attempt：
+  - 01 oracle：两阶段 pass；7 checks pass、locality fail（真实扩散：files=3、decls=7、share=0.71）、diff indeterminate（存在证据不足声明，如实保留）。
+  - 02 irrelevant：Stage 2 语义 fail（0 变更，未实施维护）。
+  - 03 baseline：Stage 1 语义 fail（fail-closed，未进 Stage 2）。
+  - 04 oracle：两阶段 pass；handler-stability fail、transport-isolation fail、locality fail（decls=4、share=0.50）、diff pass。
+  - 05 irrelevant：Stage 1 语义 fail。
+  - 06 baseline：两阶段 pass；handler fail、transport fail、locality fail（decls=9、share=0.89）、diff indeterminate。
+- 结构观测 4/6。locality/handler 失败均为真实的变更扩散信号（多文件、多声明、handler 被改、share 高），不再是 analyzer unknown 盲区；indeterminate 仅出现在证据不足声明（保留语义）。
+
+## 四轮合计（r1+r2+r3+r4，21 attempts）
+
+planned 21 / evaluated 16 / execution-unhealthy 5（4 次 Stage 1 超时均发生在修复前；1×r2 snapshot-mismatch infra 缺陷共 4 次亦在修复前）。修复后（r4）执行健康 6/6。结构观测共 10 个；oracle-practice 完成 5 次两阶段（4 个结构观测），baseline 4 次（3 个），irrelevant 5 次（3 个）。仍为 diagnostic-only：三条件间的描述性差异不构成 directional / Practice effect / 正式结论。

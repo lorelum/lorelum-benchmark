@@ -30,3 +30,9 @@
 - [x] 5.4 诊断 r2 的 stage-1-snapshot-mismatch 根因：semantic oracle 的 `bun test` 在 snapshot 后向 app 追加 `usage.jsonl` 运行时账本；修复为 semantic adapter 在一次性副本上评估（write scope: `src/benchmark/runner/pi/v2/staged/staged-pilot-pi-adapter.ts`）
 - [x] 5.5 执行 r3（2 blocks，6 attempts，验证修复后的执行健康；r1/r2 结果保留不重跑）
 - [x] 5.6 汇总 r1+r2+r3 全部 attempt 的 redacted diagnostic summary
+
+## 前置问题修复与 r4（#188 授权「两个前置问题还是得解决」）
+
+- [x] 6.0 修复 Stage 1 超时：收紧 driver 级 stage instruction（禁止 app/ 外探索与依赖改写）
+- [x] 6.1 修复 analyzer 角色推断盲区（client-table / network-usage 规则）+ registry-map-extension 校准 fixture + snapshot 重新生成（bug 类修复，经需求方确认不另立 issue；#190 已关闭）
+- [x] 6.2 r4 执行（2 blocks）：6/6 evaluated、0 超时、4 个完整结构观测；结果记录于 verification.md
