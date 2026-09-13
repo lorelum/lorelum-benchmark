@@ -2,7 +2,7 @@
 
 ## 1. OpenSpec and initial PR
 
-- [ ] 1.1 Create the #195 OpenSpec artifacts, pass `openspec validate rule-freshness-maintenance --type change --strict --json`, and open the required same-branch initial PR containing only these artifacts (write scope: `openspec/changes/rule-freshness-maintenance/`).
+- [x] 1.1 Create the #195 OpenSpec artifacts, pass `openspec validate rule-freshness-maintenance --type change --strict --json`, and open the required same-branch initial PR containing only these artifacts (write scope: `openspec/changes/rule-freshness-maintenance/`).
 
 ## 2. Current-rule maintenance
 
