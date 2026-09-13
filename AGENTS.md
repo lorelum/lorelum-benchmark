@@ -52,6 +52,10 @@
 - 未由当前 change 或 experiment 明确声明的领域方法条件不是实施门禁，也不要求填写不适用
   说明；当前 change 已声明的领域方法必须在其 design 中记录并按对应领域契约执行。规划回答
   必须写回 issue 与 OpenSpec design/tasks，再开始实现。信息不足时必须暂停并询问，不得自行假设。
+- 用户明确的目标、范围或非目标与 Issue、OpenSpec 或历史材料不一致时，必须显式指出差异；
+  不得默认为已有 artifact 的表述改写用户目标或扩大范围。若当前请求已澄清该差异，不重复追问；
+  否则只询问会实质改变方案的未决点。需要 Issue/OpenSpec 的变更，应先同步关联记录再实施；
+  适用直接 PR 例外的流程或文档修复，按其 PR 规则记录范围与验证。
 - 当 change 新增或修改 `openspec/specs/` 中的 stable capability 时，Plan 与 PR 必须说明每条
   requirement 为什么脱离当前 Issue、candidate、任务、模型、profile、目录、版本与一次实验
   结论后仍成立；无法说明的决定必须留在当前 change 的 design/tasks 或具体 fixture contract，
@@ -60,6 +64,21 @@
   benchmark 代码时运行 `bun run validate`，并在 PR 中保留验证证据和未执行原因。
 - OpenSpec 的 strict validation、public/private 泄露审计及生命周期门禁未通过前，不得执行
   模型调用、创建正式 record，或将 candidate 升级为 suite revision。
+
+## PR Review 双轮规范
+
+- 涉及 suite、任务、schema、evaluator、runner、treatment、environment、实验协议或 record
+  的 PR，合并前必须完成两轮独立 review。两轮独立产出 findings、分别留档、互不替代：
+  1. 第一轮执行 `ai-code-review`：核查评测有效性、可复现性、public/private 隔离、
+     生命周期、验证门禁与流程合规。第一轮存在未修复 must-fix 时，不得进入第二轮。
+  2. 第二轮执行 `thermo-nuclear-code-quality-review`：在第一轮 must-fix 全部修复后的
+     最新 diff 上核查结构质量、抽象与 code judo 机会、spaghetti/死逻辑条件、canonical
+     层复用与文件体量（1k 线），并按其自身 approval bar 出具阻断项。
+- 两轮结论应记录 skill 规则条目到 finding 的依据映射，便于复核审计。
+- 不触及上述 benchmark 契约的小型流程或文档修正可不执行双轮门禁，但 PR 正文必须说明
+  范围（与本文件「OpenSpec 与 PR 流程」一节的范围规则一致）。
+- 两轮 review 均为只读审查，不得在 review 中顺带修改代码；修复按各自 findings 走常规
+  issue/OpenSpec 流程交付。
 
 ## 协作表达
 

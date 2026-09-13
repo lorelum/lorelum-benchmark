@@ -1,5 +1,11 @@
 # 贡献 Benchmark 任务夹具
 
+## 开始前：仓库级流程
+
+开始任务夹具工作前，先按根 `AGENTS.md` 判断本次变更适用的 Issue、OpenSpec、PR 和
+Plan 前置流程。本指南以下步骤只描述通过相应门禁后的夹具实施，不替代这些流程。
+不改变 benchmark 契约的流程或文档修复，按 `AGENTS.md` 的直接 PR 规则处理。
+
 ## 新增任务版本
 
 1. 创建 `suites/<suite>/tasks/<task-slug>/v<version>/`。
