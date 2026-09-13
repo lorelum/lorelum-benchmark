@@ -20,6 +20,8 @@
 - Never commit `node_modules/`, run workspaces, logs, or generated diffs.
   Commit dependency manifests and lockfiles needed to reconstruct a starter.
 - Run `bun run validate` after changing a suite, task, schema, or benchmark code.
+- Use `docs/README.md` as a reading map for maintainer documents; it is navigation,
+  not a second normative source.
 
 ## OpenSpec 与 PR 流程
 
@@ -64,6 +66,24 @@
   benchmark 代码时运行 `bun run validate`，并在 PR 中保留验证证据和未执行原因。
 - OpenSpec 的 strict validation、public/private 泄露审计及生命周期门禁未通过前，不得执行
   模型调用、创建正式 record，或将 candidate 升级为 suite revision。
+
+## 用户纠错与规则沉淀
+
+- 用户纠正后先修正当前理解、计划或交付，停止沿用已被否定的假设；不重复确认已明确
+  的结论。
+- 按影响范围选一个权威落点：
+  - 当前任务或实验的决定：写回适用的 Issue/OpenSpec；若按根流程无需 OpenSpec，则记录在当前 PR；
+  - 文档错误：修正其 canonical source，不在多份指南复制规则；
+  - 跨任务仍成立的契约：按 stable spec 升格要求处理；
+  - 可复用的 Agent 工作方式：写入 `AGENTS.md` 或范围明确的维护指南；
+  - 工具/环境故障：修复相应工具、环境或操作指南，不转成 benchmark 规则。
+- 只有能脱离当前 Issue、candidate、模型或单次实验继续成立的规则，才可升为全局规则。
+  不要复制原始对话或建立独立纠错台账。
+- 规则相关的纠正，在已有 Issue、PR 或 OpenSpec 中简要记录“错误模式 → 根因 → 唯一
+  更新位置 → 回归场景/验证”。可复用规则至少配一个重现旧错误的检查；不能自动化时，
+  在 PR 验证中记录人工场景。普通任务没有规则发现时不额外记日志。
+- 设计示例须区分“说明”“非规范性走查”和“验证证据”；只有预先声明的验收标准实际
+  通过，才可称为验证，不能把示例数量当成通用性证明。
 
 ## PR Review 双轮规范
 

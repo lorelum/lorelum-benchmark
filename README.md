@@ -15,6 +15,7 @@ React Skill 对比 suite。当前默认集包含三个冻结依赖的多文件 N
 
 - `suites/`：冻结的正式任务 revision 与私有 evaluator。
 - `incubator/`：尚未冻结的候选任务。
+- `docs/`：维护者指南与研究资料；文档适用范围见 [`docs/README.md`](docs/README.md)。
 - `schemas/`：机器可读契约。
 - `src/benchmark/`：Bun/TypeScript 校验器、evaluator 和 Pi v2 adapter。
 - `treatments/`、`environments/`：固定 Skill、运行环境与隔离策略。

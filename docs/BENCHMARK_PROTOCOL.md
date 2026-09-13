@@ -6,6 +6,10 @@
 | --- | --- | --- |
 | `performance-skill-comparison` | 固定 Vercel React Skill 能否改善真实 Next 仓库问题的解决质量？ | 基线、Vercel Skill |
 
+本协议的实验轨道专指固定 Vercel React Skill 的 G0/G1 对比；Practice-injection candidate 的额外
+设计要求见 [`PRACTICE_BENCHMARK_GUIDE.md`](PRACTICE_BENCHMARK_GUIDE.md)。本文件后续的结果表达契约
+是仓库共享结果约定，不会把 Practice 专属方法扩展成所有轨道的门禁。
+
 任务卡、评测器、运行记录和评审流程共同保证对比只改变预先声明的实验条件。
 
 ## 实验条件
