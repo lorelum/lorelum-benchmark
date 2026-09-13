@@ -8,9 +8,9 @@
 
 - [x] 2.1 Converge `AGENTS.md`: add the actual root-rule review date; retain universal invariants/routing; remove #74 history, Practice-effectiveness checklist, and treatment delivery details; add applicability and stable-promotion boundaries.
 - [x] 2.2 Move the complete `practice-card` and `project-convention/v1` delivery contract into `treatments/README.md` without weakening public/private or condition-scoped isolation.
-- [ ] 2.3 Update `openspec-pr-continuity` Purpose and apply its generic continuity, Plan-mode/applicability, and stable-promotion delta requirements.
-- [ ] 2.4 Update `practice-benchmark-boundaries` Purpose and apply the declared-Practice-effectiveness control-design requirement.
-- [ ] 2.5 Archive the change after its stable-spec deltas are complete, then remove the empty `practice-candidate-expansion` stable capability while preserving its archive source.
+- [x] 2.3 Update `openspec-pr-continuity` Purpose and apply its generic continuity, Plan-mode/applicability, and stable-promotion delta requirements.
+- [x] 2.4 Update `practice-benchmark-boundaries` Purpose and apply the declared-Practice-effectiveness control-design requirement.
+- [x] 2.5 Confirm no active reference, remove the historical `practice-candidate-expansion` stable capability while preserving its archive source, then archive the remaining stable-spec deltas.
 
 ## 3. CI purpose guard
 
@@ -21,7 +21,7 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Run focused purpose-guard tests, `bun run validate:openspec`, `openspec validate scoped-rule-governance --type change --strict --json`, and `git diff --check`.
-- [ ] 4.2 Verify final scope counterexamples: direct runner/validation/process repair; authorized local smoke; declared Practice-effectiveness change; frozen candidate directional screen.
-- [ ] 4.3 Verify root `AGENTS.md` no longer contains #74, the global Practice-control checklist, or delivery-form details; verify no active reference or stable file remains for `practice-candidate-expansion`.
-- [ ] 4.4 Run final `openspec validate --all --strict --json`; record that no suite/task/schema/benchmark-code change or model execution occurred.
+- [x] 4.1 Run focused purpose-guard tests, `bun run validate:openspec`, `openspec validate scoped-rule-governance --type change --strict --json`, and `git diff --check`.
+- [x] 4.2 Verify final scope counterexamples: direct runner/validation/process repair; authorized local smoke; declared Practice-effectiveness change; frozen candidate directional screen.
+- [x] 4.3 Verify root `AGENTS.md` no longer contains #74, the global Practice-control checklist, or delivery-form details; verify no active reference or stable file remains for `practice-candidate-expansion`.
+- [x] 4.4 Run final `openspec validate --all --strict --json`; record that no suite/task/schema/benchmark-code change or model execution occurred.

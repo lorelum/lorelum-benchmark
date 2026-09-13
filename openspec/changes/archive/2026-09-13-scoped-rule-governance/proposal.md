@@ -23,7 +23,6 @@ _None._
 
 - `openspec-pr-continuity`: replace history- and experiment-specific workflow text with generic continuity, applicable-planning, and stable-promotion requirements.
 - `practice-benchmark-boundaries`: require control design only for changes that explicitly declare Practice-effectiveness measurement.
-- `practice-candidate-expansion`: remove #89-specific requirements from the active stable-spec set; archived #89 evidence remains unchanged.
 
 ## Impact
 

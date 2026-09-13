@@ -40,7 +40,7 @@ A new requirement in `practice-benchmark-boundaries` will require baseline, rele
 
 ### 3. Retire, do not generalize, the unreferenced #89 expansion capability
 
-`practice-candidate-expansion` has no active references outside its own stable file. Its requirements combine #89, fixed runtime/profile choices, and historical execution handoff. The delta will remove all three requirements. After archive applies the removals, the implementation deletes the empty stable capability directory in the same PR. The archived #89 change remains the historical source.
+`practice-candidate-expansion` has no active references outside its own stable file. Its requirements combine #89, fixed runtime/profile choices, and historical execution handoff. OpenSpec cannot archive a capability with zero remaining requirements, so this change directly removes the active stable capability after confirming that no active file references it. The archived #89 change remains the historical source; the archive operation applies the other capability deltas normally.
 
 ### 4. CI enforces objective OpenSpec hygiene only
 
@@ -60,5 +60,5 @@ The CI workflow gets one governance job: install locked dependencies, run strict
 1. Create and strict-validate this OpenSpec-only change, then open its initial PR referencing #195.
 2. Present the approved implementation plan before changing non-OpenSpec files.
 3. Implement root/document/spec/CI changes in dependency order; archive the change only after final strict validation.
-4. Delete the empty retired stable capability after archive has applied removals; verify that no active reference remains.
+4. Delete the retired stable capability before archive after confirming no active reference remains; archive the remaining stable-spec deltas and verify the final active catalog.
 5. Keep #203 closed and do not merge or reuse its archived rule-freshness change.
