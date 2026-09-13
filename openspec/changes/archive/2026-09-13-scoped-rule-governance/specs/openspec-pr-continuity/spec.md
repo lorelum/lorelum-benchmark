@@ -1,8 +1,5 @@
-# openspec-pr-continuity Specification
+## MODIFIED Requirements
 
-## Purpose
-Define the traceable lifecycle for benchmark-contract changes: issue discovery, OpenSpec readiness, requester-confirmed planning, stable-rule promotion, and a single PR evidence chain.
-## Requirements
 ### Requirement: Issue 先于后续 OpenSpec change
 MUST：仓库在创建 benchmark OpenSpec change 前必须确认已有可追溯的 GitHub issue；若没有，必须先创建一张只收敛单一问题、边界、依赖、验收口径与验证要求的 issue。proposal 与 PR 正文必须引用该 issue 编号。
 
@@ -23,23 +20,7 @@ MUST：OpenSpec strict validation 通过且初始 PR 创建后，在开始任何
 - **当** 当前 change 未声明测量 Practice 是否带来效果差异
 - **则** 维护者不得将相关 Practice 或等长无关对照作为该 change 的实施门禁，也不得要求其说明不适用理由
 
-### Requirement: OpenSpec change 保持单一 PR 证据链
-MUST：仓库对 benchmark change 必须先创建仅含 OpenSpec artifacts 和必要流程约束的 PR。后续
-实现、验证、任务清单勾选和修订必须提交到同一分支与同一 PR。该 PR 在 change 的所有任务完成
-或 change 被正式归档为放弃前不得关闭或合并；关闭或合并后发现的新范围必须使用独立 OpenSpec
-change。该 PR 正文必须引用 change 对应的 issue。
-
-#### Scenario: OpenSpec change 准备开始实现
-- **当** 一个已严格验证的 OpenSpec change 准备开始任务实现时
-- **则** 实现提交必须追加到创建该 change 的同一 PR，且不得创建独立实现 PR
-
-#### Scenario: 初始 PR 尚有未完成任务
-- **当** change 的 `tasks.md` 仍有未完成项
-- **则** 维护者不得关闭或合并初始 PR，也不得将未完成实现迁移到另一 PR
-
-#### Scenario: 变更需要新的能力范围
-- **当** 实现发现需要扩展候选池、修改 runner/schema 或创建正式运行记录时
-- **则** 必须为该新范围创建独立 OpenSpec change，并为其建立自己的仅含 OpenSpec 的 PR
+## ADDED Requirements
 
 ### Requirement: Stable spec 只承载脱离当前 change 后仍成立的契约
 MUST：当 change 准备新增或修改 `openspec/specs/` 中的 stable capability 时，维护者必须在 Plan 和 PR 中说明每条新增或修改 requirement 为什么脱离当前 Issue、candidate、任务、模型、profile、目录、版本与一次实验结论后仍然成立。无法作出该说明的决定必须保留在当前 change 的 design/tasks 或具体 fixture contract 中，不得作为 stable spec delta 归档。

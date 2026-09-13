@@ -1,5 +1,7 @@
 # Benchmark Workspace Rules
 
+规则最近核对：2026-09-13（仅表示根规则已在该日期完成实际范围复核；不是普通编辑日期，也不会自动使规则失效。）
+
 - Keep reusable contracts in `schemas/`, benchmark fixtures in `suites/`, and
   runner or validation code in `src/benchmark/`.
 - A task revision lives at `suites/<suite>/tasks/<task-slug>/v<version>/`.
@@ -12,31 +14,15 @@
   helper version used by a frozen task.
 - Agent-visible files belong in `public/`. Evaluators, oracle material, and
   scoring configuration belong in `private/` and must never be copied into an
-  agent workspace or model input. A versioned Practice card that is itself the
-  declared treatment may be injected through a condition-scoped private runtime
-  channel. Two delivery forms are allowed:
-  - `practice-card`: the treatment is delivered as a runtime-injected card and
-    must not be materialized in the workspace or public task prompt.
-  - `project-convention` (`project-convention/v1`): the treatment text is
-    materialized into the agent workspace as a project-internal convention
-    document (for example `docs/frontend-guide.md`), under strict guardrails:
-    it contains only the declared treatment content and never evaluator,
-    oracle, or scoring material; it is condition-scoped, so the baseline
-    workspace and any condition that does not declare the treatment must not
-    contain it; public traces and logs record only the treatment version and
-    hash.
-  The `project-convention` form is an explicit extension of the original
-  "must not be materialized" intent: the materialized document is
-  agent-visible treatment content, not private benchmark material.
+  agent workspace or model input. A declared treatment may be agent-visible
+  only through its versioned, condition-scoped treatment contract; its delivery
+  forms and isolation details are maintained in `treatments/README.md`.
 - Never commit `node_modules/`, run workspaces, logs, or generated diffs.
   Commit dependency manifests and lockfiles needed to reconstruct a starter.
 - Run `bun run validate` after changing a suite, task, schema, or benchmark code.
 
 ## OpenSpec 与 PR 流程
 
-- `practice-login-page-oracle-probe` 是本规则落库时唯一的引导例外：#74 在其首个
-  OpenSpec commit 和 PR 创建后才建立。该顺序不得作为合规先例；本规则对其后的新
-  benchmark change 严格生效。
 - 修复现有 runner、validation、流程或文档缺陷，且不改变评测语义、candidate/snapshot
   身份、record 或结论解释的改动，可直接在独立分支提交 PR，不需要先创建 issue 或 OpenSpec
   change；PR 正文必须说明根因、修复边界与验证方式。
@@ -58,14 +44,24 @@
 - 此后的实现、验证、任务清单勾选和修订必须持续提交到该同一分支和同一 PR。不得为同一
   change 另开实现 PR、迁移到另一分支，或拆分其证据链。未完成或未归档的 change 不得关闭
   或合并其初始 PR；关闭或合并后发现的新范围必须创建独立 OpenSpec change。
-- OpenSpec strict validation 通过且初始 PR 创建后、开始任何候选 fixture 或 benchmark 代码
-  实现前，必须先进入规划澄清阶段并向需求方确认：被测的可观察行为与 Practice 行为、预期
-  baseline 缺陷及区分度、相关 Practice 与等长无关对照、私有语义/质量验收、starter 与
-  不可变源码提交，以及模型、提示、预算和盲评边界。
-- 规划澄清的回答必须写回 issue 与 OpenSpec design/tasks，再开始实现。任何会改变题面、
-  oracle、对照、评测、treatment、environment 或结论解释的未决问题，均构成实现门禁；
-  信息不足时必须暂停并询问，不得自行假设。
+- OpenSpec strict validation 通过且初始 PR 创建后、开始任何非 OpenSpec 的实施前，必须进入
+  Plan mode（当前客户端不支持时，明确标出等效规划阶段），向需求方展示本次改动范围、预期
+  效果、验证方式和非目标，并获得明确确认；实施中若需实质改变已确认的范围或预期效果，必须
+  重新规划并确认。规划必须记录当前 change 实际适用、且会改变题面、oracle、对照、评测、
+  treatment、environment 或结论解释的决定。
+- 未由当前 change 或 experiment 明确声明的领域方法条件不是实施门禁，也不要求填写不适用
+  说明；当前 change 已声明的领域方法必须在其 design 中记录并按对应领域契约执行。规划回答
+  必须写回 issue 与 OpenSpec design/tasks，再开始实现。信息不足时必须暂停并询问，不得自行假设。
+- 当 change 新增或修改 `openspec/specs/` 中的 stable capability 时，Plan 与 PR 必须说明每条
+  requirement 为什么脱离当前 Issue、candidate、任务、模型、profile、目录、版本与一次实验
+  结论后仍成立；无法说明的决定必须留在当前 change 的 design/tasks 或具体 fixture contract，
+  不得作为 stable spec delta 归档。
 - 实现按 `tasks.md` 的依赖顺序推进。完成每项任务后立即勾选；触及 suite、任务、schema 或
   benchmark 代码时运行 `bun run validate`，并在 PR 中保留验证证据和未执行原因。
 - OpenSpec 的 strict validation、public/private 泄露审计及生命周期门禁未通过前，不得执行
   模型调用、创建正式 record，或将 candidate 升级为 suite revision。
+
+## 协作表达
+
+- 面向仓库协作者的 Issue、PR 标题、正文、review 和重要状态评论默认使用中文；用户明确要求其他语言时除外。文件路径、命令、代码标识符和不可翻译的专有名词可保留原文。
+- Issue 或 PR 的正文必须使用清晰的 Markdown 标题、段落和列表。创建或编辑后，提交者必须回读 GitHub 实际保存的标题、正文和重要评论，确认换行、列表和段落没有被压平或损坏；未通过回读验证前不得请求 review 或合并。
