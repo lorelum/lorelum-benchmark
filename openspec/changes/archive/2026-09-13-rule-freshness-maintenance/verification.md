@@ -29,7 +29,8 @@ Other stable OpenSpec specs with generated `Purpose: TBD` text were not bulk-edi
 ## Validation
 
 - `openspec validate --specs --strict --json`: 40 stable specs valid (pre-existing long-requirement INFO notices only).
-- `openspec validate rule-freshness-maintenance --type change --strict --json`
+- `openspec validate rule-freshness-maintenance --type change --strict --json` before archive.
+- `openspec archive rule-freshness-maintenance -y`: archived successfully as `2026-09-13-rule-freshness-maintenance` and applied the approved stable-spec delta.
 - `git diff --check`
 - Manual diff review confirmed that only `AGENTS.md`, `CONTRIBUTING.md`, the stable continuity spec, and this change's OpenSpec artifacts changed. No task, suite, schema, evaluator, runner, treatment, environment, record, private material, snapshot, or generated artifact changed.
 - `bun run validate` was not required or run: this change does not modify a suite, task, schema, or benchmark code.
