@@ -27,8 +27,8 @@
 
 - 修改 suite、任务、schema、evaluator、runner、treatment、environment、实验协议或 record 前，
   必须先确认关联 Issue 和经 strict validation 的 OpenSpec；非契约类流程/文档缺陷可走直接 PR 例外。
-- 按需读取 [`docs/CHANGE_WORKFLOW.md`](docs/CHANGE_WORKFLOW.md) 执行 Issue/OpenSpec、分支/PR、
-  规划确认、稳定契约、验证与正式运行门禁；信息不足或范围与用户目标冲突时先澄清，不自行扩大。
+- 对上述契约变更、OpenSpec change 或用户授权的本地诊断，开始前必须读取并遵守
+  [`docs/CHANGE_WORKFLOW.md`](docs/CHANGE_WORKFLOW.md) 中对应步骤；信息不足或范围与用户目标冲突时先澄清，不自行扩大。
 
 - 用户明确纠正后，立即修正当前理解、计划和交付；不再沿用已否定假设或重复询问已澄清点。**单次纠正不自动新增全局规则，也不建立逐条纠错日志**。
 - 只有同一错误模式在至少两个独立任务复现、一次高风险事件暴露规范缺口/冲突，
