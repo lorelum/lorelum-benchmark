@@ -1,6 +1,6 @@
 ## 1. OpenSpec and required planning gate
 
-- [ ] 1.1 Run strict OpenSpec validation, commit only the #198 OpenSpec artifacts, and create/retain one artifact-only PR from `codex/judge-agent-cross-scenario-v2-contract` that references issue #198. Do not add candidate fixtures, tasks, runner code, model calls, records, or generated run artifacts.
+- [x] 1.1 Ran strict OpenSpec validation, committed only the #198 OpenSpec artifacts, and created artifact-only PR #205 from `codex/judge-agent-cross-scenario-v2-contract` referencing issue #198. No candidate fixtures, tasks, runner code, model calls, records, or generated run artifacts were added.
 - [ ] 1.2 After the artifact-only PR exists and strict validation passes, request and enter Plan mode. Confirm all six questions in `design.md` "Open Questions — Plan-mode Gate" with the requester before implementation planning proceeds.
 - [ ] 1.3 Write the Plan-mode answers back to issue #198 and revise `design.md`/`tasks.md` with the confirmed descriptor fields, approval/provenance choice, scenario families, calibration admission rule, model/prompt/budget/blind-review boundary, and migration boundary.
 
