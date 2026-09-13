@@ -1,7 +1,7 @@
 # openspec-pr-continuity Specification
 
 ## Purpose
-TBD - created by archiving change practice-login-page-oracle-probe. Update Purpose after archive.
+Define the traceable lifecycle for benchmark-contract changes: issue discovery, OpenSpec readiness, requester-confirmed planning, stable-rule promotion, and a single PR evidence chain.
 ## Requirements
 ### Requirement: Issue 先于后续 OpenSpec change
 MUST：除 `practice-login-page-oracle-probe` 作为本规则落库时的一次性引导例外外，仓库在创建

@@ -1,7 +1,7 @@
 # practice-benchmark-boundaries Specification
 
 ## Purpose
-TBD - created by archiving change practice-design-quality-gates. Update Purpose after archive.
+Define the information boundaries, condition isolation, quality-signal limits, and interpretation rules for benchmark changes that explicitly measure Practice-injection effects.
 ## Requirements
 ### Requirement: Practice、任务和验收具有明确的信息边界
 
