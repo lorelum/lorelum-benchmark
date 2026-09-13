@@ -1,18 +1,18 @@
-## 1. OpenSpec and required planning gate
+## 1. OpenSpec and planning gate
 
-- [x] 1.1 Ran strict OpenSpec validation, committed only the #198 OpenSpec artifacts, and created artifact-only PR #205 from `codex/judge-agent-cross-scenario-v2-contract` referencing issue #198. No candidate fixtures, tasks, runner code, model calls, records, or generated run artifacts were added.
-- [ ] 1.2 After the artifact-only PR exists and strict validation passes, request and enter Plan mode. Confirm all six questions in `design.md` "Open Questions — Plan-mode Gate" with the requester before implementation planning proceeds.
-- [ ] 1.3 Write the Plan-mode answers back to issue #198 and revise `design.md`/`tasks.md` with the confirmed descriptor fields, approval/provenance choice, scenario families, calibration admission rule, model/prompt/budget/blind-review boundary, and migration boundary.
+- [x] 1.1 Ran strict OpenSpec validation, committed only the #198 OpenSpec artifacts, and created artifact-only PR #205 from `codex/judge-agent-cross-scenario-v2-contract`.
+- [x] 1.2 Entered Plan mode after PR #205 existed and confirmed scope, research-driven workflow, optional evaluator-code drafts, privacy/blinding, study-specific validation, #200 independence, and walkthrough policy with the requester.
+- [x] 1.3 Updated issue #198 and the OpenSpec artifacts with the confirmed plan. #198 remains design-only.
 
-## 2. Documentation-only design deliverables (blocked by 1.2–1.3)
+## 2. Research-adaptive evaluation design
 
-- [ ] 2.1 Produce a capability map for `generic/v2`, `src/benchmark/judge/input.ts`, and #132/#133/#146/#153: identify what is reusable, missing, and prohibited from reuse for cross-scenario scoring.
-- [ ] 2.2 Define two non-isomorphic descriptor and calibration-package outlines—one UI/service-boundary scenario and one cross-request gateway/policy scenario—without creating candidate fixtures or putting private labels/thresholds in public material.
-- [ ] 2.3 Perform and document a public/private exclusion review for descriptor fields, rubric proposal/approval provenance, calibration-package inputs, public logs, and model input.
-- [ ] 2.4 Define the implementation-readiness decision: conditions for a separate implementation issue/OpenSpec, conditions for retaining a scenario family as experimental, and conditions that keep fixed task-specific rubrics in place.
+- [x] 2.1 Map current `generic/v2`, input allowlist, and #132/#133/#146/#153: reusable public-only input/provenance/mock/soft-score foundations; missing research-question method selection and evidence-gap handling; do not reuse task-specific code heuristics as universal criteria.
+- [x] 2.2 Add two non-normative research-method walkthroughs: #200’s blinded task-specific LLM soft score and #192’s deterministic comparison with no LLM Judge. Use them only to verify different method choices, not as scope proof or universal rubric/calibration requirements.
+- [x] 2.3 Define the boundary: approved public research context for planning; allowlisted, blinded evidence for scoring where needed; no private Oracle/evaluator/scoring/Practice payload or condition mapping to model; no runner/task/environment/instrumentation edits by code drafts.
+- [x] 2.4 Define method-specific validation and implementation readiness: human approval before tool drafts; human review before isolated public/synthetic smoke; a new implementation issue/OpenSpec/PR; no migration of `generic/v1`, `generic/v2`, #200, or historical results without explicit validation.
 
 ## 3. Validation and closeout
 
-- [ ] 3.1 Re-run strict OpenSpec validation and `git diff --check` after the planning answers and documentation-only deliverables are complete.
-- [ ] 3.2 Confirm no runtime code, schema, suite/task revision, candidate fixture, provider invocation, benchmark execution, formal record, or private material was added by this design change.
-- [ ] 3.3 Record the design-stage evidence and remaining implementation gate on issue #198 and the single PR. Do not close or merge the PR while the OpenSpec change remains unarchived.
+- [x] 3.1 Ran `openspec validate judge-agent-cross-scenario-v2-contract --type change --strict --json` (valid, 0 issues) and `git diff --check` after the design and issue updates.
+- [x] 3.2 Audited the final change: only the #198 OpenSpec proposal/design/spec/tasks are modified; no provider/evaluator/runner/schema/task/fixture/environment code, private material, model calls, benchmark runs, or formal records were added.
+- [x] 3.3 Recorded design/validation evidence on issue #198 and PR #205; kept PR #205 open. Archive/sync OpenSpec and complete the required independent reviews before any future merge or closure.

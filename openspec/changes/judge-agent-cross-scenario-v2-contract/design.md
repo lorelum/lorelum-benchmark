@@ -1,96 +1,119 @@
 ## Context
 
-Issue #198 is a design-stage follow-on to the repository's JudgeAgent foundation. #132 separated execution health, semantic completion, and quality soft signals. #133 established the public-only JudgeAgent input constructor, `judge-result/v1`, provenance hashes, fail-closed behavior, and mock-by-default CI posture. #146 connected task-scoped judge providers to the runner without allowing quality to change semantic completion. #153 introduced the repository-level generic LLM JudgeAgent and retained the requirement for calibration before directional use.
+Issue #198 follows the repository’s existing JudgeAgent work. #132 separated semantic completion from soft quality; #133 established public-only input, provenance, fail-closed behavior, and mock-by-default; #146 connected Judge providers to the runner; #153 delivered a generic code-task rubric-and-score path. `generic/v2` improved that path but its quality guidance still reflects specific code-quality domains.
 
-The current generic provider is not yet a cross-scenario facility. `generic/v2/rubric.ts` and `score.ts` contain an engineering-quality guideline and score prompt that name frontend transport isolation as well as LLM-gateway retry, provider-protocol, budget, and metering signals. Those signals are useful for their original scenarios, but they are task-type assumptions rather than a declared scenario contract. `generic/v2/calibrate.ts` can report calibration outcomes, but no reusable scenario descriptor, rubric approval state, scenario-family admission gate, or descriptor-to-result provenance exists.
+The current MVP has distinct, deliberately bounded evaluation work. #200 applies a task-specific, blinded soft Judge to whether an Agent reconsiders assumptions and plans after receiving deployment constraints; #202 owns deterministic correctness. #192 uses deterministic structure-pass counts and explicitly does not use an LLM Judge. These are useful design walkthroughs because the appropriate evaluation method differs; they do not define the universe of research or prove generality.
 
-This change produces the contract and validation plan only. It has no authority to change the current fixed-rubric MVP, make model calls, add candidate fixtures, or report benchmark conclusions.
+This change specifies a future capability only. It does not implement provider/code generation, modify #200/#192, add schemas or fixtures, invoke models, run experiments, or create records.
+
+## Capability Map
+
+| Existing capability | Reusable foundation | Gap or prohibited assumption |
+|---|---|---|
+| #132 outcome separation | Execution health, semantic hard gate, and quality soft signal remain separate. | Do not turn a Judge score into task completion or experimental fact. |
+| #133 JudgeAgent soft-scoring | Public-only allowlist, `judge-result/v1`, provenance, fail-closed output, mock/default-no-network. | No private Oracle, evaluator, scoring, Practice payload, or undeclared condition data in model input. |
+| #146 provider/runner integration | Versioned provider resolution and indeterminate handling can be reused by a later consumer. | #198 does not alter runner integration or use it to evaluate delivery timing. |
+| #153 and `generic/v1` | Rubric generation, structured scoring, explicit real-model opt-in, and calibration are existing building blocks. | Their code-task rubric-and-score flow does not itself select a method for a research question. |
+| `generic/v2` | Existing rubric validation/hash, evidence-oriented scoring, fixed-rubric option, and calibration runner. | Frontend transport and gateway policy guidance are task-specific; do not treat them or their thresholds as universal. |
+| `src/benchmark/judge/input.ts` | Path-level public allowlist, redacted failure, and input hash. | It accepts judge materials; it does not decide which evidence/method answers a study question or draft a new evaluator. |
+
+The missing capability is a research-question planning step that can select deterministic, LLM, human, combined, or no-Judge evaluation; identify evidence gaps; and, only when approved, request a measurement-only code draft. Existing task-specific rubrics remain valid and are not automatically replaced.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Specify the smallest public descriptor that lets a future judge understand a scoring scenario without receiving Oracle, evaluator, condition, Practice, calibration labels, or other private material.
-- Specify a clear separation between generating/advising a rubric and scoring with an approved rubric, including version/hash/provenance and invalid/indeterminate semantics.
-- Specify how reference, equivalent, and anti-pattern calibration examples establish discrimination rather than merely demonstrating that an LLM returned JSON.
-- Specify the compatibility boundary: cross-scenario judgment remains public-only, opt-in for real models, mockable in CI, fail-closed, and a quality sidecar only.
-- Make all unresolved choices explicit so they can be answered during the required Plan-mode clarification and written back to issue #198 and these artifacts before any implementation work starts.
+- Make evaluation assistance responsive to the research question, not to a fixed task category or universal quality rubric.
+- Use the confirmed research issue/OpenSpec as the context source; do not require a duplicate brief for unrelated engineering work.
+- Have the assistant recommend deterministic, LLM-based, human, combined, or no-Judge methods; explain evidence needs, limitations, and when it must ask the researcher for clarification.
+- Permit a future assistant to draft an evaluator/analysis tool after the researcher approves a plan, limited to already approved evidence and subject to human code review.
+- Preserve study-specific calibration, blinding, privacy, provenance, and the existing rule that Judge quality is not a semantic hard gate.
 
 **Non-Goals:**
 
-- Do not implement a new provider, change `judge-agent/generic/v2`, change `JudgeProvider`, modify `judge-result/v1`, or select an external model/provider.
-- Do not create task/candidate/calibration fixtures, a private oracle, a formal record, a model run, a runner integration, or a migration of existing fixed rubrics.
-- Do not let either an LLM-generated rubric or a quality score determine semantic completion, execution health, task admission, or a formal experimental conclusion.
-- Do not infer hidden product requirements from candidate source or use task-type-specific prompt heuristics as a substitute for a descriptor.
+- Do not implement the assistant, a provider, code generator, evaluator, runner, instrumentation, task, schema, fixture, or environment change in #198.
+- Do not require Judge evaluation for pure engineering setup, bug fixes, or work without an outcome/comparison question.
+- Do not let the model inspect private Oracle, evaluator, scoring configuration, private Practice payload, or real condition mapping.
+- Do not let generated code modify how experiments deliver treatments or collect evidence; missing observations are reported as a gap and planned separately.
+- Do not replace `generic/v1`/`generic/v2`, #200’s MVP rubric, deterministic evaluators, or prior results.
 
 ## Decisions
 
-### 1. Use a public, scoped scenario descriptor rather than task text alone
+### 1. Start from the research question, not a task descriptor
 
-A future facility SHALL accept a versioned `judge-scenario-descriptor/v1` alongside the existing public task and candidate evidence. Its minimal public fields are: stable identity/version; concise scenario purpose; explicit observable behaviors; quality signals with reviewable evidence expectations; declared admissible public evidence paths/types; exclusions/non-goals; and uncertainty boundaries. The descriptor is source-controlled, hashable, and narrow enough to scope a rubric without embedding a private answer key.
+The workflow is relevant when a study needs to evaluate or compare outcomes. It reads the confirmed issue/OpenSpec, then identifies the decision being made, unit of analysis, available approved evidence, and conclusion boundary. Pure engineering work does not need to declare “Judge applicable / not applicable.” A study may explicitly conclude that no Judge is appropriate.
 
-**Why this over relying on `task.md`:** task text establishes the coding request but normally does not identify which engineering-quality signal is deliberately being studied, what evidence is admissible, or when a reviewer must abstain. Adding hidden evaluator content would violate the #133 public-input contract.
+**Rationale:** a mandatory field on every task card or every engineering issue would add process without improving the evaluation of a research outcome. The issue/OpenSpec already holds the research intent.
 
-**Rejected alternative — task-type templates in the prompt:** a global prompt listing frontend/gateway patterns gives irrelevant prior instructions to unrelated scenarios and makes the rubric generation look generic when it is not.
+### 2. Produce a reviewable evaluation plan before scoring or code drafting
 
-**Rejected alternative — allow an opaque free-form context blob:** it cannot be path-audited, safely versioned, or reviewed for private-material leakage.
+The plan describes, as applicable: the research question and outcome; comparison/evaluation unit; candidate evidence; suitable deterministic, LLM, and human roles; metric/rubric and aggregation proposal; missing observations; method-specific validation; privacy/blinding; and limits on conclusions. If an unresolved choice changes the primary outcome, evidence, or conclusion, the assistant asks rather than finalizing a plan with a hidden assumption.
 
-### 2. Treat generation as advice; score only with an approved rubric identity
+The researcher’s approval authorizes only the actions explicitly declared in that plan. If no LLM judgment or new tool is warranted, the workflow does not add one.
 
-A future rubric generator may emit a `rubric-proposal/v1` bound to the descriptor hash, public task/evidence inventory hash, generator identity/version, prompt hash, and proposal hash. Its output is advisory. A scenario owner must explicitly accept, edit, or reject it into a versioned approved rubric before it is used for scored reporting or calibration admission. The approved rubric records its source descriptor hash, stable rubric version/hash, selected dimensions/weights, evidence requirements, and approval provenance.
+### 3. Allow optional tool-code drafts, not unreviewed execution changes
 
-**Why this over automatic generation-and-scoring:** a model cannot validate its own coverage, hidden assumptions, or discriminatory power. Separating proposal from approval preserves reviewability and makes a changed prompt/model an explicit new provenance input.
+After plan approval, a future JudgeAgent may draft a deterministic evaluator or analysis script that consumes already available, approved evidence. It may not alter runner delivery, add trace/instrumentation, edit task/environment assets, or read private labels to invent a score. If data is missing, it reports the gap for a separately scoped change.
 
-**Compatibility:** existing fixed task-specific rubrics remain approved by their current versioned mechanism. A future generic provider version must not silently reinterpret a `generic/v2` rubric or overwrite an existing rubric hash.
+A generated draft remains untrusted until a human reviews it. Only after code review may an explicitly authorized isolated smoke use public or synthetic samples. Formal integration and any benchmark-code changes follow their own issue/OpenSpec/PR, validation, and lifecycle gates. Tool generation is conditional, not a mandatory step for every study.
 
-### 3. Bind score evidence and provenance through a companion context/provenance artifact
+### 4. Separate study design, blind scoring, deterministic aggregation, and human interpretation
 
-`judge-result/v1` already binds a score to prompt, rubric, and input hashes. The future facility needs auditable linkage to descriptor identity, evidence inventory, rubric lifecycle state, and calibration package without silently extending a frozen schema. The preferred design is a versioned companion context/provenance sidecar (name and exact schema are deferred to the Plan confirmation) that records hashes and public identities, never raw private acceptance labels or oracle material.
+The planning stage may use the approved high-level research question and comparison framing, but only after private details are excluded. A scoring call receives only the declared, allowlisted evidence and approved rubric; where condition identity could bias judgment, the evidence is blinded. A deterministic aggregator may join blinded results back to the pre-registered comparison after scoring. LLM quality remains a soft signal; it cannot change semantic completion, execution health, or a formal record’s facts. Human researchers retain responsibility for interpreting conclusions.
 
-The judge is given only the descriptor, public task/material selected by the existing allowlist, candidate diff/source, and the approved rubric. Each criterion rationale must cite supplied evidence by file/symbol/behavior or identify the missing evidence. If evidence is insufficient, contradictory, or outside the descriptor boundary, the result is `indeterminate`/`judge-unavailable` under the existing outcome contract; it is not a guessed low score.
+This reuses `judgeagent-soft-scoring` and `benchmark-outcome-contract`; #198 does not rewrite those contracts.
 
-**Why this over adding descriptor fields to `judge-result/v1`:** #132/#133 prohibit silent extension of frozen versions. A sidecar preserves backward interpretation while allowing a later versioned migration only if consumers truly need an inline field.
+### 5. Validate the method that the study actually uses
 
-### 4. Separate public judge inputs from private calibration acceptance material
+Validation is study-specific. Deterministic evaluators use known cases, invariants, or mutation/negative tests appropriate to their metric. LLM scoring requires a relevant calibration/reliability plan, with private acceptance labels kept outside model input. Human review requires a declared review protocol where it is part of the outcome. No universal reference/equivalent/anti-pattern package or score threshold is required for every study.
 
-A calibration package is a versioned scenario-family artifact containing reference, behaviorally equivalent, and anti-pattern candidates. Each candidate is judged using the same public-only input builder and descriptor/rubric path intended for production. The private package retains expected ordering/acceptance thresholds, semantic-oracle evidence, and any quality labels; neither those labels nor threshold values are passed to the judge, agent workspace, public prompt, trace, or public report.
+Two non-normative walkthroughs check method selection: #200 should preserve its blinded, task-specific LLM soft-score role; #192 should remain a deterministic comparison with no LLM Judge. Passing these walkthroughs demonstrates only that the design distinguishes those cases—not generality across all future research.
 
-The package must establish at least: high/acceptable reference behavior, equivalence tolerance for a materially different but valid implementation, and a detectable anti-pattern that violates the declared quality signal while preserving enough semantic behavior to make quality judgment meaningful. One calibration run is evidence, not a universal-quality claim.
+### 6. Preserve versioned provenance and existing consumers
 
-**Why this over reference-only demonstrations:** reference-only scoring cannot establish invariance to implementation style or separation from the declared negative pattern.
+Future plans, approved rubrics, generated code, and resulting scores must be traceable to source issue/OpenSpec revision and content hashes. The implementation must not silently extend or reinterpret `judge-result/v1`; if its existing hashes cannot express a required relationship, use a separately versioned artifact or schema in the follow-up implementation change.
 
-### 5. Admit a scenario family only after bounded discrimination evidence
+Existing generic providers and fixed rubrics remain unchanged. Any future consumer opts into a new, versioned capability only after its own validation; no automatic migration occurs.
 
-A future consumer may use cross-scenario scoring for directional quality analysis only after the relevant scenario family has an approved descriptor/rubric and a passing private calibration review. The review must document result ordering/tolerance, repeatability or disagreement handling, indeterminate/unavailable rates, and the boundary beyond which the facility remains experimental. Until then the result is diagnostic only; existing fixed rubrics remain the supported choice for that scenario.
+## Non-normative Design Walkthroughs
 
-The initial validation plan must include two non-isomorphic scenario descriptors—one UI/service-boundary scenario and one cross-request gateway/policy scenario—to prove that the descriptor contract, rather than the current hard-coded prompt, carries the relevant quality signal. These are descriptor/calibration-package designs, not new benchmark fixtures in this change.
+These walkthroughs check that the design can choose different methods. They are not scope limits, calibration requirements, or evidence that the capability generalizes.
+
+- **#200 — adaptation-quality soft signal:** the study asks whether the Agent reconsidered assumptions, plan, implementation, and validation after new constraints. Keep its fixed, blinded, task-specific LLM rubric for the current MVP; #202 retains deterministic semantic correctness. Do not use the Judge to decide which delivery timing is better, and do not migrate #200 automatically.
+- **#192 — deterministic structure comparison:** the study compares a predeclared deterministic structure-pass measure across paired blocks and explicitly excludes an LLM Judge. Recommend the existing deterministic evaluation and aggregation approach; do not add an LLM score or generate another tool when the existing one answers the question.
+
+## Public/Private and Blinding Review
+
+| Stage | Permitted model context | Excluded from model input |
+|---|---|---|
+| Evaluation planning | Redacted, approved research question, high-level comparison purpose, and inventory of approved evidence. | Private Oracle/evaluator/scoring content, private Practice payload, real condition mapping, credentials, or private calibration labels/thresholds. |
+| Subjective scoring | Only declared, path-allowlisted evidence and approved rubric; use blind IDs when condition knowledge could bias judgment. | Private acceptance material and condition/treatment identity or timing labels when blinded scoring is required. |
+| Tool-code drafting | Approved evidence interfaces and public/synthetic examples needed to draft a reader or analyzer. | Private labels, hidden expected outcomes, private paths, and protected scoring configuration. |
+| Smoke and reporting | After code review, isolated public/synthetic samples; report version/hash and redacted reason as appropriate. | Private raw artifacts or mapping in model prompts, public traces, or public summaries. |
+
+New observation/runner instrumentation is not generated in this workflow. It is reported as an evidence gap and handled in a separately scoped change. Generated evaluator code remains subject to repository public/private storage and lifecycle rules.
 
 ## Risks / Trade-offs
 
-- **Descriptor becomes a public oracle or leaks treatment/private scoring logic** → Keep it limited to product-visible behavior, reviewable quality signals, admissible evidence, exclusions, and uncertainty; run a dedicated public/private exclusion review before implementation and before every descriptor is consumed.
-- **Descriptor is too vague, leading to generic praise or task-type priors** → Require concrete evidence expectations and an abstention boundary; reject descriptors that cannot distinguish a reference, equivalent, and anti-pattern example.
-- **Rubric approval becomes ceremonial** → Bind every scoring/calibration attempt to descriptor/rubric hashes and require private calibration evidence before directional use.
-- **Calibration overfits to one candidate layout** → Require a materially different equivalent implementation and prohibit path/name/helper-specific rubric criteria.
-- **Real-model variance or outage masquerades as low quality** → Preserve mock/default-no-network behavior, explicit real-model opt-in, provider/version/prompt provenance, repeat/disagreement evidence, and fail-closed `indeterminate`/`judge-unavailable` states.
-- **A design change alters current runner conclusions accidentally** → Keep this issue documentation-only; any provider/schema/runner/fixture work needs a subsequent implementation OpenSpec and its own lifecycle gates.
+- **The planner sees hidden scoring/condition information** → construct a redacted research context; keep private Oracle, evaluator, scoring, Practice payload, and real condition mapping outside all model inputs.
+- **The assistant invents a metric when the study is underspecified** → require clarifying questions for decision-critical gaps and keep assumptions visible in a non-final proposal.
+- **Generated code changes the experiment rather than measuring it** → restrict drafts to already approved evidence; route new collection/runner/task/environment changes to a separate issue and OpenSpec.
+- **A study-specific score is overstated as universally valid** → validate each method for its declared study and limit claims to that scope.
+- **Generic work changes old results** → version the future capability and preserve `generic/v1`, `generic/v2`, #200, and all historical provenance.
 
 ## Migration Plan
 
-1. Complete the artifact-only PR for #198 and strict validation.
-2. Enter the required Plan-mode clarification. Confirm the open questions below with the requester; record the answers in issue #198 plus this design and `tasks.md`.
-3. Finish the documentation-only deliverables: capability mapping, two descriptor/calibration-package outlines, and a public/private exclusion review. No model or benchmark execution occurs.
-4. If the resulting plan warrants implementation, open a separate implementation change from a new issue/PR chain. That later change selects the provider/version, schema/sidecar, exact calibration fixtures, and validation thresholds; it must not modify frozen generic/v2 behavior in place.
-5. If calibration cannot demonstrate discrimination across the selected scenario families, retain the facility as experimental and continue using fixed task-specific rubrics.
+1. Complete the design-only #198 OpenSpec and its artifact-only PR #205 after strict validation.
+2. Once the design is complete, create a separate implementation issue for the research-adaptive planning, optional code-draft, and scoring workflow; implement it under its own OpenSpec and initial PR.
+3. Keep #200 on its current task-specific rubric and execution path. It may be evaluated for migration only under a later explicit issue after the generic capability has passed relevant validation; no automatic migration or reinterpretation is allowed.
+4. Until an applicable method is validated, keep its output diagnostic/experimental and use existing deterministic evaluators or fixed task-specific rubrics.
 
-Rollback for this change is removal of its unmerged documentation-only OpenSpec artifacts. No runtime behavior, fixture, record, or schema is changed.
+Rollback of #198 is removal of its unmerged design artifacts; it has no runtime effect.
 
-## Open Questions — Plan-mode Gate
+## Stable Capability Rationale
 
-The following choices materially affect input boundaries, evaluation semantics, calibration, and conclusion interpretation. They MUST be confirmed in Plan mode before any implementation, candidate fixture, model invocation, or formal record:
+The requirements are intended to remain valid beyond the motivating issues, model, task, profile, and repository directory: research objectives can call for different evaluation methods; evaluators need approved evidence and visible limitations; generated measurement code must not silently change treatment delivery or evidence collection; private acceptance material must remain separate from model input; and a quality opinion must not become a semantic fact. #200 and #192 are examples only, not sources of universal thresholds or implementation assumptions.
 
-1. **Descriptor minimum:** Are the listed public fields sufficient, and which public evidence types (task text, starter files, candidate diff, explicitly declared public run output) may be included? Is a source-controlled descriptor required per scenario or may a shared family descriptor be referenced?
-2. **Approval authority and storage:** Who approves a generated rubric, how is approval provenance represented, and should the approved artifact be public source, a condition-scoped private artifact that is never injected into the judge, or a separate reviewed manifest? The answer must preserve the public-only input rule.
-3. **Provenance format:** Is a `judge-context/v1`-style companion sidecar the preferred first implementation, or is a new `judge-result/v2` necessary? Which consumers need descriptor/rubric approval provenance directly?
-4. **Validation coverage and threshold:** Which two non-isomorphic scenario families are in scope, what repeat/disagreement/indeterminate limits make calibration adequate, and what exact private acceptance ordering/tolerance qualifies a family for directional use?
-5. **Model and blind-evaluation boundary:** Which model/provider/version, system prompt ownership, temperature/retry policy, budget, real-model opt-in control, and blinded reviewer access are permitted? What is the rule for provider failure and cost reporting?
-6. **Migration boundary:** Which existing `generic/v2` consumers, if any, may adopt the future facility, and what evidence is required before a fixed task-specific rubric can be replaced or retired?
+## Open Questions
+
+No planning questions remain for this design-only change. Exact provider/model configuration, schema names, code-generation runtime, and any concrete generated evaluator belong to the separately tracked implementation change.
