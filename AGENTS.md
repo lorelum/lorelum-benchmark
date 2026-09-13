@@ -58,10 +58,12 @@
 - 此后的实现、验证、任务清单勾选和修订必须持续提交到该同一分支和同一 PR。不得为同一
   change 另开实现 PR、迁移到另一分支，或拆分其证据链。未完成或未归档的 change 不得关闭
   或合并其初始 PR；关闭或合并后发现的新范围必须创建独立 OpenSpec change。
-- OpenSpec strict validation 通过且初始 PR 创建后、开始任何候选 fixture 或 benchmark 代码
-  实现前，必须先进入规划澄清阶段并向需求方确认：被测的可观察行为与 Practice 行为、预期
-  baseline 缺陷及区分度、相关 Practice 与等长无关对照、私有语义/质量验收、starter 与
-  不可变源码提交，以及模型、提示、预算和盲评边界。
+- OpenSpec strict validation 通过且初始 PR 创建后、开始任何非 OpenSpec 的实施前，必须进入
+  Plan mode（当前客户端不支持时，明确标出等效规划阶段），向需求方展示本次改动范围、预期
+  效果、验证方式和非目标，并获得明确确认；实施中若需实质改变已确认的范围或预期效果，必须
+  重新规划并确认。规划澄清还必须向需求方确认：被测的可观察行为与
+  Practice 行为、预期 baseline 缺陷及区分度、相关 Practice 与等长无关对照、私有语义/质量
+  验收、starter 与不可变源码提交，以及模型、提示、预算和盲评边界。
 - 规划澄清的回答必须写回 issue 与 OpenSpec design/tasks，再开始实现。任何会改变题面、
   oracle、对照、评测、treatment、environment 或结论解释的未决问题，均构成实现门禁；
   信息不足时必须暂停并询问，不得自行假设。
