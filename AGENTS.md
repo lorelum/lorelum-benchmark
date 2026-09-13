@@ -71,3 +71,8 @@
   benchmark 代码时运行 `bun run validate`，并在 PR 中保留验证证据和未执行原因。
 - OpenSpec 的 strict validation、public/private 泄露审计及生命周期门禁未通过前，不得执行
   模型调用、创建正式 record，或将 candidate 升级为 suite revision。
+
+## 协作表达
+
+- 面向仓库协作者的 Issue、PR 标题、正文、review 和重要状态评论默认使用中文；用户明确要求其他语言时除外。文件路径、命令、代码标识符和不可翻译的专有名词可保留原文。
+- Issue 或 PR 的正文必须使用清晰的 Markdown 标题、段落和列表。创建或编辑后，提交者必须回读 GitHub 实际保存的标题、正文和重要评论，确认换行、列表和段落没有被压平或损坏；未通过回读验证前不得请求 review 或合并。
