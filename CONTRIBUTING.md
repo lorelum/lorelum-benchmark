@@ -1,5 +1,9 @@
 # 贡献 Benchmark 任务夹具
 
+## 开始前
+
+新增或修改 suite、任务、schema、evaluator、runner、treatment、environment、实验协议或记录前，先满足 `AGENTS.md` 中适用的 Issue、OpenSpec 与 PR 流程。本页说明该前置流程完成后的 fixture 构建、冻结与产物要求，不是替代流程。
+
 ## 新增任务版本
 
 1. 创建 `suites/<suite>/tasks/<task-slug>/v<version>/`。

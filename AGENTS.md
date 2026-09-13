@@ -1,5 +1,7 @@
 # Benchmark Workspace Rules
 
+> **规则最近核对：2026-09-13。** 此日期表示已对已提交的仓库规则和流程进行实际复核，不是本文件编辑日期，也不会自动使任何规则失效。
+
 - Keep reusable contracts in `schemas/`, benchmark fixtures in `suites/`, and
   runner or validation code in `src/benchmark/`.
 - A task revision lives at `suites/<suite>/tasks/<task-slug>/v<version>/`.
@@ -32,6 +34,12 @@
   Commit dependency manifests and lockfiles needed to reconstruct a starter.
 - Run `bun run validate` after changing a suite, task, schema, or benchmark code.
 
+## 规则维护
+
+- 当工作改变、验证或暴露共享规则/流程的过时、范围不清或冲突时，在现有 Issue、PR 或 OpenSpec 留下一条简短结论：`无需更新`、`已更新 <files>` 或 `后续 #<issue>`；没有规则发现的普通工作无需新增记录。
+- 只有在实际复核已提交的规则/流程后才更新“规则最近核对”日期。复核由上述发现、相关任务收尾或流程/工具变化触发；不为日期本身建立定时自动化或独立日志。
+- 修订规则时先更新现行文本及其相邻说明，而不是叠加面向单一案例的永久补丁；无法判断时记录后续 Issue，不自行假设新通用规则。
+
 ## OpenSpec 与 PR 流程
 
 - `practice-login-page-oracle-probe` 是本规则落库时唯一的引导例外：#74 在其首个
@@ -58,13 +66,14 @@
 - 此后的实现、验证、任务清单勾选和修订必须持续提交到该同一分支和同一 PR。不得为同一
   change 另开实现 PR、迁移到另一分支，或拆分其证据链。未完成或未归档的 change 不得关闭
   或合并其初始 PR；关闭或合并后发现的新范围必须创建独立 OpenSpec change。
-- OpenSpec strict validation 通过且初始 PR 创建后、开始任何候选 fixture 或 benchmark 代码
-  实现前，必须先进入规划澄清阶段并向需求方确认：被测的可观察行为与 Practice 行为、预期
-  baseline 缺陷及区分度、相关 Practice 与等长无关对照、私有语义/质量验收、starter 与
-  不可变源码提交，以及模型、提示、预算和盲评边界。
-- 规划澄清的回答必须写回 issue 与 OpenSpec design/tasks，再开始实现。任何会改变题面、
-  oracle、对照、评测、treatment、environment 或结论解释的未决问题，均构成实现门禁；
-  信息不足时必须暂停并询问，不得自行假设。
+- OpenSpec strict validation 通过且初始 PR 创建后，创建或改变 benchmark 的可观察任务行为、
+  Practice/treatment 或对照、私有语义/质量验收、starter 或不可变源码身份、模型/提示/
+  预算/盲评计划或结论解释前，必须向需求方确认并记录相关决定；记录必须写回 issue 与
+  OpenSpec design/tasks。
+- 仅实施同一 change 已记录且本次未改变的决定时，必须引用该决定，但无需重新确认不受影响的
+  选择；验证、public/private、生命周期和执行门禁仍然适用。任何会改变题面、oracle、对照、
+  评测、treatment、environment 或结论解释的未决问题，均阻断受影响的实现或模型执行；信息
+  不足时暂停并询问，不得自行假设。
 - 实现按 `tasks.md` 的依赖顺序推进。完成每项任务后立即勾选；触及 suite、任务、schema 或
   benchmark 代码时运行 `bun run validate`，并在 PR 中保留验证证据和未执行原因。
 - OpenSpec 的 strict validation、public/private 泄露审计及生命周期门禁未通过前，不得执行
