@@ -18,10 +18,11 @@ bun run pi:coordinate -- scratch/requests/<run-id>.json --dry-run
 bun run pi:coordinate -- scratch/requests/<run-id>.json
 ```
 
-当前不存在 active G0/G1 计划或正式 record。React Skill 对比的三个 pilot revision
-（dashboard v2、report insights v7、team directory v3）已在
-`suites/realistic-react-skill-comparison` 冻结；在新的实验计划、离线校准与运行前置条件
-全部通过前，不得生成 Pi 请求或调用模型 API。
+本页不维护当前计划、workflow 或正式 record 的状态清单。实验计划以已提交的
+`experiments/<suite>/` 文件为准；默认任务集以对应 `suites/<suite>/suite.yaml` 的
+`default_active_task_set` 为准；已提交记录以 `results/records/` 为准。生成请求前，必须核对
+计划引用的 task revision、source commit、离线校准与启动门禁；本页不是运行授权。formal smoke
+的具体前置条件见 [`FORMAL_SMOKE.md`](FORMAL_SMOKE.md)，不得因本页存在命令示例就调用模型 API。
 
 `--dry-run` 会验证全部契约并输出将要使用的隔离工作区，不创建目录也不执行 Pi。正式运行
 会在 `artifacts/runs/<run-id>/<manifest_name>` 写入 `pi-run-artifact/v2` manifest，记录经过

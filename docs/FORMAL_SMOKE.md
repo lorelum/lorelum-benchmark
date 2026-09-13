@@ -1,8 +1,10 @@
 # 正式 G0/G1 Smoke 运行手册
 
-当前 formal smoke workflow 已撤下，仓库中没有可生成请求或记录的历史计划。真实 Next
-仓库候选尚处于离线校准阶段；只有三份预注册问题全部冻结、source commit、不可变模型
-快照、隔离 runner 与不可变 artifact storage 全部就绪后，才能新建 workflow 和正式计划。
+本页定义 formal G0/G1 smoke 的启动门禁，不代表当前已具备运行资格或 workflow 已启用。每次执行前，
+必须重新确认正式 workflow 可用、已提交的实验计划存在且绑定不可变 source commit、计划中所有 task
+revision 已冻结，并且离线校准、不可变模型快照、隔离 runner 与 artifact storage 均已就绪。任一条件
+缺失时停止，不生成 Pi 请求、不调用模型，也不创建正式 record。当前计划和记录的事实来源分别是
+`experiments/` 与 `results/records/`；当前候选集由对应 suite manifest 决定。
 
 ## 启动前配置
 

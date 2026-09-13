@@ -122,33 +122,17 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 
 ### Practice 观测结果契约
 
-所有当前与未来 Practice-injection candidate 的 evaluator 和结果汇总必须独立保存以下维度；新增或修改 candidate 时，必须在关联 issue 与 OpenSpec 说明如何满足该契约。已冻结 candidate 只能通过新 revision 或独立 change 迁移，绝不回写历史输入或记录。
+运行健康、语义结果、质量状态（包括 `judge-unavailable`）和派生 `joint_pass` 的共享枚举与报告规则，
+以 [`BENCHMARK_PROTOCOL.md`](BENCHMARK_PROTOCOL.md) 的结果契约及 stable capability
+`benchmark-outcome-contract` 为准；本指南不再维护第二份状态枚举。
 
-| 维度 | 允许状态 | 说明 |
-| --- | --- | --- |
-| 语义结果 | `pass` / `fail` / `not-run` | 仅语义 `pass` 表示任务完成 |
-| Practice 观测 | `observed` / `not-observed` / `indeterminate` / `not-run` | 仅报告 Practice 相关职责证据 |
-| evaluator/execution health | `evaluated` / `invalid-output` / `execution-failed` / `not-executable` | 表示管线是否产生可用结果，不能从前两项推导 |
+Practice-injection candidate 额外遵守：
 
-- `semantic=pass` 且 `practice_observation=not-observed` 必须表述为任务完成、未观察到对应 Practice 证据；它仍是一次健康的 `evaluated` 结果。
-- `not-observed` 只能由已校准且适用于 candidate 的反模式或缺失职责证据产生。
-- probe 遇到解析失败、未支持代码形态、依赖缺失或无法可靠分类时，必须报告 `indeterminate` 及稳定审计原因，不能把它伪装成 `not-observed`。
-- `joint_pass` 仅可派生为语义 `pass` 与 Practice `observed` 同时成立；它不是任务完成、evaluator health 或加权总分。
-
-### 单次运行的判定标准
-
-一次运行必须同时保留三个彼此独立的问题；任何报告、汇总或退出码都不得用其中一个问题的答案替代另一个。
-
-| 要回答的问题 | 唯一判定依据 | 可以得出的结论 | 不得得出的结论 |
-| --- | --- | --- | --- |
-| 评测是否产生可用结果？ | `evaluation_status` | 仅 `evaluated` 表示本次评测健康并产出可解释结果 | `semantic=fail`、`not-observed` 或 `indeterminate` 不等于评测失败 |
-| Agent 是否完成任务？ | `semantic` | 仅 `pass` 表示通过全部已声明的公开语义验收 | `observed` 不等于任务完成；`not-observed` 不等于任务失败 |
-| 是否观察到被测 Practice 的职责证据？ | `practice_observation` | 仅 `observed` 表示在 probe 已声明且已校准的能力范围内观察到该证据 | `not-observed` 仅表示已校准负面证据；`indeterminate` 不表示未遵循 Practice |
-| 是否同时满足功能与该质量信号？ | 派生 `joint_pass` | 仅当 `semantic=pass` 且 `practice_observation=observed` 时为真 | 它不是总分、任务完成状态或评测健康状态 |
-
-因此，`semantic=pass`、`practice_observation=not-observed`、`evaluation_status=evaluated` 的正确结论是：**任务完成，未观察到该 Practice 证据，评测正常完成**。它不是“不通过”，也不是“评测失败”。
-
-当 `practice_observation=indeterminate` 时，正确结论是“当前 probe 无法可靠分类”，并保留稳定审计原因；不得将该次运行计入 `not-observed`，也不得据此评价 Agent 是否遵循 Practice。当 `evaluation_status` 不是 `evaluated` 时，语义与 Practice 维度只能保留为 `not-run` 或已有原始值供审计，不能补推为任何通过或未通过结论。
+- Practice 质量信号只报告候选声明且已校准的职责证据，不单独决定任务完成或运行健康。
+- `not-observed` 只能表示有已校准的负面证据；解析失败、不支持的代码形态或证据不足必须记为
+  `indeterminate`，不得推断成 Agent 未遵循 Practice。
+- JudgeAgent 未产出结果时使用 `judge-unavailable`，不得折叠成 `not-observed`。
+- `joint_pass` 只能由语义通过与质量 `observed` 派生；保留计划分母、原始信号和失败原因，不合并成总分。
 
 ### 禁止的行为
 
