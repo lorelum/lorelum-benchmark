@@ -19,8 +19,9 @@
 | --- | --- | --- |
 | [`../README.md`](../README.md) | 仓库简介与当前状态快照 | 生命周期、评测或变更流程的完整规范 |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | 任务夹具创建、冻结与结果产物的操作入口；前置门禁见 `AGENTS.md` | 可以跳过 Issue/OpenSpec/Plan 的授权 |
+| [`AGENT_GUIDANCE_MAINTENANCE.md`](AGENT_GUIDANCE_MAINTENANCE.md) | 仅在满足沉淀触发条件时评估如何处理 Agent 纠错与规则更新 | 每次用户纠正都要追加一条规则或日志 |
 | [`BENCHMARK_PROTOCOL.md`](BENCHMARK_PROTOCOL.md) | 固定 Vercel React Skill 的 G0/G1 性能对比轨道及共享结果表达 | 所有 Practice-injection 研究的完整方法；后者还须读 Practice 指南 |
-| [`PRACTICE_BENCHMARK_GUIDE.md`](PRACTICE_BENCHMARK_GUIDE.md) | 声明测量 Practice 效果的 candidate 的设计与评测边界 | 与 Practice 无关的通用实验门禁 |
+| [`PRACTICE_BENCHMARK_GUIDE.md`](PRACTICE_BENCHMARK_GUIDE.md) | Practice 候选的设计边界；treatment 投递以 [`treatments/README.md`](../treatments/README.md) 为准，跨变更契约以适用的 stable spec 为准 | 不应把带 candidate 编号的校准/矩阵当成新 candidate 的现成验收证据 |
 | [`TASK_LIFECYCLE.md`](TASK_LIFECYCLE.md) | candidate、pilot、frozen、official、published、retired 的版本生命周期 | 任务语义或 evaluator 的唯一来源 |
 | [`WORKSPACE_LAYOUT.md`](WORKSPACE_LAYOUT.md) | 目录所有权和工作区概览；treatment 交付细节见 `treatments/README.md` | 私有 treatment 可以任意复制到 Agent 输入 |
 | [`PI_RUNNER.md`](PI_RUNNER.md) | Pi adapter、请求、trace 与运行记录契约 | 授权正式运行的充分条件；仍须满足 `AGENTS.md` 与 formal smoke 前置条件 |

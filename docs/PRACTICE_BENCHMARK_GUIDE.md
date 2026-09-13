@@ -30,7 +30,11 @@
 
 ### 2. 注入 Practice
 
-Practice 是可迁移的工程指导，经声明的私有运行时通道注入，不进入公开题面或 agent workspace。
+Practice 是可迁移的工程指导，必须按版本化、condition-scoped treatment contract 交付：
+`practice-card` 经私有运行时通道注入且不物化到 agent workspace；`project-convention/v1`
+可将已声明的 treatment 文本物化为对应条件的项目内规范，但不得进入 baseline 或未声明该
+`treatment` 的条件。具体隔离边界以 [`treatments/README.md`](../treatments/README.md) 为准；
+两种形式都不得泄露 evaluator、oracle 或 scoring material。
 
 - 正例（#75 `react.api.layered-design`）："让组件聚焦交互与展示；通过 feature API 调用远程能力，不直接依赖 HTTP 客户端；在边界处理 DTO 与认证失败翻译。"它描述职责边界与理由，不绑定具体文件名。
 - 反例：一张"在组件中调用 `./services/http` 的 `postLogin`"的卡--这把单题 reference 的具体路径和函数名当成了 Practice，不可迁移。
