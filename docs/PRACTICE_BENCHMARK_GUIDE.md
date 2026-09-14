@@ -261,11 +261,13 @@ Practice-injection candidate 额外遵守：
 
 ## 九、真实开发风格 candidate 环境规范
 
-candidate 的公开面（`public/task.md` 与 `public/starter/`）是 agent 在干净
-workspace 里看到的全部内容，也是真实性审查的唯一对象。以下规范来自 #135
-（`login-page-auth-flow-v1`）round 1 外部 AI 真实性审查的修复结论；后续
-candidate 的公开面必须满足，审查清单见
-`openspec/changes/login-page-realistic-practice-candidate/authenticity-review-guide.md`。
+本节适用于 stable spec `practice-benchmark-boundaries` 所指的真实开发风格
+candidate；其他类型按各自 Issue/OpenSpec 和适用契约，不要照搬登录页的 API、占位
+starter 或 calibration 例子。以下做法来自 #135（`login-page-auth-flow-v1`）的
+历史修复证据，可作为设计参考；其 [归档审查清单](../openspec/changes/archive/2026-08-03-login-page-realistic-practice-candidate/authenticity-review-guide.md) 仅供追溯，不是所有 candidate 的默认验收清单。
+
+只有当当前 Issue/OpenSpec 或适用契约明确要求独立真实性审查时，它才是 calibration
+前置门禁；否则本节内容用于设计与自查，不得仅凭本节自行追加独立 AI pass-or-fix 门禁。
 
 ### 1. 题面与代码状态一致（基线是真占位）
 
@@ -278,15 +280,15 @@ candidate 的公开面必须满足，审查清单见
 
 ### 2. 真实网络与无埋点
 
-- API 模块必须真实调用网络（如 `fetch("/api/session")`）并做类型化解析；
-  不得使用 `window.__xxx` 计数器、setTimeout 假延迟，或把凭据写进产品代码。
-- 后端响应由测试内 `page.route` 拦截或 runner 提供；测试可以声明测试账号，
-  产品代码不得包含 demo 凭据或保留占位域名（如 example.com）。
+- 仅当 candidate 的被测行为包含 HTTP/API 请求时，才检查相应 transport 边界；按该 candidate 声明的
+  环境执行（可使用本地 stub/网络拦截），不得擅自要求外部真实网络，也不得为无关任务添加网络层。
+- 不得使用 `window.__xxx` 等产品内测试计数或假延迟，也不得把凭据写入产品代码；测试账号应留在
+  测试/runner 配置中，产品代码不得包含 demo 凭据或占位域名（如 example.com）。
 
 ### 3. 测试断言产品行为
 
-- 公开测试只断言用户可观察行为（成功/失败文案、禁用态、防重复提交）；
-  网络请求计数使用 `page.waitForRequest` 等真实请求观测，不得依赖产品内部埋点。
+- 公开测试应断言用户可观察行为（例如成功/失败反馈、禁用态、防重复提交），而不是隐藏的
+  reference 结构；若需验证请求次数，使用网络层观测，不依赖产品内部埋点。
 
 ### 4. 题面口语化
 
@@ -299,8 +301,10 @@ candidate 的公开面必须满足，审查清单见
 - starter 不得包含 `node_modules/`、`test-results/`、`dist/`、trace 截图等
   运行产物；物化与快照必须排除生成目录；`bun run validate` 必须通过。
 
-### 6. 真实性审查门禁
+### 6. 真实性审查（仅在当前变更声明为门禁时适用）
 
-- task.md 与 starter 完成后、calibration 之前，由独立 AI（非实现方）按审查指南
-  执行 pass-or-fix 审查；fix 项清零后才进入 calibration/pilot。
-- 审查记录写入对应 change 与 PR 证据链。
+- 若当前 Issue/OpenSpec 或适用契约声明此门禁，则在 `task.md` 与 starter 完成后、
+  calibration 之前，由独立 reviewer 按当前 change 的审查指南执行 pass-or-fix；fix
+  项清零后才进入 calibration/pilot，审查记录写入对应 change 与 PR 证据链。
+- 若没有此项声明，不要把 #135 的独立审查流程扩展为全仓库默认门禁；按根规则和当前变更
+  实际适用的验证要求执行即可。

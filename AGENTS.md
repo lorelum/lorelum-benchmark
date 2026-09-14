@@ -26,7 +26,9 @@
 ## OpenSpec 与 PR 流程
 
 - 修改 suite、任务、schema、evaluator、runner、treatment、environment、实验协议或 record 前，
-  必须先确认关联 Issue 和经 strict validation 的 OpenSpec；非契约类流程/文档缺陷可走直接 PR 例外。
+  必须先确认关联 Issue 和经 strict validation 的 OpenSpec；非契约类流程/文档缺陷，以及仅按
+  既有已批准决定消除 stable spec 文字冲突且不改变适用范围/允许行为的修正，可走直接 PR 例外
+  （详细边界见工作流指南）。
 - 对上述契约变更、OpenSpec change 或用户授权的本地诊断，开始前必须读取并遵守
   [`docs/CHANGE_WORKFLOW.md`](docs/CHANGE_WORKFLOW.md) 中对应步骤；信息不足或范围与用户目标冲突时先澄清，不自行扩大。
 - 对 benchmark contract change，OpenSpec strict validation 和初始 PR 完成后、任何实现代码前，必须进入 Plan mode（客户端不支持时用等效规划阶段）并获用户确认；完整规划要求见工作流指南。
