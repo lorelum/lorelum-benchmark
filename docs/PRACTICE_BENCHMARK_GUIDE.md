@@ -126,13 +126,10 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 以 [`BENCHMARK_PROTOCOL.md`](BENCHMARK_PROTOCOL.md) 的结果契约及 stable capability
 `benchmark-outcome-contract` 为准；本指南不再维护第二份状态枚举。
 
-Practice-injection candidate 额外遵守：
-
-- Practice 质量信号只报告候选声明且已校准的职责证据，不单独决定任务完成或运行健康。
-- `not-observed` 只能表示有已校准的负面证据；解析失败、不支持的代码形态或证据不足必须记为
-  `indeterminate`，不得推断成 Agent 未遵循 Practice。
-- JudgeAgent 未产出结果时使用 `judge-unavailable`，不得折叠成 `not-observed`。
-- `joint_pass` 只能由语义通过与质量 `observed` 派生；保留计划分母、原始信号和失败原因，不合并成总分。
+Practice-injection 的 probe 校准、质量信号解释与分条件报告要求以 stable capability
+[`practice-benchmark-boundaries`](../openspec/specs/practice-benchmark-boundaries/spec.md) 为准；
+共享状态语义以 `benchmark-outcome-contract` 为准。本指南不复制这些状态规则，后续章节中的
+#75 校准与报告表仅作该候选的实例，不替代当前 Issue/OpenSpec 的验收口径。
 
 ### 禁止的行为
 
@@ -182,36 +179,17 @@ Practice-injection candidate 额外遵守：
 
 ---
 
-## 五、人可读原始结果表
+## 五、#75 本地结果示例
 
-每个本地或候选对照结果必须按下表呈现，禁止用隐藏加权分数或产品结论代替。
-
-### 模板
+下表是 #75 登录页候选每条件两次本地运行的历史结果示例，展示原始维度与分母；它不是新候选的默认验收矩阵或固定重复次数。
+新候选的必报字段和结论边界以 stable capability
+[`practice-benchmark-boundaries`](../openspec/specs/practice-benchmark-boundaries/spec.md) 为准，共享状态语义以 `benchmark-outcome-contract` 为准。
 
 | 条件 | 注入内容 | 计划运行 | `evaluated` | 非健康评测 | 语义通过 | Practice 已观察 | Practice 未观察 | Practice 不确定 | 两者同时通过 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 无 Practice 基线 | 无 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
 | 相关 Oracle Practice | React API 分层设计 | 2 | 2/2 | 0/2 | 2/2 | 2/2 | 0/2 | 0/2 | 2/2 |
 | 无关 Practice 对照 | React 身份列表呈现 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
-
-### 每个 `x/y` 的含义
-
-- **分子 x**：该条件下通过该维度的运行次数。
-- **分母 y**：该条件总运行次数。
-- **语义通过**：该次运行通过全部公开语义测试（登录成功显示欢迎、失败显示通用错误、提交期间禁用并防重复提交）。
-- **Practice 已观察**：该次运行的私有 probe 在其声明能力范围内观察到对应职责。
-- **Practice 未观察**：该次运行有已校准的负面证据；它不表示任务失败。
-- **Practice 不确定**：probe 不能可靠分类，必须保留审计原因；它不表示 Agent 未遵循 Practice。
-- **JudgeAgent 不可用**：判分资源未产出信号，与 `not-observed` 严格区分；它不表示候选质量缺失，也不改变任务完成。
-- **两者同时通过（`joint_pass`）**：该次运行同时满足语义与质量信号--这是判断 Practice 是否带来方向性改善的依据。`joint_pass` 只是派生报告字段，不是任务完成、execution health 或加权总分。
-- **`evaluated` / 非健康评测 / 不确定**：`evaluated` 是产生有效结构化结果的次数；非健康分别列出 `invalid-output`、`execution-failed` 与 `not-executable` 的次数和原因；完成状态无法可靠判定时显式记录为 `indeterminate` 并保留审计原因。所有 `x/y` 的分母保留计划运行次数；非健康与 `indeterminate` 评测不得静默从分母剔除、改记为 `not-observed`，或计作任何通过/观测分子。
-
-### 报告要求
-
-- 分别呈现语义通过、Practice 已观察、Practice 未观察、Practice 不确定、JudgeAgent 不可用、evaluator/execution health（含 `indeterminate`）与派生两者同时通过，不合并为总分；原始分数、probe 分值、计划分母与失败原因必须保留。
-- 结论只能描述已执行的 candidate、Practice、模型与条件；每个条件都必须同时报告计划次数、`evaluated` 次数和全部非健康状态，不能选择性排除运行。
-- 只有当所有条件均完成预先声明的重复次数、全部运行均为 `evaluated`、probe 校准通过、且相关 Practice 的语义通过次数不低于 baseline 与无关对照并且其“两者同时通过”次数严格领先二者时，才可称为**该 candidate 在该执行条件下的方向性信号**。
-- 即使满足上述条件，结论也只能说明该条件下的原始结果差异；它不证明 retrieval 有效、Practice 的因果效果、正式 benchmark 结果、产品效果或普遍模型能力。任一条件出现非健康评测、未完成计划次数或未通过校准时，只能报告诊断结果，不得作条件比较结论。
 
 ---
 

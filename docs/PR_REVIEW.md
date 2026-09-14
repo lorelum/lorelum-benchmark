@@ -11,5 +11,6 @@
 - 两轮结论应记录 skill 规则条目到 finding 的依据映射，便于复核审计。
 - 不触及上述 benchmark 契约的小型流程或文档修正可不执行双轮门禁，但 PR 正文必须说明
   范围（与 [`CHANGE_WORKFLOW.md`](CHANGE_WORKFLOW.md) 的范围规则一致）。
-- 两轮 review 均为只读审查，不得在 review 中顺带修改代码；修复按各自 findings 走常规
-  issue/OpenSpec 流程交付。
+- 两轮 review 均为只读审查，不得在 review 中顺带修改代码。修复按 finding 的实际范围走适用流程：
+  当前 change 范围内的修复留在现有 Issue/OpenSpec/PR 证据链；新增或无关范围按工作流拆分；
+  符合直接 PR 例外的文档/流程修复不要求另建 Issue/OpenSpec。
