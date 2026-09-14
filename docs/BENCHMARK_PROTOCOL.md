@@ -6,6 +6,10 @@
 | --- | --- | --- |
 | `performance-skill-comparison` | 固定 Vercel React Skill 能否改善真实 Next 仓库问题的解决质量？ | 基线、Vercel Skill |
 
+本协议的实验轨道专指固定 Vercel React Skill 的 G0/G1 对比；Practice-injection candidate 的额外
+设计要求见 [`PRACTICE_BENCHMARK_GUIDE.md`](PRACTICE_BENCHMARK_GUIDE.md)。本文件后续的结果表达契约
+是仓库共享结果约定，不会把 Practice 专属方法扩展成所有轨道的门禁。
+
 任务卡、评测器、运行记录和评审流程共同保证对比只改变预先声明的实验条件。
 
 ## 实验条件
@@ -32,8 +36,11 @@ tasks/task-slug/v1/
     snapshot.json # 已提交的正式任务文件 SHA-256 manifest
 ```
 
-runner 只能将 `public/task.md` 和 `public/starter/` 复制到编码 Agent 的工作区，
-绝不能复制 `private/` 或 `oracle.yaml`。任务题面必须描述目标产品行为，不得泄露私有验收材料。
+每个条件都从 `public/task.md` 与 `public/starter/` 构建全新的任务工作区；这描述的是任务输入，
+不是所有条件的完整 Agent 可见输入。若实验声明了版本化 treatment，可按
+[`treatments/README.md`](../treatments/README.md) 中的 condition-scoped contract 另行交付。
+评测器、oracle 和评分材料绝不能复制到 Agent 工作区或模型输入；Practice treatment 只能按其声明
+的交付形式提供。任务题面必须描述目标产品行为，不得泄露私有验收材料。
 
 Practice-injection 候选还需遵循 [Practice Benchmark 维护者指南](./PRACTICE_BENCHMARK_GUIDE.md)：区分公开任务、注入 Practice、私有语义验收、私有质量信号和实现偏好，禁止把 reference 偏好伪装成任务失败。
 

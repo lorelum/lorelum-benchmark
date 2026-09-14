@@ -24,9 +24,12 @@ scratch/                      被忽略的一次性探针和实验
 包括退休版本在内的所有正式版本都保留在 `suites/` 下。suite manifest 控制默认参与的
 版本；退休版本仍可通过显式任务引用运行。
 
-`public/` 是唯一可放入 Agent 工作区的任务内容。runner 只能为 Agent 实体化
-`public/task.md` 与 `public/starter/`，并且每个条件都必须使用全新的工作区。只有在
-运行结束后才能挂载 `private/`。
+`public/` 保存公开任务夹具，但不一定涵盖每个条件下 Agent 可见的全部输入。每个条件都使用
+全新的工作区，并以 `public/task.md` 与 `public/starter/` 作为任务起始内容。若条件声明了版本化
+`treatment`，可按 [`treatments/README.md`](../treatments/README.md) 中的 condition-scoped contract
+另外交付：`practice-card` 只能经运行时通道注入；`project-convention/v1` 只能在声明该 treatment
+的条件中物化。评测器、oracle 和评分材料绝不能进入 Agent 工作区或模型输入；仅供评测使用的私有
+材料只能在 Agent 运行结束后提供给 evaluator。
 
 `incubator/` 是可长期维护的候选区。`scratch/` 和 `artifacts/` 可丢弃且被忽略。候选
 只有升级为版本化 suite 任务后才成为正式任务。支持运行记录的 artifact 必须以校验和或

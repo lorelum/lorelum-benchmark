@@ -30,7 +30,11 @@
 
 ### 2. 注入 Practice
 
-Practice 是可迁移的工程指导，经声明的私有运行时通道注入，不进入公开题面或 agent workspace。
+Practice 是可迁移的工程指导，必须按版本化、condition-scoped treatment contract 交付：
+`practice-card` 经私有运行时通道注入且不物化到 agent workspace；`project-convention/v1`
+可将已声明的 treatment 文本物化为对应条件的项目内规范，但不得进入 baseline 或未声明该
+`treatment` 的条件。具体隔离边界以 [`treatments/README.md`](../treatments/README.md) 为准；
+两种形式都不得泄露 evaluator、oracle 或 scoring material。
 
 - 正例（#75 `react.api.layered-design`）："让组件聚焦交互与展示；通过 feature API 调用远程能力，不直接依赖 HTTP 客户端；在边界处理 DTO 与认证失败翻译。"它描述职责边界与理由，不绑定具体文件名。
 - 反例：一张"在组件中调用 `./services/http` 的 `postLogin`"的卡--这把单题 reference 的具体路径和函数名当成了 Practice，不可迁移。
@@ -118,33 +122,14 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 
 ### Practice 观测结果契约
 
-所有当前与未来 Practice-injection candidate 的 evaluator 和结果汇总必须独立保存以下维度；新增或修改 candidate 时，必须在关联 issue 与 OpenSpec 说明如何满足该契约。已冻结 candidate 只能通过新 revision 或独立 change 迁移，绝不回写历史输入或记录。
+运行健康、语义结果、质量状态（包括 `judge-unavailable`）和派生 `joint_pass` 的共享枚举与报告规则，
+以 [`BENCHMARK_PROTOCOL.md`](BENCHMARK_PROTOCOL.md) 的结果契约及 stable capability
+`benchmark-outcome-contract` 为准；本指南不再维护第二份状态枚举。
 
-| 维度 | 允许状态 | 说明 |
-| --- | --- | --- |
-| 语义结果 | `pass` / `fail` / `not-run` | 仅语义 `pass` 表示任务完成 |
-| Practice 观测 | `observed` / `not-observed` / `indeterminate` / `not-run` | 仅报告 Practice 相关职责证据 |
-| evaluator/execution health | `evaluated` / `invalid-output` / `execution-failed` / `not-executable` | 表示管线是否产生可用结果，不能从前两项推导 |
-
-- `semantic=pass` 且 `practice_observation=not-observed` 必须表述为任务完成、未观察到对应 Practice 证据；它仍是一次健康的 `evaluated` 结果。
-- `not-observed` 只能由已校准且适用于 candidate 的反模式或缺失职责证据产生。
-- probe 遇到解析失败、未支持代码形态、依赖缺失或无法可靠分类时，必须报告 `indeterminate` 及稳定审计原因，不能把它伪装成 `not-observed`。
-- `joint_pass` 仅可派生为语义 `pass` 与 Practice `observed` 同时成立；它不是任务完成、evaluator health 或加权总分。
-
-### 单次运行的判定标准
-
-一次运行必须同时保留三个彼此独立的问题；任何报告、汇总或退出码都不得用其中一个问题的答案替代另一个。
-
-| 要回答的问题 | 唯一判定依据 | 可以得出的结论 | 不得得出的结论 |
-| --- | --- | --- | --- |
-| 评测是否产生可用结果？ | `evaluation_status` | 仅 `evaluated` 表示本次评测健康并产出可解释结果 | `semantic=fail`、`not-observed` 或 `indeterminate` 不等于评测失败 |
-| Agent 是否完成任务？ | `semantic` | 仅 `pass` 表示通过全部已声明的公开语义验收 | `observed` 不等于任务完成；`not-observed` 不等于任务失败 |
-| 是否观察到被测 Practice 的职责证据？ | `practice_observation` | 仅 `observed` 表示在 probe 已声明且已校准的能力范围内观察到该证据 | `not-observed` 仅表示已校准负面证据；`indeterminate` 不表示未遵循 Practice |
-| 是否同时满足功能与该质量信号？ | 派生 `joint_pass` | 仅当 `semantic=pass` 且 `practice_observation=observed` 时为真 | 它不是总分、任务完成状态或评测健康状态 |
-
-因此，`semantic=pass`、`practice_observation=not-observed`、`evaluation_status=evaluated` 的正确结论是：**任务完成，未观察到该 Practice 证据，评测正常完成**。它不是“不通过”，也不是“评测失败”。
-
-当 `practice_observation=indeterminate` 时，正确结论是“当前 probe 无法可靠分类”，并保留稳定审计原因；不得将该次运行计入 `not-observed`，也不得据此评价 Agent 是否遵循 Practice。当 `evaluation_status` 不是 `evaluated` 时，语义与 Practice 维度只能保留为 `not-run` 或已有原始值供审计，不能补推为任何通过或未通过结论。
+Practice-injection 的 probe 校准、质量信号解释与分条件报告要求以 stable capability
+[`practice-benchmark-boundaries`](../openspec/specs/practice-benchmark-boundaries/spec.md) 为准；
+共享状态语义以 `benchmark-outcome-contract` 为准。本指南不复制这些状态规则，后续章节中的
+#75 校准与报告表仅作该候选的实例，不替代当前 Issue/OpenSpec 的验收口径。
 
 ### 禁止的行为
 
@@ -194,36 +179,17 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 
 ---
 
-## 五、人可读原始结果表
+## 五、#75 本地结果示例
 
-每个本地或候选对照结果必须按下表呈现，禁止用隐藏加权分数或产品结论代替。
-
-### 模板
+下表是 #75 登录页候选每条件两次本地运行的历史结果示例，展示原始维度与分母；它不是新候选的默认验收矩阵或固定重复次数。
+新候选的必报字段和结论边界以 stable capability
+[`practice-benchmark-boundaries`](../openspec/specs/practice-benchmark-boundaries/spec.md) 为准，共享状态语义以 `benchmark-outcome-contract` 为准。
 
 | 条件 | 注入内容 | 计划运行 | `evaluated` | 非健康评测 | 语义通过 | Practice 已观察 | Practice 未观察 | Practice 不确定 | 两者同时通过 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 无 Practice 基线 | 无 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
 | 相关 Oracle Practice | React API 分层设计 | 2 | 2/2 | 0/2 | 2/2 | 2/2 | 0/2 | 0/2 | 2/2 |
 | 无关 Practice 对照 | React 身份列表呈现 | 2 | 2/2 | 0/2 | 2/2 | 0/2 | 2/2 | 0/2 | 0/2 |
-
-### 每个 `x/y` 的含义
-
-- **分子 x**：该条件下通过该维度的运行次数。
-- **分母 y**：该条件总运行次数。
-- **语义通过**：该次运行通过全部公开语义测试（登录成功显示欢迎、失败显示通用错误、提交期间禁用并防重复提交）。
-- **Practice 已观察**：该次运行的私有 probe 在其声明能力范围内观察到对应职责。
-- **Practice 未观察**：该次运行有已校准的负面证据；它不表示任务失败。
-- **Practice 不确定**：probe 不能可靠分类，必须保留审计原因；它不表示 Agent 未遵循 Practice。
-- **JudgeAgent 不可用**：判分资源未产出信号，与 `not-observed` 严格区分；它不表示候选质量缺失，也不改变任务完成。
-- **两者同时通过（`joint_pass`）**：该次运行同时满足语义与质量信号--这是判断 Practice 是否带来方向性改善的依据。`joint_pass` 只是派生报告字段，不是任务完成、execution health 或加权总分。
-- **`evaluated` / 非健康评测 / 不确定**：`evaluated` 是产生有效结构化结果的次数；非健康分别列出 `invalid-output`、`execution-failed` 与 `not-executable` 的次数和原因；完成状态无法可靠判定时显式记录为 `indeterminate` 并保留审计原因。所有 `x/y` 的分母保留计划运行次数；非健康与 `indeterminate` 评测不得静默从分母剔除、改记为 `not-observed`，或计作任何通过/观测分子。
-
-### 报告要求
-
-- 分别呈现语义通过、Practice 已观察、Practice 未观察、Practice 不确定、JudgeAgent 不可用、evaluator/execution health（含 `indeterminate`）与派生两者同时通过，不合并为总分；原始分数、probe 分值、计划分母与失败原因必须保留。
-- 结论只能描述已执行的 candidate、Practice、模型与条件；每个条件都必须同时报告计划次数、`evaluated` 次数和全部非健康状态，不能选择性排除运行。
-- 只有当所有条件均完成预先声明的重复次数、全部运行均为 `evaluated`、probe 校准通过、且相关 Practice 的语义通过次数不低于 baseline 与无关对照并且其“两者同时通过”次数严格领先二者时，才可称为**该 candidate 在该执行条件下的方向性信号**。
-- 即使满足上述条件，结论也只能说明该条件下的原始结果差异；它不证明 retrieval 有效、Practice 的因果效果、正式 benchmark 结果、产品效果或普遍模型能力。任一条件出现非健康评测、未完成计划次数或未通过校准时，只能报告诊断结果，不得作条件比较结论。
 
 ---
 
@@ -273,11 +239,13 @@ reference 的文件路径、局部 helper、命名、格式或无外部影响的
 
 ## 九、真实开发风格 candidate 环境规范
 
-candidate 的公开面（`public/task.md` 与 `public/starter/`）是 agent 在干净
-workspace 里看到的全部内容，也是真实性审查的唯一对象。以下规范来自 #135
-（`login-page-auth-flow-v1`）round 1 外部 AI 真实性审查的修复结论；后续
-candidate 的公开面必须满足，审查清单见
-`openspec/changes/login-page-realistic-practice-candidate/authenticity-review-guide.md`。
+本节适用于 stable spec `practice-benchmark-boundaries` 所指的真实开发风格
+candidate；其他类型按各自 Issue/OpenSpec 和适用契约，不要照搬登录页的 API、占位
+starter 或 calibration 例子。以下做法来自 #135（`login-page-auth-flow-v1`）的
+历史修复证据，可作为设计参考；其 [归档审查清单](../openspec/changes/archive/2026-08-03-login-page-realistic-practice-candidate/authenticity-review-guide.md) 仅供追溯，不是所有 candidate 的默认验收清单。
+
+只有当当前 Issue/OpenSpec 或适用契约明确要求独立真实性审查时，它才是 calibration
+前置门禁；否则本节内容用于设计与自查，不得仅凭本节自行追加独立 AI pass-or-fix 门禁。
 
 ### 1. 题面与代码状态一致（基线是真占位）
 
@@ -290,15 +258,15 @@ candidate 的公开面必须满足，审查清单见
 
 ### 2. 真实网络与无埋点
 
-- API 模块必须真实调用网络（如 `fetch("/api/session")`）并做类型化解析；
-  不得使用 `window.__xxx` 计数器、setTimeout 假延迟，或把凭据写进产品代码。
-- 后端响应由测试内 `page.route` 拦截或 runner 提供；测试可以声明测试账号，
-  产品代码不得包含 demo 凭据或保留占位域名（如 example.com）。
+- 仅当 candidate 的被测行为包含 HTTP/API 请求时，才检查相应 transport 边界；按该 candidate 声明的
+  环境执行（可使用本地 stub/网络拦截），不得擅自要求外部真实网络，也不得为无关任务添加网络层。
+- 不得使用 `window.__xxx` 等产品内测试计数或假延迟，也不得把凭据写入产品代码；测试账号应留在
+  测试/runner 配置中，产品代码不得包含 demo 凭据或占位域名（如 example.com）。
 
 ### 3. 测试断言产品行为
 
-- 公开测试只断言用户可观察行为（成功/失败文案、禁用态、防重复提交）；
-  网络请求计数使用 `page.waitForRequest` 等真实请求观测，不得依赖产品内部埋点。
+- 公开测试应断言用户可观察行为（例如成功/失败反馈、禁用态、防重复提交），而不是隐藏的
+  reference 结构；若需验证请求次数，使用网络层观测，不依赖产品内部埋点。
 
 ### 4. 题面口语化
 
@@ -311,8 +279,10 @@ candidate 的公开面必须满足，审查清单见
 - starter 不得包含 `node_modules/`、`test-results/`、`dist/`、trace 截图等
   运行产物；物化与快照必须排除生成目录；`bun run validate` 必须通过。
 
-### 6. 真实性审查门禁
+### 6. 真实性审查（仅在当前变更声明为门禁时适用）
 
-- task.md 与 starter 完成后、calibration 之前，由独立 AI（非实现方）按审查指南
-  执行 pass-or-fix 审查；fix 项清零后才进入 calibration/pilot。
-- 审查记录写入对应 change 与 PR 证据链。
+- 若当前 Issue/OpenSpec 或适用契约声明此门禁，则在 `task.md` 与 starter 完成后、
+  calibration 之前，由独立 reviewer 按当前 change 的审查指南执行 pass-or-fix；fix
+  项清零后才进入 calibration/pilot，审查记录写入对应 change 与 PR 证据链。
+- 若没有此项声明，不要把 #135 的独立审查流程扩展为全仓库默认门禁；按根规则和当前变更
+  实际适用的验证要求执行即可。

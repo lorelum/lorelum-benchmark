@@ -5,11 +5,18 @@ JSON 请求，但不接受用户提供的工作目录。adapter 会核对 suite�
 treatment manifest 和 environment manifest，随后在 `.run-workspaces/<run-id>/` 创建全新的
 工作区。
 
-工作区只包含 `public/task.md` 和 `public/starter/`；`private/`、evaluator、oracle 与
-snapshot 永远不会复制给 Pi。请求中的 Pi 命令和参数仍保持显式，但命令必须与 environment
-manifest 中固定的 agent runtime command 一致。`skill` treatment 的固定 `SKILL.md` 会在
-hash 校验后作为 Pi `--skill` 参数注入；baseline 不注入任何 Skill。adapter 约束命令的工作目录；正式环境还
-必须由 environment manifest 指定的 sandbox 阻止 Pi 逃逸到宿主文件系统。
+本页的 `pi:requests` / `pi:coordinate` 工作区规则针对正式 G0/G1 `pi/v2` 执行路径；不概括其他
+Pi profile 或 Practice diagnostic runner 的全部 Agent 输入。该正式路径的任务工作区从
+`public/task.md` 与 `public/starter/` 构建，但这只是任务 fixture 起始内容，并非 Agent 可见输入的完整集合。
+本路径中，声明的 Vercel Skill treatment 在 hash 校验后通过 Pi `--skill` 通道提供，baseline 不注入 Skill。
+
+Practice diagnostic runner 是单独的执行路径：按 [`treatments/README.md`](../treatments/README.md)
+的 condition-scoped contract，`practice-card` 只经私有运行时模型输入通道交付、不物化到工作区；
+`project-convention/v1` 只在声明该 treatment 的 condition 中按其目标路径物化。此处描述的 Practice
+delivery 不代表正式 G0/G1 coordinator 已实现这些诊断能力。任何路径下，evaluator、oracle、scoring
+及其他评测私有材料和 snapshot 都不得进入 Agent 工作区或模型输入。请求中的 Pi 命令和参数仍保持显式，
+且必须与 environment manifest 中固定的 agent runtime command 一致；正式环境还必须由其 sandbox
+阻止 Pi 逃逸到宿主文件系统。
 
 ```sh
 # 仅在真实仓库任务被冻结为正式 revision 后使用已提交的实验计划。
@@ -18,10 +25,11 @@ bun run pi:coordinate -- scratch/requests/<run-id>.json --dry-run
 bun run pi:coordinate -- scratch/requests/<run-id>.json
 ```
 
-当前不存在 active G0/G1 计划或正式 record。React Skill 对比的三个 pilot revision
-（dashboard v2、report insights v7、team directory v3）已在
-`suites/realistic-react-skill-comparison` 冻结；在新的实验计划、离线校准与运行前置条件
-全部通过前，不得生成 Pi 请求或调用模型 API。
+本页不维护当前计划、workflow 或正式 record 的状态清单。实验计划以已提交的
+`experiments/<suite>/` 文件为准；默认任务集以对应 `suites/<suite>/suite.yaml` 的
+`default_active_task_set` 为准；已提交记录以 `results/records/` 为准。生成请求前，必须核对
+计划引用的 task revision、source commit、离线校准与启动门禁；本页不是运行授权。formal smoke
+的具体前置条件见 [`FORMAL_SMOKE.md`](FORMAL_SMOKE.md)，不得因本页存在命令示例就调用模型 API。
 
 `--dry-run` 会验证全部契约并输出将要使用的隔离工作区，不创建目录也不执行 Pi。正式运行
 会在 `artifacts/runs/<run-id>/<manifest_name>` 写入 `pi-run-artifact/v2` manifest，记录经过
