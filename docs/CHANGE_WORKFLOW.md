@@ -3,7 +3,10 @@
 本文件是根 `AGENTS.md` 所链接的详细工作流；只在处理 benchmark contract、OpenSpec change、PR 边界或获准本地诊断时按需读取。它细化执行步骤，不覆盖用户明确目标或适用的 stable spec/schema。
 - 修复现有 runner、validation、流程或文档缺陷，且不改变评测语义、candidate/snapshot
   身份、record 或结论解释的改动，可直接在独立分支提交 PR，不需要先创建 issue 或 OpenSpec
-  change；PR 正文必须说明根因、修复边界与验证方式。
+  change；PR 正文必须说明根因、修复边界与验证方式。stable spec 若只是按既有已批准 Issue/PR
+  消除文字冲突、且不改变适用范围或允许行为，也适用此例外：引用原有依据，并说明该 requirement
+  仍为何跨任务成立。若目标语义未被既有决定明确，或需改变稳定契约的适用范围/允许行为，则另走
+  Issue + OpenSpec，不得以“文档修复”规避。
 - 用户明确授权的本地测试、诊断或 smoke 可以直接执行，不需要单独授权 issue；仍不得创建
   正式 record、升级 suite revision，或把测试结果当作正式结论。OpenSpec strict、
   public/private 泄露审计与生命周期门禁继续约束正式运行。
@@ -34,10 +37,10 @@
   不得默认为已有 artifact 的表述改写用户目标或扩大范围。若当前请求已澄清该差异，不重复追问；
   否则只询问会实质改变方案的未决点。需要 Issue/OpenSpec 的变更，应先同步关联记录再实施；
   适用直接 PR 例外的流程或文档修复，按其 PR 规则记录范围与验证。
-- 当 change 新增或修改 `openspec/specs/` 中的 stable capability 时，Plan 与 PR 必须说明每条
+- 当 change 新增或实质修改 `openspec/specs/` 中的 stable capability 时，Plan 与 PR 必须说明每条
   requirement 为什么脱离当前 Issue、candidate、任务、模型、profile、目录、版本与一次实验
   结论后仍成立；无法说明的决定必须留在当前 change 的 design/tasks 或具体 fixture contract，
-  不得作为 stable spec delta 归档。
+  不得作为 stable spec delta 归档。纯文字纠错适用直接 PR 例外时，无需单独 Plan，但 PR 仍须说明其跨任务适用性。
 - 实现按 `tasks.md` 的依赖顺序推进。完成每项任务后立即勾选；触及 suite、任务、schema 或
   benchmark 代码时运行 `bun run validate`，并在 PR 中保留验证证据和未执行原因。
 - OpenSpec 的 strict validation、public/private 泄露审计及生命周期门禁未通过前，不得执行
