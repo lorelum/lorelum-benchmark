@@ -3,7 +3,7 @@ lifecycle_stage: candidate
 source:
   kind: repository-local-starter
   repository: lorelum/lorelum-benchmark
-  source_commit: pending-public-starter-commit
+  source_commit: e3554b6759fabca2de646e94c6991cfaea1707a1
   public_root: public/starter/app
   immutable_by: private/snapshot.json
 runtime:
@@ -19,7 +19,7 @@ baseline_expectation:
 public_contract:
   api_versions: [v1, v2]
   session_stages: [task_start, constraint_followup, first_implementation_checkpoint]
-  checkpoint_marker: CHECKPOINT: compatibility-slice-ready
+  checkpoint_marker: "CHECKPOINT: compatibility-slice-ready"
   delivery_form: practice-card-reserved
   treatment_materialized: false
 private_material:
