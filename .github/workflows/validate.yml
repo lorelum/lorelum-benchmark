@@ -43,7 +43,7 @@ jobs:
           runner=false
           formal=false
           realistic=false
-          if printf '%s\n' "$changed" | grep -Eq '^(src/benchmark/(runner|evaluator)/|src/benchmark/(fs|snapshot|task-discovery)\.ts$|schemas/|environments/|policies/|treatments/|package\.json$|bun\.lock$)'; then
+          if printf '%s\n' "$changed" | grep -Eq '^(src/benchmark/(runner|evaluator)/|src/benchmark/(fs|snapshot|task-discovery)\.ts$|scripts/run-runner-contracts\.ts$|\.github/workflows/validate\.yml$|schemas/|environments/|policies/|treatments/|package\.json$|bun\.lock$)'; then
             runner=true
           fi
           if printf '%s\n' "$changed" | grep -Eq '^(Dockerfile\.formal-pi$|package\.json$|bun\.lock$|environments/|src/benchmark/runner/|policies/|\.github/workflows/(validate|publish-formal-pi-image)\.yml$)'; then

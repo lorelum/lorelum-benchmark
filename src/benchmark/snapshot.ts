@@ -10,7 +10,7 @@ import { resolveInjectionCalibration as resolveInjectionCalibrationV1 } from "./
 import { resolveInjectionCalibration as resolveInjectionCalibrationV2 } from "./kernel/profiles/injection-calibration/v2/runtime";
 import { resolveSkillTrigger } from "./kernel/profiles/skill-trigger-orchestration/v1/runtime";
 import { resolveTwoStageInjectionCalibration } from "./kernel/profiles/two-stage-injection-calibration/v1/runtime";
-import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256File, sha256Text, workspaceRoot } from "./fs";
+import { joinPath, listDirectories, pathExists, relativePath, sha256Directory, sha256Text, workspaceRoot } from "./fs";
 import { discoverTasks, type TaskLocation } from "./task-discovery";
 
 type Snapshot = {

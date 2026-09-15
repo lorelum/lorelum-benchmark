@@ -25,7 +25,7 @@ Issue #212 收住的是一个仓库级 CI/runtime 问题，不是 #196 candidate
 
 ### 1. Runtime pins use latest stable Bun plus current Node LTS and Pi latest
 
-采用 Bun `1.4.2`、Node `24.21.0` 和 `@earendil-works/pi-coding-agent` `0.85.1`。Node 使用 LTS 而不是 current `26.x`，因为正式 benchmark 优先稳定、可复现和长期支持；Pi 包的 lockfile 继续记录所有传递依赖的完整版本和 integrity。package `engines.node` 下限提升到 `>=24.21.0`，以避免本地/CI 误用旧 Node。
+采用 Bun `1.4.2`、Node `24.21.0` 和 `@earendil-works/pi-coding-agent` `0.85.1`。Node 使用 LTS 而不是 current `26.x`，因为正式 benchmark 优先稳定、可复现和长期支持；Pi 包的 lockfile 继续记录所有传递依赖的完整版本和 integrity。package `engines.node` 固定为 `24.21.0`，以避免本地/CI 误用旧 Node。
 
 备选方案：继续使用 range 或只升级 CI。未采用，因为会让 formal image、环境 manifest 和本地执行出现版本漂移；只升级 CI 又不能重建正式容器。
 
@@ -42,7 +42,7 @@ pull_request:
 
 并使用 `concurrency.group = validate-${{ github.event.pull_request.number || github.ref }}` 与 `cancel-in-progress: true`。这样 feature branch push 不再额外触发一套重复 workflow，main 合并后仍会有一次 post-merge validation。
 
-workspace-fast 保留 Ubuntu/Windows，但只运行 `validate`、OpenSpec governance 和核心 deterministic contracts。#196 candidate 尚未进入 `origin/main`，因此其 public starter smoke 不在本 change 中跨 PR 引用；候选合并后由其自身 change/后续 CI 调整接入。runner/coordinator integration、formal-container、realistic-repository 各自通过路径触发的 workflow 保留，避免普通文档或 candidate-only PR 被高成本检查阻塞。
+workspace-fast 保留 Ubuntu/Windows，但只运行 `validate`、OpenSpec governance 和核心 deterministic contracts。#196 candidate 尚未进入 `origin/main`，因此其 public starter smoke 不在本 change 中跨 PR 引用；候选合并后由其自身 change/后续 CI 调整接入。runner/coordinator integration、formal-container、realistic-repository 各自通过路径触发的 workflow 保留，避免普通文档或 candidate-only PR 被高成本检查阻塞。 runner integration 的路径集合同时包含其独立启动脚本和 `validate.yml` 本身，避免只修改测试编排时跳过被修改的集成门禁。
 
 备选方案：只删除 Windows、只删除 push 事件或直接删掉慢测试。未采用：Windows 仍覆盖真实路径行为；删除 push 会丢失 main post-merge 信号；测试逻辑仍然有 benchmark 价值，应调整触发和边界而非删除。
 
