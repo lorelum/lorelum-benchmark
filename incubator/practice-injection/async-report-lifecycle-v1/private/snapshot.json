@@ -1,23 +1,23 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "a155219ba33cdba01cb5c9b38c350dc139d89b550b8718d714a976a73138ea11",
+  "snapshot_id": "e989c24f10a6686239bd6a2c19fa387fb3d57b72779236b455037a6db41af48f",
   "files": {
     "private/candidate.yaml": "0bd13b582847a73f92c0045f090284030e5deb47337418eee841990a4f07ce2e",
     "public/stage-2/task.md": "cfedffac9345e1bc9b951737f1e817c07714265cd41584bb6f506fc81714ba66",
-    "public/starter/app/.gitignore": "4ce4aa6e3e87c218dd05085af2b68c7c2bfc3d8c449c41c384d3b9dd88b169b4",
+    "public/starter/app/.gitignore": "dfb458ebfc008d3fedc6ce37a0c884e5ccec317128c49ad671ab25ab65ca268d",
     "public/starter/app/bun.lock": "72e73b2bbfb1a30191e4fed5efbce8874af90b54471e0812316c8aa6b7e1db92",
-    "public/starter/app/docs/report-api.md": "9720c78fab31d6d5d50fc3995c64e56a83e1da4fe05f5606152e3beb661c6c97",
-    "public/starter/app/docs/worker.md": "14de389e9f27c5cbd9820dff187cad9ed8138376e4a1fd5d50ad8c28251b65fd",
-    "public/starter/app/package.json": "5fdf9f040784f8cad808ffd9f93e0fdb6fc5e5310f718038157b48a59095b9b6",
+    "public/starter/app/docs/report-api.md": "caf72e307506aedd99edf270a99f21b0e060ad7c925ec9e5019e471631a333ae",
+    "public/starter/app/docs/worker.md": "70d8a0cadb2f0c98b9300a9d84083b7ce924361bce8e7af0609a69efa34e437e",
+    "public/starter/app/package.json": "fcf77769cd0abaf6c2d7b7322caf6842cb41f1dca5ee06175fc6880f10f28502",
     "public/starter/app/src/report-service.ts": "9afc377e894934395a20cc682f0e08f367b05878a7f2faab1e283b812d8cc896",
-    "public/starter/app/src/server.ts": "565bb13bc2f52a453bdd01225d6bffd91f3663e4d576021ddbde601ff285f9e1",
-    "public/starter/app/src/store.ts": "2bef7cbcfbbbe542a2dbe86640d7b0664a443e96c79dfeaf004b0b84bf553140",
-    "public/starter/app/src/types.ts": "f59ec336156c67f7cc783a52fcc8d0c6a8ddf2401eaf47b077e9c03fd93a6c36",
-    "public/starter/app/src/worker.ts": "6f86bee2932ee531e6bff12797f615588690c3de2f4acb15dec4e89f21db0cdb",
-    "public/starter/app/tests/compatibility.test.ts": "e1261ba61e0afd0f36f93b6debea84cd125bfe7581a47992390caa2c42ed1e08",
-    "public/starter/app/tests/report-lifecycle.test.ts": "978f094f571baef07e35016e671c75b0ae94299b38525fd3539b02885622a7a6",
-    "public/starter/app/tsconfig.json": "60d4d566336f8dea61a7fde0c0aad56e92da38410df25fb66c7e6c0879b90b97",
-    "public/task.md": "84cc188858d2583782cb282152e5aba751a189a887f9ab62dc2fb7effd702702"
+    "public/starter/app/src/server.ts": "fb698dcdb09583f2e3c4f79012bd115bf18ae1695b82bd118adc1213ef96c9b2",
+    "public/starter/app/src/store.ts": "ecbca46da719151df43d3eaf27fd20fccf197f6b8ff17e4c339b54ee8aa36c17",
+    "public/starter/app/src/types.ts": "7b1573090462dcd171b288b8a956fb765c17603cfa2d3da772f1e34ee084d203",
+    "public/starter/app/src/worker.ts": "23d858f423750ecf1c79fcd6a38bc38d1dfdbc4294c4fcdea7ec6420a1914d54",
+    "public/starter/app/tests/compatibility.test.ts": "8fd331dac951d6ea76be96adc10b316482b0704b01282446d2d1fd611db996d4",
+    "public/starter/app/tests/report-lifecycle.test.ts": "f3674a224329916d662b63ce8465d4351853e0f05e3fd36a3559de72d00e7723",
+    "public/starter/app/tsconfig.json": "d4b2285628b340a28c67d617e421d15447d468bdbf25640fcfc9a49951881e0d",
+    "public/task.md": "3c6680a7b494c61034b547cb8846ff715e7c9c9f4e513726ecabed852e02d570"
   }
 }
