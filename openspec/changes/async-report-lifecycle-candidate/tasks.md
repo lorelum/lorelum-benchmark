@@ -2,7 +2,7 @@
 
 - [x] 0.1 在 `openspec/changes/async-report-lifecycle-candidate/` 保持 proposal、design、spec 和 tasks 与 Issue #196 的单一声明范围一致；确认本 change 只覆盖 candidate fixture/公开会话脚本，不吸收 #197、#199、#200、#202 或 #201 的实现。
 - [x] 0.2 运行 `openspec validate async-report-lifecycle-candidate --type change --strict --json`，在任何 candidate fixture、模型调用或正式记录创建前修复所有 strict validation 问题。[写入范围：`openspec/changes/async-report-lifecycle-candidate/`]
-- [ ] 0.3 从最新 `origin/main` 的 `codex/async-report-lifecycle-candidate` 分支创建只包含 OpenSpec artifacts 和必要流程约束的初始 PR；PR 标题和正文引用 Issue #196，并明确当前不包含 fixture、runner、evaluator、模型运行或结果记录。[写入范围：Git branch/PR metadata]
+- [x] 0.3 从最新 `origin/main` 的 `codex/async-report-lifecycle-candidate` 分支创建只包含 OpenSpec artifacts 和必要流程约束的初始 PR；PR 标题和正文引用 Issue #196，并明确当前不包含 fixture、runner、evaluator、模型运行或结果记录。[写入范围：Git branch/PR metadata]
 - [ ] 0.4 在初始 PR 创建后完成规划澄清：确认首个实现检查点、starter 依赖/持久化边界、兼容/回退最小可观察行为、baseline 缺陷与区分度、Practice delivery 形式、#201 条件矩阵和不可变 starter source；将确认结果写回 Issue #196、`design.md` 和本文件。[写入范围：Issue #196、`openspec/changes/async-report-lifecycle-candidate/design.md`、`tasks.md`]
 
 ## 1. Candidate 公共任务与 starter
@@ -23,4 +23,5 @@
 
 - [ ] 3.1 记录供后续 #199、#197、#202、#200 消费的最小公开 contract：任务阶段、首个实现检查点、可观察行为边界和 candidate snapshot identity；不实现这些 issue 的 runner、treatment、evaluator 或 JudgeAgent。[写入范围：`design.md`、候选 provenance]
 - [ ] 3.2 复核 candidate 仍未进入 `suites/`、active suite、formal experiment plan 或 `results/records/`，并在同一 PR 中保留验证证据和未执行的正式运行原因。[写入范围：PR body、OpenSpec task evidence]
+
 
