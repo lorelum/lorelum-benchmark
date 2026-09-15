@@ -20,4 +20,4 @@ export LORELUM_SANDBOX_ENFORCED=1
 bun run test:sandbox
 ```
 
-该检查必须验证：镜像的 Bun `1.3.11`、Node `22.19.0` 和 Pi `0.80.10`；private 与 checkout 未挂载；G1 skill 只读；AWS/GitHub 凭据不可见；`example.com` 不可达；`api.deepseek.com` 只能经 proxy 到达。通过后才允许触发 workflow 的 `dry-run`。
+该检查必须验证：镜像的 Bun `1.4.2`、Node `24.21.0` 和 Pi `0.85.1`；private 与 checkout 未挂载；G1 skill 只读；AWS/GitHub 凭据不可见；`example.com` 不可达；`api.deepseek.com` 只能经 proxy 到达。通过后才允许触发 workflow 的 `dry-run`。

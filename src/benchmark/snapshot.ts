@@ -93,7 +93,27 @@ async function listSnapshotFiles(path: string, relative = ""): Promise<string[]>
   return files;
 }
 
-async function snapshotFiles(target: SnapshotTarget, profile?: string): Promise<Record<string, string>> {
+function snapshotDigestBytes(bytes: Uint8Array): Uint8Array {
+  // Snapshot v1 follows the repository's text policy rather than the local
+  // working-tree representation. Keep binary and invalid UTF-8 byte-exact.
+  if (bytes.includes(0) || !bytes.includes(13)) return bytes;
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const normalized = text.replace(/\r\n?/g, "\n");
+    return new TextEncoder().encode(normalized);
+  } catch {
+    return bytes;
+  }
+}
+
+async function snapshotFileDigest(path: string, canonicalizeText: boolean): Promise<string> {
+  const bytes = new Uint8Array(await Bun.file(path).arrayBuffer());
+  const content = canonicalizeText ? snapshotDigestBytes(bytes) : bytes;
+  const digest = await crypto.subtle.digest("SHA-256", content);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function snapshotFiles(target: SnapshotTarget, profile?: string, canonicalizeText = true): Promise<Record<string, string>> {
   const files = await listSnapshotFiles(target.path);
   const included = files.filter((file) => {
     if (file === "private/snapshot.json") return false;
@@ -103,7 +123,7 @@ async function snapshotFiles(target: SnapshotTarget, profile?: string): Promise<
     // 证据索引在候选输入执行后才写入，不得使该输入对应的快照失效。
     return target.kind !== "incubator-candidate" || !file.startsWith("private/evidence-index/");
   }).sort();
-  return Object.fromEntries(await Promise.all(included.map(async (file) => [file, await sha256File(joinPath(target.path, file))])));
+  return Object.fromEntries(await Promise.all(included.map(async (file) => [file, await snapshotFileDigest(joinPath(target.path, file), canonicalizeText)])));
 }
 
 async function snapshotId(files: Record<string, string>): Promise<string> {
@@ -264,7 +284,7 @@ for (const target of selectedTargets) {
   let treeRoot: string | undefined;
   try {
     const declaration = await readKernelDeclaration(target);
-    files = await snapshotFiles(target, declaration?.declaration.profile);
+    files = await snapshotFiles(target, declaration?.declaration.profile, !v2Mode);
     resolved = declaration ? await computeResolvedSnapshot(target, declaration) : undefined;
     if (v2Mode && writeMode) {
       await assertNoSymlinks(target.path);

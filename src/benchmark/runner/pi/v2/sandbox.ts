@@ -112,7 +112,7 @@ export function containerVersionCommand(sandbox: ContainerSandbox): string[] {
   return [
     "docker", "run", "--rm", "--network", "none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
     "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--entrypoint", "/bin/sh", sandbox.image,
-    "-ec", "test \"$(bun --version)\" = \"1.3.11\"; test \"$(node --version)\" = \"v22.19.0\"; test \"$(pi --version)\" = \"0.80.10\""
+    "-ec", "test \"$(bun --version)\" = \"1.4.2\"; test \"$(node --version)\" = \"v24.21.0\"; test \"$(pi --version)\" = \"0.85.1\""
   ];
 }
 

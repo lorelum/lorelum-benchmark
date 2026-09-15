@@ -1,7 +1,7 @@
 ## 1. Baseline and OpenSpec gate
 
-- [ ] 1.1 Verify issue #212, latest `origin/main`, active environment manifests, existing snapshot v2 spec, and current workflow checks; record the final runtime/CI decisions in the issue and design.
-- [ ] 1.2 Run `openspec validate --all --strict --json` and create the initial PR containing only this change's OpenSpec artifacts and required process metadata.
+- [x] 1.1 Verify issue #212, latest `origin/main`, active environment manifests, existing snapshot v2 spec, and current workflow checks; record the final runtime/CI decisions in the issue and design.
+- [x] 1.2 Run `openspec validate --all --strict --json` and create the initial PR containing only this change's OpenSpec artifacts and required process metadata.
 
 ## 2. Runtime and dependency modernization
 

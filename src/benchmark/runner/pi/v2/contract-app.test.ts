@@ -9,6 +9,7 @@ const taskId = "workspace-dashboard-v1";
 const suiteRoot = join(root, "suites", suiteId);
 const taskRoot = join(suiteRoot, "tasks", "workspace-dashboard", "v1");
 const cleanupPaths = new Set<string>();
+const contractBudgetMs = 30_000;
 const sourceCommit = (await new Response(Bun.spawn(["git", "rev-parse", "HEAD"], { cwd: root, stdout: "pipe" }).stdout).text()).trim();
 
 async function write(path: string, content: string): Promise<void> {
@@ -66,7 +67,7 @@ function request(id: string, environmentId: string): Record<string, unknown> {
     schema_version: "pi-run/v2", run_id: id, experiment_id: "contract-only", experiment_plan_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", run_kind: "smoke", condition_id: "baseline", repeat: 1,
     source_commit: sourceCommit, candidate_path: "starter/app/package.json", suite: { id: suiteId, version: "0.1.0" }, task: { id: taskId, revision: "v1", snapshot_id: snapshotId }, treatment: { id: "baseline", version: "v1" }, environment: { id: environmentId, version: "v1" }, scorer: { id: "contract-app", version: "v1" },
     agent: { id: "test-agent", version: "v1", model: "test-model", model_version: "v1", system_prompt_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
-    execution: { command: process.execPath, args: ["-e", 'await Bun.write(Bun.env.CANDIDATE_PATH!, "{\\\"name\\\":\\\"solved-dashboard\\\"}\\n")'], seed: 1, budget: { max_turns: 1, max_duration_ms: 5000 }, tool_policy_hash: "095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2" },
+    execution: { command: process.execPath, args: ["-e", 'await Bun.write(Bun.env.CANDIDATE_PATH!, "{\\\"name\\\":\\\"solved-dashboard\\\"}\\n")'], seed: 1, budget: { max_turns: 1, max_duration_ms: contractBudgetMs }, tool_policy_hash: "095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2" },
     inputs: { task_prompt: "1fa9255c4f1b1f4640cddf65d43b52539fb160c3bfa3861016b2b5c675ea66f2" }, artifacts: { manifest_name: "run-manifest.json" }
   };
 }
@@ -112,7 +113,7 @@ test("generates stable requests from a temporary plan", async () => {
   await Bun.write(planPath, [
     `id: temporary-${crypto.randomUUID()}`, "version: v1", "lifecycle_stage: active", "run_kind: pilot", `source_commit: ${sourceCommit}`, `suite: { id: ${suiteId}, version: 0.1.0 }`,
     "conditions:", "  - { id: baseline, label: G0, treatment: baseline/v1 }", "  - { id: vercel-skill, label: G1, treatment: vercel-skill/v2 }", `smoke_tasks: [${taskId}]`, `full_tasks: [${taskId}]`,
-    "environment: { id: formal-pi-deepseek-v4-pro, version: v1 }", "agent: { id: pi, version: 0.80.10, command: pi }", "model: { id: test-model, version: test-v1 }", "repetitions: 2", "seed: 1", "budget: { max_turns: 1, max_duration_ms: 5000 }", "system_prompt_path: prompts/formal-pi/v1/system.md", "system_prompt_hash: a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a", "tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2", ""
+    "environment: { id: formal-pi-deepseek-v4-pro, version: v1 }", "agent: { id: pi, version: 0.85.1, command: pi }", "model: { id: test-model, version: test-v1 }", "repetitions: 2", "seed: 1", "budget: { max_turns: 1, max_duration_ms: 5000 }", "system_prompt_path: prompts/formal-pi/v1/system.md", "system_prompt_hash: a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a", "tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2", ""
   ].join("\n"));
   const child = Bun.spawn([process.execPath, "run", "src/benchmark/runner/pi/request-generator.ts", planPath, "--dry-run"], { cwd: root, stdout: "pipe", stderr: "pipe" });
   const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
