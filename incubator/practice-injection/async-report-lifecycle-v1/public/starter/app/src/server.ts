@@ -1,6 +1,6 @@
 import { createReport, getReport, pauseReport, resumeReport } from "./report-service";
 import { ReportStore, ReportStoreError } from "./store";
-import type { ApiVersion } from "./types";
+import { publicReport, type ApiVersion } from "./types";
 
 export type ServerOptions = {
   dataDir?: string;
@@ -52,7 +52,8 @@ export function createHandler(options: ServerOptions = {}): (request: Request) =
       if (target.resource === "collection") {
         if (request.method !== "POST") return json({ error: { code: "METHOD_NOT_ALLOWED", summary: "method is not allowed" } }, 405);
         const id = await bodyId(request);
-        return json(await createReport(store, target.version, id), 201);
+        const created = await createReport(store, target.version, id);
+        return json(publicReport(created, target.version), 201);
       }
       if (!target.id) return json({ error: { code: "REPORT_NOT_FOUND", summary: "report was not found" } }, 404);
       if (target.resource === "report") {
@@ -63,7 +64,7 @@ export function createHandler(options: ServerOptions = {}): (request: Request) =
       const state = target.resource === "pause"
         ? await pauseReport(store, target.version, target.id)
         : await resumeReport(store, target.version, target.id);
-      return json(state);
+      return json(publicReport(state, target.version));
     } catch (caught) {
       const error = caught instanceof ReportStoreError ? caught : new ReportStoreError("INTERNAL_ERROR", "request could not be completed", 500);
       return json({ error: { code: error.code, summary: error.message } }, error.httpStatus);

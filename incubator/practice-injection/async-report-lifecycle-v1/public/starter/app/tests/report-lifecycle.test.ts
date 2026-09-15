@@ -27,7 +27,8 @@ async function fixture() {
 describe("public async report starter", () => {
   test("legacy lifecycle reaches completed through three worker steps", async () => {
     const { request, json, dataDir } = await fixture();
-    const created = await json<{ id: string }>(await request("POST", "/api/v1/reports", { id: "legacy-complete" }));
+    const created = await json<{ id: string; pause_requested?: boolean }>(await request("POST", "/api/v1/reports", { id: "legacy-complete" }));
+    expect(created.pause_requested).toBeUndefined();
     const store = new ReportStore(dataDir);
     await advanceReport({ store, apiVersion: 1, id: created.id });
     await advanceReport({ store, apiVersion: 1, id: created.id });
@@ -106,6 +107,3 @@ describe("public async report starter", () => {
     expect(await readFile(path, "utf8")).toBe(original);
   });
 });
-
-
-
