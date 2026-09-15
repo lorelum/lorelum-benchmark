@@ -122,7 +122,13 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run check:runtime
       - run: bun run test:contracts:runner
-
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: runner-contracts-${{ matrix.os }}
+          path: test-results/runner-contracts.xml
+          if-no-files-found: ignore
+          retention-days: 7
   formal-container:
     needs: changes
     if: needs.changes.outputs.formal == 'true'

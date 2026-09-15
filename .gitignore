@@ -1,6 +1,7 @@
 **/node_modules/
 .run-workspaces/
 artifacts/
+test-results/
 scratch/
 .lorelum-cache/
 .practice-runtime/
