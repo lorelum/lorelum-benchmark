@@ -149,7 +149,7 @@ describe("public async report starter", () => {
     persisted.stack_trace = "Error: secret stack trace";
     persisted.raw_payload = { credentials: "secret-token" };
     persisted.credentials = "secret-token";
-    persisted.error = { code: "INTERNAL_DATABASE", summary: `${dataDir}/secret.db: password=secret` };
+    persisted.error = { code: "__proto__", summary: `${dataDir}/secret.db: password=secret` };
     await writeFile(statePath, `${JSON.stringify(persisted)}\n`, "utf8");
 
     const response = await request("GET", "/api/v2/reports/safe-public");

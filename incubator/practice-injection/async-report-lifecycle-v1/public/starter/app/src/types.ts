@@ -41,9 +41,9 @@ export const CORE_STATE_KEYS = [
   "error",
 ] as const;
 
-const PUBLIC_ERROR_SUMMARIES: Record<string, string> = {
-  WORKER_SEGMENT_FAILED: "worker failed while processing a report segment",
-};
+const PUBLIC_ERROR_SUMMARIES = new Map([
+  ["WORKER_SEGMENT_FAILED", "worker failed while processing a report segment"],
+]);
 
 const PUBLIC_CHECKPOINT_REASONS = new Set([
   "created",
@@ -57,7 +57,7 @@ const PUBLIC_CHECKPOINT_REASONS = new Set([
 
 function publicError(error: ReportError | null): ReportError | null {
   if (error === null) return null;
-  const summary = PUBLIC_ERROR_SUMMARIES[error.code];
+  const summary = PUBLIC_ERROR_SUMMARIES.get(error.code);
   if (summary === undefined) return { code: "REPORT_ERROR", summary: "report failed" };
   return { code: error.code, summary };
 }
