@@ -2,54 +2,174 @@ name: Validate benchmark workspace
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: "1.4.2"
+  NODE_VERSION: "24.21.0"
+  PI_VERSION: "0.85.1"
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.filter.outputs.runner }}
+      formal: ${{ steps.filter.outputs.formal }}
+      realistic: ${{ steps.filter.outputs.realistic }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            changed="$(git ls-files)"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            changed="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "$GITHUB_SHA")"
+          else
+            changed="$(git diff --name-only "${{ github.event.before }}" "$GITHUB_SHA")"
+          fi
+          printf '%s\n' "$changed"
+          printf '%s\n' "$changed" | bun run scripts/ci-change-classifier.ts >> "$GITHUB_OUTPUT"
+
   workspace:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: ${{ env.BUN_VERSION }}
       - run: bun install --frozen-lockfile
+      - run: bun run check:runtime
       - run: bun run validate
-      - run: bun run test:contracts
+      - run: bun run test:contracts:core
 
   openspec-governance:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: ${{ env.BUN_VERSION }}
       - run: bun install --frozen-lockfile
+      - run: bun run check:runtime -- --manifest-only
       - run: bun run validate:openspec
       - run: bun run test:openspec-purpose
       - if: github.event_name == 'pull_request'
         run: bun run check:openspec-purpose -- "${{ github.event.pull_request.base.sha }}"
 
-  formal-container:
-    runs-on: ubuntu-latest
+  runner-integration:
+    needs: changes
+    if: needs.changes.outputs.runner == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - run: docker build --file Dockerfile.formal-pi --tag lorelum-formal-pi:ci .
-      - run: docker run --rm --entrypoint /bin/sh lorelum-formal-pi:ci -ec 'test "$(bun --version)" = "1.3.11"; test "$(node --version)" = "v22.19.0"; test "$(pi --version)" = "0.80.10"'
-
-  realistic-repository:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: ${{ env.BUN_VERSION }}
       - run: bun install --frozen-lockfile
+      - run: bun run check:runtime
+      - run: bun run test:contracts:runner
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: runner-contracts-${{ matrix.os }}
+          path: test-results/runner-contracts.xml
+          if-no-files-found: ignore
+          retention-days: 7
+  formal-container:
+    needs: changes
+    if: needs.changes.outputs.formal == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build --progress=plain --file Dockerfile.formal-pi --tag lorelum-formal-pi:ci .
+      - run: docker run --rm --entrypoint /bin/sh lorelum-formal-pi:ci -ec 'test "$(bun --version)" = "${{ env.BUN_VERSION }}"; test "$(node --version)" = "v${{ env.NODE_VERSION }}"; test "$(pi --version)" = "${{ env.PI_VERSION }}"'
+
+  realistic-repository:
+    needs: changes
+    if: needs.changes.outputs.realistic == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run check:runtime
       - run: bunx playwright@1.61.1 install --with-deps chromium
       - run: bun run test:realistic-repo
+
+  required-validation:
+    if: ${{ always() }}
+    needs: [changes, workspace, openspec-governance, runner-integration, formal-container, realistic-repository]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require fast validation and tolerate skipped heavy jobs
+        shell: bash
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          WORKSPACE_RESULT: ${{ needs.workspace.result }}
+          OPENSPEC_RESULT: ${{ needs.openspec-governance.result }}
+          RUNNER_RESULT: ${{ needs.runner-integration.result }}
+          FORMAL_RESULT: ${{ needs.formal-container.result }}
+          REALISTIC_RESULT: ${{ needs.realistic-repository.result }}
+        run: |
+          set -euo pipefail
+          for result in "$CHANGES_RESULT" "$WORKSPACE_RESULT" "$OPENSPEC_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "Required fast validation result was $result"
+              exit 1
+            fi
+          done
+          for result in "$RUNNER_RESULT" "$FORMAL_RESULT" "$REALISTIC_RESULT"; do
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "Relevant heavy validation result was $result"
+              exit 1
+            fi
+          done
+          echo "Required validation passed; irrelevant heavy jobs may be skipped."

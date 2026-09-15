@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { workspaceRoot } from "../../../fs";
-import { containerCommand, containerEnvironment, containerImageInspectCommand, containerVersionCommand, formalContainerSandbox } from "./sandbox";
+import { containerCommand, containerEnvironment, containerImageInspectCommand, containerRuntimeVersions, containerVersionCommand, formalContainerSandbox } from "./sandbox";
 
 function fail(message: string): never {
   throw new Error(message);
@@ -19,15 +19,16 @@ function requireSuccess(result: { exitCode: number; stdout: string; stderr: stri
 
 if (Bun.env.LORELUM_SANDBOX_ENFORCED !== "1") fail("Sandbox preflight requires LORELUM_SANDBOX_ENFORCED=1");
 
-const environmentPath = join(workspaceRoot, "environments", "formal-pi-deepseek-v4-pro", "v1", "environment.yaml");
+const environmentPath = join(workspaceRoot, "environments", "formal-pi-deepseek-v4-pro", "v2", "environment.yaml");
 const environment = Bun.YAML.parse(await Bun.file(environmentPath).text()) as Record<string, unknown>;
 const sandbox = formalContainerSandbox(environment);
+const runtimeVersions = containerRuntimeVersions(environment);
 const cliEnv = { PATH: Bun.env.PATH ?? "", ...containerEnvironment("sandbox-preflight", sandbox) };
 
 const inspection = await run(containerImageInspectCommand(sandbox), cliEnv);
 requireSuccess(inspection, "Formal container image inspection");
 if (inspection.stdout.trim() !== sandbox.image) fail("Formal container image digest does not match the configured image");
-requireSuccess(await run(containerVersionCommand(sandbox), cliEnv), "Formal container runtime version check");
+requireSuccess(await run(containerVersionCommand(sandbox, runtimeVersions), cliEnv), "Formal container runtime version check");
 
 const root = await mkdtemp(join(tmpdir(), "lorelum-sandbox-"));
 try {

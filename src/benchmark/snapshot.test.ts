@@ -147,6 +147,82 @@ test("keeps the legacy #75 candidate on its non-kernel snapshot path", async () 
   expect(result.exitCode).toBe(0);
   expect(result.output).toContain("Snapshots are intact.");
 });
+test("normal verification preserves the raw-byte policy of a stored v2 snapshot", async () => {
+  const workspace = await createCandidateWorkspace();
+  const candidate = join(workspace, "incubator", "candidates", "example-candidate");
+  try {
+    await writeFile(join(candidate, "public", "task.md"), "# Example\r\n", "utf8");
+    const writeResult = await runSnapshot(workspace, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    expect(writeResult.exitCode, writeResult.output).toBe(0);
+
+    // Do not pass --v2: normal repository validation must infer the stored
+    // version and keep v2's raw-byte digest policy.
+    const verifyResult = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(verifyResult.exitCode, verifyResult.output).toBe(0);
+    expect(verifyResult.output).toContain("Snapshots are intact.");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("valid UTF-8 control-heavy payloads remain byte-exact as binary input", async () => {
+  const workspace = await createCandidateWorkspace();
+  const candidate = join(workspace, "incubator", "candidates", "example-candidate");
+  const binaryPath = join(candidate, "public", "starter", "binary.dat");
+  try {
+    await writeFile(binaryPath, new Uint8Array([0x01, 0x0d, 0x02]));
+    const writeResult = await runSnapshot(workspace, "--write", "--incubator", "candidates", "example-candidate");
+    expect(writeResult.exitCode, writeResult.output).toBe(0);
+    const manifest = JSON.parse(await Bun.file(join(candidate, "private", "snapshot.json")).text()) as { files: Record<string, string> };
+    expect(manifest.files["public/starter/binary.dat"]).toBe(await sha256(binaryPath));
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("v1 snapshot identity is stable across text line endings but byte-exact for binary and invalid UTF-8", async () => {
+  const lfWorkspace = await createCandidateWorkspace();
+  const alternateWorkspace = await createCandidateWorkspace();
+  const lfCandidate = join(lfWorkspace, "incubator", "candidates", "example-candidate");
+  const alternateCandidate = join(alternateWorkspace, "incubator", "candidates", "example-candidate");
+  try {
+    await writeFile(join(lfCandidate, "public", "task.md"), "# Example\n\n", "utf8");
+    await writeFile(join(lfCandidate, "public", "starter", ".env.example"), "PORT=3000\nNEXT=1\nTAIL=2\n", "utf8");
+    await writeFile(join(alternateCandidate, "public", "task.md"), "# Example\r\n\r\n", "utf8");
+    await writeFile(join(alternateCandidate, "public", "starter", ".env.example"), "PORT=3000\r\nNEXT=1\nTAIL=2\r\n", "utf8");
+    await writeFile(join(lfCandidate, "public", "starter", "bom.txt"), new Uint8Array([0xef, 0xbb, 0xbf, 0x62, 0x6f, 0x6d, 0x0a]));
+    await writeFile(join(alternateCandidate, "public", "starter", "bom.txt"), new Uint8Array([0xef, 0xbb, 0xbf, 0x62, 0x6f, 0x6d, 0x0d, 0x0a]));
+
+    const lfWrite = await runSnapshot(lfWorkspace, "--write", "--incubator", "candidates", "example-candidate");
+    const alternateWrite = await runSnapshot(alternateWorkspace, "--write", "--incubator", "candidates", "example-candidate");
+    expect(lfWrite.exitCode, lfWrite.output).toBe(0);
+    expect(alternateWrite.exitCode, alternateWrite.output).toBe(0);
+    const lfManifest = JSON.parse(await Bun.file(join(lfCandidate, "private", "snapshot.json")).text()) as { snapshot_id: string };
+    const alternateManifest = JSON.parse(await Bun.file(join(alternateCandidate, "private", "snapshot.json")).text()) as { snapshot_id: string };
+    expect(alternateManifest.snapshot_id).toBe(lfManifest.snapshot_id);
+
+    const v2Lf = await runSnapshot(lfWorkspace, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    const v2Alternate = await runSnapshot(alternateWorkspace, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    expect(v2Lf.exitCode, v2Lf.output).toBe(0);
+    expect(v2Alternate.exitCode, v2Alternate.output).toBe(0);
+    const v2LfManifest = JSON.parse(await Bun.file(join(lfCandidate, "private", "snapshot.json")).text()) as { snapshot_id: string };
+    const v2AlternateManifest = JSON.parse(await Bun.file(join(alternateCandidate, "private", "snapshot.json")).text()) as { snapshot_id: string };
+    expect(v2AlternateManifest.snapshot_id).not.toBe(v2LfManifest.snapshot_id);
+
+    await writeFile(join(alternateCandidate, "public", "starter", "invalid.bin"), new Uint8Array([0xc3, 0x28, 0x0d]));
+    const invalidLf = await runSnapshot(alternateWorkspace, "--write", "--incubator", "candidates", "example-candidate");
+    expect(invalidLf.exitCode, invalidLf.output).toBe(0);
+    const invalidLfManifest = JSON.parse(await Bun.file(join(alternateCandidate, "private", "snapshot.json")).text()) as { snapshot_id: string };
+    await writeFile(join(alternateCandidate, "public", "starter", "invalid.bin"), new Uint8Array([0xc3, 0x28, 0x0a]));
+    const invalidCr = await runSnapshot(alternateWorkspace, "--write", "--incubator", "candidates", "example-candidate");
+    expect(invalidCr.exitCode, invalidCr.output).toBe(0);
+    const invalidCrManifest = JSON.parse(await Bun.file(join(alternateCandidate, "private", "snapshot.json")).text()) as { snapshot_id: string };
+    expect(invalidCrManifest.snapshot_id).not.toBe(invalidLfManifest.snapshot_id);
+  } finally {
+    await rm(lfWorkspace, { force: true, recursive: true });
+    await rm(alternateWorkspace, { force: true, recursive: true });
+  }
+});
 test("v2 writes a canonical tree root without a files manifest and verifies across clean checkouts", async () => {
   const workspace1 = await createCandidateWorkspace();
   const workspace2 = await createCandidateWorkspace();

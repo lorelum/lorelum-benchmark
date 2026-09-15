@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { workspaceRoot } from "../../../fs";
-import { containerCommand, containerEnvironment, containerVersionCommand, localContainerImageInspectCommand, localContainerSandbox } from "./sandbox";
+import { containerCommand, containerEnvironment, containerRuntimeVersions, containerVersionCommand, localContainerImageInspectCommand, localContainerSandbox } from "./sandbox";
 
 function fail(message: string): never {
   throw new Error(message);
@@ -22,10 +22,11 @@ if (Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("Local sandbox preflight requ
 const environmentPath = join(workspaceRoot, "environments", "local-wsl-pi", "v2", "environment.yaml");
 const environment = Bun.YAML.parse(await Bun.file(environmentPath).text()) as Record<string, unknown>;
 const sandbox = localContainerSandbox(environment);
+const runtimeVersions = containerRuntimeVersions(environment);
 const cliEnv = { PATH: Bun.env.PATH ?? "", ...containerEnvironment("sandbox-preflight", sandbox) };
 
 requireSuccess(await run(localContainerImageInspectCommand(sandbox), cliEnv), "Local container image inspection");
-requireSuccess(await run(containerVersionCommand(sandbox), cliEnv), "Local container runtime version check");
+requireSuccess(await run(containerVersionCommand(sandbox, runtimeVersions), cliEnv), "Local container runtime version check");
 
 const root = await mkdtemp(join(tmpdir(), "lorelum-local-sandbox-"));
 try {

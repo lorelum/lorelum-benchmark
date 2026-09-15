@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { containerCommand, containerEnvironment, containerName, containerRemoveCommand, formalContainerSandbox, localContainerSandbox } from "./sandbox";
+import { containerCommand, containerEnvironment, containerName, containerRemoveCommand, containerRuntimeVersions, containerVersionCommand, formalContainerSandbox, localContainerSandbox } from "./sandbox";
 
 const image = "ghcr.io/lorelum/lorelum-benchmark/formal-pi@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const environment = {
@@ -72,6 +72,12 @@ test("passes only the API key and fixed proxy environment", () => {
     NO_PROXY: ""
   });
   expect(() => containerEnvironment(undefined, formalContainerSandbox(environment))).toThrow("DEEPSEEK_API_KEY");
+});
+
+test("binds container version assertions to the selected environment identity", () => {
+  const sandbox = formalContainerSandbox(environment);
+  const versions = containerRuntimeVersions({ bun: "1.3.11", node: "22.19.0", agent_runtime: { id: "pi", version: "0.80.10" } });
+  expect(containerVersionCommand(sandbox, versions).at(-1)).toContain('test "$(bun --version)" = "1.3.11"; test "$(node --version)" = "v22.19.0"; test "$(pi --version)" = "0.80.10"');
 });
 
 test("uses a separately marked local container without proxy credentials", () => {
