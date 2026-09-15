@@ -2,54 +2,152 @@ name: Validate benchmark workspace
 
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: "1.4.2"
+  NODE_VERSION: "24.21.0"
+  PI_VERSION: "0.85.1"
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.filter.outputs.runner }}
+      formal: ${{ steps.filter.outputs.formal }}
+      realistic: ${{ steps.filter.outputs.realistic }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            changed="$(git ls-files)"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            changed="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "$GITHUB_SHA")"
+          else
+            changed="$(git diff --name-only "${{ github.event.before }}" "$GITHUB_SHA")"
+          fi
+          printf '%s\n' "$changed"
+
+          runner=false
+          formal=false
+          realistic=false
+          if printf '%s\n' "$changed" | grep -Eq '^(src/benchmark/(runner|evaluator)/|src/benchmark/(fs|snapshot|task-discovery)\.ts$|schemas/|environments/|policies/|treatments/|package\.json$|bun\.lock$)'; then
+            runner=true
+          fi
+          if printf '%s\n' "$changed" | grep -Eq '^(Dockerfile\.formal-pi$|package\.json$|bun\.lock$|environments/|src/benchmark/runner/|policies/|\.github/workflows/(validate|publish-formal-pi-image)\.yml$)'; then
+            formal=true
+          fi
+          if printf '%s\n' "$changed" | grep -Eq '^(src/benchmark/calibrate-realistic-suite\.ts$|src/benchmark/kernel/|suites/realistic-react-skill-comparison/|incubator/calibration-bases/|package\.json$|bun\.lock$|\.github/workflows/validate\.yml$)'; then
+            realistic=true
+          fi
+          {
+            echo "runner=$runner"
+            echo "formal=$formal"
+            echo "realistic=$realistic"
+          } >> "$GITHUB_OUTPUT"
+
   workspace:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: ${{ env.BUN_VERSION }}
       - run: bun install --frozen-lockfile
+      - run: bun run check:runtime
       - run: bun run validate
-      - run: bun run test:contracts
+      - run: bun run test:contracts:core
+      - run: bun run test:async-report-lifecycle
 
   openspec-governance:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: ${{ env.BUN_VERSION }}
       - run: bun install --frozen-lockfile
+      - run: bun run check:runtime -- --manifest-only
       - run: bun run validate:openspec
       - run: bun run test:openspec-purpose
       - if: github.event_name == 'pull_request'
         run: bun run check:openspec-purpose -- "${{ github.event.pull_request.base.sha }}"
 
-  formal-container:
-    runs-on: ubuntu-latest
+  runner-integration:
+    needs: changes
+    if: needs.changes.outputs.runner == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - run: docker build --file Dockerfile.formal-pi --tag lorelum-formal-pi:ci .
-      - run: docker run --rm --entrypoint /bin/sh lorelum-formal-pi:ci -ec 'test "$(bun --version)" = "1.3.11"; test "$(node --version)" = "v22.19.0"; test "$(pi --version)" = "0.80.10"'
-
-  realistic-repository:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.11"
+          bun-version: ${{ env.BUN_VERSION }}
       - run: bun install --frozen-lockfile
+      - run: bun run check:runtime
+      - run: bun run test:contracts:runner
+
+  formal-container:
+    needs: changes
+    if: needs.changes.outputs.formal == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build --progress=plain --file Dockerfile.formal-pi --tag lorelum-formal-pi:ci .
+      - run: docker run --rm --entrypoint /bin/sh lorelum-formal-pi:ci -ec 'test "$(bun --version)" = "${{ env.BUN_VERSION }}"; test "$(node --version)" = "v${{ env.NODE_VERSION }}"; test "$(pi --version)" = "${{ env.PI_VERSION }}"'
+
+  realistic-repository:
+    needs: changes
+    if: needs.changes.outputs.realistic == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run check:runtime
       - run: bunx playwright@1.61.1 install --with-deps chromium
       - run: bun run test:realistic-repo
