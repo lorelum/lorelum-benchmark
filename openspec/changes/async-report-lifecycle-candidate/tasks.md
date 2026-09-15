@@ -15,9 +15,9 @@
 
 ## 2. Snapshot、隔离与候选验证
 
-- [ ] 2.1 创建最小 private candidate provenance 和 SHA-256 snapshot，覆盖 public task、starter、candidate metadata 及其声明的源码文件；不得把 evaluator、oracle、scoring 或 Practice 内容添加到 Agent 输入。[写入范围：`private/candidate.yaml`、`private/snapshot.json`]
-- [ ] 2.2 执行 public/private 泄露审计，确认 Agent workspace 只由 public task/stage-2/starter 构成；确认公开材料没有 hidden assertion、reference implementation 偏好或 Practice 文本。[写入范围：审计命令和 PR 证据，不提交运行日志]
-- [ ] 2.3 运行 candidate focused tests、snapshot verification、`bun run validate` 和 `git diff --check`；确认没有模型调用、正式 record、suite revision、run workspace 或生成日志被提交。[写入范围：验证命令及必要的源码修复]
+- [x] 2.1 创建最小 private candidate provenance 和 SHA-256 snapshot，覆盖 public task、starter、candidate metadata 及其声明的源码文件；不得把 evaluator、oracle、scoring 或 Practice 内容添加到 Agent 输入。[写入范围：`private/candidate.yaml`、`private/snapshot.json`]
+- [x] 2.2 执行 public/private 泄露审计，确认 Agent workspace 只由 public task/stage-2/starter 构成；确认公开材料没有 hidden assertion、reference implementation 偏好或 Practice 文本。[写入范围：审计命令和 PR 证据，不提交运行日志]
+- [x] 2.3 运行 candidate focused tests、snapshot verification、`bun run validate` 和 `git diff --check`；确认没有模型调用、正式 record、suite revision、run workspace 或生成日志被提交。[写入范围：验证命令及必要的源码修复]
 - [ ] 2.4 若行为夹具不能区分正确、表面正确和错误方案，停止升级并在 Issue #196/OpenSpec 中记录 diagnostic/indeterminate；不得为了得到分离度而修改题面、oracle 或条件。[写入范围：Issue #196、`design.md`、候选状态]
 
 ## 3. 交接与生命周期收束
