@@ -27,4 +27,4 @@
 | snapshot/runner 契约隔离 | 存储 snapshot version 决定 digest policy；container version assertion 从所选 environment 读取 |
 | CI 触发边界可审计 | `scripts/ci-change-classifier.ts` 集中维护三类路径，`ci-change-classifier.test.ts` 覆盖 realistic 依赖、runner harness、classifier self-change 和 docs-only |
 
-验证：本地 snapshot/runner/sandbox/core focused tests 全部通过；`bun run validate`、strict OpenSpec validation、`git diff --check` 通过。修复后 CI 运行结果待本次提交触发的新 PR run 完成。
+验证：本地 snapshot/runner/sandbox/core focused tests 全部通过；`bun run validate`、strict OpenSpec validation、`git diff --check` 通过。修复后 CI run `34973115602` 的全部 jobs 通过。

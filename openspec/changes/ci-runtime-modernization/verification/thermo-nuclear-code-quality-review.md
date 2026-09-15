@@ -24,4 +24,4 @@
 | 资源与超时边界 | job-level timeout、Bun test timeout、synthetic fixture budget 和既有 process-tree cleanup 分层存在 |
 | 可维护性与文件体量 | 变更文件均远低于 1,000 行；新增测试覆盖 classifier、snapshot v1/v2、binary 和 sandbox runtime binding |
 
-验证：第一轮 must-fix 已全部修复；本地 core contracts `123 pass`、runner contracts `111 pass`、snapshot/sandbox/classifier focused tests 全部通过，`bun run validate` 与 strict OpenSpec validation 通过。修复后 CI 运行结果待新 PR run 完成。
+验证：第一轮 must-fix 已全部修复；本地 core contracts `123 pass`、runner contracts `111 pass`、snapshot/sandbox/classifier focused tests 全部通过，`bun run validate` 与 strict OpenSpec validation 通过。修复后 CI run `34973115602` 的全部 jobs 通过。
