@@ -3,7 +3,7 @@ lifecycle_stage: candidate
 source:
   kind: repository-local-starter
   repository: lorelum/lorelum-benchmark
-  source_commit: f1eb106bdde661a8676e88ca93a722a6395a0da0
+  source_commit: 74962ee0c98f7775b0eb626f7b49b878035d8778
   public_root: public/starter/app
   immutable_by: private/snapshot.json
 runtime:
