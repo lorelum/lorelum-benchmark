@@ -17,7 +17,7 @@ sandbox:
   secrets: protected-environment
   container:
     runtime: docker
-    image: ghcr.io/lorelum/lorelum-benchmark/formal-pi@sha256:a6de637a7537d2eea2fbd53c789b377975a6b10470672562e7d1b702ecdd6b82
+    image: ghcr.io/lorelum/lorelum-benchmark/formal-pi@sha256:1ebfc6f005467a527fbc895b82477bf55a75f7daf14393468a1ea8b93c976b6c
     network: lorelum-formal-egress
     proxy_url: http://lorelum-egress-proxy:3128
     allowed_endpoint: api.deepseek.com:443
