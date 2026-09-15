@@ -99,6 +99,13 @@ function snapshotDigestBytes(bytes: Uint8Array): Uint8Array {
   if (bytes.includes(0) || !bytes.includes(13)) return bytes;
   try {
     const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    // Valid UTF-8 is not sufficient to identify text: control-heavy payloads
+    // can also decode successfully. Treat only printable text plus tab/LF/CR
+    // as text, which keeps small binary payloads byte-exact.
+    if ([...text].some((character) => {
+      const codePoint = character.codePointAt(0)!;
+      return codePoint < 0x20 && codePoint !== 0x09 && codePoint !== 0x0a && codePoint !== 0x0d;
+    })) return bytes;
     const normalized = text.replace(/\r\n?/g, "\n");
     return new TextEncoder().encode(normalized);
   } catch {
@@ -279,14 +286,28 @@ if ((group || reference) && selectedTargets.length === 0) {
 
 for (const target of selectedTargets) {
   const snapshotPath = joinPath(target.path, "private", "snapshot.json");
+  let storedSnapshot: Record<string, unknown> | undefined;
+  if (!writeMode && await pathExists(snapshotPath)) {
+    try {
+      const parsed = JSON.parse(await Bun.file(snapshotPath).text());
+      if (!isRecord(parsed)) throw new Error("snapshot must be a JSON object");
+      storedSnapshot = parsed;
+    } catch (error) {
+      failures.push(`Invalid snapshot ${relativePath(snapshotPath)}: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+  }
   let files: Record<string, string>;
   let resolved: ResolvedSnapshot | undefined;
   let treeRoot: string | undefined;
   try {
     const declaration = await readKernelDeclaration(target);
-    files = await snapshotFiles(target, declaration?.declaration.profile, !v2Mode);
+    // During verification, the stored snapshot version owns the digest policy.
+    // The CLI flag only selects the format for a new snapshot.
+    const useV2Digest = writeMode ? v2Mode : storedSnapshot?.version === 2;
+    files = await snapshotFiles(target, declaration?.declaration.profile, !useV2Digest);
     resolved = declaration ? await computeResolvedSnapshot(target, declaration) : undefined;
-    if (v2Mode && writeMode) {
+    if (useV2Digest && writeMode) {
       await assertNoSymlinks(target.path);
       treeRoot = await canonicalTreeRoot(files);
     }
@@ -309,19 +330,12 @@ for (const target of selectedTargets) {
     continue;
   }
 
-  if (!(await pathExists(snapshotPath))) {
+  if (!storedSnapshot) {
     failures.push(`Missing snapshot: ${relativePath(snapshotPath)}`);
     continue;
   }
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(await Bun.file(snapshotPath).text()) as Record<string, unknown>;
-  } catch (error) {
-    failures.push(`Invalid snapshot ${relativePath(snapshotPath)}: ${error instanceof Error ? error.message : String(error)}`);
-    continue;
-  }
-
+  const parsed = storedSnapshot;
   if (parsed.version === 2) {
     if (parsed.algorithm !== "sha256-merkle" || typeof parsed.snapshot_id !== "string") {
       failures.push(`Unsupported snapshot format: ${relativePath(snapshotPath)}`);

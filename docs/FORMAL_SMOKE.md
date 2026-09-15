@@ -8,7 +8,7 @@ revision 已冻结，并且离线校准、不可变模型快照、隔离 runner 
 
 ## 启动前配置
 
-1. 提交并验证冻结的真实仓库任务源树，使用新 commit 创建正式计划；从 DeepSeek 获取不可变模型快照 ID，并将该值同时写入 `environments/formal-pi-deepseek-v4-pro/v1/environment.yaml` 与新计划的 `model.version`。不得使用 `pending-provider-snapshot` 执行真实运行。
+1. 提交并验证冻结的真实仓库任务源树，使用新 commit 创建正式计划；从 DeepSeek 获取不可变模型快照 ID，并将该值同时写入 `environments/formal-pi-deepseek-v4-pro/v2/environment.yaml` 与新计划的 `model.version`。不得使用 `pending-provider-snapshot` 执行真实运行。
 2. 创建启用 versioning 和默认 Object Lock retention 的 S3 bucket/prefix。将固定的 `s3://bucket/prefix` 写入 formal environment 的 `artifact_storage.uri`，并将完全相同的值配置为 GitHub Environment variable `LORELUM_ARTIFACT_STORAGE_URI`。
 3. 合并后由 `Publish formal Pi container image` 发布镜像。将 workflow 输出的 digest 写回 formal environment；不得使用 image tag。注册带 `lorelum-formal-sandbox` 标签的 Linux 自托管 GitHub Actions runner，并由 runner 服务环境设置 `LORELUM_SANDBOX_ENFORCED=1`；workflow 使用临时 `GITHUB_TOKEN` 拉取 digest，不将 registry 凭据传给 Pi。
 4. 创建 Docker 内部网络 `lorelum-formal-egress`，并部署只允许 `api.deepseek.com:443` 的 CONNECT proxy；Pi 容器不得拥有 host network、Docker socket 或 checkout 挂载。

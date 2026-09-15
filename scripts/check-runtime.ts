@@ -26,9 +26,9 @@ assertEqual(packageJson.engines?.node, expected.node, "package.json engines.node
 assertEqual(packageJson.devDependencies?.["@earendil-works/pi-coding-agent"], expected.pi, "package.json Pi dependency");
 
 for (const relativePath of [
-  "environments/formal-pi-deepseek-v4-pro/v1/environment.yaml",
-  "environments/local-pi/v2/environment.yaml",
-  "environments/local-wsl-pi/v2/environment.yaml"
+  "environments/formal-pi-deepseek-v4-pro/v2/environment.yaml",
+  "environments/local-pi/v3/environment.yaml",
+  "environments/local-wsl-pi/v3/environment.yaml"
 ]) {
   const environment = Bun.YAML.parse(await Bun.file(join(root, relativePath)).text()) as Record<string, unknown>;
   assertEqual(environment.bun, expected.bun, `${relativePath} bun`);

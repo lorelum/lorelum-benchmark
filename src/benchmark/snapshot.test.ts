@@ -147,6 +147,39 @@ test("keeps the legacy #75 candidate on its non-kernel snapshot path", async () 
   expect(result.exitCode).toBe(0);
   expect(result.output).toContain("Snapshots are intact.");
 });
+test("normal verification preserves the raw-byte policy of a stored v2 snapshot", async () => {
+  const workspace = await createCandidateWorkspace();
+  const candidate = join(workspace, "incubator", "candidates", "example-candidate");
+  try {
+    await writeFile(join(candidate, "public", "task.md"), "# Example\r\n", "utf8");
+    const writeResult = await runSnapshot(workspace, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    expect(writeResult.exitCode, writeResult.output).toBe(0);
+
+    // Do not pass --v2: normal repository validation must infer the stored
+    // version and keep v2's raw-byte digest policy.
+    const verifyResult = await runSnapshot(workspace, "--incubator", "candidates", "example-candidate");
+    expect(verifyResult.exitCode, verifyResult.output).toBe(0);
+    expect(verifyResult.output).toContain("Snapshots are intact.");
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test("valid UTF-8 control-heavy payloads remain byte-exact as binary input", async () => {
+  const workspace = await createCandidateWorkspace();
+  const candidate = join(workspace, "incubator", "candidates", "example-candidate");
+  const binaryPath = join(candidate, "public", "starter", "binary.dat");
+  try {
+    await writeFile(binaryPath, new Uint8Array([0x01, 0x0d, 0x02]));
+    const writeResult = await runSnapshot(workspace, "--write", "--incubator", "candidates", "example-candidate");
+    expect(writeResult.exitCode, writeResult.output).toBe(0);
+    const manifest = JSON.parse(await Bun.file(join(candidate, "private", "snapshot.json")).text()) as { files: Record<string, string> };
+    expect(manifest.files["public/starter/binary.dat"]).toBe(await sha256(binaryPath));
+  } finally {
+    await rm(workspace, { force: true, recursive: true });
+  }
+});
+
 test("v1 snapshot identity is stable across text line endings but byte-exact for binary and invalid UTF-8", async () => {
   const lfWorkspace = await createCandidateWorkspace();
   const alternateWorkspace = await createCandidateWorkspace();

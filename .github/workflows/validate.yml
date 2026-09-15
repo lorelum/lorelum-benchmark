@@ -27,6 +27,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
       - id: filter
         shell: bash
         run: |
@@ -39,24 +42,7 @@ jobs:
             changed="$(git diff --name-only "${{ github.event.before }}" "$GITHUB_SHA")"
           fi
           printf '%s\n' "$changed"
-
-          runner=false
-          formal=false
-          realistic=false
-          if printf '%s\n' "$changed" | grep -Eq '^(src/benchmark/(runner|evaluator)/|src/benchmark/(fs|snapshot|task-discovery)\.ts$|scripts/run-runner-contracts\.ts$|\.github/workflows/validate\.yml$|schemas/|environments/|policies/|treatments/|package\.json$|bun\.lock$)'; then
-            runner=true
-          fi
-          if printf '%s\n' "$changed" | grep -Eq '^(Dockerfile\.formal-pi$|package\.json$|bun\.lock$|environments/|src/benchmark/runner/|policies/|\.github/workflows/(validate|publish-formal-pi-image)\.yml$)'; then
-            formal=true
-          fi
-          if printf '%s\n' "$changed" | grep -Eq '^(src/benchmark/calibrate-realistic-suite\.ts$|src/benchmark/kernel/|suites/realistic-react-skill-comparison/|incubator/calibration-bases/|package\.json$|bun\.lock$|\.github/workflows/validate\.yml$)'; then
-            realistic=true
-          fi
-          {
-            echo "runner=$runner"
-            echo "formal=$formal"
-            echo "realistic=$realistic"
-          } >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$changed" | bun run scripts/ci-change-classifier.ts >> "$GITHUB_OUTPUT"
 
   workspace:
     strategy:
@@ -156,3 +142,34 @@ jobs:
       - run: bun run check:runtime
       - run: bunx playwright@1.61.1 install --with-deps chromium
       - run: bun run test:realistic-repo
+
+  required-validation:
+    if: ${{ always() }}
+    needs: [changes, workspace, openspec-governance, runner-integration, formal-container, realistic-repository]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require fast validation and tolerate skipped heavy jobs
+        shell: bash
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          WORKSPACE_RESULT: ${{ needs.workspace.result }}
+          OPENSPEC_RESULT: ${{ needs.openspec-governance.result }}
+          RUNNER_RESULT: ${{ needs.runner-integration.result }}
+          FORMAL_RESULT: ${{ needs.formal-container.result }}
+          REALISTIC_RESULT: ${{ needs.realistic-repository.result }}
+        run: |
+          set -euo pipefail
+          for result in "$CHANGES_RESULT" "$WORKSPACE_RESULT" "$OPENSPEC_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "Required fast validation result was $result"
+              exit 1
+            fi
+          done
+          for result in "$RUNNER_RESULT" "$FORMAL_RESULT" "$REALISTIC_RESULT"; do
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "Relevant heavy validation result was $result"
+              exit 1
+            fi
+          done
+          echo "Required validation passed; irrelevant heavy jobs may be skipped."

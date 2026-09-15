@@ -6,7 +6,7 @@
 ## 2. Runtime and dependency modernization
 
 - [x] 2.1 Update root package engines and exact Pi dependency to Bun `1.4.2`/Node `24.21.0`/Pi `0.85.1`, regenerate `bun.lock`, and verify `bun install --frozen-lockfile`.
-- [x] 2.2 Update formal Pi Dockerfile, active formal/local environment manifests, and runtime documentation/assertions without changing historical incubator condition pins or recorded provenance.
+- [x] 2.2 Add new versioned formal/local environment manifests for the upgraded runtime, keep existing environment and incubator condition identity unchanged, and update runtime documentation/assertions to the new active versions.
 - [x] 2.3 Add deterministic runtime/version consistency checks and run Pi CLI/runner preflight without invoking a model or creating a record.
 
 ## 3. Cross-platform snapshot and test stability
@@ -20,9 +20,9 @@
 
 - [x] 4.1 Change the fast validation workflow to PR + main push triggers with concurrency cancellation and exact Bun pin; keep OpenSpec governance and Ubuntu/Windows fast checks.
 - [x] 4.2 Split runner/coordinator integration checks into a path-scoped job with explicit job timeout, cleanup behavior, and failure artifacts.
-- [x] 4.3 Split formal-container and realistic-repository checks into path-scoped jobs (or equivalent conservative job filters), preserving both test implementations and runtime assertions.
+- [x] 4.3 Split formal-container and realistic-repository checks into path-scoped jobs (or equivalent conservative job filters), preserving both test implementations and runtime assertions; centralize and test the dependency classifier.
 - [x] 4.4 Keep #212 independent of the unmerged #196 candidate; document that its public starter smoke is a follow-up after #196 lands and must not be a required gate here.
-- [x] 4.5 Validate changed workflow YAML, inspect PR checks and concurrency behavior, and document old-to-new required-check names.
+- [x] 4.5 Validate changed workflow YAML, inspect PR checks and concurrency behavior, add the stable `required-validation` aggregation check, and document old-to-new required-check names.
 
 ## 5. Repository verification and handoff
 

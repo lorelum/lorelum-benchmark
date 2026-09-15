@@ -4,7 +4,7 @@ import { lstat, mkdir, readdir } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { joinPath, listFiles, pathExists, relativePath, sha256File, sha256Text, workspaceRoot } from "../../../fs";
 import { findTask } from "../../../task-discovery";
-import { containerCommand, containerEnvironment, containerImageInspectCommand, containerRemoveCommand, containerVersionCommand, formalContainerSandbox, localContainerImageInspectCommand, localContainerSandbox, type ContainerSandbox } from "./sandbox";
+import { containerCommand, containerEnvironment, containerImageInspectCommand, containerRemoveCommand, containerRuntimeVersions, containerVersionCommand, formalContainerSandbox, localContainerImageInspectCommand, localContainerSandbox, type ContainerSandbox } from "./sandbox";
 import { auditPiJsonTrace, piJsonTraceArgs, piToolTimeoutEvent } from "./trace";
 import { declaredRuleContext, routedRuleNames, type RuleContext } from "./rule-router";
 import { declaredSkillBundle, resolveSkillBundle, stageSkillBundle, type SkillBundle } from "./treatment-resolver";
@@ -416,7 +416,7 @@ async function verifyRuntime(environment: Record<string, unknown>, request: PiRu
     } else {
       await runSandboxCommand(localContainerImageInspectCommand(containerSandbox), sandboxEnv, "Local container image inspection");
     }
-    await runSandboxCommand(containerVersionCommand(containerSandbox), sandboxEnv, "Formal container runtime version check");
+    await runSandboxCommand(containerVersionCommand(containerSandbox, containerRuntimeVersions(environment)), sandboxEnv, "Formal container runtime version check");
     return;
   }
   const versionCheck = Bun.spawn([request.execution.command, "--version"], { cwd: workspaceRoot, env: Bun.env, stdout: "pipe", stderr: "pipe" });

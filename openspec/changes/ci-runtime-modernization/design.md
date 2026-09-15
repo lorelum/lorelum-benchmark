@@ -27,7 +27,9 @@ Issue #212 收住的是一个仓库级 CI/runtime 问题，不是 #196 candidate
 
 采用 Bun `1.4.2`、Node `24.21.0` 和 `@earendil-works/pi-coding-agent` `0.85.1`。Node 使用 LTS 而不是 current `26.x`，因为正式 benchmark 优先稳定、可复现和长期支持；Pi 包的 lockfile 继续记录所有传递依赖的完整版本和 integrity。package `engines.node` 固定为 `24.21.0`，以避免本地/CI 误用旧 Node。
 
-备选方案：继续使用 range 或只升级 CI。未采用，因为会让 formal image、环境 manifest 和本地执行出现版本漂移；只升级 CI 又不能重建正式容器。
+运行时升级采用环境版本迁移而不是原地改写：formal Pi 新路径为 `formal-pi-deepseek-v4-pro/v2`，本地路径为 `local-pi/v3` 和 `local-wsl-pi/v3`；原有 formal `v1`、local `v2` manifest 及其 incubator condition identity 保持不变。当前开发/CI 检查和文档指向新版本；依赖旧环境的历史 candidate 不在本 change 中静默迁移，后续重跑须显式使用旧 runtime 或另建 candidate/plan migration。
+
+备选方案：继续使用 range、只升级 CI 或直接改写现有 environment version。未采用，因为前两者会让 formal image、环境 manifest 和本地执行出现版本漂移，最后一种会破坏已有 candidate/plan 的 runtime provenance。
 
 ### 2. CI uses one validation workflow for PR/main and path-scoped heavy workflows
 
@@ -42,13 +44,13 @@ pull_request:
 
 并使用 `concurrency.group = validate-${{ github.event.pull_request.number || github.ref }}` 与 `cancel-in-progress: true`。这样 feature branch push 不再额外触发一套重复 workflow，main 合并后仍会有一次 post-merge validation。
 
-workspace-fast 保留 Ubuntu/Windows，但只运行 `validate`、OpenSpec governance 和核心 deterministic contracts。#196 candidate 尚未进入 `origin/main`，因此其 public starter smoke 不在本 change 中跨 PR 引用；候选合并后由其自身 change/后续 CI 调整接入。runner/coordinator integration、formal-container、realistic-repository 各自通过路径触发的 workflow 保留，避免普通文档或 candidate-only PR 被高成本检查阻塞。 runner integration 的路径集合同时包含其独立启动脚本和 `validate.yml` 本身，避免只修改测试编排时跳过被修改的集成门禁。
+workspace-fast 保留 Ubuntu/Windows，但只运行 `validate`、OpenSpec governance 和核心 deterministic contracts。#196 candidate 尚未进入 `origin/main`，因此其 public starter smoke 不在本 change 中跨 PR 引用；候选合并后由其自身 change/后续 CI 调整接入。runner/coordinator integration、formal-container、realistic-repository 各自通过保守路径集合触发，避免普通文档或 candidate-only PR 被高成本检查阻塞；这些路径集合由 `scripts/ci-change-classifier.ts` 统一维护并由测试覆盖。runner integration 的路径集合同时包含其独立启动脚本和 `validate.yml` 本身，realistic calibration 还覆盖 evaluate、snapshot、fs、task-discovery 和 evaluator 依赖，避免只修改实际执行链路时跳过对应门禁。`required-validation` 始终运行并把快速 job 作为必需项、把按路径跳过的重型 job 视为可接受结果，供分支保护绑定稳定 check。
 
 备选方案：只删除 Windows、只删除 push 事件或直接删掉慢测试。未采用：Windows 仍覆盖真实路径行为；删除 push 会丢失 main post-merge 信号；测试逻辑仍然有 benchmark 价值，应调整触发和边界而非删除。
 
 ### 3. Snapshot v1 adds a scoped canonical text digest without changing shared exact-file hashes
 
-snapshot v1 的 candidate file manifest 使用专用的 snapshot digest：对 UTF-8 文本把 CRLF/孤立 CR 规范化为 LF 后计算 SHA-256；二进制或非文本文件仍按原始字节计算。该逻辑只在 `snapshot.ts` 组装 v1/v2 输入文件 manifest 时使用，不改变 `sha256File` 对 environment lockfile、prompt、record artifact 等 exact-byte contract 的既有含义。v2 canonical tree 继续按现有 spec 使用文件字节级 hash；新 candidate 应优先采用 v2，但历史/现有 v1 输入保持 v1 格式。
+snapshot v1 的 candidate file manifest 使用专用的 snapshot digest：对可识别为文本的 UTF-8 内容把 CRLF/孤立 CR 规范化为 LF 后计算 SHA-256；包含 NUL、无效 UTF-8 或控制字符的 binary payload 按原始字节计算。该逻辑只在 `snapshot.ts` 组装 v1 输入文件 manifest 时使用，不改变 `sha256File` 对 environment lockfile、prompt、record artifact 等 exact-byte contract 的既有含义。v2 canonical tree 始终按已存储 snapshot version 选择 byte-level file digest，普通验证路径也不会把 v1 text normalization 应用于 v2；新 candidate 应优先采用 v2，但历史/现有 v1 输入保持 v1 格式。
 
 同时增加测试：同一 candidate 的 LF、CRLF 和混合换行工作区生成相同 v1 snapshot identity；损坏 UTF-8/二进制不被文本转换误处理。
 
@@ -62,7 +64,7 @@ snapshot v1 的 candidate file manifest 使用专用的 snapshot digest：对 UT
 
 ### 5. Active environment manifests are versioned before formal use
 
-formal Pi environment 尚无正式 record，因此在没有运行记录的前提下同步其 runtime/dependency identity；local-pi/local-wsl manifests 同步到新 runtime。历史 incubator condition pins 不变。若新 runtime 被用于正式记录，先创建新的 environment version 和 experiment plan，不能原地改写已有 record 的 provenance。
+formal Pi 新 runtime 写入 `formal-pi-deepseek-v4-pro/v2`，local runtime 写入 `local-pi/v3` 和 `local-wsl-pi/v3`；旧的 formal `v1`、local `v2` manifest 和历史 incubator condition pins 不变。若新 runtime 被用于正式记录，计划必须引用新 environment version；不能原地改写已有 record 的 provenance。
 
 ## Risks / Trade-offs
 

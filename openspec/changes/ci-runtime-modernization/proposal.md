@@ -5,9 +5,9 @@
 ## What Changes
 
 - 将主仓库开发/CI/formal Pi 的 exact runtime 更新为 Bun `1.4.2`、Node `24.21.0` LTS 和 `@earendil-works/pi-coding-agent` `0.85.1`。
-- 同步 package manifest、lockfile、formal Pi 镜像、active formal/local environment manifest、runner/sandbox 文档与版本断言。
-- 将普通验证 workflow 改为 PR 与 main push 的单一事件模型，加入按 PR/ref 的过期 run 取消；保留测试逻辑但将快速契约、runner integration、formal container 和 realistic repository calibration 拆成合理边界与路径触发的 job/workflow。
-- 为 snapshot v1 的文本文件提供遵循 `.gitattributes` 的 LF canonical digest 路径，保持 snapshot v2 的字节级 Merkle 契约和历史冻结 identity 不变。
+- 同步 package manifest、lockfile、formal Pi 镜像、new versioned formal/local environment manifests、runner/sandbox 文档与版本断言；保留旧 environment version 和 incubator condition identity。
+- 将普通验证 workflow 改为 PR 与 main push 的单一事件模型，加入按 PR/ref 的过期 run 取消；保留测试逻辑但将快速契约、runner integration、formal container 和 realistic repository calibration 拆成合理边界与集中维护、可测试的路径触发 job，并提供稳定聚合 check。
+- 为 snapshot v1 的可识别文本文件提供遵循 `.gitattributes` 的 LF canonical digest 路径，保持 snapshot v2 的字节级 Merkle 契约和历史冻结 identity 不变；验证时由存储 snapshot version 选择 digest policy。
 - 为 runner/coordinator black-box 测试采用足够的测试 timeout 与 fixture budget，明确这不改变正式运行的 budget contract。
 
 ## Capabilities
@@ -22,7 +22,7 @@
 
 ## Impact
 
-- `package.json`、`bun.lock`、`Dockerfile.formal-pi`、`environments/` 中未被历史 record 使用的 active runtime manifests、`docs/PI_RUNNER.md` 和 `docs/FORMAL_SANDBOX.md`。
+- `package.json`、`bun.lock`、`Dockerfile.formal-pi`、new versioned `environments/` manifests、`docs/PI_RUNNER.md` 和 `docs/FORMAL_SANDBOX.md`；旧 environment version 保持不变。
 - `.github/workflows/` 的验证编排及新增 workflow/job 的 required-check 边界。
 - `src/benchmark/snapshot.ts`/相关 hash helper 和 `src/benchmark/runner/pi/v2/contract-app.test.ts` 的跨平台与 timeout 测试代码。
 - 不修改 `suites/`、既有正式 record、历史 incubator private conditions、Practice/oracle/evaluator/scoring 或模型运行条件。

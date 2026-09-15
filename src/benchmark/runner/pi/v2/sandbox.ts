@@ -29,6 +29,12 @@ export type ContainerSandbox = FormalContainerSandbox | LocalContainerSandbox;
 
 type Environment = Record<string, unknown>;
 
+export type ContainerRuntimeVersions = {
+  bun: string;
+  node: string;
+  pi: string;
+};
+
 function fail(message: string): never {
   throw new Error(message);
 }
@@ -108,11 +114,23 @@ export function containerCommand(request: PiRunRequestV2, sandbox: ContainerSand
   return [...commandLine, ...args];
 }
 
-export function containerVersionCommand(sandbox: ContainerSandbox): string[] {
+export function containerRuntimeVersions(environment: Environment): ContainerRuntimeVersions {
+  const agentRuntime = environment.agent_runtime;
+  if (
+    typeof environment.bun !== "string" || !/^\d+\.\d+\.\d+$/.test(environment.bun) ||
+    typeof environment.node !== "string" || !/^\d+\.\d+\.\d+$/.test(environment.node) ||
+    !isRecord(agentRuntime) || agentRuntime.id !== "pi" || typeof agentRuntime.version !== "string" || !/^\d+\.\d+\.\d+$/.test(agentRuntime.version)
+  ) {
+    fail("Container environment must declare exact Bun, Node, and Pi versions");
+  }
+  return { bun: environment.bun, node: environment.node, pi: agentRuntime.version };
+}
+
+export function containerVersionCommand(sandbox: ContainerSandbox, versions: ContainerRuntimeVersions): string[] {
   return [
     "docker", "run", "--rm", "--network", "none", "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
     "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--entrypoint", "/bin/sh", sandbox.image,
-    "-ec", "test \"$(bun --version)\" = \"1.4.2\"; test \"$(node --version)\" = \"v24.21.0\"; test \"$(pi --version)\" = \"0.85.1\""
+    "-ec", `test "$(bun --version)" = "${versions.bun}"; test "$(node --version)" = "v${versions.node}"; test "$(pi --version)" = "${versions.pi}"`
   ];
 }
 

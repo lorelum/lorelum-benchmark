@@ -6,7 +6,7 @@
 
 创建 Docker internal network `lorelum-formal-egress`，Pi 容器只能加入该网络。部署一个 proxy 容器：它同时连接 internal network 和独立上游网络，但 Pi 永远不连接上游网络。proxy 的配置必须只允许 `CONNECT api.deepseek.com:443`，拒绝所有其他目的地、HTTP 方法和管理端口；proxy image 也必须使用 digest。
 
-`environments/formal-pi-deepseek-v4-pro/v1/environment.yaml` 中的 `proxy_url`、network 名称和 endpoint 是 runner 的验收契约。变更 proxy 地址、镜像或策略时，必须在尚无 record 前更新该 environment；已有 record 后创建新的 environment version。
+`environments/formal-pi-deepseek-v4-pro/v2/environment.yaml` 中的 `proxy_url`、network 名称和 endpoint 是 runner 的验收契约。变更 proxy 地址、镜像或策略时，必须在尚无 record 前更新该 environment；已有 record 后创建新的 environment version。
 
 ## 镜像与验收
 

@@ -113,7 +113,7 @@ test("generates stable requests from a temporary plan", async () => {
   await Bun.write(planPath, [
     `id: temporary-${crypto.randomUUID()}`, "version: v1", "lifecycle_stage: active", "run_kind: pilot", `source_commit: ${sourceCommit}`, `suite: { id: ${suiteId}, version: 0.1.0 }`,
     "conditions:", "  - { id: baseline, label: G0, treatment: baseline/v1 }", "  - { id: vercel-skill, label: G1, treatment: vercel-skill/v2 }", `smoke_tasks: [${taskId}]`, `full_tasks: [${taskId}]`,
-    "environment: { id: formal-pi-deepseek-v4-pro, version: v1 }", "agent: { id: pi, version: 0.85.1, command: pi }", "model: { id: test-model, version: test-v1 }", "repetitions: 2", "seed: 1", "budget: { max_turns: 1, max_duration_ms: 5000 }", "system_prompt_path: prompts/formal-pi/v1/system.md", "system_prompt_hash: a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a", "tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2", ""
+    "environment: { id: formal-pi-deepseek-v4-pro, version: v2 }", "agent: { id: pi, version: 0.85.1, command: pi }", "model: { id: test-model, version: test-v1 }", "repetitions: 2", "seed: 1", "budget: { max_turns: 1, max_duration_ms: 5000 }", "system_prompt_path: prompts/formal-pi/v1/system.md", "system_prompt_hash: a09d2451a34f2fb452bf4a35df308ded561aabbfe1b2ef3c0f143fe067bbd20a", "tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2", ""
   ].join("\n"));
   const child = Bun.spawn([process.execPath, "run", "src/benchmark/runner/pi/request-generator.ts", planPath, "--dry-run"], { cwd: root, stdout: "pipe", stderr: "pipe" });
   const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);

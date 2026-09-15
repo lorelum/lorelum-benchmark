@@ -9,7 +9,7 @@
 
 ### Requirement: Exact runtime identity is synchronized
 
-The repository MUST declare and validate one exact baseline runtime for the active development/CI/formal Pi path: Bun `1.4.2`, Node `24.21.0`, and `@earendil-works/pi-coding-agent` `0.85.1`. The package manifest, lockfile, formal image, active environment manifests, docs, and CI assertions MUST agree. Historical incubator condition pins and recorded provenance MUST NOT be rewritten by this change.
+The repository MUST declare and validate one exact baseline runtime for the active development/CI/formal Pi path: Bun `1.4.2`, Node `24.21.0`, and `@earendil-works/pi-coding-agent` `0.85.1`. The package manifest, lockfile, formal image, active environment manifests (`formal-pi-deepseek-v4-pro/v2`, `local-pi/v3`, and `local-wsl-pi/v3`), docs, and CI assertions MUST agree. Existing environment versions and historical incubator condition pins MUST NOT be rewritten by this change.
 
 #### Scenario: Fresh install resolves the declared runtime
 
@@ -27,7 +27,7 @@ The fast validation workflow MUST run once for a pull request through `pull_requ
 
 ### Requirement: CI checks are separated by cost and relevance
 
-Fast CI MUST retain deterministic validation and OpenSpec governance. Runner/coordinator integration, formal container, and realistic repository calibration checks MUST remain available with explicit timeouts and conservative path-trigger rules rather than being deleted or run redundantly for every unrelated PR. Candidate-specific smoke may be added only after the candidate is present in the base branch; this change MUST NOT depend on an unmerged candidate from another PR.
+Fast CI MUST retain deterministic validation and OpenSpec governance. Runner/coordinator integration, formal container, and realistic repository calibration checks MUST remain available with explicit timeouts and conservative path-trigger rules rather than being deleted or run redundantly for every unrelated PR. The path classifier MUST include the actual realistic calibration execution dependencies, including evaluate, snapshot, filesystem, task-discovery, and evaluator code. A stable aggregation check MUST always report the fast validation result and MUST treat a path-gated heavy job as acceptable only when it is successful or intentionally skipped. Candidate-specific smoke may be added only after the candidate is present in the base branch; this change MUST NOT depend on an unmerged candidate from another PR.
 
 #### Scenario: An unrelated documentation change is submitted
 
@@ -41,7 +41,7 @@ Fast CI MUST retain deterministic validation and OpenSpec governance. Runner/coo
 
 ### Requirement: Snapshot identity is stable for declared text line endings
 
-For v1 snapshot file manifests, snapshot generation and verification MUST normalize UTF-8 text line endings to LF before hashing, while preserving raw-byte hashing for binary/invalid UTF-8 files. This scoped behavior MUST NOT change shared exact-byte hashes or v2 byte-level canonical Merkle identity, and MUST preserve public/private exclusion boundaries.
+For v1 snapshot file manifests, snapshot generation and verification MUST normalize text line endings to LF only for an explicitly recognized text payload, while preserving raw-byte hashing for binary, invalid UTF-8, or control-heavy payloads. During verification, the stored snapshot version MUST select the digest policy: v1 may normalize recognized text, while v2 MUST always use raw-byte file digests. This scoped behavior MUST NOT change shared exact-byte hashes or v2 byte-level canonical Merkle identity, and MUST preserve public/private exclusion boundaries.
 
 #### Scenario: The same text tree is checked out with different line endings
 
