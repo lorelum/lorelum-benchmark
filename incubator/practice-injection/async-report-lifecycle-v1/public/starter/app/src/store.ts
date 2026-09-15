@@ -1,6 +1,10 @@
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { isReportStatus, TOTAL_SEGMENTS, type ReportState } from "./types";
+
+const LOCK_TIMEOUT_MS = 5_000;
+const LOCK_STALE_MS = 30_000;
+const LOCK_RETRY_MS = 10;
 
 export class ReportStoreError extends Error {
   constructor(
@@ -57,6 +61,18 @@ export function reportPath(dataDir: string, id: string): string {
   return join(dataDir, `${id}.json`);
 }
 
+function stateContents(state: ReportState): string {
+  return `${JSON.stringify(state, null, 2)}\n`;
+}
+
+function isErrno(error: unknown, code: string): boolean {
+  return (error as NodeJS.ErrnoException | undefined)?.code === code;
+}
+
+function wait(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 export class ReportStore {
   constructor(public readonly dataDir: string) {}
 
@@ -70,7 +86,7 @@ export class ReportStore {
     try {
       text = await readFile(path, "utf8");
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new ReportStoreError("REPORT_NOT_FOUND", "report was not found", 404);
+      if (isErrno(error, "ENOENT")) throw new ReportStoreError("REPORT_NOT_FOUND", "report was not found", 404);
       throw new ReportStoreError("STATE_READ_FAILED", "report state could not be read", 500);
     }
     let parsed: unknown;
@@ -79,7 +95,36 @@ export class ReportStore {
     } catch {
       throw new ReportStoreError("STATE_CORRUPT", "report state is not valid JSON");
     }
-    return validateReportState(parsed);
+    const state = validateReportState(parsed);
+    if (state.id !== id) {
+      throw new ReportStoreError("STATE_ID_MISMATCH", "report state id does not match the requested report");
+    }
+    return state;
+  }
+
+  async create(state: ReportState): Promise<void> {
+    const validated = validateReportState(state);
+    await mkdir(this.dataDir, { recursive: true });
+    const destination = this.path(validated.id);
+    const temporary = join(this.dataDir, `.${validated.id}.${crypto.randomUUID()}.tmp`);
+    try {
+      await writeFile(temporary, stateContents(validated), "utf8");
+      try {
+        // A hard link publishes the fully written temporary file without allowing
+        // a concurrent create to replace an existing report.
+        await link(temporary, destination);
+      } catch (error) {
+        if (isErrno(error, "EEXIST")) {
+          throw new ReportStoreError("REPORT_ALREADY_EXISTS", "report already exists", 409);
+        }
+        throw error;
+      }
+    } catch (error) {
+      if (error instanceof ReportStoreError) throw error;
+      throw new ReportStoreError("STATE_WRITE_FAILED", "report state could not be written", 500);
+    } finally {
+      await rm(temporary, { force: true });
+    }
   }
 
   async write(state: ReportState): Promise<void> {
@@ -88,11 +133,49 @@ export class ReportStore {
     const destination = this.path(validated.id);
     const temporary = join(this.dataDir, `.${validated.id}.${crypto.randomUUID()}.tmp`);
     try {
-      await writeFile(temporary, `${JSON.stringify(validated, null, 2)}\n`, "utf8");
+      await writeFile(temporary, stateContents(validated), "utf8");
       await rename(temporary, destination);
     } catch {
       await rm(temporary, { force: true });
       throw new ReportStoreError("STATE_WRITE_FAILED", "report state could not be written", 500);
+    }
+  }
+
+  async withReportLock<T>(id: string, operation: () => Promise<T>): Promise<T> {
+    assertReportId(id);
+    await mkdir(this.dataDir, { recursive: true });
+    const lockPath = join(this.dataDir, `.${id}.lock`);
+    const deadline = Date.now() + LOCK_TIMEOUT_MS;
+
+    while (true) {
+      try {
+        await mkdir(lockPath);
+        break;
+      } catch (error) {
+        if (!isErrno(error, "EEXIST")) {
+          throw new ReportStoreError("STATE_LOCK_FAILED", "report state could not be locked", 500);
+        }
+        try {
+          const lockInfo = await stat(lockPath);
+          if (Date.now() - lockInfo.mtimeMs > LOCK_STALE_MS) {
+            await rm(lockPath, { recursive: true, force: true });
+            continue;
+          }
+        } catch {
+          // The competing lock may have been released between mkdir and stat.
+          continue;
+        }
+        if (Date.now() >= deadline) {
+          throw new ReportStoreError("REPORT_BUSY", "report is busy; retry the operation", 409);
+        }
+        await wait(LOCK_RETRY_MS);
+      }
+    }
+
+    try {
+      return await operation();
+    } finally {
+      await rm(lockPath, { recursive: true, force: true });
     }
   }
 }

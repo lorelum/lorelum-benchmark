@@ -27,4 +27,6 @@ POST /api/v2/reports/:id/resume
 
 The v2 state adds compatibility metadata but keeps the v1 core fields. A v1 reader must preserve unknown v2 fields when it writes a state it can safely handle. Unsupported schema, missing required fields, invalid JSON, and unsafe migration return a stable error code and do not replace the original state file.
 
+The v2 response exposes only the allowlisted `writer_version` and `checkpoint_metadata` metadata fields. Other persisted extension fields remain persistence-only. Error summaries are also sanitized to the stable public vocabulary.
+
 Responses never expose filesystem paths, stack traces, or raw persisted documents.
