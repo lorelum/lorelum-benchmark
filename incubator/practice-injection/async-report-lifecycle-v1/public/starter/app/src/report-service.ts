@@ -2,9 +2,7 @@ import { ReportStore, ReportStoreError } from "./store";
 import { CORE_STATE_KEYS, publicReport, TOTAL_SEGMENTS, type ApiVersion, type ReportState } from "./types";
 
 export function legacyWriteState(next: ReportState): ReportState {
-  // The candidate intentionally starts with this incomplete migration behavior:
-  // the old writer keeps core fields but drops v2 extensions. The task asks the
-  // Agent to make this compatibility boundary preserve unknown fields safely.
+
   const core = Object.fromEntries(CORE_STATE_KEYS.map((key) => [key, next[key]]));
   return core as ReportState;
 }

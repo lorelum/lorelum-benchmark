@@ -8,10 +8,10 @@
 ## 1. Candidate 公共任务与 starter
 
 - [x] 1.1 创建 `incubator/practice-injection/async-report-lifecycle-v1/` 的 candidate 元数据，声明 `candidate` 生命周期、source repository、runtime、baseline expectation、starter source commit 和 snapshot 路径；不得加入 suite manifest。[写入范围：`incubator/practice-injection/async-report-lifecycle-v1/private/candidate.yaml`]
-- [x] 1.2 编写公开多回合任务脚本：初始检查/方案阶段、stage-2 用户补充旧新并行与回退约束、复查后实施/验证阶段；明确 `CHECKPOINT: compatibility-slice-ready` 和聚焦测试证据，不泄露 private oracle 或 Practice 正文。[写入范围：`public/task.md`、`public/stage-2/task.md`]
+- [x] 1.2 编写公开多回合任务脚本：初始检查/方案阶段、stage-2 用户补充旧新并行与回退约束、复查后实施/验证阶段；明确 `CHECKPOINT: compatibility-slice-ready` 和 `bun test tests/compatibility.test.ts` 聚焦测试证据，不泄露 private oracle 或 Practice 正文。[写入范围：`public/task.md`、`public/stage-2/task.md`]
 - [x] 1.3 创建可运行 Bun public starter：版本化 v1/v2 HTTP JSON API、每 report 一个原子状态文件、固定三个 segment、独立 worker CLI、pause/resume、确定性 failure 和从 checkpoint retry；保留旧版完整路径和新版迁移/回退缺口作为 baseline。[写入范围：`public/starter/app/`]
 - [x] 1.4 在 starter docs 中公开 API、状态字段、版本差异和 worker CLI；不写 hidden oracle、完整迁移答案、评分配置或 Practice 内容。[写入范围：`public/starter/app/docs/`]
-- [x] 1.5 添加黑盒 HTTP/持久化 focused tests，覆盖生命周期、pause checkpoint、进度持久化、failure/retry、v1/v2 并行和可诊断安全错误；测试不绑定 private evaluator 或特定 reference 目录结构。[写入范围：`public/starter/app/tests/`]
+- [x] 1.5 添加黑盒 HTTP/持久化 focused tests，覆盖生命周期、pause checkpoint、进度持久化、failure/retry、v1/v2 并行、未知字段保留目标和可诊断安全错误；兼容性目标测试允许在 baseline 阶段失败，但必须成为 Agent 的公开验证入口。测试不绑定 private evaluator 或特定 reference 目录结构。[写入范围：`public/starter/app/tests/`]
 
 ## 2. Snapshot、隔离与候选验证
 

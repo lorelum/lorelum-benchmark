@@ -69,7 +69,7 @@ bun run src/worker.ts --report <id> --step --fail-at-segment <n>
 
 pause 请求不会立即打断当前 segment，而在下一个 checkpoint 生效；resume 清除 pause 请求并继续推进。故障通过 `--fail-at-segment` 注入，不使用随机数或墙钟延迟。
 
-会话沿用 staged 目录约定：初始请求在 `public/task.md`，约束补充在 `public/stage-2/task.md`。`first_implementation_checkpoint` 定义为：stage-2 follow-up 后，Agent 完成第一项兼容/回退相关代码变更、指定聚焦测试通过，并输出：
+会话沿用 staged 目录约定：初始请求在 `public/task.md`，约束补充在 `public/stage-2/task.md`。`first_implementation_checkpoint` 定义为：stage-2 follow-up 后，Agent 完成第一项兼容/回退相关代码变更、`bun test tests/compatibility.test.ts` 通过，并输出：
 
 ```text
 CHECKPOINT: compatibility-slice-ready
