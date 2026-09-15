@@ -166,6 +166,14 @@ test("v1 snapshot identity is stable across text line endings but byte-exact for
     const alternateManifest = JSON.parse(await Bun.file(join(alternateCandidate, "private", "snapshot.json")).text()) as { snapshot_id: string };
     expect(alternateManifest.snapshot_id).toBe(lfManifest.snapshot_id);
 
+    const v2Lf = await runSnapshot(lfWorkspace, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    const v2Alternate = await runSnapshot(alternateWorkspace, "--write", "--v2", "--incubator", "candidates", "example-candidate");
+    expect(v2Lf.exitCode, v2Lf.output).toBe(0);
+    expect(v2Alternate.exitCode, v2Alternate.output).toBe(0);
+    const v2LfManifest = JSON.parse(await Bun.file(join(lfCandidate, "private", "snapshot.json")).text()) as { snapshot_id: string };
+    const v2AlternateManifest = JSON.parse(await Bun.file(join(alternateCandidate, "private", "snapshot.json")).text()) as { snapshot_id: string };
+    expect(v2AlternateManifest.snapshot_id).not.toBe(v2LfManifest.snapshot_id);
+
     await writeFile(join(alternateCandidate, "public", "starter", "invalid.bin"), new Uint8Array([0xc3, 0x28, 0x0d]));
     const invalidLf = await runSnapshot(alternateWorkspace, "--write", "--incubator", "candidates", "example-candidate");
     expect(invalidLf.exitCode, invalidLf.output).toBe(0);

@@ -5,16 +5,16 @@
 
 ## 2. Runtime and dependency modernization
 
-- [ ] 2.1 Update root package engines and exact Pi dependency to Bun `1.4.2`/Node `24.21.0`/Pi `0.85.1`, regenerate `bun.lock`, and verify `bun install --frozen-lockfile`.
-- [ ] 2.2 Update formal Pi Dockerfile, active formal/local environment manifests, and runtime documentation/assertions without changing historical incubator condition pins or recorded provenance.
-- [ ] 2.3 Add deterministic runtime/version consistency checks and run Pi CLI/runner preflight without invoking a model or creating a record.
+- [x] 2.1 Update root package engines and exact Pi dependency to Bun `1.4.2`/Node `24.21.0`/Pi `0.85.1`, regenerate `bun.lock`, and verify `bun install --frozen-lockfile`.
+- [x] 2.2 Update formal Pi Dockerfile, active formal/local environment manifests, and runtime documentation/assertions without changing historical incubator condition pins or recorded provenance.
+- [x] 2.3 Add deterministic runtime/version consistency checks and run Pi CLI/runner preflight without invoking a model or creating a record.
 
 ## 3. Cross-platform snapshot and test stability
 
-- [ ] 3.1 Implement a snapshot-scoped canonical text digest for v1 manifests, leaving shared exact-byte `sha256File` and v2 byte-level Merkle semantics unchanged.
-- [ ] 3.2 Add tests proving LF/CRLF/mixed text workspaces produce the same v1 identity and binary/invalid UTF-8 inputs remain byte-based; preserve private/public exclusion rules.
-- [ ] 3.3 Make `contract-app.test.ts` subprocess tests use explicit bounded test timeouts and a 30-second synthetic fixture budget while retaining cleanup and formal budget assertions.
-- [ ] 3.4 Run focused snapshot and runner contract tests and confirm no task/snapshot/record identity outside the intended unrecorded candidate inputs changed.
+- [x] 3.1 Implement a snapshot-scoped canonical text digest for v1 manifests, leaving shared exact-byte `sha256File` and v2 byte-level Merkle semantics unchanged.
+- [x] 3.2 Add tests proving LF/CRLF/mixed text workspaces produce the same v1 identity and binary/invalid UTF-8 inputs remain byte-based; preserve private/public exclusion rules.
+- [x] 3.3 Make `contract-app.test.ts` subprocess tests use explicit bounded test timeouts and a 30-second synthetic fixture budget while retaining cleanup and formal budget assertions.
+- [x] 3.4 Run focused snapshot and runner contract tests and confirm no task/snapshot/record identity outside the intended unrecorded candidate inputs changed.
 
 ## 4. CI workflow restructuring
 
