@@ -1,9 +1,9 @@
 {
   "version": 1,
   "algorithm": "sha256",
-  "snapshot_id": "46b34a77ab95f29f76d2d5fa3ee9aa40e5e98d7e9b6a5e67df0c2ee7a1b760fd",
+  "snapshot_id": "1d5ed4cf62abdb50c49286d5cfb45ec078f475f068018fcc642e2f524ef9fe54",
   "files": {
-    "private/candidate.yaml": "279caba24271bb752de87c23926f946dd9a673d52a13a8cd7762e3046a1c9484",
+    "private/candidate.yaml": "f14406ef56c25d650eae8745effae192e6f4a1af62f676aabbcf6fac8e2a1413",
     "public/stage-2/task.md": "2a9fe6c0f0f92729aa7ea2a2cf67fce7199bb31f53ad3fbc87cac9939d09300a",
     "public/starter/app/.gitignore": "4ce4aa6e3e87c218dd05085af2b68c7c2bfc3d8c449c41c384d3b9dd88b169b4",
     "public/starter/app/bun.lock": "72e73b2bbfb1a30191e4fed5efbce8874af90b54471e0812316c8aa6b7e1db92",
