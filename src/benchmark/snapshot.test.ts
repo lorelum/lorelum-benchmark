@@ -157,6 +157,8 @@ test("v1 snapshot identity is stable across text line endings but byte-exact for
     await writeFile(join(lfCandidate, "public", "starter", ".env.example"), "PORT=3000\nNEXT=1\nTAIL=2\n", "utf8");
     await writeFile(join(alternateCandidate, "public", "task.md"), "# Example\r\n\r\n", "utf8");
     await writeFile(join(alternateCandidate, "public", "starter", ".env.example"), "PORT=3000\r\nNEXT=1\nTAIL=2\r\n", "utf8");
+    await writeFile(join(lfCandidate, "public", "starter", "bom.txt"), new Uint8Array([0xef, 0xbb, 0xbf, 0x62, 0x6f, 0x6d, 0x0a]));
+    await writeFile(join(alternateCandidate, "public", "starter", "bom.txt"), new Uint8Array([0xef, 0xbb, 0xbf, 0x62, 0x6f, 0x6d, 0x0d, 0x0a]));
 
     const lfWrite = await runSnapshot(lfWorkspace, "--write", "--incubator", "candidates", "example-candidate");
     const alternateWrite = await runSnapshot(alternateWorkspace, "--write", "--incubator", "candidates", "example-candidate");

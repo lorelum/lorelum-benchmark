@@ -98,7 +98,7 @@ function snapshotDigestBytes(bytes: Uint8Array): Uint8Array {
   // working-tree representation. Keep binary and invalid UTF-8 byte-exact.
   if (bytes.includes(0) || !bytes.includes(13)) return bytes;
   try {
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
     const normalized = text.replace(/\r\n?/g, "\n");
     return new TextEncoder().encode(normalized);
   } catch {
