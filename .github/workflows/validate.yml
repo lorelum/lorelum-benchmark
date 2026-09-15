@@ -79,7 +79,6 @@ jobs:
       - run: bun run check:runtime
       - run: bun run validate
       - run: bun run test:contracts:core
-      - run: bun run test:async-report-lifecycle
 
   openspec-governance:
     runs-on: ubuntu-latest

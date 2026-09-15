@@ -21,12 +21,12 @@
 - [ ] 4.1 Change the fast validation workflow to PR + main push triggers with concurrency cancellation and exact Bun pin; keep OpenSpec governance and Ubuntu/Windows fast checks.
 - [ ] 4.2 Split runner/coordinator integration checks into a path-scoped workflow with explicit job timeout, cleanup behavior, and failure artifacts.
 - [ ] 4.3 Split formal-container and realistic-repository checks into path-scoped workflows (or equivalent conservative job filters), preserving both test implementations and runtime assertions.
-- [ ] 4.4 Add async-report-lifecycle public starter lifecycle smoke to fast CI while documenting why compatibility target baseline failure is not a required green check.
+- [x] 4.4 Keep #212 independent of the unmerged #196 candidate; document that its public starter smoke is a follow-up after #196 lands and must not be a required gate here.
 - [ ] 4.5 Validate changed workflow YAML, inspect PR checks and concurrency behavior, and document old-to-new required-check names.
 
 ## 5. Repository verification and handoff
 
-- [ ] 5.1 Run `bun run validate`, `bun run test:contracts:core`, runner integration tests, snapshot tests, candidate smoke, OpenSpec strict validation, and `git diff --check`.
+- [ ] 5.1 Run `bun run validate`, `bun run test:contracts:core`, runner integration tests, snapshot tests, OpenSpec strict validation, and `git diff --check`.
 - [ ] 5.2 Build and inspect the formal Pi image, verify exact Bun/Node/Pi versions and no private/model access, and run realistic repository calibration only when its path-scoped workflow applies.
 - [ ] 5.3 Run public/private leakage and lifecycle audit; confirm no model calls, formal records, suite promotion, historical condition rewrites, node_modules, run workspaces, logs, or generated diffs are committed.
 - [ ] 5.4 Update issue #212 and PR with root cause, scope, validation evidence, residual infra uncertainty, and the environment-version migration rule.

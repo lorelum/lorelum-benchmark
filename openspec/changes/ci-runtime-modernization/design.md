@@ -42,7 +42,7 @@ pull_request:
 
 并使用 `concurrency.group = validate-${{ github.event.pull_request.number || github.ref }}` 与 `cancel-in-progress: true`。这样 feature branch push 不再额外触发一套重复 workflow，main 合并后仍会有一次 post-merge validation。
 
-workspace-fast 保留 Ubuntu/Windows，但只运行 `validate`、OpenSpec governance、核心 deterministic contracts 和 async candidate lifecycle smoke。runner/coordinator integration、formal-container、realistic-repository 各自通过路径触发的 workflow 保留，避免普通文档或 candidate-only PR 被高成本检查阻塞。
+workspace-fast 保留 Ubuntu/Windows，但只运行 `validate`、OpenSpec governance 和核心 deterministic contracts。#196 candidate 尚未进入 `origin/main`，因此其 public starter smoke 不在本 change 中跨 PR 引用；候选合并后由其自身 change/后续 CI 调整接入。runner/coordinator integration、formal-container、realistic-repository 各自通过路径触发的 workflow 保留，避免普通文档或 candidate-only PR 被高成本检查阻塞。
 
 备选方案：只删除 Windows、只删除 push 事件或直接删掉慢测试。未采用：Windows 仍覆盖真实路径行为；删除 push 会丢失 main post-merge 信号；测试逻辑仍然有 benchmark 价值，应调整触发和边界而非删除。
 
@@ -66,7 +66,7 @@ formal Pi environment 尚无正式 record，因此在没有运行记录的前提
 
 ## Risks / Trade-offs
 
-- [Runtime upgrade regression] Pi 0.85.1 或 Bun 1.4.2 可能改变 CLI/Node compatibility。→ 先执行 lockfile install、Pi `--version`、runner v2 contract、sandbox image assertion 和 candidate smoke；失败时不生成 record。
+- [Runtime upgrade regression] Pi 0.85.1 或 Bun 1.4.2 可能改变 CLI/Node compatibility。→ 先执行 lockfile install、Pi `--version`、runner v2 contract 和 sandbox image assertion；失败时不生成 record。
 - [CI required-check rename] 拆分 workflow 可能让仓库设置中的旧 required check 名称失效。→ 在 PR 中列出旧/新 job name 映射，合并前读取 branch protection/required checks（若权限可见）并更新设置。
 - [Snapshot semantic drift] v1 文本规范化可能改变尚未记录的候选 snapshot ID。→ 只对未产生 record 的候选重新生成 snapshot；历史 v1 和 v2 走原有版本路径，变更必须在 snapshot tests 中锁定。
 - [Timeout masks a real hang] 更大 timeout 可能延迟失败。→ 保留 job-level timeout、子进程 tree termination、afterEach/afterAll cleanup，并把 integration workflow 与快速 required gate 分离。
@@ -84,4 +84,5 @@ formal Pi environment 尚无正式 record，因此在没有运行记录的前提
 
 - 已按 issue #212 的默认决策选择 Node `24.21.0` LTS，不采用 current `26.x`。
 - 已按 issue #212 的默认决策保留测试逻辑、拆分快速与 integration workflow，并以路径过滤减少无关高成本运行。
+- #196 candidate smoke 不作为本 PR 的 required gate，待 #196 合并后再由独立变更接入。
 - 需要在实现前确认仓库分支保护中实际要求的 check 名称；无权限读取时以 PR checks 与 workflow lint 作为证据并在 PR 中标注。

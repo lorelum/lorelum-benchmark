@@ -27,7 +27,7 @@ The fast validation workflow MUST run once for a pull request through `pull_requ
 
 ### Requirement: CI checks are separated by cost and relevance
 
-Fast CI MUST retain deterministic validation, OpenSpec governance, cross-platform smoke where relevant, and the public async report lifecycle smoke. Runner/coordinator integration, formal container, and realistic repository calibration checks MUST remain available with explicit timeouts and conservative path-trigger rules rather than being deleted or run redundantly for every unrelated PR.
+Fast CI MUST retain deterministic validation and OpenSpec governance. Runner/coordinator integration, formal container, and realistic repository calibration checks MUST remain available with explicit timeouts and conservative path-trigger rules rather than being deleted or run redundantly for every unrelated PR. Candidate-specific smoke may be added only after the candidate is present in the base branch; this change MUST NOT depend on an unmerged candidate from another PR.
 
 #### Scenario: An unrelated documentation change is submitted
 
@@ -38,15 +38,6 @@ Fast CI MUST retain deterministic validation, OpenSpec governance, cross-platfor
 
 - **WHEN** a PR changes runner, sandbox, environment, package/lockfile, or formal container inputs
 - **THEN** the corresponding integration/container validation is scheduled and reports a bounded, diagnosable result
-
-### Requirement: Candidate starter smoke is model-free
-
-CI MUST run the async-report-lifecycle public starter lifecycle smoke through its documented HTTP/worker behavior without reading private evaluator/oracle/scoring material and without invoking a model. The compatibility target that intentionally exposes the baseline defect MUST remain an explicitly non-required diagnostic until a later candidate implementation change resolves it.
-
-#### Scenario: Public lifecycle smoke runs in CI
-
-- **WHEN** the fast workflow validates the repository
-- **THEN** the candidate lifecycle/worker smoke passes using only public starter files and local filesystem state
 
 ### Requirement: Snapshot identity is stable for declared text line endings
 

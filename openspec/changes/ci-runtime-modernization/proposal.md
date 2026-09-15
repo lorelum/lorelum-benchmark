@@ -7,7 +7,6 @@
 - 将主仓库开发/CI/formal Pi 的 exact runtime 更新为 Bun `1.4.2`、Node `24.21.0` LTS 和 `@earendil-works/pi-coding-agent` `0.85.1`。
 - 同步 package manifest、lockfile、formal Pi 镜像、active formal/local environment manifest、runner/sandbox 文档与版本断言。
 - 将普通验证 workflow 改为 PR 与 main push 的单一事件模型，加入按 PR/ref 的过期 run 取消；保留测试逻辑但将快速契约、runner integration、formal container 和 realistic repository calibration 拆成合理边界与路径触发的 job/workflow。
-- 为 async-report-lifecycle candidate 接入只读的 public starter focused smoke；预期的 compatibility baseline failure 不作为 required green gate。
 - 为 snapshot v1 的文本文件提供遵循 `.gitattributes` 的 LF canonical digest 路径，保持 snapshot v2 的字节级 Merkle 契约和历史冻结 identity 不变。
 - 为 runner/coordinator black-box 测试采用足够的测试 timeout 与 fixture budget，明确这不改变正式运行的 budget contract。
 
