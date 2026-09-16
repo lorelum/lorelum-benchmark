@@ -22,20 +22,6 @@ export type StagedPracticeStreamRunner = (command: string[], cwd: string, timeou
 
 type StreamResult = CommandResult & { marker_observed: boolean };
 
-function containsCheckpointMarker(value: unknown, marker: string): boolean {
-  if (typeof value === "string") return value.split(/\r?\n/).some((line) => line.trim() === marker);
-  if (Array.isArray(value)) return value.some((entry) => containsCheckpointMarker(entry, marker));
-  if (isRecord(value)) return Object.values(value).some((entry) => containsCheckpointMarker(entry, marker));
-  return false;
-}
-
-export function hasCheckpointMarker(output: string, marker = checkpointMarker): boolean {
-  return output.split(/\r?\n/).some((line) => {
-    if (line.trim() === marker) return true;
-    try { return containsCheckpointMarker(JSON.parse(line), marker); } catch { return false; }
-  });
-}
-
 async function runUntilMarker(command: string[], cwd: string, timeoutMs: number, marker: string): Promise<StreamResult> {
   const started = performance.now();
   const child = Bun.spawn(command, { cwd, env: Bun.env, stdout: "pipe", stderr: "pipe" });
