@@ -1,6 +1,6 @@
 # AI Code Review Round 1（#199）
 
-- 审查范围：`origin/main...88d4ae5`
+- 审查范围：`origin/main...4e19290`
 - 审查类型：`ai-code-review`
 - 审查日期：2026-09-16
 - 关联 Issue：#199
@@ -19,6 +19,10 @@
 - **生命周期**：未修改 suite、task revision、evaluator、runner、正式 record 或结果；改动保持在 #199 treatment contract 范围内。
 - **baseline/未声明 condition**：不生成 Practice payload，delivery failure/unsupported 显式返回。
 - **验证**：OpenSpec strict、`bun run validate`、Pack Practice contract tests 和 `git diff --check` 均通过。
+
+## Review addendum
+
+Latest diff `4e19290` also centralizes private output path validation between the prepare adapter and runtime contract; the addendum introduced no new lifecycle, isolation, or reproducibility finding.
 
 ## 未覆盖范围
 
