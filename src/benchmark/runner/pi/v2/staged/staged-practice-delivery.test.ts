@@ -1,10 +1,11 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
-import { mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import {
   checkpointMarker,
   checkpointResumeMessage,
   hashStagedPracticeDeliveryPlan,
+  parseStagedPracticeDeliveryPlan,
   hasCheckpointMarker,
   prepareStagedPracticeDelivery,
   runStagedPracticeDeliveryAttempt,
@@ -102,6 +103,27 @@ async function run(condition: StagedPracticeDeliveryPlan["delivery"]["condition_
   return runStagedPracticeDeliveryAttempt({ root: workspaceRoot, plan: await planFor(condition), attempt_id: `attempt-${condition}`, artifacts, workspace, pi: adapter });
 }
 
+
+test("plan parser enforces the strict manifest shape and scalar types", async () => {
+  const plan = await planFor("task_start");
+  await expect(parseStagedPracticeDeliveryPlan({ ...plan, unexpected: true })).rejects.toThrow("unsupported field");
+  await expect(parseStagedPracticeDeliveryPlan({ ...plan, id: "not valid" })).rejects.toThrow("id is invalid");
+  await expect(parseStagedPracticeDeliveryPlan({
+    ...plan,
+    execution: { ...plan.execution, budget: { ...plan.execution.budget, max_turns: "10" } },
+  })).rejects.toThrow("positive integer limits");
+});
+
+test("candidate snapshot leaves are verified before workspace setup", async () => {
+  const root = await temp("snapshot-drift");
+  const copiedCandidate = join(root, "incubator/practice-injection/async-report-lifecycle-v1");
+  const copiedTreatment = join(root, "treatments/agentic-coding-replan-on-material-drift/v1");
+  await cp(candidatePath, copiedCandidate, { recursive: true });
+  await cp(treatmentRoot, copiedTreatment, { recursive: true });
+  const driftedFile = join(copiedCandidate, "public/starter/app/src/types.ts");
+  await writeFile(driftedFile, `${await Bun.file(driftedFile).text()}\n// frozen snapshot drift\n`);
+  await expect(prepareStagedPracticeDelivery(await planFor("task_start"), root)).rejects.toThrow("snapshot leaf");
+});
 
 test("checkpoint marker matching is line-exact, including JSON event text", () => {
   expect(hasCheckpointMarker(`prefix ${checkpointMarker} suffix`)).toBe(false);

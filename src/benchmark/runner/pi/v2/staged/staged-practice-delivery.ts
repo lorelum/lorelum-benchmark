@@ -1,4 +1,4 @@
-import { appendFile, cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { appendFile, cp, lstat, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { loadPackPracticeTreatment, deliverPreparedPractice } from "../../../../treatments/pack-practice/v1/contract";
 import type {
@@ -21,6 +21,8 @@ export type StagedPracticeCondition = string;
 
 const sha256Pattern = /^[a-f0-9]{64}$/;
 const commitPattern = /^[a-f0-9]{40}$/;
+const planIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const conditionPattern = /^[a-z0-9][a-z0-9_-]*$/;
 const treatmentIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const versionPattern = /^v[1-9][0-9]*$/;
 
@@ -170,6 +172,11 @@ function stringField(value: Record<string, unknown>, field: string, label = fiel
   return result;
 }
 
+function exactKeys(value: Record<string, unknown>, allowed: readonly string[], label: string): void {
+  const unexpected = Object.keys(value).filter((key) => !allowed.includes(key));
+  if (unexpected.length > 0) fail(`${label} contains unsupported field(s): ${unexpected.join(", ")}`);
+}
+
 function hashField(value: Record<string, unknown>, field: string, label = field): string {
   const result = stringField(value, field, label);
   if (!sha256Pattern.test(result)) fail(`${label} must be a lowercase SHA-256 digest`);
@@ -197,8 +204,10 @@ export async function hashStagedPracticeDeliveryPlan(plan: StagedPracticeDeliver
 
 export async function parseStagedPracticeDeliveryPlan(value: unknown): Promise<StagedPracticeDeliveryPlan> {
   if (!isRecord(value)) fail("plan must be an object");
+  exactKeys(value, ["schema_version", "id", "candidate", "treatment", "delivery", "prompts", "execution", "plan_hash"], "plan");
   if (value.schema_version !== stagedPracticeDeliverySchemaVersion) fail("schema_version is not staged-practice-delivery/v1");
   const id = stringField(value, "id");
+  if (!planIdPattern.test(id)) fail("id is invalid");
   if (!isRecord(value.candidate)) fail("candidate must be an object");
   if (!isRecord(value.treatment)) fail("treatment must be an object");
   if (!isRecord(value.delivery)) fail("delivery must be an object");
@@ -209,9 +218,14 @@ export async function parseStagedPracticeDeliveryPlan(value: unknown): Promise<S
   const delivery = value.delivery;
   const prompts = value.prompts;
   const execution = value.execution;
+  exactKeys(candidate, ["path", "source_commit", "snapshot_id"], "candidate");
+  exactKeys(treatment, ["root", "id", "version"], "treatment");
+  exactKeys(delivery, ["condition_id", "delivery_node"], "delivery");
+  exactKeys(prompts, ["task_path", "followup_path", "task_sha256", "followup_sha256", "checkpoint_marker", "checkpoint_resume_message"], "prompts");
+  exactKeys(execution, ["model", "model_version", "system_prompt_hash", "tool_policy_hash", "environment", "budget"], "execution");
   const condition_id = stringField(delivery, "condition_id") as StagedPracticeCondition;
   const delivery_node = stringField(delivery, "delivery_node") as TimingNode;
-  if (!condition_id.match(/^[a-z0-9][a-z0-9_-]*$/)) fail("delivery.condition_id is invalid");
+  if (!conditionPattern.test(condition_id)) fail("delivery.condition_id is invalid");
   if (!timingNodes.includes(delivery_node)) fail("delivery.delivery_node is not allowlisted");
   if (stagedPracticeConditions.includes(condition_id as typeof stagedPracticeConditions[number]) && condition_id !== delivery_node) fail("timing condition must match delivery_node");
   const candidatePath = stringField(candidate, "path", "candidate.path");
@@ -232,6 +246,8 @@ export async function parseStagedPracticeDeliveryPlan(value: unknown): Promise<S
   if (checkpointMessage !== checkpointResumeMessage) fail("prompts.checkpoint_resume_message must use the frozen checkpoint continuation");
   if (!isRecord(execution.environment)) fail("execution.environment must be an object");
   if (!isRecord(execution.budget)) fail("execution.budget must be an object");
+  exactKeys(execution.environment, ["id", "version"], "execution.environment");
+  exactKeys(execution.budget, ["max_turns", "max_duration_ms"], "execution.budget");
   const model = stringField(execution, "model", "execution.model");
   const modelVersion = stringField(execution, "model_version", "execution.model_version");
   const systemPromptHash = hashField(execution, "system_prompt_hash", "execution.system_prompt_hash");
@@ -239,9 +255,9 @@ export async function parseStagedPracticeDeliveryPlan(value: unknown): Promise<S
   const environmentId = stringField(execution.environment, "id", "execution.environment.id");
   const environmentVersion = stringField(execution.environment, "version", "execution.environment.version");
   if (!versionPattern.test(environmentVersion)) fail("execution.environment.version is invalid");
-  const maxTurns = Number(execution.budget.max_turns);
-  const maxDurationMs = Number(execution.budget.max_duration_ms);
-  if (!Number.isInteger(maxTurns) || maxTurns < 1 || !Number.isInteger(maxDurationMs) || maxDurationMs < 1) fail("execution.budget must contain positive integer limits");
+  const maxTurns = execution.budget.max_turns;
+  const maxDurationMs = execution.budget.max_duration_ms;
+  if (typeof maxTurns !== "number" || !Number.isInteger(maxTurns) || maxTurns < 1 || typeof maxDurationMs !== "number" || !Number.isInteger(maxDurationMs) || maxDurationMs < 1) fail("execution.budget must contain positive integer limits");
   const planHash = hashField(value, "plan_hash", "plan_hash");
   const plan: StagedPracticeDeliveryPlan = {
     schema_version: stagedPracticeDeliverySchemaVersion,
@@ -262,7 +278,9 @@ export async function parseStagedPracticeDeliveryPlan(value: unknown): Promise<S
   };
   if (await hashStagedPracticeDeliveryPlan(plan) !== planHash) fail("plan_hash does not match canonical plan content");
   return Object.freeze(plan);
-}function resolveWithin(root: string, path: string, label: string): string {
+}
+
+function resolveWithin(root: string, path: string, label: string): string {
   if (isAbsolute(path) || path.split(/[\\/]/).some((part) => part === ".." || part.length === 0)) fail(`${label} must be a normalized relative path`);
   const resolvedRoot = resolve(root);
   const target = resolve(resolvedRoot, path);
@@ -279,12 +297,81 @@ async function readYaml(path: string, label: string): Promise<Record<string, unk
   return value;
 }
 
+function snapshotDigestBytes(bytes: Uint8Array): Uint8Array {
+  if (bytes.includes(0) || !bytes.includes(13)) return bytes;
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    if ([...text].some((character) => {
+      const codePoint = character.codePointAt(0)!;
+      return codePoint < 0x20 && codePoint !== 0x09 && codePoint !== 0x0a && codePoint !== 0x0d;
+    })) return bytes;
+    return new TextEncoder().encode(text.replace(/\r\n?/g, "\n"));
+  } catch {
+    return bytes;
+  }
+}
+
+async function snapshotFileDigest(path: string): Promise<string> {
+  const bytes = new Uint8Array(await Bun.file(path).arrayBuffer());
+  const digest = await crypto.subtle.digest("SHA-256", snapshotDigestBytes(bytes));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function assertNoSymlinks(path: string): Promise<void> {
+  const info = await lstat(path);
+  if (info.isSymbolicLink()) fail(`candidate contains a symbolic link: ${path}`);
+  if (!info.isDirectory()) return;
+  for (const entry of await readdir(path, { withFileTypes: true })) await assertNoSymlinks(join(path, entry.name));
+}
+
+async function listCandidateFiles(root: string, current = root): Promise<string[]> {
+  const files: string[] = [];
+  for (const entry of await readdir(current, { withFileTypes: true })) {
+    const path = join(current, entry.name);
+    if (entry.isDirectory()) files.push(...await listCandidateFiles(root, path));
+    else if (entry.isFile()) files.push(relative(root, path).replaceAll("\\", "/"));
+  }
+  return files;
+}
+
+async function validateCandidateSnapshot(candidatePath: string, expectedSnapshotId: string): Promise<void> {
+  const snapshotPath = join(candidatePath, "private/snapshot.json");
+  let snapshotValue: unknown;
+  try {
+    snapshotValue = JSON.parse(await Bun.file(snapshotPath).text()) as unknown;
+  } catch (error) {
+    fail(`candidate snapshot is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!isRecord(snapshotValue) || snapshotValue.version !== 1 || snapshotValue.algorithm !== "sha256" || typeof snapshotValue.snapshot_id !== "string" || !isRecord(snapshotValue.files)) {
+    fail("candidate snapshot must be a v1 sha256 file snapshot");
+  }
+  if (snapshotValue.snapshot_id !== expectedSnapshotId) fail("candidate snapshot_id does not match frozen plan");
+  const expectedFiles = Object.entries(snapshotValue.files).map(([file, digest]) => {
+    if (file.replaceAll("\\", "/") !== file || isAbsolute(file) || file.split("/").some((part) => part === "" || part === "..") || file === "private/snapshot.json") fail(`candidate snapshot path is not canonical: ${file}`);
+    if (typeof digest !== "string" || !sha256Pattern.test(digest)) fail(`candidate snapshot digest is invalid: ${file}`);
+    return [file, digest] as const;
+  }).sort(([left], [right]) => left.localeCompare(right));
+  const actualFiles = (await listCandidateFiles(candidatePath))
+    .filter((file) => file !== "private/snapshot.json" && !file.startsWith("private/evidence-index/"))
+    .sort();
+  const expectedNames = expectedFiles.map(([file]) => file);
+  if (actualFiles.length !== expectedNames.length || actualFiles.some((file, index) => file !== expectedNames[index])) {
+    fail("candidate snapshot file set does not match the frozen snapshot");
+  }
+  for (const [file, expectedDigest] of expectedFiles) {
+    const actualDigest = await snapshotFileDigest(join(candidatePath, file));
+    if (actualDigest !== expectedDigest) fail(`candidate snapshot leaf does not match: ${file}`);
+  }
+  const recomputedSnapshotId = await sha256Text(JSON.stringify(Object.fromEntries(expectedFiles)));
+  if (recomputedSnapshotId !== expectedSnapshotId) fail("candidate snapshot_id does not match its frozen file map");
+}
+
 async function validateCandidate(plan: StagedPracticeDeliveryPlan, root: string): Promise<{ path: string; taskPrompt: string; followupPrompt: string }> {
   const candidatePath = resolveWithin(root, plan.candidate.path, "candidate.path");
+  await assertNoSymlinks(candidatePath);
+  await validateCandidateSnapshot(candidatePath, plan.candidate.snapshot_id);
   const candidate = await readYaml(join(candidatePath, "private/candidate.yaml"), "candidate manifest");
   if (!isRecord(candidate.source) || candidate.source.source_commit !== plan.candidate.source_commit) fail("candidate source_commit does not match frozen plan");
-  const snapshotValue = JSON.parse(await Bun.file(join(candidatePath, "private/snapshot.json")).text()) as unknown;
-  if (!isRecord(snapshotValue) || snapshotValue.snapshot_id !== plan.candidate.snapshot_id) fail("candidate snapshot_id does not match frozen plan");
   const taskPath = join(candidatePath, plan.prompts.task_path);
   const followupPath = join(candidatePath, plan.prompts.followup_path);
   if (await sha256File(taskPath) !== plan.prompts.task_sha256) fail("public task hash does not match frozen plan");
