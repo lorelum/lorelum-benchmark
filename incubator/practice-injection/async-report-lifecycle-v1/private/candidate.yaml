@@ -1,0 +1,28 @@
+id: async-report-lifecycle-v1
+lifecycle_stage: candidate
+source:
+  kind: repository-local-starter
+  repository: lorelum/lorelum-benchmark
+  source_commit: 74962ee0c98f7775b0eb626f7b49b878035d8778
+  public_root: public/starter/app
+  immutable_by: private/snapshot.json
+runtime:
+  package_manager: bun
+  node: 22.19.x
+  backend: { typescript: 5.9.3, server: Bun.serve }
+  persistence: { kind: per-report-json, atomic_write: true }
+  worker: { kind: independent-cli, segments: 3 }
+baseline_expectation:
+  functional: partial
+  practice_adherence: not-assessed
+  reason: happy-path lifecycle is runnable, while v1/v2 unknown-field preservation, rollback fail-closed handling, and checkpoint-safe recovery remain incomplete for the Agent to repair after the stage-2 constraint follow-up.
+public_contract:
+  api_versions: [v1, v2]
+  session_stages: [task_start, constraint_followup, first_implementation_checkpoint]
+  checkpoint_marker: "CHECKPOINT: compatibility-slice-ready"
+  treatment_materialized: false
+private_material:
+  evaluator: none
+  oracle: none
+  scoring: none
+  calibration: none
