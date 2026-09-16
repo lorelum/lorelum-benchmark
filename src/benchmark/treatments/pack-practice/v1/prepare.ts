@@ -1,6 +1,6 @@
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { sha256File, sha256Text } from "../../../fs";
-import { parseLoreGetResponse, parseLoreQueryResponse, expectedPackCommit, expectedPackRef, expectedPackVersion, expectedPracticeId, expectedRepository } from "./contract";
+import { parseLoreGetResponse, parseLoreQueryResponse, resolvePrivatePath, expectedPackCommit, expectedPackRef, expectedPackVersion, expectedPracticeId, expectedRepository } from "./contract";
 import type { LoreGetData, LoreQueryData, PackPracticeManifest, SelectionRecord } from "./types";
 
 export type LoreCommandResult = { exitCode: number; stdout: string; stderr: string };
@@ -166,23 +166,14 @@ export function prepareCommandForDisplay(options: { storeRoot: string; queryText
   ];
 }
 
-function privateOutputPath(root: string, path: string): string {
-  if (!path.startsWith("private/") || isAbsolute(path) || path.split(/[\\/]/).some((part) => part === ".." || part.length === 0)) throw new Error("Prepared output path must be a normalized private relative path");
-  const privateRoot = resolve(root, "private");
-  const target = resolve(root, path);
-  const fromPrivate = relative(privateRoot, target);
-  if (fromPrivate === "" || fromPrivate === ".." || fromPrivate.startsWith(`..${"/"}`) || fromPrivate.startsWith(`..${"\\"}`) || isAbsolute(fromPrivate)) throw new Error("Prepared output path escapes private treatment root");
-  return target;
-}
-
 export async function writePreparedTreatment(root: string, prepared: PreparedLoreSelection): Promise<void> {
   const manifestPath = join(root, "treatment.yaml");
   const manifest = Bun.YAML.parse(await Bun.file(manifestPath).text()) as Record<string, unknown>;
   const practice = manifest.practice as Record<string, unknown>;
   const selection = manifest.selection as Record<string, unknown>;
   if (typeof practice?.body_path !== "string" || typeof selection?.path !== "string") throw new Error("Treatment manifest must declare private body and selection paths");
-  const bodyPath = privateOutputPath(root, practice.body_path);
-  const selectionPath = privateOutputPath(root, selection.path);
+  const bodyPath = resolvePrivatePath(root, practice.body_path, "practice.body_path");
+  const selectionPath = resolvePrivatePath(root, selection.path, "selection.path");
   await Bun.write(bodyPath, prepared.get.practice.body);
   await Bun.write(selectionPath, `${JSON.stringify(prepared.selection, null, 2)}\n`);
 }

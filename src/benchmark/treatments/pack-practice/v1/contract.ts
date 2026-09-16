@@ -49,7 +49,7 @@ function objectField(value: UnknownRecord, field: string): UnknownRecord {
   return result;
 }
 
-function safePrivatePath(root: string, path: string, label: string): string {
+export function resolvePrivatePath(root: string, path: string, label: string): string {
   if (!path.startsWith("private/") || isAbsolute(path) || path.split(/[\\/]/).some((part) => part === ".." || part.length === 0)) {
     fail(`${label} must be a normalized private relative path`);
   }
@@ -215,9 +215,9 @@ function verifyApplicability(manifest: PackPracticeManifest, applicability: Appl
 export async function loadPackPracticeTreatment(treatmentRoot: string): Promise<PreparedPackPractice> {
   const manifestValue = await readYaml(resolve(treatmentRoot, "treatment.yaml"), "treatment manifest");
   const manifest = asManifest(manifestValue);
-  const bodyPath = safePrivatePath(treatmentRoot, manifest.practice.body_path, "practice.body_path");
-  const selectionPath = safePrivatePath(treatmentRoot, manifest.selection.path, "selection.path");
-  const applicabilityPath = safePrivatePath(treatmentRoot, manifest.applicability.basis_path, "applicability.basis_path");
+  const bodyPath = resolvePrivatePath(treatmentRoot, manifest.practice.body_path, "practice.body_path");
+  const selectionPath = resolvePrivatePath(treatmentRoot, manifest.selection.path, "selection.path");
+  const applicabilityPath = resolvePrivatePath(treatmentRoot, manifest.applicability.basis_path, "applicability.basis_path");
   const body = normalize(await Bun.file(bodyPath).text());
   const selection = asSelection(await readJson(selectionPath, "selection record"));
   const applicability = asApplicability(await readYaml(applicabilityPath, "applicability basis"));
