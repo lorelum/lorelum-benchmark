@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pack-practice-treatment.schema.json",
+  "title": "Lorelum Pack-sourced Practice treatment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "version", "kind", "injection", "pack", "practice", "selection", "applicability", "privacy"],
+  "properties": {
+    "schema_version": { "const": "pack-practice-treatment/v1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "version": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
+    "kind": { "const": "retrieval" },
+    "injection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["delivery", "channel"],
+      "properties": {
+        "delivery": { "const": "practice-card" },
+        "channel": { "const": "condition-scoped-private-runtime" }
+      }
+    },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "ref", "version", "commit"],
+      "properties": {
+        "repository": { "const": "https://github.com/lorelum/lorelum-packs.git" },
+        "ref": { "type": "string", "pattern": "^agentic-coding-v[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
+      }
+    },
+    "practice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source_path", "content_digest", "source_sha256", "card_sha256", "body_path"],
+      "properties": {
+        "id": { "const": "agentic-coding.implementation.replan-on-material-drift" },
+        "source_path": { "const": "packs/agentic-coding/practices/implementation/replan-on-material-drift.md" },
+        "content_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "source_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "card_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "body_path": { "type": "string", "pattern": "^private/[a-z0-9._/-]+\\.md$" }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "query_sha256", "path"],
+      "properties": {
+        "mode": { "const": "semantic" },
+        "query_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "path": { "type": "string", "pattern": "^private/[a-z0-9._/-]+\\.json$" }
+      }
+    },
+    "applicability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario", "status", "basis_path", "basis_sha256"],
+      "properties": {
+        "scenario": { "const": "async-report-lifecycle/scope_changed/v1" },
+        "status": { "const": "reviewed" },
+        "basis_path": { "type": "string", "pattern": "^private/[a-z0-9._/-]+\\.yaml$" },
+        "basis_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["materialization", "secrets"],
+      "properties": {
+        "materialization": { "const": "forbidden" },
+        "secrets": { "const": "excluded" }
+      }
+    }
+  }
+}

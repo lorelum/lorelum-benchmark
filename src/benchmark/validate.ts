@@ -3,6 +3,7 @@ import type { ErrorObject, ValidateFunction } from "ajv";
 import { isAbsolute, relative, resolve } from "node:path";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
 import { directoryExists, joinPath, listDirectories, listFiles, pathExists, relativePath, sha256File, workspaceRoot } from "./fs";
+import { loadPackPracticeTreatment } from "./treatments/pack-practice/v1/contract";
 
 const failures: string[] = [];
 const lifecycleStages = new Set(["candidate", "pilot", "frozen", "official", "published", "retired"]);
@@ -285,12 +286,22 @@ async function validateVersionedManifests(path: string, manifestName: string, sc
       if (document && (document.id !== id || document.version !== version)) {
         failures.push(`${label} identity must match path: ${relativePath(manifestPath)}`);
       }
+      if (document?.schema_version === "pack-practice-treatment/v1") {
+        const packSchema = await validateYaml(manifestPath, "pack-practice-treatment.schema.json");
+        if (packSchema) {
+          try {
+            await loadPackPracticeTreatment(joinPath(idPath, version));
+          } catch (error) {
+            failures.push(`Pack Practice treatment is invalid: ${relativePath(manifestPath)}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+      }
     }
   }
 }
 
 const suitesPath = joinPath(workspaceRoot, "suites");
-for (const schema of ["suite.schema.json", "task-card.schema.json", "task-rule-audit.schema.json", "evaluator-result-v2.schema.json", "judge-result-v1.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
+for (const schema of ["suite.schema.json", "task-card.schema.json", "task-rule-audit.schema.json", "evaluator-result-v2.schema.json", "judge-result-v1.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "pack-practice-treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json"]) {
   await requirePath(joinPath(workspaceRoot, "schemas", schema));
 }
 

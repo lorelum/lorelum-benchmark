@@ -1,0 +1,21 @@
+schema_version: pack-practice-applicability/v1
+scenario: async-report-lifecycle/scope_changed/v1
+status: reviewed
+applies_when: coding has revealed an unplanned dependency, public behavior, stored state, I/O path, risk, or verification need that changes the accepted scope, and the agent is about to continue under the old plan
+facts:
+  - id: initial-plan-formed
+    observed: true
+    description: The Agent has already formed an initial implementation plan for the async report lifecycle.
+  - id: old-new-concurrency
+    observed: true
+    description: Old and new clients and workers will operate concurrently against persisted report state.
+  - id: rollback-path
+    observed: true
+    description: Application rollback may reactivate the old reader/writer path after deployment.
+  - id: verification-boundary
+    observed: true
+    description: Compatibility and rollback facts change the required verification boundary.
+changed_dimensions:
+  scope: true
+  risk: true
+  verification: true

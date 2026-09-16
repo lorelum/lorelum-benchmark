@@ -22,3 +22,22 @@ oracle 或 scoring material 复制到 agent workspace、模型输入、公开题
 
 `project-convention` 物化的是 agent-visible treatment content，不是 private benchmark material；
 其条件隔离与 version/hash 识别仍是 delivery contract 的一部分。
+
+## Pack-sourced Practice preparation
+
+A Pack-sourced `kind: retrieval` treatment uses `pack-practice-treatment/v1`. Its immutable
+manifest fixes the Pack repository/ref/commit, Practice source path, Lore `contentDigest`, the
+source Markdown hash, and the exact hash of the injected `practice.body` card.
+
+Preparation is a separate preflight step. It uses an isolated Store and runs the fixed sequence:
+
+```sh
+lore --store-root "$STORE_ROOT" pack install agentic-coding@0.4.0 --registry lorelum/lorelum-packs
+lore --store-root "$STORE_ROOT" query "$QUERY" --mode semantic --top-k 5
+lore --store-root "$STORE_ROOT" get agentic-coding.implementation.replan-on-material-drift
+```
+
+The prepared selection and provenance are saved under the treatment's `private/` directory. The
+staged runner consumes that frozen result; it must not query, rerank, or replace a Practice during a
+condition or delivery node. CI uses command fixtures and does not invoke the real Lore CLI, network,
+or semantic model.
