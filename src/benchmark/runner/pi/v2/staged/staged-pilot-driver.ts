@@ -7,6 +7,7 @@ import { configureLocalPiModelCatalog, localPiApiKey } from "../local-pi-model-c
 import { piCommand, preflightPiAndModel, run } from "../preflight";
 import { demonstrateTimeoutTermination, PiStageError, productionStagedPiAdapter, productionStagedSemanticAdapter, type StagedPilotPiConfig } from "./staged-pilot-pi-adapter";
 import { buildStagedSchedule, parseStagedDiagnosticPlan, record, stagedConditions, text, type ScheduledStagedAttempt } from "./staged-profile-diagnostic-plan";
+import { interpretDirectionalScreen, type ScreenInterpretation } from "./directional-screen-interpretation";
 import { runStagedDiagnosticAttempt, stagedAttemptFailureReport, summarizeStagedReports, type StagedAttemptReport } from "./staged-profile-diagnostic-runner";
 
 export const stagedPilotCandidate = "incubator/practice-injection/llm-provider-gateway-v4";
@@ -203,7 +204,8 @@ export type StagedPilotRun = {
   blocks: number;
   dry_run: boolean;
   preflight: StagedPilotPreflight | null;
-  attempts: Array<ScheduledAttemptOutcome & { attempt_id: string }>;
+  attempts: Array<ScheduledAttemptOutcome & { attempt_id: string; block: number }>;
+  interpretation?: ScreenInterpretation;
   summary: ReturnType<typeof summarizeStagedReports>;
   disclaimer: string;
 };
@@ -235,7 +237,10 @@ export async function executeStagedPilot(options: { mode: "preflight" | "dry-run
   const reports: StagedPilotRun["attempts"] = [];
   for (const [index, attempt] of context.attempts.entries()) {
     const report = await runScheduledAttempt(context, attempt, index, options.outputRoot, options.mode === "dry-run");
-    reports.push({ ...report, attempt_id: `${options.run_id}-${String(index + 1).padStart(2, "0")}-${attempt.condition}` });
+    // The plan numbers each repetition as a "block"; for a single candidate the
+    // natural screen block is three consecutive repetitions covering each
+    // condition exactly once under the cyclic rotation.
+    reports.push({ ...report, attempt_id: `${options.run_id}-${String(index + 1).padStart(2, "0")}-${attempt.condition}`, block: Math.ceil(attempt.block / stagedConditions.length) });
   }
   return {
     schema_version: "staged-pilot-run/v1",
@@ -246,6 +251,7 @@ export async function executeStagedPilot(options: { mode: "preflight" | "dry-run
     preflight,
     attempts: reports,
     summary: summarizeStagedReports(reports),
+    ...(options.mode === "run" ? { interpretation: interpretDirectionalScreen(reports) } : {}),
     disclaimer: pilotDisclaimer,
   };
 }
