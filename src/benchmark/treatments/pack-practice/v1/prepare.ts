@@ -93,10 +93,11 @@ export async function preparePackPractice(options: {
   queryText: string;
   commandRunner?: LoreCommandRunner;
   sourceHashResolver?: (get: LoreGetData) => Promise<string>;
-  loreCliVersion?: string;
+  loreCliVersion: string;
 }): Promise<PreparedLoreSelection> {
   const runner = options.commandRunner ?? defaultLoreCommandRunner;
   const { manifest, storeRoot, queryText } = options;
+  if (!options.loreCliVersion.trim()) fail("failed", "Lore CLI version is required for provenance");
   if (manifest.pack.repository !== expectedRepository || manifest.pack.ref !== expectedPackRef || manifest.pack.version !== expectedPackVersion || manifest.pack.commit !== expectedPackCommit) fail("failed", "manifest Pack identity is not the fixed agentic-coding@0.4.0 release");
   if (manifest.practice.id !== expectedPracticeId) fail("failed", "manifest Practice ID is not the selected Practice");
   const querySha = await sha256Text(queryText);
@@ -111,7 +112,6 @@ export async function preparePackPractice(options: {
   const query = parseLoreQueryResponse(parseJson(queryResult.stdout, "lore query response"));
   const selectedRank = query.results.findIndex((result) => result.practiceId === expectedPracticeId) + 1;
   if (selectedRank === 0) fail("indeterminate", `query results do not contain ${expectedPracticeId}`);
-  if (selectedRank !== manifest.selection.result_rank) fail("failed", `query result rank drifted: expected ${manifest.selection.result_rank}, got ${selectedRank}`);
   const selected = query.results[selectedRank - 1];
   if (selected?.contentDigest !== manifest.practice.content_digest) fail("failed", "query contentDigest does not match treatment manifest");
 
@@ -128,9 +128,10 @@ export async function preparePackPractice(options: {
   const selection: SelectionRecord = {
     schema_version: "pack-practice-selection/v1",
     captured_from: "lore-cli",
-    lore_cli_version: options.loreCliVersion ?? "recorded-by-caller",
+    lore_cli_version: options.loreCliVersion,
     commands: { install: installArgs, query: queryArgs, get: getArgs },
     pack: manifest.pack,
+    install_response_sha256: await sha256Text(stableJson(unwrap(parseJson(install.stdout, "lore pack install response")))),
     query: {
       text: queryText,
       mode: "semantic",
@@ -165,16 +166,23 @@ export function prepareCommandForDisplay(options: { storeRoot: string; queryText
   ];
 }
 
+function privateOutputPath(root: string, path: string): string {
+  if (!path.startsWith("private/") || isAbsolute(path) || path.split(/[\\/]/).some((part) => part === ".." || part.length === 0)) throw new Error("Prepared output path must be a normalized private relative path");
+  const privateRoot = resolve(root, "private");
+  const target = resolve(root, path);
+  const fromPrivate = relative(privateRoot, target);
+  if (fromPrivate === "" || fromPrivate === ".." || fromPrivate.startsWith(`..${"/"}`) || fromPrivate.startsWith(`..${"\\"}`) || isAbsolute(fromPrivate)) throw new Error("Prepared output path escapes private treatment root");
+  return target;
+}
+
 export async function writePreparedTreatment(root: string, prepared: PreparedLoreSelection): Promise<void> {
   const manifestPath = join(root, "treatment.yaml");
   const manifest = Bun.YAML.parse(await Bun.file(manifestPath).text()) as Record<string, unknown>;
   const practice = manifest.practice as Record<string, unknown>;
   const selection = manifest.selection as Record<string, unknown>;
   if (typeof practice?.body_path !== "string" || typeof selection?.path !== "string") throw new Error("Treatment manifest must declare private body and selection paths");
-  const bodyPath = resolve(root, practice.body_path);
-  const selectionPath = resolve(root, selection.path);
-  const fromRoot = relative(resolve(root), bodyPath);
-  if (fromRoot.startsWith("..") || isAbsolute(fromRoot)) throw new Error("Prepared body path escapes treatment root");
+  const bodyPath = privateOutputPath(root, practice.body_path);
+  const selectionPath = privateOutputPath(root, selection.path);
   await Bun.write(bodyPath, prepared.get.practice.body);
   await Bun.write(selectionPath, `${JSON.stringify(prepared.selection, null, 2)}\n`);
 }
@@ -193,7 +201,7 @@ async function main(): Promise<void> {
   const queryFile = resolve(argumentValue(args, "--query-file"));
   const queryText = await Bun.file(queryFile).text();
   const manifest = Bun.YAML.parse(await Bun.file(join(treatmentRoot, "treatment.yaml")).text()) as PackPracticeManifest;
-  const prepared = await preparePackPractice({ manifest, storeRoot, queryText, loreCliVersion: args.includes("--lore-cli-version") ? argumentValue(args, "--lore-cli-version") : undefined });
+  const prepared = await preparePackPractice({ manifest, storeRoot, queryText, loreCliVersion: argumentValue(args, "--lore-cli-version") });
   await writePreparedTreatment(treatmentRoot, prepared);
   process.stdout.write(JSON.stringify({ status: "prepared", treatment_id: manifest.id, practice_id: manifest.practice.id, card_sha256: manifest.practice.card_sha256 }, null, 2) + "\n");
 }

@@ -121,6 +121,7 @@ function asSelection(value: UnknownRecord): SelectionRecord {
   const get = objectField(value, "get");
   if (value.captured_from !== "prepare-fixture" && value.captured_from !== "lore-cli") fail("selection captured_from is invalid");
   if (typeof value.lore_cli_version !== "string" || value.lore_cli_version.length === 0) fail("selection lore_cli_version is required");
+  if (typeof value.install_response_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(value.install_response_sha256)) fail("selection install_response_sha256 is required");
   if (!Array.isArray(value.commands) && !isRecord(value.commands)) fail("selection commands are required");
   if (pack.repository !== expectedRepository || pack.ref !== expectedPackRef || pack.version !== expectedPackVersion || pack.commit !== expectedPackCommit) fail("selection Pack identity does not match");
   if (query.mode !== "semantic" || query.top_k !== 5 || typeof query.text !== "string") fail("selection query must be semantic with top_k 5");
@@ -196,11 +197,12 @@ function verifySelection(manifest: PackPracticeManifest, selection: SelectionRec
   const get = selection.get;
   if (query.mode !== manifest.selection.mode || query.query_sha256 !== manifest.selection.query_sha256) fail("selection query identity does not match manifest");
   if (sha256TextSync(normalize(query.text)) !== manifest.selection.query_sha256) fail("selection query hash does not match query text");
-  if (query.selected_practice_id !== manifest.practice.id || query.selected_rank !== manifest.selection.result_rank) fail("selection does not select the manifest Practice/rank");
+  if (query.selected_practice_id !== manifest.practice.id) fail("selection does not select the manifest Practice");
   const selected = query.results.find((result) => result.practiceId === manifest.practice.id);
   if (!selected) fail("selection query results do not contain the manifest Practice");
   if (selected.contentDigest !== manifest.practice.content_digest) fail("selection query contentDigest does not match manifest");
   if (get.practice_id !== manifest.practice.id || get.content_digest !== manifest.practice.content_digest) fail("selection get identity does not match manifest");
+  if (!/^[a-f0-9]{64}$/.test(selection.query.response_sha256) || !/^[a-f0-9]{64}$/.test(selection.get.response_sha256)) fail("selection response hashes are invalid");
   if (get.source.pack_name !== "agentic-coding" || get.source.source_path !== manifest.practice.source_path) fail("selection source does not match manifest");
   if (get.source_sha256 !== manifest.practice.source_sha256 || get.card_sha256 !== manifest.practice.card_sha256) fail("selection hash identity does not match manifest");
   if (sha256TextSync(body) !== manifest.practice.card_sha256) fail("private card hash does not match manifest");
@@ -275,12 +277,13 @@ export function deliverPreparedPractice(prepared: PreparedPackPractice | undefin
 
 export function createAuditSidecar(prepared: PreparedPackPractice, deliveries: ReadonlyArray<PublicDeliveryTrace>): AuditSidecar {
   const delivered = deliveries.filter((delivery) => delivery.status === "delivered");
-  const identityConsistent = delivered.every((delivery) => delivery.practice_id === prepared.payload.practice_id && delivery.card_sha256 === prepared.payload.card_sha256);
+  const nodes = new Set(deliveries.map((delivery) => delivery.node));
+  const identityConsistent = deliveries.length === timingNodes.length && nodes.size === timingNodes.length && delivered.length === timingNodes.length && delivered.every((delivery) => delivery.practice_id === prepared.payload.practice_id && delivery.card_sha256 === prepared.payload.card_sha256);
   return Object.freeze({
     schema_version: "pack-practice-audit/v1",
     treatment: { id: prepared.manifest.id, version: prepared.manifest.version },
     provenance: prepared.provenance,
-    selection: { captured_from: prepared.selection.captured_from, query_sha256: prepared.selection.query_sha256, query_response_sha256: prepared.selection.query.response_sha256, get_response_sha256: prepared.selection.get.response_sha256, selected_rank: prepared.selection.query.selected_rank },
+    selection: { captured_from: prepared.selection.captured_from, install_response_sha256: prepared.selection.install_response_sha256, query_sha256: prepared.selection.query_sha256, query_response_sha256: prepared.selection.query.response_sha256, get_response_sha256: prepared.selection.get.response_sha256, selected_rank: prepared.selection.query.selected_rank },
     applicability: { scenario: prepared.applicability.scenario, basis_sha256: prepared.manifest.applicability.basis_sha256, status: prepared.applicability.status },
     deliveries: deliveries.map((delivery) => ({ condition_id: delivery.condition_id, node: delivery.node, status: delivery.status, ...(delivery.practice_id ? { practice_id: delivery.practice_id } : {}), ...(delivery.card_sha256 ? { card_sha256: delivery.card_sha256 } : {}) })),
     identity_consistent: identityConsistent

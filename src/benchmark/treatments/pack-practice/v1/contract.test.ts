@@ -35,6 +35,8 @@ test("delivers the same card at all three timing nodes and redacts public traces
   expect(audit.identity_consistent).toBe(true);
   expect(audit.provenance.commit).toBe("df89b8d432a01c53361a0e23df6896a772942b09");
   expect(JSON.stringify(audit)).not.toContain(prepared.payload.text);
+  const partialAudit = createAuditSidecar(prepared, deliveries.slice(0, 2).map((delivery) => delivery.trace));
+  expect(partialAudit.identity_consistent).toBe(false);
 });
 
 test("baseline and undeclared conditions receive no Practice payload", async () => {

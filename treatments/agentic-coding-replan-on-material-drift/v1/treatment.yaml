@@ -20,7 +20,6 @@ practice:
 selection:
   mode: semantic
   query_sha256: f8476e5e4830f0da5d88e6fde056734557d6fdc3e0eb7926ccf0859405d4762e
-  result_rank: 1
   path: private/selection.json
 applicability:
   scenario: async-report-lifecycle/scope_changed/v1

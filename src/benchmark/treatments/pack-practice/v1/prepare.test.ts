@@ -39,6 +39,7 @@ test("prepare runs one fixed install/query/get sequence and returns Lore provena
     manifest: prepared.manifest as PackPracticeManifest,
     storeRoot: "<isolated-store>",
     queryText,
+    loreCliVersion: "0.1.0-alpha.1",
     commandRunner: fixture.runner,
     sourceHashResolver: async () => prepared.manifest.practice.source_sha256
   });
@@ -60,7 +61,7 @@ test("prepare returns indeterminate when semantic query omits the expected Pract
     if (args[2] === "query") return { ...result, stdout: JSON.stringify({ ok: true, data: { mode: "semantic", results: [] } }) };
     return result;
   };
-  await expect(preparePackPractice({ manifest: prepared.manifest as PackPracticeManifest, storeRoot: "<isolated-store>", queryText, commandRunner: missing, sourceHashResolver: async () => prepared.manifest.practice.source_sha256 })).rejects.toMatchObject({ kind: "indeterminate" } satisfies Partial<LorePreparationError>);
+  await expect(preparePackPractice({ manifest: prepared.manifest as PackPracticeManifest, storeRoot: "<isolated-store>", queryText, loreCliVersion: "0.1.0-alpha.1", commandRunner: missing, sourceHashResolver: async () => prepared.manifest.practice.source_sha256 })).rejects.toMatchObject({ kind: "indeterminate" } satisfies Partial<LorePreparationError>);
 });
 
 test("prepare never silently changes semantic mode after a preparation error", async () => {
@@ -69,5 +70,5 @@ test("prepare never silently changes semantic mode after a preparation error", a
     if (args[2] === "pack") return { exitCode: 0, stdout: JSON.stringify({ ok: true, data: { pack: { name: "agentic-coding", version: "0.4.0" } } }), stderr: "" };
     return { exitCode: 1, stdout: JSON.stringify({ ok: true, data: { state: "preparing" } }), stderr: "semantic model is preparing" };
   };
-  await expect(preparePackPractice({ manifest: prepared.manifest as PackPracticeManifest, storeRoot: "<isolated-store>", queryText, commandRunner: runner, sourceHashResolver: async () => prepared.manifest.practice.source_sha256 })).rejects.toMatchObject({ kind: "indeterminate" } satisfies Partial<LorePreparationError>);
+  await expect(preparePackPractice({ manifest: prepared.manifest as PackPracticeManifest, storeRoot: "<isolated-store>", queryText, loreCliVersion: "0.1.0-alpha.1", commandRunner: runner, sourceHashResolver: async () => prepared.manifest.practice.source_sha256 })).rejects.toMatchObject({ kind: "indeterminate" } satisfies Partial<LorePreparationError>);
 });

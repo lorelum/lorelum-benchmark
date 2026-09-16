@@ -17,7 +17,7 @@ export type PackPracticeManifest = {
     card_sha256: string;
     body_path: string;
   };
-  selection: { mode: "semantic"; query_sha256: string; result_rank: number; path: string };
+  selection: { mode: "semantic"; query_sha256: string; path: string };
   applicability: { scenario: "async-report-lifecycle/scope_changed/v1"; status: "reviewed"; basis_path: string; basis_sha256: string };
   privacy: { materialization: "forbidden"; secrets: "excluded" };
 };
@@ -52,6 +52,7 @@ export type SelectionRecord = {
   lore_cli_version: string;
   commands: { install: string[]; query: string[]; get: string[] };
   pack: { repository: string; ref: string; version: string; commit: string };
+  install_response_sha256: string;
   query: {
     text: string;
     mode: "semantic";
@@ -131,7 +132,7 @@ export type AuditSidecar = Readonly<{
   schema_version: "pack-practice-audit/v1";
   treatment: { id: string; version: string };
   provenance: PackProvenance;
-  selection: { captured_from: SelectionRecord["captured_from"]; query_sha256: string; query_response_sha256: string; get_response_sha256: string; selected_rank: number };
+  selection: { captured_from: SelectionRecord["captured_from"]; install_response_sha256: string; query_sha256: string; query_response_sha256: string; get_response_sha256: string; selected_rank: number };
   applicability: { scenario: string; basis_sha256: string; status: string };
   deliveries: Array<{ condition_id: string; node: TimingNode; status: DeliveryStatus; practice_id?: string; card_sha256?: string }>;
   identity_consistent: boolean;

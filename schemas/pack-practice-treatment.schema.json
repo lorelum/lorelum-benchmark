@@ -46,11 +46,10 @@
     "selection": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "query_sha256", "result_rank", "path"],
+      "required": ["mode", "query_sha256", "path"],
       "properties": {
         "mode": { "const": "semantic" },
         "query_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-        "result_rank": { "type": "integer", "minimum": 1, "maximum": 50 },
         "path": { "type": "string", "pattern": "^private/[a-z0-9._/-]+\\.json$" }
       }
     },
