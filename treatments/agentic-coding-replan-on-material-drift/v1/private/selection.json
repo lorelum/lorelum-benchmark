@@ -1,0 +1,71 @@
+{
+  "schema_version": "pack-practice-selection/v1",
+  "captured_from": "prepare-fixture",
+  "lore_cli_version": "0.1.0-alpha.1",
+  "commands": {
+    "install": [
+      "--store-root",
+      "<isolated-store>",
+      "pack",
+      "install",
+      "agentic-coding@0.4.0",
+      "--registry",
+      "lorelum/lorelum-packs"
+    ],
+    "query": [
+      "--store-root",
+      "<isolated-store>",
+      "query",
+      "I am implementing an asynchronous report lifecycle. After the initial plan, new facts require old and new clients and workers to run concurrently and allow application rollback. These facts may change the delivered behavior, risks, and verification boundary; I need guidance on when to pause and replan before continuing implementation.",
+      "--mode",
+      "semantic",
+      "--top-k",
+      "5"
+    ],
+    "get": [
+      "--store-root",
+      "<isolated-store>",
+      "get",
+      "agentic-coding.implementation.replan-on-material-drift"
+    ]
+  },
+  "pack": {
+    "repository": "https://github.com/lorelum/lorelum-packs.git",
+    "ref": "agentic-coding-v0.4.0",
+    "version": "0.4.0",
+    "commit": "df89b8d432a01c53361a0e23df6896a772942b09"
+  },
+  "query": {
+    "text": "I am implementing an asynchronous report lifecycle. After the initial plan, new facts require old and new clients and workers to run concurrently and allow application rollback. These facts may change the delivered behavior, risks, and verification boundary; I need guidance on when to pause and replan before continuing implementation.",
+    "mode": "semantic",
+    "top_k": 5,
+    "query_sha256": "f8476e5e4830f0da5d88e6fde056734557d6fdc3e0eb7926ccf0859405d4762e",
+    "response_sha256": "3bcf9397640ead7a798c8af294f1464b0602c6f5e77809741cda793ae32a5fba",
+    "selected_practice_id": "agentic-coding.implementation.replan-on-material-drift",
+    "selected_rank": 1,
+    "results": [
+      {
+        "practiceId": "agentic-coding.implementation.replan-on-material-drift",
+        "title": "Replan When New Facts Change the Work",
+        "stage": "implementation",
+        "techStack": [
+          "agentic-coding"
+        ],
+        "appliesWhen": "coding has revealed an unplanned dependency, public behavior, stored state, I/O path, risk, or verification need that changes the accepted scope, and the agent is about to continue under the old plan",
+        "severity": "warn",
+        "contentDigest": "8913dc851d1b51e5610010b8ea9804b47c31109b8514620187f54e00ca7eb3f9"
+      }
+    ]
+  },
+  "get": {
+    "practice_id": "agentic-coding.implementation.replan-on-material-drift",
+    "content_digest": "8913dc851d1b51e5610010b8ea9804b47c31109b8514620187f54e00ca7eb3f9",
+    "response_sha256": "5ea55aec766710baad6fb6fcacf88a4c7e19dab49fb2cdae3d9deafa8b656742",
+    "source": {
+      "pack_name": "agentic-coding",
+      "source_path": "packs/agentic-coding/practices/implementation/replan-on-material-drift.md"
+    },
+    "source_sha256": "eaec0e27c85f5df6553eccf5cbcb521d2975aecfb0a3ffd0b7d754c89afa2909",
+    "card_sha256": "4a8de5d1546bfd7ed074b8f40e06ad142c4cb79ebdc90781f4b5c87b1bf03b97"
+  }
+}

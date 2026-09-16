@@ -1,0 +1,32 @@
+schema_version: pack-practice-treatment/v1
+id: agentic-coding-replan-on-material-drift
+version: v1
+kind: retrieval
+injection:
+  delivery: practice-card
+  channel: condition-scoped-private-runtime
+pack:
+  repository: https://github.com/lorelum/lorelum-packs.git
+  ref: agentic-coding-v0.4.0
+  version: 0.4.0
+  commit: df89b8d432a01c53361a0e23df6896a772942b09
+practice:
+  id: agentic-coding.implementation.replan-on-material-drift
+  source_path: packs/agentic-coding/practices/implementation/replan-on-material-drift.md
+  content_digest: 8913dc851d1b51e5610010b8ea9804b47c31109b8514620187f54e00ca7eb3f9
+  source_sha256: eaec0e27c85f5df6553eccf5cbcb521d2975aecfb0a3ffd0b7d754c89afa2909
+  card_sha256: 4a8de5d1546bfd7ed074b8f40e06ad142c4cb79ebdc90781f4b5c87b1bf03b97
+  body_path: private/practice.md
+selection:
+  mode: semantic
+  query_sha256: f8476e5e4830f0da5d88e6fde056734557d6fdc3e0eb7926ccf0859405d4762e
+  result_rank: 1
+  path: private/selection.json
+applicability:
+  scenario: async-report-lifecycle/scope_changed/v1
+  status: reviewed
+  basis_path: private/applicability.yaml
+  basis_sha256: d4ca5766879bd8c2e29639272c060f429a4da545cddc9ad0cd585302a90c795b
+privacy:
+  materialization: forbidden
+  secrets: excluded
