@@ -1,5 +1,5 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { terminateProcessTree } from "../process-tree";
 import { parseSessionHeader, findTranscript } from "./staged-pilot-pi-adapter";
 import type { CommandResult, CommandRunner } from "../preflight";
@@ -78,7 +78,17 @@ function buildCommand(config: StagedPracticePiConfig, invocation: StagedPractice
   return command;
 }
 
-async function runtimeCard(artifacts: string, phase: string, payload: PreparedPracticePayload | undefined): Promise<string | undefined> {
+function assertSeparateRoots(workspace: string, artifacts: string): void {
+  const workspaceRoot = resolve(workspace);
+  const artifactsRoot = resolve(artifacts);
+  const artifactsFromWorkspace = relative(workspaceRoot, artifactsRoot);
+  const workspaceFromArtifacts = relative(artifactsRoot, workspaceRoot);
+  const contained = (value: string) => { const normalized = value.replaceAll(String.fromCharCode(92), "/"); return normalized === "" || (!normalized.startsWith("../") && !isAbsolute(normalized)); };
+  if (contained(artifactsFromWorkspace) || contained(workspaceFromArtifacts)) throw new StagedPracticePiError("workspace and private artifacts must be separate non-nested roots");
+}
+
+async function runtimeCard(artifacts: string, workspace: string, phase: string, payload: PreparedPracticePayload | undefined): Promise<string | undefined> {
+  assertSeparateRoots(workspace, artifacts);
   if (!payload) return undefined;
   if (await sha256Text(payload.text) !== payload.card_sha256) throw new StagedPracticePiError("Practice payload card hash mismatch");
   const directory = join(artifacts, "private-runtime");
@@ -90,7 +100,7 @@ async function runtimeCard(artifacts: string, phase: string, payload: PreparedPr
 
 export function productionStagedPracticePiAdapter(config: StagedPracticePiConfig, commandRunner: CommandRunner = defaultCommandRunner, streamRunner: StagedPracticeStreamRunner = runUntilMarker): StagedPracticePiAdapter {
   const invoke = async (invocation: StagedPracticePiInvocation, streamUntil?: string): Promise<StagedPracticePiResult> => {
-    const runtimePath = await runtimeCard(config.log_directory, invocation.phase, invocation.practice);
+    const runtimePath = await runtimeCard(config.log_directory, invocation.workspace, invocation.phase, invocation.practice);
     const command = buildCommand(config, invocation, runtimePath);
     try {
       const result = streamUntil

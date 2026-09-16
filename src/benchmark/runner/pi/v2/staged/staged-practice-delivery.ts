@@ -228,6 +228,7 @@ export async function parseStagedPracticeDeliveryPlan(value: unknown): Promise<S
   const followupSha = hashField(prompts, "followup_sha256", "prompts.followup_sha256");
   if (prompts.checkpoint_marker !== checkpointMarker) fail("prompts.checkpoint_marker is not the frozen #196 marker");
   const checkpointMessage = stringField(prompts, "checkpoint_resume_message", "prompts.checkpoint_resume_message");
+  if (checkpointMessage !== checkpointResumeMessage) fail("prompts.checkpoint_resume_message must use the frozen checkpoint continuation");
   if (!isRecord(execution.environment)) fail("execution.environment must be an object");
   if (!isRecord(execution.budget)) fail("execution.budget must be an object");
   const model = stringField(execution, "model", "execution.model");
@@ -376,6 +377,15 @@ function ensureSession(expected: string | undefined, actual: string): void {
   if (expected && expected !== actual) throw new Error(`session resumed as ${actual} instead of ${expected}`);
 }
 
+function assertSeparateRoots(workspace: string, artifacts: string): void {
+  const workspaceRoot = resolve(workspace);
+  const artifactsRoot = resolve(artifacts);
+  const artifactsFromWorkspace = relative(workspaceRoot, artifactsRoot);
+  const workspaceFromArtifacts = relative(artifactsRoot, workspaceRoot);
+  const contained = (value: string) => { const normalized = value.replaceAll(String.fromCharCode(92), "/"); return normalized === "" || (!normalized.startsWith("../") && !isAbsolute(normalized)); };
+  if (contained(artifactsFromWorkspace) || contained(workspaceFromArtifacts)) throw new Error("workspace and private artifacts must be separate non-nested roots");
+}
+
 function containsCheckpointMarker(value: unknown, marker: string): boolean {
   if (typeof value === "string") return value.split(/\r?\n/).some((line) => line.trim() === marker);
   if (Array.isArray(value)) return value.some((entry) => containsCheckpointMarker(entry, marker));
@@ -394,6 +404,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
   const root = options.root ?? workspaceRoot;
   const node = options.plan.delivery.delivery_node;
   const condition = options.plan.delivery.condition_id;
+  assertSeparateRoots(options.workspace, options.artifacts);
   const treatmentVersion = options.plan.treatment.version;
   let prepared: PreparedPackPractice | null = null;
   let sessionId: string | null = null;

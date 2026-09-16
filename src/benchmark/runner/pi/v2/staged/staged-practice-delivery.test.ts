@@ -193,8 +193,10 @@ test("public trace excludes Practice identity and private paths", async () => {
 
 test("production adapter uses a private append-system-prompt file without putting card bytes in argv", async () => {
   const root = await temp("adapter");
+  const workspace = join(root, "workspace");
   const sessionDir = join(root, "sessions");
   const logs = join(root, "logs");
+  await mkdir(workspace, { recursive: true });
   await mkdir(sessionDir, { recursive: true });
   const commands: string[][] = [];
   const commandRunner = async (command: string[]): Promise<CommandResult> => {
@@ -206,7 +208,7 @@ test("production adapter uses a private append-system-prompt file without puttin
   };
   const adapter = productionStagedPracticePiAdapter({ command: "pi", model: "mock/model", tools: "read", stage_budget_ms: 1_000, log_directory: logs }, commandRunner);
   const prepared = (await prepareStagedPracticeDelivery(await planFor("task_start"))).prepared;
-  await adapter.start({ phase: "task_start", workspace: root, session_dir: sessionDir, prompt_path: "task.md", practice: prepared.payload });
+  await adapter.start({ phase: "task_start", workspace, session_dir: sessionDir, prompt_path: "task.md", practice: prepared.payload });
   expect(commands[0]).toContain("--append-system-prompt");
   expect(commands[0]?.join(" ")).not.toContain(prepared.payload.text);
   expect(commands[0]?.join(" ")).not.toContain(prepared.payload.card_sha256);
@@ -247,8 +249,10 @@ test("delivery failure after start is preserved and does not resume", async () =
 
 test("production checkpoint adapter accepts a marker-bounded stream and keeps the private card out of argv", async () => {
   const root = await temp("stream-adapter");
+  const workspace = join(root, "workspace");
   const sessionDir = join(root, "sessions");
   const logs = join(root, "logs");
+  await mkdir(workspace, { recursive: true });
   await mkdir(sessionDir, { recursive: true });
   const calls: string[][] = [];
   const commandRunner = async (command: string[]): Promise<CommandResult> => {
@@ -266,7 +270,7 @@ test("production checkpoint adapter accepts a marker-bounded stream and keeps th
     return { code: 143, stdout: `{"type":"session","id":"${sessionId}"}\n${marker}\n`, stderr: "", timedOut: false, durationMs: 1, marker_observed: true };
   };
   const adapter = productionStagedPracticePiAdapter({ command: "pi", model: "mock/model", tools: "read", stage_budget_ms: 1_000, log_directory: logs }, commandRunner, streamRunner);
-  const result = await adapter.resumeUntilCheckpoint({ phase: "constraint_followup", workspace: root, session_dir: sessionDir, session_id: "session-1", prompt_path: "stage-2/task.md" });
+  const result = await adapter.resumeUntilCheckpoint({ phase: "constraint_followup", workspace, session_dir: sessionDir, session_id: "session-1", prompt_path: "stage-2/task.md" });
   expect(result.session_id).toBe("session-1");
   expect(result.checkpoint_observed).toBe(true);
   expect(calls).toHaveLength(1);

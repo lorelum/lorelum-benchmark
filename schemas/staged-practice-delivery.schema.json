@@ -43,7 +43,7 @@
         "task_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
         "followup_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
         "checkpoint_marker": { "const": "CHECKPOINT: compatibility-slice-ready" },
-        "checkpoint_resume_message": { "type": "string", "minLength": 1 }
+        "checkpoint_resume_message": { "const": "Continue the task after the compatibility checkpoint." }
       }
     },
     "execution": {
