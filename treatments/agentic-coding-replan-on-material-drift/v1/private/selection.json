@@ -67,5 +67,6 @@
     },
     "source_sha256": "eaec0e27c85f5df6553eccf5cbcb521d2975aecfb0a3ffd0b7d754c89afa2909",
     "card_sha256": "4a8de5d1546bfd7ed074b8f40e06ad142c4cb79ebdc90781f4b5c87b1bf03b97"
-  }
+  },
+  "install_response_sha256": "eb268cea8d22c7bab9a48bc00b2169f9fde5303289d4b44603c48670f3e6ee92"
 }
