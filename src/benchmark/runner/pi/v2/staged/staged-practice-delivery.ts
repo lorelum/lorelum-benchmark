@@ -1,4 +1,4 @@
-import { appendFile, cp, mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { appendFile, cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { loadPackPracticeTreatment, deliverPreparedPractice } from "../../../../treatments/pack-practice/v1/contract";
 import type {
@@ -10,10 +10,6 @@ import type {
 } from "../../../../treatments/pack-practice/v1/types";
 import { timingNodes } from "../../../../treatments/pack-practice/v1/types";
 import { sha256File, sha256Text, workspaceRoot } from "../../../../fs";
-import { terminateProcessTree } from "../process-tree";
-import { parseSessionHeader } from "./staged-pilot-pi-adapter";
-import type { CommandResult, CommandRunner } from "../preflight";
-import { piCommand, run as defaultCommandRunner } from "../preflight";
 
 export const stagedPracticeDeliverySchemaVersion = "staged-practice-delivery/v1" as const;
 export const stagedPracticeAuditSchemaVersion = "staged-practice-delivery-audit/v1" as const;
@@ -380,6 +376,20 @@ function ensureSession(expected: string | undefined, actual: string): void {
   if (expected && expected !== actual) throw new Error(`session resumed as ${actual} instead of ${expected}`);
 }
 
+function containsCheckpointMarker(value: unknown, marker: string): boolean {
+  if (typeof value === "string") return value.split(/\r?\n/).some((line) => line.trim() === marker);
+  if (Array.isArray(value)) return value.some((entry) => containsCheckpointMarker(entry, marker));
+  if (isRecord(value)) return Object.values(value).some((entry) => containsCheckpointMarker(entry, marker));
+  return false;
+}
+
+export function hasCheckpointMarker(output: string, marker = checkpointMarker): boolean {
+  return output.split(/\r?\n/).some((line) => {
+    if (line.trim() === marker) return true;
+    try { return containsCheckpointMarker(JSON.parse(line), marker); } catch { return false; }
+  });
+}
+
 export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRunOptions): Promise<StagedPracticeAttemptReport> {
   const root = options.root ?? workspaceRoot;
   const node = options.plan.delivery.delivery_node;
@@ -429,12 +439,16 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
         }
       } else if (node === "constraint_followup") {
         const followupDelivery = deliver();
-        deliveryStatus = followupDelivery.trace.status;
-        status = followupDelivery.trace.status;
-        if (status === "delivered" || status === "not-declared") {
+        if (followupDelivery.trace.status !== "delivered" && followupDelivery.trace.status !== "not-declared") {
+          deliveryStatus = followupDelivery.trace.status;
+          status = followupDelivery.trace.status;
+          reason = "constraint_followup delivery was not confirmed";
+        } else {
           const resumed = await pi.resume({ phase: "constraint_followup", workspace: options.workspace, session_dir: sessionDir, prompt_path: "stage-2/task.md", session_id: start.session_id, ...(followupDelivery.payload ? { practice: followupDelivery.payload } : {}) });
           ensureSession(start.session_id, resumed.session_id);
           transcriptPath = resumed.transcript_path;
+          deliveryStatus = followupDelivery.trace.status;
+          status = followupDelivery.trace.status;
         }
       } else {
         const checkpoint = await pi.resumeUntilCheckpoint({ phase: "constraint_followup", workspace: options.workspace, session_dir: sessionDir, prompt_path: "stage-2/task.md", session_id: start.session_id });
@@ -446,12 +460,16 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
           reason = "checkpoint marker was not observed";
         } else {
           const checkpointDelivery = deliver();
-          deliveryStatus = checkpointDelivery.trace.status;
-          status = checkpointDelivery.trace.status;
-          if (status === "delivered" || status === "not-declared") {
+          if (checkpointDelivery.trace.status !== "delivered" && checkpointDelivery.trace.status !== "not-declared") {
+            deliveryStatus = checkpointDelivery.trace.status;
+            status = checkpointDelivery.trace.status;
+            reason = "checkpoint delivery was not confirmed";
+          } else {
             const resumed = await pi.resume({ phase: "checkpoint_resume", workspace: options.workspace, session_dir: sessionDir, session_id: start.session_id, checkpoint_resume_message: inputs.plan.prompts.checkpoint_resume_message, ...(checkpointDelivery.payload ? { practice: checkpointDelivery.payload } : {}) });
             ensureSession(start.session_id, resumed.session_id);
             transcriptPath = resumed.transcript_path;
+            deliveryStatus = checkpointDelivery.trace.status;
+            status = checkpointDelivery.trace.status;
           }
         }
       }
@@ -479,173 +497,4 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
   };
   const paths = await writeArtifacts({ artifacts: options.artifacts, event, summary, publicTrace });
   return Object.freeze({ schema_version: "staged-practice-attempt/v1", attempt_id: options.attempt_id, condition_id: condition, delivery_node: node, status: summary.status, comparable: summary.comparable, session_binding: sessionBinding, public_trace: publicTrace, audit_event: event, delivery_status: deliveryStatus, plan_hash: options.plan.plan_hash, ...paths, ...(transcriptPath ? { transcript_path: transcriptPath } : {}), ...(reason ? { termination_reason: reason } : {}) });
-}
-async function findTranscript(sessionDir: string, sessionId: string): Promise<string> {
-  const candidates: string[] = [];
-  const walk = async (current: string): Promise<void> => {
-    for (const entry of await readdir(current, { withFileTypes: true })) {
-      const path = join(current, entry.name);
-      if (entry.isDirectory()) await walk(path);
-      else if (entry.isFile() && entry.name.endsWith(".jsonl")) candidates.push(path);
-    }
-  };
-  await walk(sessionDir).catch(() => undefined);
-  const exact = candidates.find((path) => path.includes(sessionId));
-  if (!exact) throw new Error(`Pi session transcript not found for ${sessionId}`);
-  return exact;
-}
-
-export type StagedPracticePiConfig = Readonly<{
-  command: string;
-  model: string;
-  tools: string;
-  stage_budget_ms: number;
-  log_directory: string;
-}>;
-
-export class StagedPracticePiError extends Error {}
-
-export type StagedPracticeStreamRunner = (command: string[], cwd: string, timeoutMs: number, marker: string) => Promise<CommandResult & { marker_observed: boolean }>;
-
-type StreamResult = CommandResult & { marker_observed: boolean };
-
-async function runUntilMarker(command: string[], cwd: string, timeoutMs: number, marker: string): Promise<StreamResult> {
-  const started = performance.now();
-  const child = Bun.spawn(command, { cwd, env: Bun.env, stdout: "pipe", stderr: "pipe" });
-  const reader = child.stdout.getReader();
-  const decoder = new TextDecoder();
-  let stdout = "";
-  let markerObserved = false;
-  const read = (async () => {
-    while (true) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      stdout += decoder.decode(chunk.value, { stream: true });
-      if (!markerObserved && stdout.includes(marker)) {
-        markerObserved = true;
-        await terminateProcessTree(child.pid).catch(() => undefined);
-        child.kill();
-        break;
-      }
-    }
-    stdout += decoder.decode();
-  })();
-  let timedOut = false;
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    void terminateProcessTree(child.pid).finally(() => child.kill());
-  }, timeoutMs);
-  const stderrPromise = new Response(child.stderr).text();
-  await read;
-  const code = await child.exited;
-  clearTimeout(timeout);
-  return { code, stdout, stderr: await stderrPromise, timedOut, durationMs: Math.round(performance.now() - started), marker_observed: markerObserved };
-}
-
-function buildCommand(config: StagedPracticePiConfig, invocation: StagedPracticePiInvocation, runtimeCardPath?: string): string[] {
-  const command = [config.command, "--print", "--mode", "json", "--no-context-files", "--no-extensions", "--no-skills", "--no-prompt-templates", "--tools", config.tools, "--model", config.model, "--session-dir", invocation.session_dir];
-  if (invocation.session_id) command.push("--session", invocation.session_id);
-  if (runtimeCardPath) command.push("--append-system-prompt", runtimeCardPath);
-  if (invocation.prompt_path) command.push(`@${invocation.prompt_path}`);
-  if (invocation.checkpoint_resume_message) command.push(invocation.checkpoint_resume_message);
-  return command;
-}
-
-async function runtimeCard(artifacts: string, phase: string, payload: PreparedPracticePayload | undefined): Promise<string | undefined> {
-  if (!payload) return undefined;
-  if (await sha256Text(payload.text) !== payload.card_sha256) throw new StagedPracticePiError("Practice payload card hash mismatch");
-  const directory = join(artifacts, "private-runtime");
-  await mkdir(directory, { recursive: true });
-  const path = join(directory, `${phase}-${crypto.randomUUID()}.md`);
-  await writeFile(path, payload.text);
-  return path;
-}
-
-export function productionStagedPracticePiAdapter(config: StagedPracticePiConfig, commandRunner: CommandRunner = defaultCommandRunner, streamRunner: StagedPracticeStreamRunner = runUntilMarker): StagedPracticePiAdapter {
-  const invoke = async (invocation: StagedPracticePiInvocation, streamUntil?: string): Promise<StagedPracticePiResult> => {
-    const runtimePath = await runtimeCard(config.log_directory, invocation.phase, invocation.practice);
-    const command = buildCommand(config, invocation, runtimePath);
-    try {
-      const result = streamUntil
-        ? await streamRunner(command, invocation.workspace, config.stage_budget_ms, streamUntil)
-        : await commandRunner(command, invocation.workspace, config.stage_budget_ms);
-      await mkdir(config.log_directory, { recursive: true });
-      await writeFile(join(config.log_directory, `${invocation.phase}.stdout.jsonl`), result.stdout);
-      await writeFile(join(config.log_directory, `${invocation.phase}.stderr.log`), `${result.stderr}${result.timedOut ? "\nexecution budget exceeded\n" : ""}\n`);
-      if (result.timedOut) throw new StagedPracticePiError(`${invocation.phase} exceeded its ${config.stage_budget_ms}ms execution budget`);
-      const sessionId = parseSessionHeader(result.stdout);
-      if (invocation.session_id && sessionId !== invocation.session_id) throw new StagedPracticePiError(`${invocation.phase} resumed session ${sessionId} instead of ${invocation.session_id}`);
-      const markerObserved = streamUntil ? (result as StreamResult).marker_observed : undefined;
-      if (result.code !== 0 && !markerObserved) throw new StagedPracticePiError(`${invocation.phase} exited with code ${result.code}`);
-      return { session_id: sessionId, transcript_path: await findTranscript(invocation.session_dir, sessionId), stdout: result.stdout, stderr: result.stderr, ...(streamUntil ? { checkpoint_observed: markerObserved } : {}) };
-    } finally {
-      if (runtimePath) await rm(runtimePath, { force: true }).catch(() => undefined);
-    }
-  };
-  return {
-    start: (invocation) => invoke(invocation),
-    resume: (invocation) => invoke(invocation),
-    resumeUntilCheckpoint: (invocation) => invoke(invocation, checkpointMarker),
-  };
-}
-
-export const stagedPracticeCandidatePath = "incubator/practice-injection/async-report-lifecycle-v1";
-export const stagedPracticeTreatmentPath = "treatments/agentic-coding-replan-on-material-drift/v1";
-
-
-async function readPlanFile(path: string): Promise<StagedPracticeDeliveryPlan> {
-  const value = path.endsWith(".yaml") || path.endsWith(".yml")
-    ? Bun.YAML.parse(await Bun.file(path).text())
-    : JSON.parse(await Bun.file(path).text());
-  return parseStagedPracticeDeliveryPlan(value);
-}
-
-export async function executeStagedPracticeDeliveryFromFile(options: {
-  plan_path: string;
-  attempt_id: string;
-  artifacts: string;
-  workspace: string;
-  root?: string;
-  dry_run?: boolean;
-}): Promise<StagedPracticeAttemptReport> {
-  const plan = await readPlanFile(resolve(options.plan_path));
-  const dryRun = options.dry_run === true;
-  const pi = dryRun
-    ? undefined
-    : productionStagedPracticePiAdapter({
-        command: await piCommand(workspaceRoot),
-        model: plan.execution.model,
-        tools: "read,bash,edit,write,grep,find,ls",
-        stage_budget_ms: plan.execution.budget.max_duration_ms,
-        log_directory: options.artifacts,
-      });
-  return runStagedPracticeDeliveryAttempt({
-    root: options.root ?? workspaceRoot,
-    plan,
-    attempt_id: options.attempt_id,
-    artifacts: resolve(options.artifacts),
-    workspace: resolve(options.workspace),
-    dry_run: dryRun,
-    pi,
-  });
-}
-
-function argumentValue(args: string[], name: string): string | undefined {
-  const index = args.indexOf(name);
-  return index === -1 ? undefined : args[index + 1];
-}
-
-if (import.meta.main) {
-  const args = Bun.argv.slice(2);
-  const planPath = argumentValue(args, "--plan");
-  const attemptId = argumentValue(args, "--attempt-id");
-  const artifacts = argumentValue(args, "--artifacts");
-  const workspace = argumentValue(args, "--workspace");
-  const dryRun = args.includes("--dry-run");
-  if (!planPath || !attemptId || !artifacts || !workspace) {
-    console.error("Usage: bun run staged-practice-delivery.ts --plan <plan.json|plan.yaml> --attempt-id <id> --artifacts <dir> --workspace <dir> [--dry-run]");
-    process.exit(1);
-  }
-  const report = await executeStagedPracticeDeliveryFromFile({ plan_path: planPath, attempt_id: attemptId, artifacts, workspace, dry_run: dryRun });
-  console.log(JSON.stringify({ schema_version: report.schema_version, attempt_id: report.attempt_id, status: report.status, comparable: report.comparable, delivery_status: report.delivery_status, public_trace: report.public_trace }, null, 2));
 }

@@ -5,8 +5,8 @@ import {
   checkpointMarker,
   checkpointResumeMessage,
   hashStagedPracticeDeliveryPlan,
+  hasCheckpointMarker,
   prepareStagedPracticeDelivery,
-  productionStagedPracticePiAdapter,
   runStagedPracticeDeliveryAttempt,
   stagedPracticeConditions,
   type StagedPracticeDeliveryPlan,
@@ -14,6 +14,7 @@ import {
   type StagedPracticePiInvocation,
   type StagedPracticePiResult,
 } from "./staged-practice-delivery";
+import { productionStagedPracticePiAdapter } from "./staged-practice-delivery-pi-adapter";
 import { sha256File, workspaceRoot } from "../../../../fs";
 import type { CommandResult } from "../preflight";
 
@@ -100,6 +101,13 @@ async function run(condition: StagedPracticeDeliveryPlan["delivery"]["condition_
   const workspace = join(root, "workspace");
   return runStagedPracticeDeliveryAttempt({ root: workspaceRoot, plan: await planFor(condition), attempt_id: `attempt-${condition}`, artifacts, workspace, pi: adapter });
 }
+
+
+test("checkpoint marker matching is line-exact, including JSON event text", () => {
+  expect(hasCheckpointMarker(`prefix ${checkpointMarker} suffix`)).toBe(false);
+  expect(hasCheckpointMarker(`\n${checkpointMarker}\n`)).toBe(true);
+  expect(hasCheckpointMarker(JSON.stringify({ type: "message", text: `plan\n${checkpointMarker}\n` }))).toBe(true);
+});
 
 test("task_start delivers exactly once before the first Agent response", async () => {
   const fake = fakeAdapter();
@@ -232,8 +240,8 @@ test("delivery failure after start is preserved and does not resume", async () =
   expect(report.comparable).toBe(false);
   expect(calls.map((call) => call.phase)).toEqual(["task_start", "constraint_followup"]);
   expect(calls[1]?.practice).toBeDefined();
-  expect(report.audit_event?.status).toBe("delivered");
-  expect(report.audit_event?.acknowledged).toBe(true);
+  expect(report.audit_event?.status).toBe("failed");
+  expect(report.audit_event?.acknowledged).toBe(false);
   expect(report.termination_reason).toContain("delivery runtime unavailable");
 });
 
