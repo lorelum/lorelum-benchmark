@@ -20,14 +20,12 @@ locator 作为 `packRoot` 返回，但它是可变 current view；treatment 必�
 - 用一个版本化 manifest 固定 Pack repository、tag/ref、resolved commit、Pack version、
   Practice ID、source path、Lore content digest、正文 SHA-256、selection query/provenance
   和适用性判定。
-- 用一次选定结果生成 private runtime payload；三处 delivery 消费同一已校验 payload，
-  不在运行中调用 query/get、不重排、不 fallback 到另一条 Practice。
+- 在独立 prepare 阶段真实执行一次 Lore query/get，生成 private frozen snapshot；三处 delivery 消费同一已校验 payload，九次运行中不再 query/get、不重排、不 fallback 到另一条 Practice。
 - 让 baseline/未声明 condition fail closed；Practice card 只走
   `condition-scoped-private-runtime`，不物化到 workspace，不进入 public task/starter。
 - 让 #197 能记录 `treatment_id`、`treatment_version`、`practice_id`、`practice_sha256`
   和 delivery outcome，同时在 benchmark audit sidecar 保存完整 Pack provenance。
-- 以 mock/fixture 验证 identity、body consistency、applicability 和泄露边界，不依赖模型、
-  网络或实时 Lore Store。
+- 以 mock/fixture 验证 identity、card consistency、applicability 和泄露边界；CI 不调用真实 Lore/模型，生产 prepare adapter 通过可注入命令 runner 调用标准 Lore CLI。
 
 **Non-Goals:**
 
@@ -48,14 +46,20 @@ locator 作为 `packRoot` 返回，但它是可变 current view；treatment 必�
 - `practice.id`: `agentic-coding.implementation.replan-on-material-drift`
 - `practice.source_path`:
   `packs/agentic-coding/practices/implementation/replan-on-material-drift.md`
-- canonical body SHA-256:
+- source SHA-256:
   `eaec0e27c85f5df6553eccf5cbcb521d2975aecfb0a3ffd0b7d754c89afa2909`
+- Lore canonical content digest:
+  `8913dc851d1b51e5610010b8ea9804b47c31109b8514620187f54e00ca7eb3f9`
+- injected card SHA-256:
+  `4a8de5d1546bfd7ed074b8f40e06ad142c4cb79ebdc90781f4b5c87b1bf03b97`
 
-The query is a one-time selection input, not an experiment variable. It must describe the task
-moment and decision boundary without naming the expected Practice ID. The selected result is then
-read once, canonicalized according to the Lore `get` contract, hashed, and copied only to the
-private treatment runtime/reference. If the upstream ref, ID, digest, or body hash differs, the
-resolver fails closed instead of silently selecting another result.
+The query is executed once by the prepare adapter, not by #197/#201 delivery execution. It must
+use semantic mode and describe the task moment and decision boundary without naming the expected
+Practice ID. The expected Practice ID must appear in the returned top-k result set; absence is an
+indeterminate preparation result, not a reason to select another card. The adapter then calls `get`
+once for that exact ID, records the normalized result and command provenance, and writes a frozen
+snapshot. If the upstream ref, ID, source, digest, source hash, or card hash differs, preparation
+fails closed.
 
 ### Applicability to `scope_changed`
 
@@ -84,6 +88,16 @@ changes and must include the review basis without adding hidden acceptance answe
 The exact field names are implementation details to be frozen in the schema task, but the contract
 must have these logical groups:
 
+The prepare adapter uses these standard commands with an isolated Store:
+
+```sh
+lore --store-root "$STORE_ROOT" pack install agentic-coding@0.4.0 --registry lorelum/lorelum-packs
+lore --store-root "$STORE_ROOT" query "$QUERY" --mode semantic --top-k 5
+lore --store-root "$STORE_ROOT" get agentic-coding.implementation.replan-on-material-drift
+```
+
+CI injects a command runner and fixture stdout; it does not invoke real Lore or a model.
+
 ```yaml
 schema_version: pack-practice-treatment/v1
 id: agentic-coding-replan-on-material-drift
@@ -100,8 +114,9 @@ pack:
 practice:
   id: agentic-coding.implementation.replan-on-material-drift
   source_path: packs/agentic-coding/practices/implementation/replan-on-material-drift.md
-  content_digest: <Lore get contentDigest>
-  body_sha256: eaec0e27c85f5df6553eccf5cbcb521d2975aecfb0a3ffd0b7d754c89afa2909
+  content_digest: 8913dc851d1b51e5610010b8ea9804b47c31109b8514620187f54e00ca7eb3f9
+  source_sha256: eaec0e27c85f5df6553eccf5cbcb521d2975aecfb0a3ffd0b7d754c89afa2909
+  card_sha256: 4a8de5d1546bfd7ed074b8f40e06ad142c4cb79ebdc90781f4b5c87b1bf03b97
 selection:
   mode: semantic
   query_sha256: <canonical query hash>
@@ -120,22 +135,27 @@ must not weaken the identity or isolation requirements above.
 
 ## Implementation order and validation
 
-1. Freeze the contract and schema fields after the required planning clarification.
-2. Add private canonical practice/reference and immutable provenance fixture; no public materialization.
-3. Implement resolver/validator with dependency-injected query/get fixture and fail-closed identity
-   checks; do not make a live model/network call in tests.
-4. Add delivery metadata helper and identity-consistency tests for three nodes; leave scheduling to
-   #197.
+1. Record the confirmed prepare/query/runtime boundary in Issue #199 and this OpenSpec change.
+2. Add the versioned schema, prepare command adapter, private canonical practice/reference and immutable provenance/applicability fixture.
+3. Implement resolver/validator with an injectable Lore command runner; production prepare may call Lore, but tests use fixed stdout fixtures and runtime never re-queries.
+4. Add delivery metadata helper and identity-consistency tests for three nodes; leave scheduling to #197.
 5. Run `bun run validate`, contract/unit tests, public/private leak audit and `git diff --check`.
 6. Run the two independent read-only reviews required for benchmark contract PRs only after the
    implementation diff exists; fix findings in the same PR/change before requesting merge.
 
-## Decision recorded before full planning
+## Confirmed planning decisions
 
-需求方已明确一项前置方向：实验尚未开始，Pack release 固定为最新已发布的
-`agentic-coding@0.4.0`，而不是 issue 创建时提名的 `0.3.0`。这只记录 release 选择，
-不代表完整规划澄清已经完成。
+需求方已确认并在执行计划中固定：
 
-以下 treatment kind、query sidecar 隐私边界、内容双 hash、delivery failure 语义和
-baseline/三 timing node 的最终可观察口径，仍须在正式规划阶段确认后，才能勾选 tasks.md
-中的 0.4 并开始非 OpenSpec 实现。
+- 实验尚未开始，Pack release 使用 `agentic-coding@0.4.0`；
+- #199 提供独立 prepare adapter，按标准 Lore CLI 三步流程在隔离 Store 中执行一次 install/query/get；
+- semantic query 的结果必须包含预注册 Practice ID，缺失时 preparation indeterminate；不得静默换卡；
+- query/get provenance 进入 private selection sidecar，公共 trace 只保留 treatment/practice/hash/status；
+- source SHA、Lore content digest、injected card SHA 三者分别保存并校验；
+- `kind: retrieval`、`practice-card`、`condition-scoped-private-runtime` 作为 v1 contract；
+- #197/#201 的九次运行只消费 frozen snapshot，不能重新调用 Lore；
+- CI 使用注入的命令 runner 和固定 stdout fixture，不调用真实 Lore、模型或网络；
+- baseline/未声明 condition 无 payload，delivery failure 显式 fail closed。
+
+如果后续需要改变 query 选择、Pack provenance、delivery isolation 或实验变量边界，必须另行
+重新规划，不在本 change 中隐式扩大范围。

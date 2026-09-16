@@ -36,9 +36,7 @@ Pack 更新、语义检索重排或宿主状态就会污染 timing 结论。
 - 增加只在 benchmark private runtime 可读的固定 Practice body/reference；不把 Practice
   正文、Pack 全量内容、private evaluator、oracle 或 scoring material 放入 public task、
   starter、Agent workspace 或公共 trace。
-- 增加 deterministic resolver/validator 与 mock/fixture：验证固定 ref、version、Practice
-  ID、正文 hash、`applies_when` 与 `scope_changed` 任务脚本的适用性映射，并拒绝在运行中
-  再 query、重排或替换内容。
+- 增加独立 prepare adapter：在隔离 Store 中按固定 Pack/version 执行一次 Lore query/get，生成冻结 snapshot；再由 deterministic resolver/validator 校验 ref、version、Practice ID、source、三种 hash、`applies_when` 与 `scope_changed` 映射，并拒绝九次运行中重新 query、重排或替换内容。
 - 为 #197 staged runner 提供最小、不可变的 delivery metadata/审计 sidecar contract；
   本 change 不修改 #197 的三阶段投放实现。
 - 保持 baseline 与任何未声明 treatment condition 没有 Practice 可见输入；三个 timing
@@ -52,7 +50,7 @@ Pack 更新、语义检索重排或宿主状态就会污染 timing 结论。
   Trigger Orchestrator、文件信号或跨宿主适配。
 - 不发布或修改 `lorelum-packs`，不生成新 Practice，不把 `agentic-coding@0.4.0` 的新增
   Practices 混入本题 treatment。
-- 不调用模型、不创建正式 record、不升级 suite revision。
+- 不调用 Agent/Judge 模型、不创建正式 record、不升级 suite revision；prepare 阶段允许按固定标准命令调用 Lore semantic query，并记录其工具/模型/index provenance。
 
 ## Capabilities
 
