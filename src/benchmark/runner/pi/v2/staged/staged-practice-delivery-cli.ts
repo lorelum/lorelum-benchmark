@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { piCommand } from "../preflight";
+import { piCommand, preflightPiAndModel } from "../preflight";
 import { workspaceRoot } from "../../../../fs";
 import { parseStagedPracticeDeliveryPlan, runStagedPracticeDeliveryAttempt, type StagedPracticeAttemptReport, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
 import { productionStagedPracticePiAdapter } from "./staged-practice-delivery-pi-adapter";
@@ -21,10 +21,13 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
 }): Promise<StagedPracticeAttemptReport> {
   const plan = await readPlanFile(resolve(options.plan_path));
   const dryRun = options.dry_run === true;
+  if (!dryRun && Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") throw new Error("real staged Practice delivery requires LORELUM_LOCAL_EXPERIMENT=1");
+  const command = dryRun ? undefined : await piCommand(workspaceRoot);
+  if (command) await preflightPiAndModel(command, plan.execution.model);
   const pi = dryRun
     ? undefined
     : productionStagedPracticePiAdapter({
-        command: await piCommand(workspaceRoot),
+        command,
         model: plan.execution.model,
         tools: "read,bash,edit,write,grep,find,ls",
         stage_budget_ms: plan.execution.budget.max_duration_ms,
