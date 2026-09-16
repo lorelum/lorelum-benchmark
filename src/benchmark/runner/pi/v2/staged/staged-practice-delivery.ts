@@ -75,6 +75,7 @@ export type StagedPracticeAuditEvent = Readonly<{
   practice_id: string | null;
   card_sha256: string | null;
   acknowledged: boolean;
+  acknowledgement: "task-start" | "constraint-followup" | "checkpoint-marker" | "not-declared" | "not-observed";
   status: StagedPracticeDeliveryStatus;
   reason?: string;
 }>;
@@ -317,6 +318,7 @@ function makeAuditEvent(options: {
   prepared: PreparedPackPractice | null;
   status: StagedPracticeDeliveryStatus;
   acknowledged: boolean;
+  acknowledgement: StagedPracticeAuditEvent["acknowledgement"];
   reason?: string;
 }): StagedPracticeAuditEvent {
   const { prepared } = options;
@@ -333,6 +335,7 @@ function makeAuditEvent(options: {
     practice_id: options.status === "delivered" ? (prepared?.payload.practice_id ?? null) : null,
     card_sha256: options.status === "delivered" ? (prepared?.payload.card_sha256 ?? null) : null,
     acknowledged: options.acknowledged,
+    acknowledgement: options.acknowledgement,
     status: options.status,
     ...(options.reason ? { reason: options.reason } : {}),
   });
@@ -413,6 +416,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
   let sessionBinding: SessionBinding = "not-started";
   let reason: string | undefined;
   let transcriptPath: string | undefined;
+  let acknowledgement: StagedPracticeAuditEvent["acknowledgement"] = "not-observed";
   try {
     const inputs = await prepareStagedPracticeDelivery(options.plan, root);
     prepared = inputs.prepared;
@@ -439,6 +443,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
       sessionId = start.session_id;
       sessionBinding = "same-session";
       transcriptPath = start.transcript_path;
+      acknowledgement = node === "task_start" && declared ? "task-start" : "not-declared";
       await appendFollowup(options.workspace, inputs.followup_prompt);
       if (node === "task_start") {
         deliveryStatus = startDelivery.trace.status;
@@ -460,6 +465,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
           transcriptPath = resumed.transcript_path;
           deliveryStatus = followupDelivery.trace.status;
           status = followupDelivery.trace.status;
+          acknowledgement = followupDelivery.trace.status === "delivered" ? "constraint-followup" : "not-declared";
         }
       } else {
         const checkpoint = await pi.resumeUntilCheckpoint({ phase: "constraint_followup", workspace: options.workspace, session_dir: sessionDir, prompt_path: "stage-2/task.md", session_id: start.session_id });
@@ -481,6 +487,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
             transcriptPath = resumed.transcript_path;
             deliveryStatus = checkpointDelivery.trace.status;
             status = checkpointDelivery.trace.status;
+            acknowledgement = checkpointDelivery.trace.status === "delivered" ? "checkpoint-marker" : "not-declared";
           }
         }
       }
@@ -491,7 +498,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
     status = reason.includes("unsupported") ? "unsupported" : status === "indeterminate" ? "indeterminate" : "failed";
   }
   const acknowledged = deliveryStatus === "delivered";
-  const event = makeAuditEvent({ attempt_id: options.attempt_id, condition_id: condition, delivery_node: node, session_id: sessionId, plan_hash: options.plan.plan_hash, candidate: options.plan.candidate, prepared, status: deliveryStatus, acknowledged, reason });
+  const event = makeAuditEvent({ attempt_id: options.attempt_id, condition_id: condition, delivery_node: node, session_id: sessionId, plan_hash: options.plan.plan_hash, candidate: options.plan.candidate, prepared, status: deliveryStatus, acknowledged, acknowledgement, reason });
   const publicTrace = makePublicTrace({ attempt_id: options.attempt_id, condition_id: condition, delivery_node: node, treatment_version: treatmentVersion, status: deliveryStatus, session_binding: sessionBinding });
   const summary: StagedPracticeAttemptSummary = {
     schema_version: "staged-practice-attempt-summary/v1",

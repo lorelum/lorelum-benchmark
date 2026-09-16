@@ -4,7 +4,7 @@
   "title": "Lorelum staged Practice delivery audit event v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "plan_hash", "candidate", "attempt_id", "condition_id", "delivery_node", "session_id", "treatment", "provenance", "practice_id", "card_sha256", "acknowledged", "status"],
+  "required": ["schema_version", "plan_hash", "candidate", "attempt_id", "condition_id", "delivery_node", "session_id", "treatment", "provenance", "practice_id", "card_sha256", "acknowledged", "acknowledgement", "status"],
   "properties": {
     "schema_version": { "const": "staged-practice-delivery-audit/v1" },
     "plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
@@ -30,6 +30,7 @@
     "practice_id": { "type": ["string", "null"] },
     "card_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
     "acknowledged": { "type": "boolean" },
+    "acknowledgement": { "enum": ["task-start", "constraint-followup", "checkpoint-marker", "not-declared", "not-observed"] },
     "status": { "enum": ["delivered", "not-declared", "failed", "unsupported", "indeterminate", "invalid-plan"] },
     "reason": { "type": "string", "minLength": 1 }
   }

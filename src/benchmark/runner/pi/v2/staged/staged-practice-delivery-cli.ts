@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { piCommand, preflightPiAndModel } from "../preflight";
 import { workspaceRoot } from "../../../../fs";
-import { parseStagedPracticeDeliveryPlan, runStagedPracticeDeliveryAttempt, type StagedPracticeAttemptReport, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
+import { parseStagedPracticeDeliveryPlan, prepareStagedPracticeDelivery, runStagedPracticeDeliveryAttempt, type StagedPracticeAttemptReport, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
 import { productionStagedPracticePiAdapter } from "./staged-practice-delivery-pi-adapter";
 
 async function readPlanFile(path: string): Promise<StagedPracticeDeliveryPlan> {
@@ -21,6 +21,8 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
 }): Promise<StagedPracticeAttemptReport> {
   const plan = await readPlanFile(resolve(options.plan_path));
   const dryRun = options.dry_run === true;
+  const root = options.root ?? workspaceRoot;
+  await prepareStagedPracticeDelivery(plan, root);
   if (!dryRun && Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") throw new Error("real staged Practice delivery requires LORELUM_LOCAL_EXPERIMENT=1");
   const command = dryRun ? undefined : await piCommand(workspaceRoot);
   if (command) await preflightPiAndModel(command, plan.execution.model);
@@ -34,7 +36,7 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
         log_directory: resolve(options.artifacts),
       });
   return runStagedPracticeDeliveryAttempt({
-    root: options.root ?? workspaceRoot,
+    root,
     plan,
     attempt_id: options.attempt_id,
     artifacts: resolve(options.artifacts),
