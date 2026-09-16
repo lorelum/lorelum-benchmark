@@ -3,7 +3,7 @@
 - [ ] 0.1 确认 proposal/design/spec/tasks 与 Issue #199 单一声明范围一致；明确本 change 只负责 Pack-sourced treatment contract，不吸收 #196、#197、#200、#201 或 #202 的实现。
 - [ ] 0.2 执行 `openspec validate pack-sourced-practice-treatment --type change --strict --json`，修复所有 strict validation 问题；此阶段不得修改非 OpenSpec 实现文件。
 - [ ] 0.3 从最新 `origin/main` 的 `codex/pack-sourced-practice-treatment-199` 分支创建只含 OpenSpec artifacts 的初始 PR；PR 标题/正文引用 Issue #199，并明确不含 candidate fixture、runner、模型调用或结果记录。
-- [x] 0.4 在初始 PR 创建后完成规划澄清：需求方确认实验尚未开始，固定新发布的 `agentic-coding@0.4.0`；其余采用 `kind: retrieval`、query 仅存 private audit sidecar、`contentDigest` 与 body SHA-256 双身份、baseline/三 timing node 的最小 delivery/审计口径；结论已写回 Issue #199、`design.md` 和本文件。
+- [ ] 0.4 在正式规划阶段确认 release 之外的 treatment kind/schema、query sidecar 隐私边界、`contentDigest` 与 body SHA-256 的双身份策略，以及 baseline/三 timing node 的可观察 delivery/审计口径；release 选择 `agentic-coding@0.4.0` 已记录，但未将本任务视为完成。
 
 ## 1. 固定 Pack-sourced treatment contract
 

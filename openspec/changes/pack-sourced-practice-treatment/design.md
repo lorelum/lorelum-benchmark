@@ -130,19 +130,12 @@ must not weaken the identity or isolation requirements above.
 6. Run the two independent read-only reviews required for benchmark contract PRs only after the
    implementation diff exists; fix findings in the same PR/change before requesting merge.
 
-## Confirmed planning decisions
+## Decision recorded before full planning
 
-需求方在初始 PR 创建后确认：实验尚未开始，采用最新已发布的 `agentic-coding@0.4.0`。
-其余实现细节按本 design 中的最小、可审计方案执行：
+需求方已明确一项前置方向：实验尚未开始，Pack release 固定为最新已发布的
+`agentic-coding@0.4.0`，而不是 issue 创建时提名的 `0.3.0`。这只记录 release 选择，
+不代表完整规划澄清已经完成。
 
-- treatment 复用 shared treatment schema 已预留的 `kind: retrieval`，并由
-  `pack-practice-treatment/v1` 字段做严格 provenance 校验；
-- 完整 selection query 只进入非 Agent 可见的 audit sidecar，公共 trace 仅保留 treatment
-  version/hash/status；
-- 同时要求 Lore `contentDigest` 与 canonical body SHA-256 两个内容身份；
-- 采用 `practice-card` + `condition-scoped-private-runtime`，不物化 Practice 正文，
-  baseline/未声明 condition 无 payload；
-- 三个 timing node 复用同一已校验 payload，节点失败显式记录，不静默提前、延后或换卡。
-
-这些决定已写回 Issue #199、PR #215 和本 change 的 tasks；后续实现若需改变 treatment、
-delivery、privacy 或结论解释，必须重新规划并确认。
+以下 treatment kind、query sidecar 隐私边界、内容双 hash、delivery failure 语义和
+baseline/三 timing node 的最终可观察口径，仍须在正式规划阶段确认后，才能勾选 tasks.md
+中的 0.4 并开始非 OpenSpec 实现。
