@@ -118,14 +118,23 @@ export type PublicDeliveryTrace = Readonly<{
   node: TimingNode;
   treatment_id: string;
   treatment_version: string;
+  status: DeliveryStatus;
+}>;
+
+export type PrivateDeliveryTrace = Readonly<{
+  condition_id: string;
+  node: TimingNode;
+  treatment_id: string;
+  treatment_version: string;
+  status: DeliveryStatus;
   practice_id?: string;
   card_sha256?: string;
-  status: DeliveryStatus;
 }>;
 
 export type DeliveryResult = Readonly<{
   payload?: PreparedPracticePayload;
   trace: PublicDeliveryTrace;
+  private_trace: PrivateDeliveryTrace;
 }>;
 
 export type AuditSidecar = Readonly<{
@@ -134,6 +143,6 @@ export type AuditSidecar = Readonly<{
   provenance: PackProvenance;
   selection: { captured_from: SelectionRecord["captured_from"]; install_response_sha256: string; query_sha256: string; query_response_sha256: string; get_response_sha256: string; selected_rank: number };
   applicability: { scenario: string; basis_sha256: string; status: string };
-  deliveries: Array<{ condition_id: string; node: TimingNode; status: DeliveryStatus; practice_id?: string; card_sha256?: string }>;
+  deliveries: Array<PrivateDeliveryTrace>;
   identity_consistent: boolean;
 }>;

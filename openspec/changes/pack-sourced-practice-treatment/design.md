@@ -128,8 +128,7 @@ applicability:
 privacy:
   materialization: forbidden
   secrets: excluded
-``` 
-
+```
 The schema task may choose a more precise versioned kind or split the audit sidecar schema, but
 must not weaken the identity or isolation requirements above.
 
@@ -150,7 +149,7 @@ must not weaken the identity or isolation requirements above.
 - 实验尚未开始，Pack release 使用 `agentic-coding@0.4.0`；
 - #199 提供独立 prepare adapter，按标准 Lore CLI 三步流程在隔离 Store 中执行一次 install/query/get；
 - semantic query 的结果必须包含预注册 Practice ID，缺失时 preparation indeterminate；不得静默换卡；
-- query/get provenance 进入 private selection sidecar，公共 trace 只保留 treatment/practice/hash/status；
+- query/get provenance 进入 private selection sidecar，公共 trace 只保留 treatment identity/status；Practice ID、card hash 和完整 provenance 仅进入 private audit sidecar；
 - source SHA、Lore content digest、injected card SHA 三者分别保存并校验；
 - `kind: retrieval`、`practice-card`、`condition-scoped-private-runtime` 作为 v1 contract；
 - #197/#201 的九次运行只消费 frozen snapshot，不能重新调用 Lore；

@@ -1,4 +1,5 @@
 import { isAbsolute, join, relative, resolve } from "node:path";
+import { realpath, stat } from "node:fs/promises";
 import { sha256File, sha256Text } from "../../../fs";
 import { parseLoreGetResponse, parseLoreQueryResponse, resolvePrivatePath, expectedPackCommit, expectedPackRef, expectedPackVersion, expectedPracticeId, expectedRepository } from "./contract";
 import type { LoreGetData, LoreQueryData, PackPracticeManifest, SelectionRecord } from "./types";
@@ -70,14 +71,39 @@ function packInstallData(stdout: string, manifest: PackPracticeManifest): void {
   if (packRecord.name !== "agentic-coding" || packRecord.version !== manifest.pack.version) fail("failed", "pack install response does not match agentic-coding@0.4.0");
 }
 
-function sourceFilePath(get: LoreGetData): string {
+function ensureWithin(root: string, target: string, label: string): void {
+  const fromRoot = relative(root, target);
+  if (fromRoot === "" || fromRoot === ".." || fromRoot.startsWith(`..${"/"}`) || fromRoot.startsWith(`..${"\\"}`) || isAbsolute(fromRoot)) {
+    fail("failed", `${label} escapes the isolated Store`);
+  }
+}
+
+async function canonicalPath(path: string, label: string): Promise<string> {
+  try {
+    return await realpath(resolve(path));
+  } catch (error) {
+    fail("failed", `${label} is missing or cannot be resolved: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+function isSafeRelativePath(path: string): boolean {
+  return path.length > 0 && !isAbsolute(path) && !path.split(/[\\/]/).some((part) => part === ".." || part.length === 0);
+}
+
+async function sourceFilePath(get: LoreGetData, storeRoot: string): Promise<string> {
   const source = get.sources[0];
   if (!source?.packRoot) fail("failed", "lore get source is missing packRoot during preparation");
-  const root = resolve(source.packRoot);
-  const path = resolve(root, source.sourcePath);
-  const fromRoot = relative(root, path);
-  if (fromRoot === "" || fromRoot === ".." || fromRoot.startsWith(`..${"/"}`) || fromRoot.startsWith(`..${"\\"}`) || isAbsolute(fromRoot)) fail("failed", "lore get source path escapes packRoot");
-  return path;
+  if (!isAbsolute(source.packRoot)) fail("failed", "lore get packRoot must be absolute");
+  if (!isSafeRelativePath(source.sourcePath)) fail("failed", "lore get source path must be a normalized relative path");
+  const isolatedStore = await canonicalPath(storeRoot, "isolated Store");
+  const packRoot = await canonicalPath(source.packRoot, "Lore packRoot");
+  ensureWithin(isolatedStore, packRoot, "Lore packRoot");
+  if (!(await stat(packRoot)).isDirectory()) fail("failed", "Lore packRoot is not a directory");
+  const sourcePath = await canonicalPath(join(packRoot, source.sourcePath), "Lore source file");
+  ensureWithin(packRoot, sourcePath, "Lore source file");
+  ensureWithin(isolatedStore, sourcePath, "Lore source file");
+  if (!(await stat(sourcePath)).isFile()) fail("failed", "Lore source path is not a file");
+  return sourcePath;
 }
 
 export type PreparedLoreSelection = {
@@ -92,7 +118,7 @@ export async function preparePackPractice(options: {
   storeRoot: string;
   queryText: string;
   commandRunner?: LoreCommandRunner;
-  sourceHashResolver?: (get: LoreGetData) => Promise<string>;
+  sourceHashResolver?: (sourcePath: string, get: LoreGetData) => Promise<string>;
   loreCliVersion: string;
 }): Promise<PreparedLoreSelection> {
   const runner = options.commandRunner ?? defaultLoreCommandRunner;
@@ -122,7 +148,8 @@ export async function preparePackPractice(options: {
   if (get.contentDigest !== manifest.practice.content_digest) fail("failed", "lore get contentDigest does not match treatment manifest");
   if (get.practice.applies_when !== "coding has revealed an unplanned dependency, public behavior, stored state, I/O path, risk, or verification need that changes the accepted scope, and the agent is about to continue under the old plan") fail("failed", "lore get applies_when does not match applicability contract");
   if ((await sha256Text(get.practice.body)) !== manifest.practice.card_sha256) fail("failed", "lore get body hash does not match treatment manifest");
-  const sourceSha = options.sourceHashResolver ? await options.sourceHashResolver(get) : await sha256File(sourceFilePath(get));
+  const sourcePath = await sourceFilePath(get, storeRoot);
+  const sourceSha = options.sourceHashResolver ? await options.sourceHashResolver(sourcePath, get) : await sha256File(sourcePath);
   if (sourceSha !== manifest.practice.source_sha256) fail("failed", "Pack source file hash does not match treatment manifest");
 
   const selection: SelectionRecord = {

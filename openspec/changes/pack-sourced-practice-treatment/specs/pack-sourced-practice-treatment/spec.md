@@ -83,7 +83,8 @@ payload or any Agent-visible input.
 ### Requirement: Delivery and audit provenance
 
 A delivery record MUST expose to the runner only the minimum stable metadata needed to deliver the
-selected card and to record treatment version/hash/status. A non-Agent audit sidecar MUST preserve the
+selected card and to record treatment identity and delivery status. Practice-specific identity such as the
+Practice ID and card hash MUST remain in a non-Agent audit sidecar, which MUST preserve the
 full Pack provenance, selection provenance, applicability evidence identity, and the fact that all
 three timing nodes used the same Practice ID and body hash. Public traces and logs MUST NOT expose the
 full Pack provenance or Practice body.
@@ -97,8 +98,8 @@ full Pack provenance or Practice body.
 #### Scenario: Public trace is redacted
 
 - **WHEN** a delivery trace is serialized for Agent/public consumption
-- **THEN** it contains only treatment version/hash/status and no Practice body, Pack root, Store path,
-  or full Pack provenance
+- **THEN** it contains only treatment identity and delivery status, with no Practice ID, card hash,
+  Practice body, Pack root, Store path, or full Pack provenance
 
 ### Requirement: Fail-closed delivery outcomes
 
@@ -131,8 +132,3 @@ formal benchmark record.
 - **WHEN** the contract test suite runs with mock query/get and delivery fixtures
 - **THEN** it verifies identity, isolation, same-content delivery, drift rejection, and failure states
   without model calls, network access, formal records, or suite promotion
-
-
-
-
-

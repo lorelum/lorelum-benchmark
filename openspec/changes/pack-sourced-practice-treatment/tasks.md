@@ -22,4 +22,4 @@
 - [x] 3.1 添加 mock/fixture 测试：fixed identity、hash consistency、three-node same-content、baseline/undeclared isolation、wrong ref/version/id/hash rejection、query rerun/drift rejection、applicability evidence 和 delivery failure。
 - [x] 3.2 执行 public/private 泄露审计，确认没有 Practice 正文、Pack root/Store path、Pack 全量内容、evaluator/oracle/scoring 进入 Agent workspace、public task、starter、public trace 或日志。
 - [x] 3.3 运行 `bun run validate`、相关契约测试和 `git diff --check`；确认 CI 没有真实 Lore/model/network call，且没有正式 record、suite revision、run workspace、logs 或 generated diff 被提交；在同一 PR 中记录验证证据和未执行项。
-- [x] 3.4 完成第一轮 `ai-code-review` 并修复 must-fix；再在最新 diff 上完成第二轮 `thermo-nuclear-code-quality-review`，两轮 findings 和规则依据分别留档；在 change 完成前不得合并/归档初始 PR。
+- [ ] 3.4 完成第一轮 `ai-code-review` 并修复 must-fix；再在最新 diff 上完成第二轮 `thermo-nuclear-code-quality-review`，两轮 findings 和规则依据分别留档；在 change 完成前不得合并/归档初始 PR。

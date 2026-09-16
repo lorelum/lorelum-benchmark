@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { isAbsolute, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { sha256File, sha256Text } from "../../../fs";
 import type {
   ApplicabilityRecord,
@@ -23,9 +23,15 @@ const expectedPackRef = "agentic-coding-v0.4.0";
 const expectedPackVersion = "0.4.0";
 const expectedPackCommit = "df89b8d432a01c53361a0e23df6896a772942b09";
 const expectedPracticeId = "agentic-coding.implementation.replan-on-material-drift";
+const expectedTreatmentId = "agentic-coding-replan-on-material-drift";
+const expectedTreatmentVersion = "v1";
 const expectedSourcePath = "packs/agentic-coding/practices/implementation/replan-on-material-drift.md";
 const expectedAppliesWhen = "coding has revealed an unplanned dependency, public behavior, stored state, I/O path, risk, or verification need that changes the accepted scope, and the agent is about to continue under the old plan";
 const requiredFactIds = ["initial-plan-formed", "old-new-concurrency", "rollback-path", "verification-boundary"] as const;
+const sha256Pattern = /^[a-f0-9]{64}$/;
+const commitPattern = /^[a-f0-9]{40}$/;
+const treatmentIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const treatmentVersionPattern = /^v[1-9][0-9]*$/;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -41,6 +47,26 @@ function stringField(value: UnknownRecord, field: string, label = field): string
   const result = value[field];
   if (typeof result !== "string" || result.length === 0) fail(`${label} must be a non-empty string`);
   return result;
+}
+
+function hashField(value: UnknownRecord, field: string, label = field): string {
+  const result = stringField(value, field, label);
+  if (!sha256Pattern.test(result)) fail(`${label} must be a lowercase SHA-256 hex digest`);
+  return result;
+}
+
+function stringArrayField(value: UnknownRecord, field: string, label = field): string[] {
+  const result = value[field];
+  if (!Array.isArray(result) || !result.every((entry) => typeof entry === "string" && entry.length > 0)) {
+    fail(`${label} must be an array of non-empty strings`);
+  }
+  return result as string[];
+}
+
+function commandArrayField(value: UnknownRecord, field: string): string[] {
+  const result = value[field];
+  if (!Array.isArray(result) || !result.every((entry) => typeof entry === "string")) fail(`selection commands.${field} must be an array of strings`);
+  return result as string[];
 }
 
 function objectField(value: UnknownRecord, field: string): UnknownRecord {
@@ -96,22 +122,37 @@ function sha256TextSync(value: string): string {
   return createHash("sha256").update(new TextEncoder().encode(value)).digest("hex");
 }
 
-function asManifest(value: UnknownRecord): PackPracticeManifest {
+function asManifest(value: UnknownRecord, treatmentRoot: string): PackPracticeManifest {
   if (value.schema_version !== "pack-practice-treatment/v1") fail("schema_version must be pack-practice-treatment/v1");
+  const id = stringField(value, "id");
+  const version = stringField(value, "version");
+  if (!treatmentIdPattern.test(id) || id !== expectedTreatmentId) fail("treatment id is not the fixed pack-practice treatment identity");
+  if (!treatmentVersionPattern.test(version) || version !== expectedTreatmentVersion) fail("treatment version is not v1");
+  const root = resolve(treatmentRoot);
+  if (basename(root) !== version || basename(dirname(root)) !== id) fail("treatment id/version do not match the treatment directory");
   if (value.kind !== "retrieval") fail("kind must be retrieval");
   const injection = objectField(value, "injection");
   if (injection.delivery !== "practice-card" || injection.channel !== "condition-scoped-private-runtime") fail("injection must declare practice-card/private-runtime");
   const pack = objectField(value, "pack");
-  if (pack.repository !== expectedRepository || pack.ref !== expectedPackRef || pack.version !== expectedPackVersion || pack.commit !== expectedPackCommit) fail("pack identity does not match agentic-coding-v0.4.0");
+  const packCommit = stringField(pack, "commit");
+  if (stringField(pack, "repository") !== expectedRepository || stringField(pack, "ref") !== expectedPackRef || stringField(pack, "version") !== expectedPackVersion || packCommit !== expectedPackCommit || !commitPattern.test(packCommit)) fail("pack identity does not match agentic-coding-v0.4.0");
   const practice = objectField(value, "practice");
-  if (practice.id !== expectedPracticeId || practice.source_path !== expectedSourcePath) fail("practice identity does not match the selected Practice");
+  if (stringField(practice, "id") !== expectedPracticeId || stringField(practice, "source_path") !== expectedSourcePath) fail("practice identity does not match the selected Practice");
+  hashField(practice, "content_digest", "practice.content_digest");
+  hashField(practice, "source_sha256", "practice.source_sha256");
+  hashField(practice, "card_sha256", "practice.card_sha256");
+  stringField(practice, "body_path", "practice.body_path");
   const selection = objectField(value, "selection");
   if (selection.mode !== "semantic") fail("selection.mode must be semantic");
+  hashField(selection, "query_sha256", "selection.query_sha256");
+  stringField(selection, "path", "selection.path");
   const applicability = objectField(value, "applicability");
   if (applicability.scenario !== "async-report-lifecycle/scope_changed/v1" || applicability.status !== "reviewed") fail("applicability must be reviewed for scope_changed");
+  hashField(applicability, "basis_sha256", "applicability.basis_sha256");
+  stringField(applicability, "basis_path", "applicability.basis_path");
   const privacy = objectField(value, "privacy");
   if (privacy.materialization !== "forbidden" || privacy.secrets !== "excluded") fail("privacy boundary is invalid");
-  return value as unknown as PackPracticeManifest;
+  return { ...value, id, version } as unknown as PackPracticeManifest;
 }
 
 function asSelection(value: UnknownRecord): SelectionRecord {
@@ -120,11 +161,29 @@ function asSelection(value: UnknownRecord): SelectionRecord {
   const query = objectField(value, "query");
   const get = objectField(value, "get");
   if (value.captured_from !== "prepare-fixture" && value.captured_from !== "lore-cli") fail("selection captured_from is invalid");
-  if (typeof value.lore_cli_version !== "string" || value.lore_cli_version.length === 0) fail("selection lore_cli_version is required");
-  if (typeof value.install_response_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(value.install_response_sha256)) fail("selection install_response_sha256 is required");
-  if (!Array.isArray(value.commands) && !isRecord(value.commands)) fail("selection commands are required");
-  if (pack.repository !== expectedRepository || pack.ref !== expectedPackRef || pack.version !== expectedPackVersion || pack.commit !== expectedPackCommit) fail("selection Pack identity does not match");
-  if (query.mode !== "semantic" || query.top_k !== 5 || typeof query.text !== "string") fail("selection query must be semantic with top_k 5");
+  stringField(value, "lore_cli_version", "selection lore_cli_version");
+  hashField(value, "install_response_sha256", "selection install_response_sha256");
+  const commands = objectField(value, "commands");
+  commandArrayField(commands, "install");
+  commandArrayField(commands, "query");
+  commandArrayField(commands, "get");
+  if (stringField(pack, "repository") !== expectedRepository || stringField(pack, "ref") !== expectedPackRef || stringField(pack, "version") !== expectedPackVersion || stringField(pack, "commit") !== expectedPackCommit) fail("selection Pack identity does not match");
+  if (query.mode !== "semantic" || query.top_k !== 5) fail("selection query must be semantic with top_k 5");
+  stringField(query, "text", "selection query.text");
+  hashField(query, "query_sha256", "selection query.query_sha256");
+  hashField(query, "response_sha256", "selection query.response_sha256");
+  stringField(query, "selected_practice_id", "selection query.selected_practice_id");
+  if (!Number.isInteger(query.selected_rank) || (query.selected_rank as number) < 1) fail("selection query.selected_rank must be a positive integer");
+  if (!Array.isArray(query.results)) fail("selection query.results must be an array");
+  for (const [index, result] of query.results.entries()) parseLoreQueryResult(result, `selection query result ${index}`);
+  if (typeof get.practice_id !== "string" || get.practice_id.length === 0) fail("selection get.practice_id is required");
+  hashField(get, "content_digest", "selection get.content_digest");
+  hashField(get, "response_sha256", "selection get.response_sha256");
+  const source = objectField(get, "source");
+  stringField(source, "pack_name", "selection get.source.pack_name");
+  stringField(source, "source_path", "selection get.source.source_path");
+  hashField(get, "source_sha256", "selection get.source_sha256");
+  hashField(get, "card_sha256", "selection get.card_sha256");
   return value as unknown as SelectionRecord;
 }
 
@@ -133,7 +192,14 @@ function asApplicability(value: UnknownRecord): ApplicabilityRecord {
   if (value.scenario !== "async-report-lifecycle/scope_changed/v1" || value.status !== "reviewed") fail("applicability scenario/status is invalid");
   if (value.applies_when !== expectedAppliesWhen) fail("applicability applies_when does not match the selected Practice");
   if (!Array.isArray(value.facts)) fail("applicability facts are required");
-  const facts = value.facts.filter(isRecord);
+  const facts = value.facts.map((fact, index) => {
+    if (!isRecord(fact)) fail(`applicability fact ${index} must be an object`);
+    return {
+      id: stringField(fact, "id", `applicability fact ${index}.id`),
+      observed: fact.observed,
+      description: stringField(fact, "description", `applicability fact ${index}.description`)
+    };
+  });
   for (const id of requiredFactIds) {
     const fact = facts.find((candidate) => candidate.id === id);
     if (!fact || fact.observed !== true) fail(`applicability fact is missing or unobserved: ${id}`);
@@ -149,45 +215,57 @@ function unwrapCliData(value: unknown): UnknownRecord {
   return value;
 }
 
+function parseLoreQueryResult(value: unknown, label: string): LoreQueryData["results"][number] {
+  if (!isRecord(value)) fail(`${label} must be an object`);
+  return {
+    practiceId: stringField(value, "practiceId", `${label}.practiceId`),
+    title: stringField(value, "title", `${label}.title`),
+    stage: stringField(value, "stage", `${label}.stage`),
+    techStack: stringArrayField(value, "techStack", `${label}.techStack`),
+    appliesWhen: stringField(value, "appliesWhen", `${label}.appliesWhen`),
+    severity: stringField(value, "severity", `${label}.severity`),
+    contentDigest: hashField(value, "contentDigest", `${label}.contentDigest`)
+  };
+}
+
+function parseLoreGetSource(value: unknown, label: string): LoreGetData["sources"][number] {
+  if (!isRecord(value)) fail(`${label} must be an object`);
+  const source: LoreGetData["sources"][number] = {
+    packName: stringField(value, "packName", `${label}.packName`),
+    sourcePath: stringField(value, "sourcePath", `${label}.sourcePath`)
+  };
+  if ("packRoot" in value) source.packRoot = stringField(value, "packRoot", `${label}.packRoot`);
+  return source;
+}
+
 export function parseLoreQueryResponse(value: unknown): LoreQueryData {
   const data = unwrapCliData(value);
   if (data.state === "preparing") fail("Lore semantic query is still preparing");
   if (data.mode !== "semantic" || !Array.isArray(data.results)) fail("Lore query response must be semantic with results");
-  const results = data.results.filter(isRecord).map((result) => ({
-    practiceId: stringField(result, "practiceId", "query result practiceId"),
-    title: stringField(result, "title", "query result title"),
-    stage: stringField(result, "stage", "query result stage"),
-    techStack: Array.isArray(result.techStack) ? result.techStack.filter((entry): entry is string => typeof entry === "string") : [],
-    appliesWhen: stringField(result, "appliesWhen", "query result appliesWhen"),
-    severity: stringField(result, "severity", "query result severity"),
-    contentDigest: stringField(result, "contentDigest", "query result contentDigest")
-  }));
+  const results = data.results.map((result, index) => parseLoreQueryResult(result, `query result ${index}`));
   return { mode: "semantic", results, ...(typeof data.profileId === "string" ? { profileId: data.profileId } : {}), ...(typeof data.coverage === "string" ? { coverage: data.coverage } : {}) };
 }
 
 export function parseLoreGetResponse(value: unknown): LoreGetData {
   const data = unwrapCliData(value);
   const practice = objectField(data, "practice");
-  const sources = Array.isArray(data.sources) ? data.sources.filter(isRecord).map((source) => ({
-    packName: stringField(source, "packName", "get source packName"),
-    sourcePath: stringField(source, "sourcePath", "get source sourcePath"),
-    ...(typeof source.packRoot === "string" ? { packRoot: source.packRoot } : {})
-  })) : [];
+  if (!Array.isArray(data.sources)) fail("Lore get response sources must be an array");
+  const sources = data.sources.map((source, index) => parseLoreGetSource(source, `get source ${index}`));
   if (sources.length !== 1) fail("Lore get must return exactly one source for this treatment");
   if (practice.id !== expectedPracticeId) fail("Lore get Practice ID does not match the selected Practice");
   if (typeof practice.body !== "string") fail("Lore get Practice body is required");
-  if (typeof data.contentDigest !== "string") fail("Lore get contentDigest is required");
+  hashField(data, "contentDigest", "Lore get contentDigest");
   return {
     practice: {
       id: expectedPracticeId,
       title: stringField(practice, "title", "get practice title"),
       stage: stringField(practice, "stage", "get practice stage"),
-      tech_stack: Array.isArray(practice.tech_stack) ? practice.tech_stack.filter((entry): entry is string => typeof entry === "string") : [],
+      tech_stack: stringArrayField(practice, "tech_stack", "get practice tech_stack"),
       applies_when: stringField(practice, "applies_when", "get practice applies_when"),
       severity: stringField(practice, "severity", "get practice severity"),
       body: normalize(practice.body)
     },
-    contentDigest: data.contentDigest,
+    contentDigest: data.contentDigest as string,
     sources
   };
 }
@@ -198,7 +276,11 @@ function verifySelection(manifest: PackPracticeManifest, selection: SelectionRec
   if (query.mode !== manifest.selection.mode || query.query_sha256 !== manifest.selection.query_sha256) fail("selection query identity does not match manifest");
   if (sha256TextSync(normalize(query.text)) !== manifest.selection.query_sha256) fail("selection query hash does not match query text");
   if (query.selected_practice_id !== manifest.practice.id) fail("selection does not select the manifest Practice");
-  const selected = query.results.find((result) => result.practiceId === manifest.practice.id);
+  if (!Number.isInteger(query.selected_rank) || query.selected_rank < 1 || query.selected_rank > query.results.length) fail("selection query.selected_rank is outside the query result range");
+  const selectedIndex = query.results.findIndex((result) => result.practiceId === manifest.practice.id);
+  if (selectedIndex === -1) fail("selection query results do not contain the manifest Practice");
+  if (query.selected_rank !== selectedIndex + 1) fail("selection query.selected_rank does not match the selected Practice rank");
+  const selected = query.results[selectedIndex];
   if (!selected) fail("selection query results do not contain the manifest Practice");
   if (selected.contentDigest !== manifest.practice.content_digest) fail("selection query contentDigest does not match manifest");
   if (get.practice_id !== manifest.practice.id || get.content_digest !== manifest.practice.content_digest) fail("selection get identity does not match manifest");
@@ -213,8 +295,9 @@ function verifyApplicability(manifest: PackPracticeManifest, applicability: Appl
 }
 
 export async function loadPackPracticeTreatment(treatmentRoot: string): Promise<PreparedPackPractice> {
-  const manifestValue = await readYaml(resolve(treatmentRoot, "treatment.yaml"), "treatment manifest");
-  const manifest = asManifest(manifestValue);
+  const root = resolve(treatmentRoot);
+  const manifestValue = await readYaml(resolve(root, "treatment.yaml"), "treatment manifest");
+  const manifest = asManifest(manifestValue, root);
   const bodyPath = resolvePrivatePath(treatmentRoot, manifest.practice.body_path, "practice.body_path");
   const selectionPath = resolvePrivatePath(treatmentRoot, manifest.selection.path, "selection.path");
   const applicabilityPath = resolvePrivatePath(treatmentRoot, manifest.applicability.basis_path, "applicability.basis_path");
@@ -246,53 +329,74 @@ export async function loadPackPracticeTreatment(treatmentRoot: string): Promise<
   return Object.freeze({ manifest, payload, provenance, selection, applicability });
 }
 
-function assertPayload(payload: PreparedPracticePayload): void {
+function assertPayload(prepared: PreparedPackPractice): void {
+  const { manifest, payload } = prepared;
+  if (payload.treatment_id !== manifest.id || payload.treatment_version !== manifest.version || payload.treatment_id !== expectedTreatmentId || payload.treatment_version !== expectedTreatmentVersion) fail("prepared payload treatment identity is not allowlisted");
+  if (payload.practice_id !== manifest.practice.id || payload.content_digest !== manifest.practice.content_digest || payload.card_sha256 !== manifest.practice.card_sha256) fail("prepared payload identity does not match manifest");
   if (sha256TextSync(payload.text) !== payload.card_sha256) fail("prepared payload card hash does not match text");
   if (payload.practice_id !== expectedPracticeId) fail("prepared payload Practice ID is not allowlisted");
 }
 
 export function deliverPreparedPractice(prepared: PreparedPackPractice | undefined, request: { condition_id: string; node: TimingNode; declared: boolean; supported?: boolean }): DeliveryResult {
   if (!timingNodes.includes(request.node)) throw new Error(`Invalid timing node: ${request.node}`);
+  const makeTrace = (status: DeliveryStatus, treatmentId: string, treatmentVersion: string, identity?: { practice_id: string; card_sha256: string }): DeliveryResult => {
+    const privateTrace = Object.freeze({ condition_id: request.condition_id, node: request.node, treatment_id: treatmentId, treatment_version: treatmentVersion, status, ...(identity ?? {}) });
+    const trace: PublicDeliveryTrace = Object.freeze({ schema_version: "pack-practice-delivery-trace/v1", condition_id: request.condition_id, node: request.node, treatment_id: treatmentId, treatment_version: treatmentVersion, status });
+    return Object.freeze({ trace, private_trace: privateTrace });
+  };
   if (request.supported === false) {
-    const trace: PublicDeliveryTrace = Object.freeze({ schema_version: "pack-practice-delivery-trace/v1", condition_id: request.condition_id, node: request.node, treatment_id: prepared?.manifest.id ?? "none", treatment_version: prepared?.manifest.version ?? "none", status: "unsupported" });
-    return Object.freeze({ trace });
+    return makeTrace("unsupported", prepared?.manifest.id ?? "none", prepared?.manifest.version ?? "none");
   }
   if (!request.declared) {
-    const trace: PublicDeliveryTrace = Object.freeze({ schema_version: "pack-practice-delivery-trace/v1", condition_id: request.condition_id, node: request.node, treatment_id: prepared?.manifest.id ?? "none", treatment_version: prepared?.manifest.version ?? "none", status: "not-declared" });
-    return Object.freeze({ trace });
+    return makeTrace("not-declared", prepared?.manifest.id ?? "none", prepared?.manifest.version ?? "none");
   }
   if (!prepared) {
-    const trace: PublicDeliveryTrace = Object.freeze({ schema_version: "pack-practice-delivery-trace/v1", condition_id: request.condition_id, node: request.node, treatment_id: "missing", treatment_version: "missing", status: "failed" });
-    return Object.freeze({ trace });
+    return makeTrace("failed", "missing", "missing");
   }
   try {
-    assertPayload(prepared.payload);
+    assertPayload(prepared);
   } catch {
-    const trace: PublicDeliveryTrace = Object.freeze({ schema_version: "pack-practice-delivery-trace/v1", condition_id: request.condition_id, node: request.node, treatment_id: prepared.manifest.id, treatment_version: prepared.manifest.version, status: "failed" });
-    return Object.freeze({ trace });
+    return makeTrace("failed", prepared.manifest.id, prepared.manifest.version);
   }
-  const trace: PublicDeliveryTrace = Object.freeze({ schema_version: "pack-practice-delivery-trace/v1", condition_id: request.condition_id, node: request.node, treatment_id: prepared.manifest.id, treatment_version: prepared.manifest.version, practice_id: prepared.payload.practice_id, card_sha256: prepared.payload.card_sha256, status: "delivered" });
-  return Object.freeze({ payload: prepared.payload, trace });
+  return Object.freeze({ ...makeTrace("delivered", prepared.manifest.id, prepared.manifest.version, { practice_id: prepared.payload.practice_id, card_sha256: prepared.payload.card_sha256 }), payload: prepared.payload });
 }
 
-export function createAuditSidecar(prepared: PreparedPackPractice, deliveries: ReadonlyArray<PublicDeliveryTrace>): AuditSidecar {
-  const delivered = deliveries.filter((delivery) => delivery.status === "delivered");
-  const nodes = new Set(deliveries.map((delivery) => delivery.node));
-  const identityConsistent = deliveries.length === timingNodes.length && nodes.size === timingNodes.length && delivered.length === timingNodes.length && delivered.every((delivery) => delivery.practice_id === prepared.payload.practice_id && delivery.card_sha256 === prepared.payload.card_sha256);
+export function createAuditSidecar(prepared: PreparedPackPractice, deliveries: ReadonlyArray<DeliveryResult>): AuditSidecar {
+  const privateDeliveries = deliveries.map((delivery) => delivery.private_trace);
+  const delivered = privateDeliveries.filter((delivery) => delivery.status === "delivered");
+  const nodes = new Set(privateDeliveries.map((delivery) => delivery.node));
+  const conditions = new Set(privateDeliveries.map((delivery) => delivery.condition_id));
+  const identityConsistent = privateDeliveries.length === timingNodes.length
+    && nodes.size === timingNodes.length
+    && timingNodes.every((node) => nodes.has(node))
+    && conditions.size === 1
+    && delivered.length === timingNodes.length
+    && delivered.every((delivery) => delivery.treatment_id === prepared.manifest.id
+      && delivery.treatment_version === prepared.manifest.version
+      && delivery.practice_id === prepared.payload.practice_id
+      && delivery.card_sha256 === prepared.payload.card_sha256);
   return Object.freeze({
     schema_version: "pack-practice-audit/v1",
     treatment: { id: prepared.manifest.id, version: prepared.manifest.version },
     provenance: prepared.provenance,
     selection: { captured_from: prepared.selection.captured_from, install_response_sha256: prepared.selection.install_response_sha256, query_sha256: prepared.selection.query_sha256, query_response_sha256: prepared.selection.query.response_sha256, get_response_sha256: prepared.selection.get.response_sha256, selected_rank: prepared.selection.query.selected_rank },
     applicability: { scenario: prepared.applicability.scenario, basis_sha256: prepared.manifest.applicability.basis_sha256, status: prepared.applicability.status },
-    deliveries: deliveries.map((delivery) => ({ condition_id: delivery.condition_id, node: delivery.node, status: delivery.status, ...(delivery.practice_id ? { practice_id: delivery.practice_id } : {}), ...(delivery.card_sha256 ? { card_sha256: delivery.card_sha256 } : {}) })),
+    deliveries: privateDeliveries,
     identity_consistent: identityConsistent
   });
 }
 
 export function publicTraceHasPrivateMaterial(trace: PublicDeliveryTrace): boolean {
   const serialized = JSON.stringify(trace);
-  return serialized.includes(expectedRepository) || serialized.includes("packRoot") || serialized.includes("store") || serialized.includes("source_path") || serialized.includes("query");
+  const publicKeys = new Set(["schema_version", "condition_id", "node", "treatment_id", "treatment_version", "status"]);
+  return Object.keys(trace).some((key) => !publicKeys.has(key))
+    || serialized.includes(expectedPracticeId)
+    || serialized.includes("card_sha256")
+    || serialized.includes(expectedPackCommit)
+    || serialized.includes(expectedRepository)
+    || serialized.includes("packRoot")
+    || serialized.includes("storeRoot")
+    || serialized.includes("isolated-store");
 }
 
 export { expectedAppliesWhen, expectedPackCommit, expectedPackRef, expectedPackVersion, expectedPracticeId, expectedRepository, expectedSourcePath, requiredFactIds };
