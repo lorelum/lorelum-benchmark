@@ -7,9 +7,9 @@ Pack 查询产品的实现，而是为 #197/#201 提供一次性选定、可审�
 或 Practice 内容。
 
 上游当前有两个影响设计的事实。第一，`agentic-coding@0.4.0` 已发布，但
-`replan-on-material-drift` 从 `v0.3.0` 到 `v0.4.0` 的正文 hash 不变；为保持 issue 已
-提名候选和历史可解释性，默认锁定 `agentic-coding-v0.3.0` 的 annotated tag 对应 commit
-`1dc16867cb3de6a08186cdc623353d275073ad8b`。第二，Lorelum 的 `lore get` 已把 source
+`replan-on-material-drift` 从 `v0.3.0` 到 `v0.4.0` 的正文 hash 不变；由于实验尚未开始，按需求方确认采用最新已发布的 `agentic-coding-v0.4.0`；锁定其
+annotated tag 对应 commit
+`df89b8d432a01c53361a0e23df6896a772942b09`。第二，Lorelum 的 `lore get` 已把 source
 locator 作为 `packRoot` 返回，但它是可变 current view；treatment 必须保存 tag/ref 和
 内容身份，不能把本地 `packRoot` 当作不可变 provenance。
 
@@ -42,9 +42,9 @@ locator 作为 `packRoot` 返回，但它是可变 current view；treatment 必�
 ### 固定 release，而非 latest
 
 - `pack.repository`: `https://github.com/lorelum/lorelum-packs.git`
-- `pack.ref`: `agentic-coding-v0.3.0`
-- `pack.version`: `0.3.0`
-- `pack.commit`: `1dc16867cb3de6a08186cdc623353d275073ad8b`
+- `pack.ref`: `agentic-coding-v0.4.0`
+- `pack.version`: `0.4.0`
+- `pack.commit`: `df89b8d432a01c53361a0e23df6896a772942b09`
 - `practice.id`: `agentic-coding.implementation.replan-on-material-drift`
 - `practice.source_path`:
   `packs/agentic-coding/practices/implementation/replan-on-material-drift.md`
@@ -94,9 +94,9 @@ injection:
   channel: condition-scoped-private-runtime
 pack:
   repository: https://github.com/lorelum/lorelum-packs.git
-  ref: agentic-coding-v0.3.0
-  version: 0.3.0
-  commit: 1dc16867cb3de6a08186cdc623353d275073ad8b
+  ref: agentic-coding-v0.4.0
+  version: 0.4.0
+  commit: df89b8d432a01c53361a0e23df6896a772942b09
 practice:
   id: agentic-coding.implementation.replan-on-material-drift
   source_path: packs/agentic-coding/practices/implementation/replan-on-material-drift.md
@@ -130,13 +130,19 @@ must not weaken the identity or isolation requirements above.
 6. Run the two independent read-only reviews required for benchmark contract PRs only after the
    implementation diff exists; fix findings in the same PR/change before requesting merge.
 
-## Open decisions requiring confirmation before implementation
+## Confirmed planning decisions
 
-- Keep the issue-nominated `agentic-coding@0.3.0` despite the newly released `0.4.0` (the selected
-  Practice body is byte-identical), or switch the fixed treatment to `0.4.0`.
-- Use the logical `kind: retrieval` extension already reserved in the shared treatment schema, or
-  introduce a dedicated `pack-practice` kind/versioned schema.
-- Record full selection query in the private audit sidecar (recommended) while public trace keeps
-  only version/hash, or hash-only everywhere.
-- Treat `contentDigest` from Lore `get` and the canonical body SHA-256 as two required identities
-  (recommended) or make body SHA-256 the only required content identity.
+需求方在初始 PR 创建后确认：实验尚未开始，采用最新已发布的 `agentic-coding@0.4.0`。
+其余实现细节按本 design 中的最小、可审计方案执行：
+
+- treatment 复用 shared treatment schema 已预留的 `kind: retrieval`，并由
+  `pack-practice-treatment/v1` 字段做严格 provenance 校验；
+- 完整 selection query 只进入非 Agent 可见的 audit sidecar，公共 trace 仅保留 treatment
+  version/hash/status；
+- 同时要求 Lore `contentDigest` 与 canonical body SHA-256 两个内容身份；
+- 采用 `practice-card` + `condition-scoped-private-runtime`，不物化 Practice 正文，
+  baseline/未声明 condition 无 payload；
+- 三个 timing node 复用同一已校验 payload，节点失败显式记录，不静默提前、延后或换卡。
+
+这些决定已写回 Issue #199、PR #215 和本 change 的 tasks；后续实现若需改变 treatment、
+delivery、privacy 或结论解释，必须重新规划并确认。

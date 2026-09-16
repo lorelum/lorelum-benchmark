@@ -3,12 +3,12 @@
 - [ ] 0.1 确认 proposal/design/spec/tasks 与 Issue #199 单一声明范围一致；明确本 change 只负责 Pack-sourced treatment contract，不吸收 #196、#197、#200、#201 或 #202 的实现。
 - [ ] 0.2 执行 `openspec validate pack-sourced-practice-treatment --type change --strict --json`，修复所有 strict validation 问题；此阶段不得修改非 OpenSpec 实现文件。
 - [ ] 0.3 从最新 `origin/main` 的 `codex/pack-sourced-practice-treatment-199` 分支创建只含 OpenSpec artifacts 的初始 PR；PR 标题/正文引用 Issue #199，并明确不含 candidate fixture、runner、模型调用或结果记录。
-- [ ] 0.4 在初始 PR 创建后完成规划澄清：确认固定 `agentic-coding@0.3.0` 或改用 `0.4.0`、treatment kind/schema、query sidecar 的隐私边界、`contentDigest` 与 body SHA-256 的双身份策略，以及 baseline/三 timing node 的可观察 delivery/审计口径；把回答写回 Issue #199、`design.md` 和本文件。
+- [x] 0.4 在初始 PR 创建后完成规划澄清：需求方确认实验尚未开始，固定新发布的 `agentic-coding@0.4.0`；其余采用 `kind: retrieval`、query 仅存 private audit sidecar、`contentDigest` 与 body SHA-256 双身份、baseline/三 timing node 的最小 delivery/审计口径；结论已写回 Issue #199、`design.md` 和本文件。
 
 ## 1. 固定 Pack-sourced treatment contract
 
 - [ ] 1.1 依据已确认的规划决定，扩展/版本化 treatment schema，要求 Pack repository/ref/commit/version、Practice ID/source path、content digest/body hash、delivery form/channel、query provenance 和 applicability evidence identity；保持 baseline 与既有 skill treatment 可解析且不重写冻结语义。
-- [ ] 1.2 创建版本化 treatment manifest 与 private canonical Practice/reference，固定 `agentic-coding-v0.3.0`（或经确认的 release）及不可变 source commit；不把正文、Pack 全量内容或 private evaluator/oracle/scoring 复制到 public/Agent 输入。
+- [ ] 1.2 创建版本化 treatment manifest 与 private canonical Practice/reference，固定已确认的 `agentic-coding-v0.4.0` 及不可变 source commit；不把正文、Pack 全量内容或 private evaluator/oracle/scoring 复制到 public/Agent 输入。
 - [ ] 1.3 创建 `pack-practice-treatment/v1` provenance/applicability fixture，记录 `scope_changed` 的新兼容、并行旧新版本、回退事实与选中 Practice 的 `applies_when` 对应关系；对 evidence 和正文执行 SHA-256。
 
 ## 2. Deterministic resolver 与 delivery contract

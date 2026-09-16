@@ -23,14 +23,15 @@ Pack 更新、语义检索重排或宿主状态就会污染 timing 结论。
   内部路径推导。该变化要求 treatment 保存 Pack provenance 和正文 hash，而不是保存一个
   可漂移的本地路径。
 
-因此本 change 暂定固定 issue 已提名的 `agentic-coding@0.3.0`，而不是随最新 release
-滚动；若规划澄清决定采用 `0.4.0`，必须改写当前 OpenSpec 的固定 ref、commit、hash 和
-相关验收证据后才能实现。
+根据需求方在初始 PR 后的规划确认，本 change 固定新发布的 `agentic-coding@0.4.0`，
+而不是继续使用 issue 创建时提名的 `0.3.0`。实验尚未开始，采用最新已发布 release 不会
+改变已有实验记录；同时仍固定 tag、解析 commit、Practice ID 和内容 hash，不使用未固定的
+`latest`。
 
 ## What Changes
 
 - 增加 Pack-sourced `practice-card` treatment contract，固定 `lorelum-packs` 的
-  `agentic-coding-v0.3.0` tag、解析出的 Practice ID、来源路径、Lore `contentDigest`、
+  `agentic-coding-v0.4.0` tag、解析出的 Practice ID、来源路径、Lore `contentDigest`、
   canonical body SHA-256 和一次性自然语言 query provenance。
 - 增加只在 benchmark private runtime 可读的固定 Practice body/reference；不把 Practice
   正文、Pack 全量内容、private evaluator、oracle 或 scoring material 放入 public task、
