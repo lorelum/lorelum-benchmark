@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "staged-practice-attempt-summary.schema.json",
+  "title": "Lorelum staged Practice attempt summary v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "attempt_id", "condition_id", "delivery_node", "status", "comparable", "session_binding", "audit_events", "delivery_status", "plan_hash"],
+  "properties": {
+    "schema_version": { "const": "staged-practice-attempt-summary/v1" },
+    "attempt_id": { "type": "string", "minLength": 1 },
+    "condition_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+    "delivery_node": { "type": "string", "enum": ["task_start", "constraint_followup", "first_implementation_checkpoint"] },
+    "status": { "enum": ["completed", "failed", "unsupported", "indeterminate", "dry-run"] },
+    "comparable": { "type": "boolean" },
+    "session_binding": { "enum": ["same-session", "not-started", "resume-failed"] },
+    "termination_reason": { "type": "string", "minLength": 1 },
+    "audit_events": { "type": "integer", "minimum": 1 },
+    "delivery_status": { "enum": ["delivered", "not-declared", "failed", "unsupported", "indeterminate", "invalid-plan"] },
+    "plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

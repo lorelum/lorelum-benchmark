@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "staged-practice-delivery.schema.json",
+  "title": "Lorelum staged Practice delivery plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "candidate", "treatment", "delivery", "prompts", "execution", "plan_hash"],
+  "properties": {
+    "schema_version": { "const": "staged-practice-delivery/v1" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "source_commit", "snapshot_id"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "snapshot_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "treatment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["root", "id", "version"],
+      "properties": {
+        "root": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "version": { "type": "string", "pattern": "^v[1-9][0-9]*$" }
+      }
+    },
+    "delivery": {
+      "type": "object", "additionalProperties": false,
+      "required": ["condition_id", "delivery_node"],
+      "properties": {
+        "condition_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+        "delivery_node": { "type": "string", "enum": ["task_start", "constraint_followup", "first_implementation_checkpoint"] }
+      }
+    },
+    "prompts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["task_path", "followup_path", "task_sha256", "followup_sha256", "checkpoint_marker", "checkpoint_resume_message"],
+      "properties": {
+        "task_path": { "const": "public/task.md" },
+        "followup_path": { "const": "public/stage-2/task.md" },
+        "task_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "followup_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "checkpoint_marker": { "const": "CHECKPOINT: compatibility-slice-ready" },
+        "checkpoint_resume_message": { "type": "string", "minLength": 1 }
+      }
+    },
+    "execution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["model", "model_version", "system_prompt_hash", "tool_policy_hash", "environment", "budget"],
+      "properties": {
+        "model": { "type": "string", "minLength": 1 },
+        "model_version": { "type": "string", "minLength": 1 },
+        "system_prompt_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "tool_policy_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "environment": {
+          "type": "object", "additionalProperties": false, "required": ["id", "version"],
+          "properties": { "id": { "type": "string", "minLength": 1 }, "version": { "type": "string", "pattern": "^v[1-9][0-9]*$" } }
+        },
+        "budget": {
+          "type": "object", "additionalProperties": false, "required": ["max_turns", "max_duration_ms"],
+          "properties": { "max_turns": { "type": "integer", "minimum": 1 }, "max_duration_ms": { "type": "integer", "minimum": 1 } }
+        }
+      }
+    },
+    "plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
