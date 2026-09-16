@@ -1,7 +1,7 @@
 # llm-provider-gateway-v3-practice-candidate Specification
 
 ## Purpose
-TBD - created by archiving change llm-provider-gateway-v3-probe-generalization. Update Purpose after archive.
+定义 LLM provider gateway v3 candidate 的命名无关结构探针、真实职责边界、校准矩阵和历史回放约束，用于区分 Practice 行为而不把命名或 Judge 结果当作硬门槛。
 ## Requirements
 ### Requirement: v3 是独立 revision 且不修改 v2
 

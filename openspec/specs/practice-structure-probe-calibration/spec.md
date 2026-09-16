@@ -1,7 +1,7 @@
 # practice-structure-probe-calibration Specification
 
 ## Purpose
-TBD - created by archiving change llm-provider-gateway-v3-probe-generalization. Update Purpose after archive.
+定义职责结构探针的证据与校准边界，使探针依据 import graph、调用/数据流和模块所有权而非封闭标识符名字判定 Practice 观察结果。
 ## Requirements
 ### Requirement: 结构职责判定不得依赖标识符名字
 

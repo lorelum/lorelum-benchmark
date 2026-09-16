@@ -1,7 +1,7 @@
 # ci-runtime-modernization Specification
 
 ## Purpose
-TBD - created by archiving change ci-runtime-modernization. Update Purpose after archive.
+定义 benchmark 仓库可重建 runtime 与 CI 校验拓扑，确保工具链版本一致、pull request 校验不重复、成本分层路径可控，并保留失败诊断与正式运行边界。
 ## Requirements
 ### Requirement: Exact runtime identity is synchronized
 

@@ -1,7 +1,7 @@
 # local-pi-model-routing Specification
 
 ## Purpose
-TBD - created by archiving change local-pi-env-base-url. Update Purpose after archive.
+定义 local profile diagnostic 如何通过环境变量选择 Pi 的模型请求地址，并隔离临时 catalog，确保正式 Pi runner 与环境路由不受影响。
 ## Requirements
 ### Requirement: Local Pi model requests use the configured API address
 

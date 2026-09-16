@@ -1,7 +1,7 @@
 # async-report-lifecycle-candidate Specification
 
 ## Purpose
-TBD - created by archiving change async-report-lifecycle-candidate. Update Purpose after archive.
+定义异步报表生命周期 candidate 的公开行为和隔离边界：队列、分段进度、暂停检查点、恢复、旧新版本并行与应用回退，作为后续 Practice 时机实验的稳定 starter，不进入 active suite 或正式结果。
 ## Requirements
 ### Requirement: Candidate remains isolated from the active suite lifecycle
 The async report lifecycle artifact MUST be stored under `incubator/practice-injection/async-report-lifecycle-v1/` with lifecycle `candidate`. It MUST NOT be added to an active suite manifest, frozen task revision, formal experiment plan, or formal result record by this change.

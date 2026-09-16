@@ -1,7 +1,7 @@
 # pack-sourced-practice-treatment Specification
 
 ## Purpose
-TBD - created by archiving change pack-sourced-practice-treatment. Update Purpose after archive.
+定义从固定 Lorelum Pack release 一次性解析、校验并冻结 Practice treatment 的 provenance、内容 hash、适用性证据、条件隔离、运行时投放与审计边界。
 ## Requirements
 ### Requirement: Fixed Pack provenance and Practice identity
 
