@@ -10,11 +10,13 @@ import type {
 } from "../../../../treatments/pack-practice/v1/types";
 import { timingNodes } from "../../../../treatments/pack-practice/v1/types";
 import { sha256File, sha256Text, workspaceRoot } from "../../../../fs";
+import { assistantEventHasCheckpointMarker, checkpointMarker, hasCheckpointMarker, hasGracefulCheckpointStop } from "./checkpoint-marker";
+
+export { assistantEventHasCheckpointMarker, checkpointMarker, hasCheckpointMarker, hasGracefulCheckpointStop } from "./checkpoint-marker";
 
 export const stagedPracticeDeliverySchemaVersion = "staged-practice-delivery/v1" as const;
 export const stagedPracticeAuditSchemaVersion = "staged-practice-delivery-audit/v1" as const;
 export const stagedPracticePublicTraceSchemaVersion = "staged-practice-delivery-public/v1" as const;
-export const checkpointMarker = "CHECKPOINT: compatibility-slice-ready" as const;
 export const checkpointResumeMessage = "Continue the task after the compatibility checkpoint.";
 export const frozenCandidateSourceCommit = "74962ee0c98f7775b0eb626f7b49b878035d8778" as const;
 export const frozenCandidateSnapshotId = "ee588de3877ab91f2c1dfe8219bb7f9834671dd2a275531485f9d0630e0165d2" as const;
@@ -600,53 +602,6 @@ export async function assertRunnerOwnedWorkspace(root: string, workspace: string
 
 export async function assertRunnerOwnedArtifacts(root: string, artifacts: string): Promise<void> {
   await assertRunnerOwnedPath(root, artifacts, "private artifacts");
-}
-
-function textHasCheckpointMarker(value: unknown, marker: string): boolean {
-  return typeof value === "string" && value.split(/\r?\n/).some((line) => line.trim() === marker);
-}
-
-function assistantContentHasCheckpointMarker(value: unknown, marker: string): boolean {
-  if (typeof value === "string") return textHasCheckpointMarker(value, marker);
-  if (!Array.isArray(value)) return false;
-  return value.some((entry) => isRecord(entry) && entry.type === "text" && textHasCheckpointMarker(entry.text, marker));
-}
-
-export function assistantEventHasCheckpointMarker(value: unknown, marker: string = checkpointMarker): boolean {
-  if (!isRecord(value) || (value.type !== "message_start" && value.type !== "message_update" && value.type !== "message_end")) return false;
-  const message = value.message;
-  if (!isRecord(message) || message.role !== "assistant") return false;
-  if (assistantContentHasCheckpointMarker(message.content, marker)) return true;
-  const assistantMessageEvent = value.assistantMessageEvent;
-  if (!isRecord(assistantMessageEvent)) return false;
-  if (assistantMessageEvent.type === "text_delta" || assistantMessageEvent.type === "text_end") {
-    if (textHasCheckpointMarker(assistantMessageEvent.delta, marker) || textHasCheckpointMarker(assistantMessageEvent.content, marker)) return true;
-  }
-  return isRecord(assistantMessageEvent.partial) && assistantContentHasCheckpointMarker(assistantMessageEvent.partial.content, marker);
-}
-
-export function hasCheckpointMarker(output: string, marker = checkpointMarker): boolean {
-  return output.split(/\r?\n/).some((line) => {
-    try { return assistantEventHasCheckpointMarker(JSON.parse(line), marker); } catch { return false; }
-  });
-}
-
-export function hasGracefulCheckpointStop(output: string, marker = checkpointMarker): boolean {
-  let markerObserved = false;
-  return output.split(/\r?\n/).some((line) => {
-    try {
-      const value = JSON.parse(line) as unknown;
-      const gracefulStop = isRecord(value)
-        && value.type === "message_end"
-        && isRecord(value.message)
-        && value.message.role === "assistant"
-        && value.message.stopReason === "aborted";
-      markerObserved ||= assistantEventHasCheckpointMarker(value, marker);
-      return markerObserved && gracefulStop;
-    } catch {
-      return false;
-    }
-  });
 }
 
 export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRunOptions): Promise<StagedPracticeAttemptReport> {

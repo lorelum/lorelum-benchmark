@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { assistantEventHasCheckpointMarker, checkpointMarker } from "./staged-practice-delivery";
+import { assistantEventHasCheckpointMarker, checkpointMarker } from "./checkpoint-marker";
 
 export default function checkpointStopExtension(pi: ExtensionAPI): void {
   let stopRequested = false;
