@@ -95,6 +95,7 @@ export type StagedPracticeAttemptSummary = Readonly<{
   comparable: boolean;
   session_binding: SessionBinding;
   termination_reason?: string;
+  ordered_events: ReadonlyArray<Readonly<{ delivery_node: StagedPracticeAttemptNode; condition_id: StagedPracticeCondition; status: StagedPracticeDeliveryStatus }>>;
   audit_events: number;
   delivery_status: StagedPracticeDeliveryStatus;
   plan_hash: string;
@@ -511,6 +512,7 @@ export async function writeInvalidStagedPracticeAttempt(options: {
     comparable: false,
     session_binding: "not-started",
     termination_reason: options.reason,
+    ordered_events: [{ delivery_node: invalidPlanCondition, condition_id: invalidPlanCondition, status: "invalid-plan" }],
     audit_events: 1,
     delivery_status: "invalid-plan",
     plan_hash: planHash,
@@ -778,6 +780,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
     comparable: (status === "delivered" || status === "not-declared") && sessionBinding === "same-session",
     session_binding: sessionBinding,
     ...(reason ? { termination_reason: reason } : {}),
+    ordered_events: [{ delivery_node: node, condition_id: condition, status: deliveryStatus }],
     audit_events: 1,
     delivery_status: deliveryStatus,
     plan_hash: plan.plan_hash,
