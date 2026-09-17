@@ -1,7 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { join } from "node:path";
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import {
+  assertSeparateRoots,
+  assertRunnerOwnedArtifacts,
   checkpointMarker,
   checkpointResumeMessage,
   hashStagedPracticeDeliveryPlan,
@@ -16,6 +18,8 @@ import {
   type StagedPracticePiResult,
 } from "./staged-practice-delivery";
 import { productionStagedPracticePiAdapter } from "./staged-practice-delivery-pi-adapter";
+import checkpointStopExtension from "./checkpoint-stop-extension";
+import { executeStagedPracticeDeliveryFromFile } from "./staged-practice-delivery-cli";
 import { sha256File, workspaceRoot } from "../../../../fs";
 import type { CommandResult } from "../preflight";
 
@@ -76,7 +80,7 @@ function fakeAdapter(options: { checkpoint_observed?: boolean; resume_session_id
     transcript_path: "private/session-1.jsonl",
     stdout: input.phase === "constraint_followup" && !input.practice ? `${checkpointMarker}\n` : "",
     stderr: "",
-    ...(input.phase === "constraint_followup" ? { checkpoint_observed: options.checkpoint_observed ?? true } : {}),
+    ...(input.phase === "constraint_followup" ? { checkpoint_observed: options.checkpoint_observed ?? true, checkpoint_stop_observed: options.checkpoint_observed ?? true } : {}),
   });
   const adapter: StagedPracticePiAdapter = {
     start: async (input) => {
@@ -90,7 +94,7 @@ function fakeAdapter(options: { checkpoint_observed?: boolean; resume_session_id
     },
     resumeUntilCheckpoint: async (input) => {
       calls.push(input);
-      return { ...result(input), checkpoint_observed: options.checkpoint_observed ?? true };
+      return { ...result(input), checkpoint_observed: options.checkpoint_observed ?? true, checkpoint_stop_observed: options.checkpoint_observed ?? true };
     },
   };
   return { adapter, calls, get startHadFollowup() { return startHadFollowup; } };
@@ -125,10 +129,153 @@ test("candidate snapshot leaves are verified before workspace setup", async () =
   await expect(prepareStagedPracticeDelivery(await planFor("task_start"), root)).rejects.toThrow("snapshot leaf");
 });
 
-test("checkpoint marker matching is line-exact, including JSON event text", () => {
+test("invalid plans produce a structured invalid-plan report without invoking Pi", async () => {
+  const fake = fakeAdapter();
+  const plan = await planFor("task_start");
+  const root = await temp("invalid-plan-root");
+  const attemptRoot = join(root, ".run-workspaces", "invalid-plan");
+  await mkdir(join(root, ".run-workspaces"), { recursive: true });
+  const invalid = { ...plan, delivery: { ...plan.delivery, delivery_node: "unknown-node" } } as unknown as StagedPracticeDeliveryPlan;
+  const report = await runStagedPracticeDeliveryAttempt({
+    root,
+    plan: invalid,
+    attempt_id: "invalid-plan",
+    artifacts: join(attemptRoot, "artifacts"),
+    workspace: join(attemptRoot, "workspace"),
+    pi: fake.adapter,
+  });
+  expect(report.status).toBe("invalid-plan");
+  expect(report.delivery_status).toBe("invalid-plan");
+  expect(report.public_trace.delivery_node).toBe("invalid-plan");
+  expect(report.audit_event?.status).toBe("invalid-plan");
+  expect(fake.calls).toHaveLength(0);
+});
+
+test("CLI records malformed plan files as invalid-plan without starting Pi", async () => {
+  const root = await temp("invalid-plan-cli");
+  const planPath = join(root, "invalid-plan.json");
+  await writeFile(planPath, JSON.stringify({ schema_version: "wrong/v1" }));
+  const report = await executeStagedPracticeDeliveryFromFile({
+    plan_path: planPath,
+    attempt_id: "invalid-plan-cli",
+    artifacts: join(root, "artifacts"),
+    workspace: join(root, "workspace"),
+    dry_run: true,
+  });
+  expect(report.status).toBe("invalid-plan");
+  expect(report.audit_event?.status).toBe("invalid-plan");
+  expect(await Bun.file(report.summary_path).exists()).toBe(true);
+});
+
+test("candidate identity is anchored to the frozen #196 source and snapshot", async () => {
+  const plan = await planFor("task_start");
+  const sourceDrift = { ...plan, candidate: { ...plan.candidate, source_commit: "0".repeat(40) } } as StagedPracticeDeliveryPlan;
+  const sourcePlan = { ...sourceDrift, plan_hash: await hashStagedPracticeDeliveryPlan(sourceDrift) };
+  await expect(prepareStagedPracticeDelivery(sourcePlan)).rejects.toThrow("frozen #196 commit");
+  const snapshotDrift = { ...plan, candidate: { ...plan.candidate, snapshot_id: "0".repeat(64) } } as StagedPracticeDeliveryPlan;
+  const snapshotPlan = { ...snapshotDrift, plan_hash: await hashStagedPracticeDeliveryPlan(snapshotDrift) };
+  await expect(prepareStagedPracticeDelivery(snapshotPlan)).rejects.toThrow("frozen #196 snapshot");
+});
+
+test("workspace setup never deletes a caller-provided non-empty workspace", async () => {
+  const root = await temp("non-empty-workspace");
+  const workspace = join(root, "workspace");
+  const artifacts = join(root, "artifacts");
+  await mkdir(workspace, { recursive: true });
+  const sentinel = join(workspace, "sentinel.txt");
+  await writeFile(sentinel, "caller-owned");
+  const report = await runStagedPracticeDeliveryAttempt({
+    root: workspaceRoot,
+    plan: await planFor("task_start"),
+    attempt_id: "non-empty-workspace",
+    artifacts,
+    workspace,
+    pi: fakeAdapter().adapter,
+  });
+  expect(report.status).toBe("failed");
+  expect(await Bun.file(sentinel).text()).toBe("caller-owned");
+});
+
+test("artifact ownership rejects frozen input paths before any write", async () => {
+  const root = await temp("artifact-ownership");
+  const workspace = join(root, "workspace");
+  const before = await sha256File(join(candidatePath, "private/candidate.yaml"));
+  await expect(assertRunnerOwnedArtifacts(workspaceRoot, candidatePath)).rejects.toThrow("runner-owned");
+  expect(await sha256File(join(candidatePath, "private/candidate.yaml"))).toBe(before);
+  await expect(runStagedPracticeDeliveryAttempt({
+    root: workspaceRoot,
+    plan: await planFor("task_start"),
+    attempt_id: "artifact-ownership",
+    artifacts: candidatePath,
+    workspace,
+    pi: fakeAdapter().adapter,
+  })).rejects.toThrow("runner-owned");
+});
+
+test("physical workspace and artifact boundaries reject symlink aliases", async () => {
+  const root = await temp("symlink-boundary");
+  const workspace = join(root, "workspace");
+  const artifacts = join(root, "artifacts");
+  await mkdir(workspace, { recursive: true });
+  let linked = true;
+  try {
+    await symlink(workspace, artifacts, "junction");
+  } catch {
+    linked = false;
+  }
+  if (linked) await expect(assertSeparateRoots(workspace, artifacts)).rejects.toThrow();
+});
+
+test("checkpoint marker matching is line-exact and ignores user prompt events", () => {
   expect(hasCheckpointMarker(`prefix ${checkpointMarker} suffix`)).toBe(false);
-  expect(hasCheckpointMarker(`\n${checkpointMarker}\n`)).toBe(true);
-  expect(hasCheckpointMarker(JSON.stringify({ type: "message", text: `plan\n${checkpointMarker}\n` }))).toBe(true);
+  expect(hasCheckpointMarker(`\n${checkpointMarker}\n`)).toBe(false);
+  expect(hasCheckpointMarker(JSON.stringify({
+    type: "message_end",
+    message: { role: "user", content: [{ type: "text", text: `plan\n${checkpointMarker}\n` }] },
+  }))).toBe(false);
+  expect(hasCheckpointMarker(JSON.stringify({
+    type: "message_update",
+    message: { role: "assistant", content: [{ type: "text", text: `implementation\n${checkpointMarker}\n` }] },
+  }))).toBe(true);
+});
+
+test("checkpoint extension aborts on assistant text deltas", async () => {
+  let handler: ((event: unknown, context: { signal?: AbortSignal; abort(): void }) => void) | undefined;
+  checkpointStopExtension({
+    on: (_event: "message_update", nextHandler: typeof handler) => { handler = nextHandler; },
+  } as never);
+  let aborted = false;
+  handler?.({
+    type: "message_update",
+    message: { role: "assistant", content: [] },
+    assistantMessageEvent: { type: "text_delta", delta: `implementation\n${checkpointMarker}\n` },
+  }, { abort: () => { aborted = true; } });
+  expect(aborted).toBe(true);
+});
+
+test("checkpoint delivery requires the adapter to confirm graceful persistence", async () => {
+  const fake = fakeAdapter();
+  const root = await temp("checkpoint-no-graceful-persistence");
+  const adapter: StagedPracticePiAdapter = {
+    ...fake.adapter,
+    resumeUntilCheckpoint: async (input) => ({
+      ...(await fake.adapter.resumeUntilCheckpoint(input)),
+      checkpoint_observed: true,
+      checkpoint_stop_observed: false,
+    }),
+  };
+  const report = await runStagedPracticeDeliveryAttempt({
+    root: workspaceRoot,
+    plan: await planFor("first_implementation_checkpoint"),
+    attempt_id: "checkpoint-no-graceful-persistence",
+    artifacts: join(root, "artifacts"),
+    workspace: join(root, "workspace"),
+    pi: adapter,
+  });
+  expect(report.status).toBe("indeterminate");
+  expect(report.delivery_status).toBe("indeterminate");
+  expect(report.termination_reason).toContain("graceful stop");
+  expect(fake.calls.map((call) => call.phase)).toEqual(["task_start", "constraint_followup"]);
 });
 
 test("task_start delivers exactly once before the first Agent response", async () => {
@@ -242,10 +389,10 @@ test("frozen prompt drift is rejected before the session starts", async () => {
   const driftedWithHash = { ...drifted, plan_hash: await hashStagedPracticeDeliveryPlan(drifted) };
   const root = await temp("prompt-drift");
   const report = await runStagedPracticeDeliveryAttempt({ root: workspaceRoot, plan: driftedWithHash, attempt_id: "prompt-drift", artifacts: join(root, "artifacts"), workspace: join(root, "workspace"), pi: fake.adapter });
-  expect(report.status).toBe("failed");
+  expect(report.status).toBe("invalid-plan");
   expect(report.session_binding).toBe("not-started");
   expect(fake.calls).toHaveLength(0);
-  expect(report.delivery_status).toBe("failed");
+  expect(report.delivery_status).toBe("invalid-plan");
 });
 
 test("delivery failure after start is preserved and does not resume", async () => {
@@ -269,6 +416,29 @@ test("delivery failure after start is preserved and does not resume", async () =
   expect(report.termination_reason).toContain("delivery runtime unavailable");
 });
 
+test("production checkpoint adapter rejects a marker without a graceful persisted stop", async () => {
+  const root = await temp("stream-no-graceful-stop");
+  const workspace = join(root, "workspace");
+  const sessionDir = join(root, "sessions");
+  const logs = join(root, "logs");
+  await mkdir(workspace, { recursive: true });
+  await mkdir(sessionDir, { recursive: true });
+  const commandRunner = async (command: string[]): Promise<CommandResult> => {
+    const sessionIndex = command.indexOf("--session");
+    const sessionId = sessionIndex === -1 ? "session-1" : command[sessionIndex + 1];
+    await Bun.write(join(sessionDir, `session-${sessionId}.jsonl`), `{"type":"session","id":"${sessionId}"}\n`);
+    return { code: 0, stdout: `{"type":"session","id":"${sessionId}"}\n`, stderr: "", timedOut: false, durationMs: 1 };
+  };
+  const streamRunner = async (command: string[], _cwd: string, _timeoutMs: number, marker: string) => {
+    const sessionIndex = command.indexOf("--session");
+    const sessionId = sessionIndex === -1 ? "session-1" : command[sessionIndex + 1];
+    await Bun.write(join(sessionDir, `session-${sessionId}.jsonl`), `{"type":"session","id":"${sessionId}"}\n`);
+    return { code: 0, stdout: `{"type":"session","id":"${sessionId}"}\n${marker}\n`, stderr: "", timedOut: false, durationMs: 1, marker_observed: true, graceful_stop_observed: false };
+  };
+  const adapter = productionStagedPracticePiAdapter({ command: "pi", model: "mock/model", tools: "read", stage_budget_ms: 1_000, log_directory: logs }, commandRunner, streamRunner);
+  await expect(adapter.resumeUntilCheckpoint({ phase: "constraint_followup", workspace, session_dir: sessionDir, session_id: "session-1", prompt_path: "stage-2/task.md" })).rejects.toThrow("graceful stop");
+});
+
 test("production checkpoint adapter accepts a marker-bounded stream and keeps the private card out of argv", async () => {
   const root = await temp("stream-adapter");
   const workspace = join(root, "workspace");
@@ -289,12 +459,23 @@ test("production checkpoint adapter accepts a marker-bounded stream and keeps th
     const sessionIndex = command.indexOf("--session");
     const sessionId = sessionIndex === -1 ? "session-1" : command[sessionIndex + 1];
     await Bun.write(join(sessionDir, `session-${sessionId}.jsonl`), `{"type":"session","id":"${sessionId}"}\n`);
-    return { code: 143, stdout: `{"type":"session","id":"${sessionId}"}\n${marker}\n`, stderr: "", timedOut: false, durationMs: 1, marker_observed: true };
+    return {
+      code: 0,
+      stdout: `{"type":"session","id":"${sessionId}"}\n{"type":"message_end","message":{"role":"assistant","stopReason":"aborted","content":[{"type":"text","text":"implementation\n${marker}\n"}]}}\n`,
+      stderr: "",
+      timedOut: false,
+      durationMs: 1,
+      marker_observed: true,
+      graceful_stop_observed: true,
+    };
   };
   const adapter = productionStagedPracticePiAdapter({ command: "pi", model: "mock/model", tools: "read", stage_budget_ms: 1_000, log_directory: logs }, commandRunner, streamRunner);
   const result = await adapter.resumeUntilCheckpoint({ phase: "constraint_followup", workspace, session_dir: sessionDir, session_id: "session-1", prompt_path: "stage-2/task.md" });
   expect(result.session_id).toBe("session-1");
   expect(result.checkpoint_observed).toBe(true);
+  expect(result.checkpoint_stop_observed).toBe(true);
   expect(calls).toHaveLength(1);
+  expect(calls[0]).toContain("--extension");
+  expect(calls[0]?.join(" ")).toContain("checkpoint-stop-extension.ts");
   expect(calls[0]?.join(" ")).not.toContain(checkpointMarker);
 });

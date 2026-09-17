@@ -1,5 +1,5 @@
-import { appendFile, cp, lstat, mkdir, readdir, rm, writeFile } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { appendFile, cp, lstat, mkdir, readdir, realpath, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { loadPackPracticeTreatment, deliverPreparedPractice } from "../../../../treatments/pack-practice/v1/contract";
 import type {
   DeliveryStatus,
@@ -16,8 +16,12 @@ export const stagedPracticeAuditSchemaVersion = "staged-practice-delivery-audit/
 export const stagedPracticePublicTraceSchemaVersion = "staged-practice-delivery-public/v1" as const;
 export const checkpointMarker = "CHECKPOINT: compatibility-slice-ready" as const;
 export const checkpointResumeMessage = "Continue the task after the compatibility checkpoint.";
+export const frozenCandidateSourceCommit = "74962ee0c98f7775b0eb626f7b49b878035d8778" as const;
+export const frozenCandidateSnapshotId = "ee588de3877ab91f2c1dfe8219bb7f9834671dd2a275531485f9d0630e0165d2" as const;
+export const invalidPlanCondition = "invalid-plan" as const;
 export const stagedPracticeConditions = ["task_start", "constraint_followup", "first_implementation_checkpoint"] as const;
 export type StagedPracticeCondition = string;
+export type StagedPracticeAttemptNode = TimingNode | typeof invalidPlanCondition;
 
 const sha256Pattern = /^[a-f0-9]{64}$/;
 const commitPattern = /^[a-f0-9]{40}$/;
@@ -58,7 +62,7 @@ export type StagedPracticePublicTrace = Readonly<{
   schema_version: typeof stagedPracticePublicTraceSchemaVersion;
   attempt_id: string;
   condition_id: StagedPracticeCondition;
-  delivery_node: TimingNode;
+  delivery_node: StagedPracticeAttemptNode;
   treatment_version: string;
   status: StagedPracticeDeliveryStatus;
   session_binding: SessionBinding;
@@ -70,7 +74,7 @@ export type StagedPracticeAuditEvent = Readonly<{
   candidate: Readonly<{ source_commit: string; snapshot_id: string }>;
   attempt_id: string;
   condition_id: StagedPracticeCondition;
-  delivery_node: TimingNode;
+  delivery_node: StagedPracticeAttemptNode;
   session_id: string | null;
   treatment: Readonly<{ id: string; version: string }>;
   provenance: PackProvenance | null;
@@ -86,8 +90,8 @@ export type StagedPracticeAttemptSummary = Readonly<{
   schema_version: "staged-practice-attempt-summary/v1";
   attempt_id: string;
   condition_id: StagedPracticeCondition;
-  delivery_node: TimingNode;
-  status: "completed" | "failed" | "unsupported" | "indeterminate" | "dry-run";
+  delivery_node: StagedPracticeAttemptNode;
+  status: "completed" | "failed" | "unsupported" | "indeterminate" | "invalid-plan" | "dry-run";
   comparable: boolean;
   session_binding: SessionBinding;
   termination_reason?: string;
@@ -100,7 +104,7 @@ export type StagedPracticeAttemptReport = Readonly<{
   schema_version: "staged-practice-attempt/v1";
   attempt_id: string;
   condition_id: StagedPracticeCondition;
-  delivery_node: TimingNode;
+  delivery_node: StagedPracticeAttemptNode;
   status: StagedPracticeAttemptSummary["status"];
   comparable: boolean;
   session_binding: SessionBinding;
@@ -140,6 +144,7 @@ export type StagedPracticePiResult = Readonly<{
   stdout: string;
   stderr: string;
   checkpoint_observed?: boolean;
+  checkpoint_stop_observed?: boolean;
 }>;
 
 export type StagedPracticePiAdapter = Readonly<{
@@ -381,6 +386,8 @@ async function validateCandidate(plan: StagedPracticeDeliveryPlan, root: string)
 
 export async function prepareStagedPracticeDelivery(planValue: unknown, root = workspaceRoot): Promise<ValidatedStagedPracticeInputs> {
   const plan = await parseStagedPracticeDeliveryPlan(planValue);
+  if (plan.candidate.source_commit !== frozenCandidateSourceCommit) fail("candidate source_commit is not the frozen #196 commit");
+  if (plan.candidate.snapshot_id !== frozenCandidateSnapshotId) fail("candidate snapshot_id is not the frozen #196 snapshot");
   const candidate = await validateCandidate(plan, root);
   const treatmentRoot = resolveWithin(root, plan.treatment.root, "treatment.root");
   if (plan.candidate.path !== "incubator/practice-injection/async-report-lifecycle-v1") fail("candidate path is not the #196 async-report candidate");
@@ -391,14 +398,14 @@ export async function prepareStagedPracticeDelivery(planValue: unknown, root = w
   return Object.freeze({ plan, candidate_path: candidate.path, treatment_root: treatmentRoot, prepared, task_prompt: candidate.taskPrompt, followup_prompt: candidate.followupPrompt });
 }
 
-function makePublicTrace(options: { attempt_id: string; condition_id: StagedPracticeCondition; delivery_node: TimingNode; treatment_version: string; status: StagedPracticeDeliveryStatus; session_binding: SessionBinding }): StagedPracticePublicTrace {
+function makePublicTrace(options: { attempt_id: string; condition_id: StagedPracticeCondition; delivery_node: StagedPracticeAttemptNode; treatment_version: string; status: StagedPracticeDeliveryStatus; session_binding: SessionBinding }): StagedPracticePublicTrace {
   return Object.freeze({ schema_version: stagedPracticePublicTraceSchemaVersion, ...options });
 }
 
 function makeAuditEvent(options: {
   attempt_id: string;
   condition_id: StagedPracticeCondition;
-  delivery_node: TimingNode;
+  delivery_node: StagedPracticeAttemptNode;
   session_id: string | null;
   plan_hash: string;
   candidate: Readonly<{ source_commit: string; snapshot_id: string }>;
@@ -433,7 +440,7 @@ async function writeArtifacts(options: {
   event: StagedPracticeAuditEvent;
   summary: StagedPracticeAttemptSummary;
   publicTrace: StagedPracticePublicTrace;
-}): Promise<{ auditPath: string; summaryPath: string; publicTracePath: string }> {
+}): Promise<{ audit_path: string; summary_path: string; public_trace_path: string }> {
   await mkdir(options.artifacts, { recursive: true });
   const auditPath = join(options.artifacts, "delivery-audit.jsonl");
   const summaryPath = join(options.artifacts, "delivery-summary.json");
@@ -441,18 +448,96 @@ async function writeArtifacts(options: {
   await appendFile(auditPath, `${JSON.stringify(options.event)}\n`);
   await writeFile(summaryPath, `${JSON.stringify(options.summary, null, 2)}\n`);
   await writeFile(publicTracePath, `${JSON.stringify(options.publicTrace, null, 2)}\n`);
-  return { auditPath, summaryPath, publicTracePath };
+  return { audit_path: auditPath, summary_path: summaryPath, public_trace_path: publicTracePath };
 }
 
 function reportStatus(status: StagedPracticeDeliveryStatus, dryRun = false): StagedPracticeAttemptSummary["status"] {
   if (dryRun) return "dry-run";
   if (status === "unsupported") return "unsupported";
   if (status === "indeterminate") return "indeterminate";
+  if (status === "invalid-plan") return "invalid-plan";
   return status === "delivered" || status === "not-declared" ? "completed" : "failed";
 }
 
-async function setUpAttempt(candidatePath: string, workspace: string, taskPrompt: string): Promise<void> {
-  await rm(workspace, { recursive: true, force: true });
+export async function hashStagedPracticePlanInput(value: unknown): Promise<string> {
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value) ?? "undefined";
+  } catch {
+    serialized = String(value);
+  }
+  return sha256Text(serialized);
+}
+
+export async function writeInvalidStagedPracticeAttempt(options: {
+  root?: string;
+  attempt_id: string;
+  artifacts: string;
+  workspace: string;
+  reason: string;
+  plan_hash?: string;
+}): Promise<StagedPracticeAttemptReport> {
+  const root = options.root ?? workspaceRoot;
+  await assertSeparateRoots(options.workspace, options.artifacts);
+  await assertRunnerOwnedArtifacts(root, options.artifacts);
+  const planHash = options.plan_hash ?? await hashStagedPracticePlanInput({ schema_version: stagedPracticeDeliverySchemaVersion, reason: options.reason });
+  const event = makeAuditEvent({
+    attempt_id: options.attempt_id,
+    condition_id: invalidPlanCondition,
+    delivery_node: invalidPlanCondition,
+    session_id: null,
+    plan_hash: planHash,
+    candidate: { source_commit: frozenCandidateSourceCommit, snapshot_id: frozenCandidateSnapshotId },
+    prepared: null,
+    status: "invalid-plan",
+    acknowledged: false,
+    acknowledgement: "not-observed",
+    reason: options.reason,
+  });
+  const publicTrace = makePublicTrace({
+    attempt_id: options.attempt_id,
+    condition_id: invalidPlanCondition,
+    delivery_node: invalidPlanCondition,
+    treatment_version: "v1",
+    status: "invalid-plan",
+    session_binding: "not-started",
+  });
+  const summary: StagedPracticeAttemptSummary = {
+    schema_version: "staged-practice-attempt-summary/v1",
+    attempt_id: options.attempt_id,
+    condition_id: invalidPlanCondition,
+    delivery_node: invalidPlanCondition,
+    status: "invalid-plan",
+    comparable: false,
+    session_binding: "not-started",
+    termination_reason: options.reason,
+    audit_events: 1,
+    delivery_status: "invalid-plan",
+    plan_hash: planHash,
+  };
+  const paths = await writeArtifacts({ artifacts: options.artifacts, event, summary, publicTrace });
+  return Object.freeze({
+    schema_version: "staged-practice-attempt/v1",
+    attempt_id: options.attempt_id,
+    condition_id: invalidPlanCondition,
+    delivery_node: invalidPlanCondition,
+    status: "invalid-plan",
+    comparable: false,
+    session_binding: "not-started",
+    public_trace: publicTrace,
+    audit_event: event,
+    delivery_status: "invalid-plan",
+    plan_hash: planHash,
+    ...paths,
+    termination_reason: options.reason,
+  });
+}
+
+async function setUpAttempt(root: string, candidatePath: string, workspace: string, taskPrompt: string): Promise<void> {
+  await assertRunnerOwnedWorkspace(root, workspace);
+  await mkdir(workspace, { recursive: true });
+  const entries = await readdir(workspace, { withFileTypes: true });
+  if (entries.length > 0) throw new Error("runner-owned workspace must be empty before setup");
   await mkdir(join(workspace, "app"), { recursive: true });
   await cp(join(candidatePath, "public/starter/app"), join(workspace, "app"), { recursive: true });
   await writeFile(join(workspace, "task.md"), taskPrompt);
@@ -464,38 +549,126 @@ async function appendFollowup(workspace: string, followupPrompt: string): Promis
 }
 
 function ensureSession(expected: string | undefined, actual: string): void {
+  if (actual.length === 0) throw new Error("Pi session id is missing");
   if (expected && expected !== actual) throw new Error(`session resumed as ${actual} instead of ${expected}`);
 }
 
-function assertSeparateRoots(workspace: string, artifacts: string): void {
-  const workspaceRoot = resolve(workspace);
-  const artifactsRoot = resolve(artifacts);
-  const artifactsFromWorkspace = relative(workspaceRoot, artifactsRoot);
-  const workspaceFromArtifacts = relative(artifactsRoot, workspaceRoot);
-  const contained = (value: string) => { const normalized = value.replaceAll(String.fromCharCode(92), "/"); return normalized === "" || (!normalized.startsWith("../") && !isAbsolute(normalized)); };
-  if (contained(artifactsFromWorkspace) || contained(workspaceFromArtifacts)) throw new Error("workspace and private artifacts must be separate non-nested roots");
+async function physicalPath(path: string): Promise<string> {
+  let current = resolve(path);
+  const missing: string[] = [];
+  while (true) {
+    try {
+      const info = await lstat(current);
+      if (info.isSymbolicLink()) throw new Error(`path boundary must not be a symlink or junction: ${path}`);
+      return resolve(await realpath(current), ...missing.reverse());
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+      const parent = dirname(current);
+      if (parent === current) throw error;
+      missing.push(basename(current));
+      current = parent;
+    }
+  }
 }
 
-function containsCheckpointMarker(value: unknown, marker: string): boolean {
-  if (typeof value === "string") return value.split(/\r?\n/).some((line) => line.trim() === marker);
-  if (Array.isArray(value)) return value.some((entry) => containsCheckpointMarker(entry, marker));
-  if (isRecord(value)) return Object.values(value).some((entry) => containsCheckpointMarker(entry, marker));
-  return false;
+function isContainedPath(base: string, target: string): boolean {
+  const fromBase = relative(base, target).replaceAll(String.fromCharCode(92), "/");
+  return fromBase === "" || (!fromBase.startsWith("../") && !isAbsolute(fromBase));
+}
+
+export async function assertSeparateRoots(workspace: string, artifacts: string): Promise<void> {
+  const workspacePath = await physicalPath(workspace);
+  const artifactsPath = await physicalPath(artifacts);
+  if (isContainedPath(workspacePath, artifactsPath) || isContainedPath(artifactsPath, workspacePath)) {
+    throw new Error("workspace and private artifacts must be separate non-nested roots");
+  }
+}
+
+async function assertRunnerOwnedPath(root: string, path: string, label: string): Promise<void> {
+  const scratchPath = await physicalPath(join(root, ".run-workspaces"));
+  const targetPath = await physicalPath(path);
+  if (!isContainedPath(scratchPath, targetPath) || targetPath === scratchPath) {
+    throw new Error(`${label} must be a descendant of the runner-owned .run-workspaces root`);
+  }
+}
+
+export async function assertRunnerOwnedWorkspace(root: string, workspace: string): Promise<void> {
+  await assertRunnerOwnedPath(root, workspace, "workspace");
+}
+
+export async function assertRunnerOwnedArtifacts(root: string, artifacts: string): Promise<void> {
+  await assertRunnerOwnedPath(root, artifacts, "private artifacts");
+}
+
+function textHasCheckpointMarker(value: unknown, marker: string): boolean {
+  return typeof value === "string" && value.split(/\r?\n/).some((line) => line.trim() === marker);
+}
+
+function assistantContentHasCheckpointMarker(value: unknown, marker: string): boolean {
+  if (typeof value === "string") return textHasCheckpointMarker(value, marker);
+  if (!Array.isArray(value)) return false;
+  return value.some((entry) => isRecord(entry) && entry.type === "text" && textHasCheckpointMarker(entry.text, marker));
+}
+
+export function assistantEventHasCheckpointMarker(value: unknown, marker: string = checkpointMarker): boolean {
+  if (!isRecord(value) || (value.type !== "message_start" && value.type !== "message_update" && value.type !== "message_end")) return false;
+  const message = value.message;
+  if (!isRecord(message) || message.role !== "assistant") return false;
+  if (assistantContentHasCheckpointMarker(message.content, marker)) return true;
+  const assistantMessageEvent = value.assistantMessageEvent;
+  if (!isRecord(assistantMessageEvent)) return false;
+  if (assistantMessageEvent.type === "text_delta" || assistantMessageEvent.type === "text_end") {
+    if (textHasCheckpointMarker(assistantMessageEvent.delta, marker) || textHasCheckpointMarker(assistantMessageEvent.content, marker)) return true;
+  }
+  return isRecord(assistantMessageEvent.partial) && assistantContentHasCheckpointMarker(assistantMessageEvent.partial.content, marker);
 }
 
 export function hasCheckpointMarker(output: string, marker = checkpointMarker): boolean {
   return output.split(/\r?\n/).some((line) => {
-    if (line.trim() === marker) return true;
-    try { return containsCheckpointMarker(JSON.parse(line), marker); } catch { return false; }
+    try { return assistantEventHasCheckpointMarker(JSON.parse(line), marker); } catch { return false; }
+  });
+}
+
+export function hasGracefulCheckpointStop(output: string, marker = checkpointMarker): boolean {
+  let markerObserved = false;
+  return output.split(/\r?\n/).some((line) => {
+    try {
+      const value = JSON.parse(line) as unknown;
+      const gracefulStop = isRecord(value)
+        && value.type === "message_end"
+        && isRecord(value.message)
+        && value.message.role === "assistant"
+        && value.message.stopReason === "aborted";
+      markerObserved ||= assistantEventHasCheckpointMarker(value, marker);
+      return markerObserved && gracefulStop;
+    } catch {
+      return false;
+    }
   });
 }
 
 export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRunOptions): Promise<StagedPracticeAttemptReport> {
   const root = options.root ?? workspaceRoot;
-  const node = options.plan.delivery.delivery_node;
-  const condition = options.plan.delivery.condition_id;
-  assertSeparateRoots(options.workspace, options.artifacts);
-  const treatmentVersion = options.plan.treatment.version;
+  let plan: StagedPracticeDeliveryPlan;
+  try {
+    plan = await parseStagedPracticeDeliveryPlan(options.plan);
+  } catch (error) {
+    return writeInvalidStagedPracticeAttempt({
+      root,
+      attempt_id: options.attempt_id,
+      artifacts: options.artifacts,
+      workspace: options.workspace,
+      plan_hash: await hashStagedPracticePlanInput(options.plan),
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  await assertSeparateRoots(options.workspace, options.artifacts);
+  await assertRunnerOwnedWorkspace(root, options.workspace);
+  await assertRunnerOwnedArtifacts(root, options.artifacts);
+  const node = plan.delivery.delivery_node;
+  const condition = plan.delivery.condition_id;
+  const treatmentVersion = plan.treatment.version;
   let prepared: PreparedPackPractice | null = null;
   let sessionId: string | null = null;
   let status: StagedPracticeDeliveryStatus = "failed";
@@ -504,10 +677,12 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
   let reason: string | undefined;
   let transcriptPath: string | undefined;
   let acknowledgement: StagedPracticeAuditEvent["acknowledgement"] = "not-observed";
+  let preflightComplete = false;
   try {
-    const inputs = await prepareStagedPracticeDelivery(options.plan, root);
+    const inputs = await prepareStagedPracticeDelivery(plan, root);
     prepared = inputs.prepared;
-    await setUpAttempt(inputs.candidate_path, options.workspace, inputs.task_prompt);
+    preflightComplete = true;
+    await setUpAttempt(root, inputs.candidate_path, options.workspace, inputs.task_prompt);
     if (options.dry_run) {
       deliveryStatus = "indeterminate";
       status = "indeterminate";
@@ -527,6 +702,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
         throw new Error(reason);
       }
       const start = await pi.start({ phase: "task_start", workspace: options.workspace, session_dir: sessionDir, prompt_path: "task.md", ...(startDelivery.payload ? { practice: startDelivery.payload } : {}) });
+      ensureSession(undefined, start.session_id);
       sessionId = start.session_id;
       sessionBinding = "same-session";
       transcriptPath = start.transcript_path;
@@ -558,10 +734,10 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
         const checkpoint = await pi.resumeUntilCheckpoint({ phase: "constraint_followup", workspace: options.workspace, session_dir: sessionDir, prompt_path: "stage-2/task.md", session_id: start.session_id });
         ensureSession(start.session_id, checkpoint.session_id);
         transcriptPath = checkpoint.transcript_path;
-        if (!checkpoint.checkpoint_observed) {
+        if (!checkpoint.checkpoint_observed || checkpoint.checkpoint_stop_observed !== true) {
           deliveryStatus = "indeterminate";
           status = "indeterminate";
-          reason = "checkpoint marker was not observed";
+          reason = "checkpoint marker and persisted graceful stop were not both observed";
         } else {
           const checkpointDelivery = deliver();
           if (checkpointDelivery.trace.status !== "delivered" && checkpointDelivery.trace.status !== "not-declared") {
@@ -569,7 +745,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
             status = checkpointDelivery.trace.status;
             reason = "checkpoint delivery was not confirmed";
           } else {
-            const resumed = await pi.resume({ phase: "checkpoint_resume", workspace: options.workspace, session_dir: sessionDir, session_id: start.session_id, checkpoint_resume_message: inputs.plan.prompts.checkpoint_resume_message, ...(checkpointDelivery.payload ? { practice: checkpointDelivery.payload } : {}) });
+            const resumed = await pi.resume({ phase: "checkpoint_resume", workspace: options.workspace, session_dir: sessionDir, session_id: start.session_id, checkpoint_resume_message: plan.prompts.checkpoint_resume_message, ...(checkpointDelivery.payload ? { practice: checkpointDelivery.payload } : {}) });
             ensureSession(start.session_id, resumed.session_id);
             transcriptPath = resumed.transcript_path;
             deliveryStatus = checkpointDelivery.trace.status;
@@ -581,11 +757,17 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
     }
   } catch (error) {
     reason = error instanceof Error ? error.message : String(error);
-    if (sessionId) sessionBinding = "resume-failed";
-    status = reason.includes("unsupported") ? "unsupported" : status === "indeterminate" ? "indeterminate" : "failed";
+    if (!preflightComplete) {
+      status = "invalid-plan";
+      deliveryStatus = "invalid-plan";
+      sessionBinding = "not-started";
+    } else {
+      if (sessionId) sessionBinding = "resume-failed";
+      status = reason.includes("unsupported") ? "unsupported" : status === "indeterminate" ? "indeterminate" : "failed";
+    }
   }
   const acknowledged = deliveryStatus === "delivered";
-  const event = makeAuditEvent({ attempt_id: options.attempt_id, condition_id: condition, delivery_node: node, session_id: sessionId, plan_hash: options.plan.plan_hash, candidate: options.plan.candidate, prepared, status: deliveryStatus, acknowledged, acknowledgement, reason });
+  const event = makeAuditEvent({ attempt_id: options.attempt_id, condition_id: condition, delivery_node: node, session_id: sessionId, plan_hash: plan.plan_hash, candidate: plan.candidate, prepared, status: deliveryStatus, acknowledged, acknowledgement, reason });
   const publicTrace = makePublicTrace({ attempt_id: options.attempt_id, condition_id: condition, delivery_node: node, treatment_version: treatmentVersion, status: deliveryStatus, session_binding: sessionBinding });
   const summary: StagedPracticeAttemptSummary = {
     schema_version: "staged-practice-attempt-summary/v1",
@@ -598,8 +780,8 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
     ...(reason ? { termination_reason: reason } : {}),
     audit_events: 1,
     delivery_status: deliveryStatus,
-    plan_hash: options.plan.plan_hash,
+    plan_hash: plan.plan_hash,
   };
   const paths = await writeArtifacts({ artifacts: options.artifacts, event, summary, publicTrace });
-  return Object.freeze({ schema_version: "staged-practice-attempt/v1", attempt_id: options.attempt_id, condition_id: condition, delivery_node: node, status: summary.status, comparable: summary.comparable, session_binding: sessionBinding, public_trace: publicTrace, audit_event: event, delivery_status: deliveryStatus, plan_hash: options.plan.plan_hash, ...paths, ...(transcriptPath ? { transcript_path: transcriptPath } : {}), ...(reason ? { termination_reason: reason } : {}) });
+  return Object.freeze({ schema_version: "staged-practice-attempt/v1", attempt_id: options.attempt_id, condition_id: condition, delivery_node: node, status: summary.status, comparable: summary.comparable, session_binding: sessionBinding, public_trace: publicTrace, audit_event: event, delivery_status: deliveryStatus, plan_hash: plan.plan_hash, ...paths, ...(transcriptPath ? { transcript_path: transcriptPath } : {}), ...(reason ? { termination_reason: reason } : {}) });
 }

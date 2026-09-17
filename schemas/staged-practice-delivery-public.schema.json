@@ -9,7 +9,7 @@
     "schema_version": { "const": "staged-practice-delivery-public/v1" },
     "attempt_id": { "type": "string", "minLength": 1 },
     "condition_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
-    "delivery_node": { "type": "string", "enum": ["task_start", "constraint_followup", "first_implementation_checkpoint"] },
+    "delivery_node": { "type": "string", "enum": ["task_start", "constraint_followup", "first_implementation_checkpoint", "invalid-plan"] },
     "treatment_version": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
     "status": { "enum": ["delivered", "not-declared", "failed", "unsupported", "indeterminate", "invalid-plan"] },
     "session_binding": { "enum": ["same-session", "not-started", "resume-failed"] }

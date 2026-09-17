@@ -1,14 +1,14 @@
 import { resolve } from "node:path";
 import { piCommand, preflightPiAndModel } from "../preflight";
 import { workspaceRoot } from "../../../../fs";
-import { parseStagedPracticeDeliveryPlan, prepareStagedPracticeDelivery, runStagedPracticeDeliveryAttempt, type StagedPracticeAttemptReport, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
+import { hashStagedPracticePlanInput, parseStagedPracticeDeliveryPlan, prepareStagedPracticeDelivery, runStagedPracticeDeliveryAttempt, writeInvalidStagedPracticeAttempt, type StagedPracticeAttemptReport, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
 import { productionStagedPracticePiAdapter } from "./staged-practice-delivery-pi-adapter";
 
-async function readPlanFile(path: string): Promise<StagedPracticeDeliveryPlan> {
+async function readPlanFile(path: string): Promise<unknown> {
   const value = path.endsWith(".yaml") || path.endsWith(".yml")
     ? Bun.YAML.parse(await Bun.file(path).text())
     : JSON.parse(await Bun.file(path).text());
-  return parseStagedPracticeDeliveryPlan(value);
+  return value;
 }
 
 export async function executeStagedPracticeDeliveryFromFile(options: {
@@ -19,12 +19,49 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
   root?: string;
   dry_run?: boolean;
 }): Promise<StagedPracticeAttemptReport> {
-  const plan = await readPlanFile(resolve(options.plan_path));
   const dryRun = options.dry_run === true;
   const root = options.root ?? workspaceRoot;
-  await prepareStagedPracticeDelivery(plan, root);
+  const artifacts = resolve(options.artifacts);
+  const workspace = resolve(options.workspace);
+  let planValue: unknown;
+  try {
+    planValue = await readPlanFile(resolve(options.plan_path));
+  } catch (error) {
+    return writeInvalidStagedPracticeAttempt({
+      root,
+      attempt_id: options.attempt_id,
+      artifacts,
+      workspace,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  }
+  let plan: StagedPracticeDeliveryPlan;
+  try {
+    plan = await parseStagedPracticeDeliveryPlan(planValue);
+  } catch (error) {
+    return writeInvalidStagedPracticeAttempt({
+      root,
+      attempt_id: options.attempt_id,
+      artifacts,
+      workspace,
+      plan_hash: await hashStagedPracticePlanInput(planValue),
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  }
+  try {
+    await prepareStagedPracticeDelivery(plan, root);
+  } catch (error) {
+    return writeInvalidStagedPracticeAttempt({
+      root,
+      attempt_id: options.attempt_id,
+      artifacts,
+      workspace,
+      plan_hash: plan.plan_hash,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  }
   if (!dryRun && Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") throw new Error("real staged Practice delivery requires LORELUM_LOCAL_EXPERIMENT=1");
-  const command = dryRun ? undefined : await piCommand(workspaceRoot);
+  const command = dryRun ? undefined : await piCommand(root);
   if (command) await preflightPiAndModel(command, plan.execution.model);
   const pi = dryRun
     ? undefined
@@ -33,14 +70,14 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
         model: plan.execution.model,
         tools: "read,bash,edit,write,grep,find,ls",
         stage_budget_ms: plan.execution.budget.max_duration_ms,
-        log_directory: resolve(options.artifacts),
+        log_directory: artifacts,
       });
   return runStagedPracticeDeliveryAttempt({
     root,
     plan,
     attempt_id: options.attempt_id,
-    artifacts: resolve(options.artifacts),
-    workspace: resolve(options.workspace),
+    artifacts,
+    workspace,
     dry_run: dryRun,
     pi,
   });

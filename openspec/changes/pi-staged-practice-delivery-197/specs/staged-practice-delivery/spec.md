@@ -90,9 +90,9 @@ and the session id remains unchanged
 
 #### Scenario: Checkpoint delivery follows the marker
 
-- **WHEN** the stream-bounded adapter observes the complete checkpoint marker
-- **THEN** it stops the current response at that boundary, delivers the card,
-and resumes the same session only afterward
+- **WHEN** the assistant-only stream adapter observes the complete checkpoint marker
+- **THEN** it gracefully aborts and observes the persisted assistant message boundary,
+delivers the card, and resumes the same session only afterward
 
 ### Requirement: Delivery is condition-scoped and isolated
 
@@ -140,11 +140,10 @@ markers are absent
 ### Requirement: Unsupported or failed delivery MUST fail closed
 
 The runner MUST fail closed when a node is unavailable, an acknowledgement is
-missing, the card payload is corrupted, a session cannot continue, or isolation
-is violated. It MUST record an explicit `failed`, `unsupported`, or
-`indeterminate` outcome, preserve prior private events, and MUST NOT silently
-move delivery to another node, deliver a fallback card, or claim treatment
-exposure.
+missing, the card payload is corrupted, a session cannot continue, a plan is invalid, or isolation
+is violated. It MUST record an explicit `failed`, `unsupported`, `indeterminate`, or
+`invalid-plan` outcome, preserve prior private events, and MUST NOT silently move delivery to
+another node, deliver a fallback card, or claim treatment exposure.
 
 #### Scenario: Node is unsupported
 

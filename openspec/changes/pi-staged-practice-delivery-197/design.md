@@ -70,8 +70,11 @@ would no longer be a timing-only comparison, so it is explicitly rejected.
 
 The controller calls the existing Pi v2 adapter once for start and uses the same session id for
 continuations. `constraint_followup` resumes with the frozen stage-2 prompt. For the checkpoint
-condition, the adapter provides a stream-bounded call that ends at the exact marker; the next resume
-carries the private card. A new long-lived stdin protocol is unnecessary, and a new session is invalid.
+condition, the adapter loads the versioned checkpoint-stop extension only for the boundary call. The
+extension watches assistant text updates, requests a graceful Pi abort when the exact marker appears,
+and the adapter waits for an assistant `message_end` with `stopReason: aborted` so Pi persists the
+partial assistant message before the next same-session resume carries the private card. A new
+long-lived stdin protocol is unnecessary, and a new session is invalid.
 
 ### 3. Treatment validation is delegated to the #199 contract
 
@@ -90,13 +93,19 @@ materialized as a file.
 ### 5. Fail closed at the first unverifiable boundary
 
 A missing marker, unsupported node, payload drift, resume mismatch, delivery error, or isolation
-violation terminates the attempt. The controller records the reason and preserves prior events, but
-never silently moves delivery to a later/earlier node or claims successful treatment exposure.
+violation terminates the attempt. Invalid plans are recorded as `invalid-plan` without starting Pi.
+The controller records the reason and preserves prior events, but never silently moves delivery to a
+later/earlier node or claims successful treatment exposure.
+
+Workspace setup is non-destructive: the caller must provide an empty descendant of the
+runner-owned `.run-workspaces/` root. Root separation is checked against physical paths so symlink
+and junction aliases cannot route private runtime files into the Agent workspace.
 
 ## Risks / Trade-offs
 
-- **[Risk] Pi output continues after the checkpoint marker.** → Use a stream-bounded adapter that
-  stops at the marker and resumes the same persisted session; test marker-before-card ordering.
+- **[Risk] Pi output continues after the checkpoint marker or the partial turn is not persisted.** →
+  Use the versioned assistant-only stop extension, require graceful abort/message persistence, and
+  resume only after the persisted checkpoint boundary is observed.
 - **[Risk] A treatment resolver accidentally exposes private identity.** → Keep the resolver payload
   and audit sidecar private; serialize public trace through an allowlist and test forbidden markers.
 - **[Risk] A runtime plan drifts from the frozen experiment inputs.** → Hash-bind candidate snapshot,
