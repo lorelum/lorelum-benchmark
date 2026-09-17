@@ -24,4 +24,4 @@
 - [x] 4.1 Run `bun run validate` after every benchmark code/schema contract slice and record the exact result.
 - [x] 4.2 Run `git diff --check` and the repository public/private leakage audit; confirm only declared `src/benchmark/`, `schemas/`, docs and OpenSpec paths changed.
 - [x] 4.3 Complete the required first-round `ai-code-review` and, only after all must-fix findings are resolved, the independent `thermo-nuclear-code-quality-review`; save both findings-to-rule mappings under this change's verification evidence.
-- [ ] 4.4 Update the same issue/PR with implementation boundary, focused validation commands, unexecuted model/formal-run items, residual risks, and candidate-only lifecycle status; do not create a suite revision or formal record.
+- [x] 4.4 Update the same issue/PR with implementation boundary, focused validation commands, unexecuted model/formal-run items, residual risks, and candidate-only lifecycle status; do not create a suite revision or formal record.
