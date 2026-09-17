@@ -7,6 +7,7 @@ import {
   localPiApiKey,
   localPiModelArgument,
   localPiModelBaseUrl,
+  localPiShellPath,
   modelCatalogWithDeepSeekBaseUrl,
 } from "./local-pi-model-catalog";
 
@@ -49,6 +50,17 @@ test("local Pi API key prefers the explicit variable and falls back to judge/dee
   expect(localPiApiKey({ DEEPSEEK_API_KEY: "deepseek-key" })).toBe("deepseek-key");
 });
 
+test("local Pi shell path is opt-in and must point at an existing file", async () => {
+  const root = await mkdtemp(join(tmpdir(), "lorelum-local-pi-shell-"));
+  const shell = join(root, "bash.exe");
+  await writeFile(shell, "");
+
+  expect(await localPiShellPath({})).toBeUndefined();
+  expect(await localPiShellPath({ LORELUM_PI_SHELL_PATH: `  ${shell}  ` })).toBe(shell);
+  await expect(localPiShellPath({ LORELUM_PI_SHELL_PATH: join(root, "missing-bash.exe") })).rejects.toThrow("LORELUM_PI_SHELL_PATH");
+  await expect(localPiShellPath({ LORELUM_PI_SHELL_PATH: root })).rejects.toThrow("LORELUM_PI_SHELL_PATH");
+});
+
 test("temporary local catalog is isolated and cleanup removes it", async () => {
   const sourceRoot = await mkdtemp(join(tmpdir(), "lorelum-local-pi-source-"));
   const sourcePath = join(sourceRoot, "models-store.json");
@@ -67,4 +79,18 @@ test("temporary local catalog is isolated and cleanup removes it", async () => {
   expect(modelsConfig.providers["lorelum-local"].models[0].id).toBe("deepseek/deepseek-v4-flash");
   override!.cleanup();
   await expect(access(override!.directory)).rejects.toThrow();
+});
+
+test("temporary local catalog pins the configured shell path without touching the user profile", async () => {
+  const sourceRoot = await mkdtemp(join(tmpdir(), "lorelum-local-pi-shell-source-"));
+  await writeFile(join(sourceRoot, "models-store.json"), JSON.stringify({ deepseek: { models: [] } }));
+
+  const override = await configureLocalPiModelCatalog(
+    { LORELUM_PI_BASE_URL: "https://pi.example/v1", PI_CODING_AGENT_DIR: sourceRoot },
+    undefined,
+    "D:\\Git\\bin\\bash.exe",
+  );
+  expect(override).toBeDefined();
+  expect(JSON.parse(await readFile(join(override!.directory, "settings.json"), "utf8"))).toEqual({ shellPath: "D:\\Git\\bin\\bash.exe" });
+  override!.cleanup();
 });

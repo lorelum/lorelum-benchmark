@@ -1,5 +1,5 @@
 import { rmSync } from "node:fs";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, stat } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -31,6 +31,19 @@ export function localPiModelBaseUrl(env: EnvLike = Bun.env): string | undefined 
 
 export function localPiApiKey(env: EnvLike = Bun.env): string | undefined {
   return env.LORELUM_PI_API_KEY?.trim() || env.LORELUM_JUDGE_API_KEY?.trim() || env.DEEPSEEK_API_KEY?.trim() || undefined;
+}
+
+/** Explicit bash interpreter for the local experiment host; Pi otherwise falls back to whatever `bash` resolves to on PATH. */
+export async function localPiShellPath(env: EnvLike = Bun.env): Promise<string | undefined> {
+  const configured = env.LORELUM_PI_SHELL_PATH?.trim();
+  if (!configured) return undefined;
+  try {
+    const info = await stat(configured);
+    if (!info.isFile()) throw new Error("not a file");
+  } catch (error) {
+    throw new Error(`LORELUM_PI_SHELL_PATH is not a usable file: ${configured} (${error instanceof Error ? error.message : String(error)})`);
+  }
+  return configured;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -93,6 +106,7 @@ function userModelStorePath(env: EnvLike): string {
 export async function configureLocalPiModelCatalog(
   env: EnvLike = Bun.env,
   requestedModel?: string,
+  shellPath?: string,
 ): Promise<LocalPiCatalogOverride | undefined> {
   const baseUrl = localPiModelBaseUrl(env);
   if (!baseUrl) return undefined;
@@ -112,6 +126,7 @@ export async function configureLocalPiModelCatalog(
   );
   const customModelConfig = customLocalGatewayModelConfig(requestedModel, baseUrl);
   if (customModelConfig) await Bun.write(join(directory, "models.json"), JSON.stringify(customModelConfig, null, 2) + "\n");
+  if (shellPath) await Bun.write(join(directory, "settings.json"), JSON.stringify({ shellPath }, null, 2) + "\n");
 
   return {
     directory,

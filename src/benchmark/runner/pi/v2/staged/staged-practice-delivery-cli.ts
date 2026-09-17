@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { piCommand, preflightPiAndModel } from "../preflight";
-import { configureLocalPiModelCatalog, localPiApiKey, localPiModelArgument } from "../local-pi-model-catalog";
+import { configureLocalPiModelCatalog, localPiApiKey, localPiModelArgument, localPiShellPath } from "../local-pi-model-catalog";
 import { workspaceRoot } from "../../../../fs";
 import { hashStagedPracticePlanInput, parseStagedPracticeDeliveryPlan, prepareStagedPracticeDelivery, runStagedPracticeDeliveryAttempt, writeInvalidStagedPracticeAttempt, type StagedPracticeAttemptReport, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
 import { productionStagedPracticePiAdapter } from "./staged-practice-delivery-pi-adapter";
@@ -63,7 +63,8 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
   }
   if (!dryRun && Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") throw new Error("real staged Practice delivery requires LORELUM_LOCAL_EXPERIMENT=1");
   const piModel = localPiModelArgument(plan.execution.model);
-  const localPiCatalog = dryRun ? undefined : await configureLocalPiModelCatalog(Bun.env, plan.execution.model);
+  const localPiShell = dryRun ? undefined : await localPiShellPath();
+  const localPiCatalog = dryRun ? undefined : await configureLocalPiModelCatalog(Bun.env, plan.execution.model, localPiShell);
   if (localPiCatalog) {
     Bun.env.PI_CODING_AGENT_DIR = localPiCatalog.directory;
     Bun.env.PI_OFFLINE = "1";
