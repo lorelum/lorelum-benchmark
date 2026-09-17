@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { piCommand, preflightPiAndModel } from "../preflight";
+import { configureLocalPiModelCatalog, localPiApiKey } from "../local-pi-model-catalog";
 import { workspaceRoot } from "../../../../fs";
 import { hashStagedPracticePlanInput, parseStagedPracticeDeliveryPlan, prepareStagedPracticeDelivery, runStagedPracticeDeliveryAttempt, writeInvalidStagedPracticeAttempt, type StagedPracticeAttemptReport, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
 import { productionStagedPracticePiAdapter } from "./staged-practice-delivery-pi-adapter";
@@ -61,26 +62,37 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
     });
   }
   if (!dryRun && Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") throw new Error("real staged Practice delivery requires LORELUM_LOCAL_EXPERIMENT=1");
-  const command = dryRun ? undefined : await piCommand(root);
-  if (command) await preflightPiAndModel(command, plan.execution.model);
-  const pi = dryRun
-    ? undefined
-    : productionStagedPracticePiAdapter({
-        command,
-        model: plan.execution.model,
-        tools: "read,bash,edit,write,grep,find,ls",
-        stage_budget_ms: plan.execution.budget.max_duration_ms,
-        log_directory: artifacts,
-      });
-  return runStagedPracticeDeliveryAttempt({
-    root,
-    plan,
-    attempt_id: options.attempt_id,
-    artifacts,
-    workspace,
-    dry_run: dryRun,
-    pi,
-  });
+  const localPiCatalog = dryRun ? undefined : await configureLocalPiModelCatalog();
+  if (localPiCatalog) {
+    Bun.env.PI_CODING_AGENT_DIR = localPiCatalog.directory;
+    Bun.env.PI_OFFLINE = "1";
+  }
+  const localPiKey = dryRun ? undefined : localPiApiKey();
+  if (localPiKey) Bun.env.DEEPSEEK_API_KEY = localPiKey;
+  try {
+    const command = dryRun ? undefined : await piCommand(root);
+    if (command) await preflightPiAndModel(command, plan.execution.model);
+    const pi = dryRun
+      ? undefined
+      : productionStagedPracticePiAdapter({
+          command,
+          model: plan.execution.model,
+          tools: "read,bash,edit,write,grep,find,ls",
+          stage_budget_ms: plan.execution.budget.max_duration_ms,
+          log_directory: artifacts,
+        });
+    return runStagedPracticeDeliveryAttempt({
+      root,
+      plan,
+      attempt_id: options.attempt_id,
+      artifacts,
+      workspace,
+      dry_run: dryRun,
+      pi,
+    });
+  } finally {
+    localPiCatalog?.cleanup();
+  }
 }
 
 function argumentValue(args: string[], name: string): string | undefined {
