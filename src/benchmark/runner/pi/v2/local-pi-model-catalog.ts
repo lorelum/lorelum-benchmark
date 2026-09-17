@@ -37,6 +37,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+export const localPiProviderId = "lorelum-local" as const;
+
+export function localPiModelArgument(model: string): string {
+  return model.startsWith("deepseek/") ? localPiProviderId + "/" + model : model;
+}
+
 export function modelCatalogWithDeepSeekBaseUrl(value: unknown, baseUrl: string): unknown {
   if (!isRecord(value)) throw new Error("Pi model catalog must be a JSON object");
   const catalog = structuredClone(value) as Record<string, unknown>;
@@ -49,6 +55,36 @@ export function modelCatalogWithDeepSeekBaseUrl(value: unknown, baseUrl: string)
   return catalog;
 }
 
+function customLocalGatewayModelConfig(requestedModel: string | undefined, baseUrl: string): Record<string, unknown> | undefined {
+  const modelId = requestedModel?.trim();
+  if (!modelId?.startsWith("deepseek/")) return undefined;
+  return {
+    providers: {
+      [localPiProviderId]: {
+        baseUrl,
+        api: "openai-completions",
+        apiKey: "$DEEPSEEK_API_KEY",
+        models: [{
+          id: modelId,
+          name: modelId + " (internal)",
+          reasoning: true,
+          input: ["text"],
+          contextWindow: 1_000_000,
+          maxTokens: 384_000,
+          compat: {
+            supportsStore: false,
+            supportsDeveloperRole: false,
+            maxTokensField: "max_tokens",
+            requiresReasoningContentOnAssistantMessages: true,
+            thinkingFormat: "deepseek",
+          },
+          thinkingLevelMap: { minimal: null, low: "low", medium: null, high: "high", max: "max" },
+        }],
+      },
+    },
+  };
+}
+
 function userModelStorePath(env: EnvLike): string {
   const root = env.PI_CODING_AGENT_DIR?.trim() || join(homedir(), ".pi", "agent");
   return join(root, "models-store.json");
@@ -56,6 +92,7 @@ function userModelStorePath(env: EnvLike): string {
 
 export async function configureLocalPiModelCatalog(
   env: EnvLike = Bun.env,
+  requestedModel?: string,
 ): Promise<LocalPiCatalogOverride | undefined> {
   const baseUrl = localPiModelBaseUrl(env);
   if (!baseUrl) return undefined;
@@ -73,6 +110,8 @@ export async function configureLocalPiModelCatalog(
     join(directory, "models-store.json"),
     `${JSON.stringify(modelCatalogWithDeepSeekBaseUrl(catalog, baseUrl), null, 2)}\n`,
   );
+  const customModelConfig = customLocalGatewayModelConfig(requestedModel, baseUrl);
+  if (customModelConfig) await Bun.write(join(directory, "models.json"), JSON.stringify(customModelConfig, null, 2) + "\n");
 
   return {
     directory,

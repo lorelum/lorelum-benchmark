@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { piCommand, preflightPiAndModel } from "../preflight";
-import { configureLocalPiModelCatalog, localPiApiKey } from "../local-pi-model-catalog";
+import { configureLocalPiModelCatalog, localPiApiKey, localPiModelArgument } from "../local-pi-model-catalog";
 import { workspaceRoot } from "../../../../fs";
 import { hashStagedPracticePlanInput, parseStagedPracticeDeliveryPlan, prepareStagedPracticeDelivery, runStagedPracticeDeliveryAttempt, writeInvalidStagedPracticeAttempt, type StagedPracticeAttemptReport, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
 import { productionStagedPracticePiAdapter } from "./staged-practice-delivery-pi-adapter";
@@ -62,7 +62,8 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
     });
   }
   if (!dryRun && Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") throw new Error("real staged Practice delivery requires LORELUM_LOCAL_EXPERIMENT=1");
-  const localPiCatalog = dryRun ? undefined : await configureLocalPiModelCatalog();
+  const piModel = localPiModelArgument(plan.execution.model);
+  const localPiCatalog = dryRun ? undefined : await configureLocalPiModelCatalog(Bun.env, plan.execution.model);
   if (localPiCatalog) {
     Bun.env.PI_CODING_AGENT_DIR = localPiCatalog.directory;
     Bun.env.PI_OFFLINE = "1";
@@ -71,17 +72,17 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
   if (localPiKey) Bun.env.DEEPSEEK_API_KEY = localPiKey;
   try {
     const command = dryRun ? undefined : await piCommand(root);
-    if (command) await preflightPiAndModel(command, plan.execution.model);
+    if (command) await preflightPiAndModel(command, piModel);
     const pi = dryRun
       ? undefined
       : productionStagedPracticePiAdapter({
           command,
-          model: plan.execution.model,
+          model: piModel,
           tools: "read,bash,edit,write,grep,find,ls",
           stage_budget_ms: plan.execution.budget.max_duration_ms,
           log_directory: artifacts,
         });
-    return runStagedPracticeDeliveryAttempt({
+    return await runStagedPracticeDeliveryAttempt({
       root,
       plan,
       attempt_id: options.attempt_id,

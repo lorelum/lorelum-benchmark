@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   configureLocalPiModelCatalog,
   localPiApiKey,
+  localPiModelArgument,
   localPiModelBaseUrl,
   modelCatalogWithDeepSeekBaseUrl,
 } from "./local-pi-model-catalog";
@@ -34,6 +35,10 @@ test("catalog override changes only DeepSeek model base URLs", () => {
   expect(result.deepseek.models[1].baseUrl).toBe("https://other.example");
 });
 
+test("custom gateway model arguments keep the logical model id while selecting a private Pi provider", () => {
+  expect(localPiModelArgument("deepseek/deepseek-v4-flash")).toBe("lorelum-local/deepseek/deepseek-v4-flash");
+  expect(localPiModelArgument("openai/gpt-5")).toBe("openai/gpt-5");
+});
 
 test("local Pi API key prefers the explicit variable and falls back to judge/deepseek config", () => {
   expect(localPiApiKey({})).toBeUndefined();
@@ -54,9 +59,12 @@ test("temporary local catalog is isolated and cleanup removes it", async () => {
   const override = await configureLocalPiModelCatalog({
     LORELUM_JUDGE_BASE_URL: "https://judge.example/v1",
     PI_CODING_AGENT_DIR: sourceRoot,
-  });
+  }, "deepseek/deepseek-v4-flash");
   expect(override).toBeDefined();
   expect(await readFile(join(override!.directory, "models-store.json"), "utf8")).toContain("https://judge.example/v1");
+  const modelsConfig = JSON.parse(await readFile(join(override!.directory, "models.json"), "utf8"));
+  expect(modelsConfig.providers["lorelum-local"]).toMatchObject({ baseUrl: "https://judge.example/v1", api: "openai-completions", apiKey: "$DEEPSEEK_API_KEY" });
+  expect(modelsConfig.providers["lorelum-local"].models[0].id).toBe("deepseek/deepseek-v4-flash");
   override!.cleanup();
   await expect(access(override!.directory)).rejects.toThrow();
 });
