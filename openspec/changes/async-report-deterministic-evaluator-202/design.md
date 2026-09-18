@@ -28,31 +28,33 @@ Issue #202 要为 `incubator/practice-injection/async-report-lifecycle-v1/` 建�
 新增 evaluator 位于：
 
 ```text
-incubator/practice-injection/async-report-lifecycle-v1/private/evaluator/v1/
-  evaluate.ts
-  evaluator.yaml
-  identity.ts
-  result.ts
-  harness.ts
-  checks/
-    lifecycle.ts
-    compatibility.ts
-    concurrency.ts
-  oracle.yaml
-  fixtures/
-    manifest.yaml
-    reference/
-    equivalent/
-    negative/<check-id>/
-  calibration/
-    run.ts
-  snapshot.json
-  *.test.ts
+incubator/practice-injection/async-report-lifecycle-evaluator-v1/
+  private/
+    snapshot.json
+    evaluator/v1/
+      evaluate.ts
+      evaluator.yaml
+      identity.ts
+      result.ts
+      harness.ts
+      checks/
+        lifecycle.ts
+        compatibility.ts
+      oracle.yaml
+      fixtures/
+        manifest.yaml
+        reference/
+        equivalent/
+        negative/<check-id>/
+      calibration/
+        run.ts
+      snapshot.json
+      *.test.ts
 ```
 
-`evaluator.yaml` 固定 candidate id、#196 source commit、snapshot id、oracle 和 evaluation result schema。`snapshot.json` 列出除自身外的 evaluator source、oracle、fixture manifest 与检查模块 SHA-256；fixture overlay 的 SHA-256 由 `fixtures/manifest.yaml` 独立记录。既有 `private/candidate.yaml` 与 `private/snapshot.json` 保持逐字节不变。
+`evaluator.yaml` 固定 candidate id、#196 source commit、snapshot id、oracle 和 evaluation result schema。`private/evaluator/v1/snapshot.json` 列出除自身和 focused tests 外的 evaluator source、oracle、fixture manifest 与检查模块 SHA-256；fixture overlay 的 SHA-256 由 `fixtures/manifest.yaml` 独立记录。仓库既有 snapshot discovery 还要求每个 `incubator/<track>/<package>/private/snapshot.json` 可验证，因此 sibling package 的外层 snapshot 冻结整个 evaluator 包，内层 snapshot 仍由 evaluator runtime 用于 v1 source identity。既有 #196 `private/candidate.yaml` 与 `private/snapshot.json` 保持逐字节不变。
 
-选择该方案是为了保持 #197 已锚定的 candidate 身份，同时让 evaluator 具备自己的版本、hash 与演进边界。把 evaluator 写回 #196 snapshot 或复用 suite 的 structured/v2 evaluator 都要求改变已合并的 candidate 身份或把 candidate 伪装成正式 task，因此不采用。v1 在 #202 PR 合并时冻结；之后任何检查、oracle、fixture 或结果语义变化都必须创建 `private/evaluator/v2/`。
+选择该方案是为了保持 #197 已锚定的 candidate 身份，同时让 evaluator 具备自己的版本、hash 与演进边界。Evaluator 位于相邻私有包，而不是 #196 candidate 目录内部；#197 的 staged runner 会把 candidate 目录的实际文件集合与该 snapshot 精确比较，向 candidate 目录新增文件会让已合并 runner 报 `candidate snapshot file set does not match`。把 evaluator 写回 #196 snapshot 或复用 suite 的 structured/v2 evaluator 都要求改变已合并的 candidate 身份或把 candidate 伪装成正式 task，因此不采用。v1 在 #202 PR 合并时冻结；之后任何检查、oracle、fixture 或结果语义变化都必须创建 `private/evaluator/v2/`。
 
 ### 2. evaluator 只执行黑盒行为，不读取实现结构
 
@@ -145,6 +147,7 @@ evaluator 运行前先验证：
 - candidate id、source commit 和 snapshot id 与 #196 固定值完全匹配；
 - `oracle.yaml` 与 fixtures manifest 可解析且 check id 集合完整；
 - fixture overlay 和 evaluator source snapshot 的 hash 与 manifest 一致；
+- sibling package 外层 snapshot 保持完整，并由仓库 `bun run validate` 独立验证；
 - 运行环境具备 Bun，且不能通过环境变量关闭身份检查。
 
 任何一项失败都返回 `indeterminate`。candidate workspace 会被 Agent 修改，因此 evaluator 不要求它与 #196 snapshot 全量一致；它验证的是 evaluator 自身记录的任务锚点、fixture base 和 private source identity。v1 在 #202 PR 合并时冻结，之后修改检查、oracle mapping、fixture 或 evaluator 行为必须创建 `private/evaluator/v2/`。
@@ -162,7 +165,7 @@ evaluator invocations 对 timing conditions 完全相同，不接收 condition m
 接入方式固定为私有自包含 CLI：
 
 ```text
-bun run <repo>/incubator/practice-injection/async-report-lifecycle-v1/private/evaluator/v1/evaluate.ts <agent-app-root>
+bun run <repo>/incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/evaluate.ts <agent-app-root>
 ```
 
 本 change 不修改根 `package.json`，也不修改 #197 runner；#201 preflight 在后续独立 change 中显式调用该路径。
@@ -187,7 +190,7 @@ bun run <repo>/incubator/practice-injection/async-report-lifecycle-v1/private/ev
 - 验收面固定为 candidate public entrypoints、外部 HTTP API/worker CLI 与持久化字节行为；不检查内部目录、类名、函数名或模块结构。
 - `public-starter` 必须通过 lifecycle、progress、pause 与 resume 检查，并分别在 old/new overlap 的 unknown-field preservation 与 rollback fail-closed 上失败。
 - evaluator 输出固定为 `pass|fail|indeterminate` 与 exit code `0|1|2`；不调用 LLM，不使用加权分数，不把 `indeterminate` 当作低分。
-- evaluator 使用独立 `private/evaluator/v1/` 身份，不修改 #196 candidate snapshot 或 #197 anchor。
+- evaluator 使用相邻私有包中的 `private/evaluator/v1/` 身份，不修改 #196 candidate snapshot 或 #197 anchor。
 - private fixtures 使用分层 parent：reference 从 public-starter 取得最小修复，equivalent 从 public-starter 独立实现，negative 从 reference 只注入一个 mutation；每个 overlay 只存变更文件与 SHA-256。
 - #200 只可读取 evaluator version、overall status 与稳定 check id 集合，不得读取逐 check status/reason 或任何 private oracle、fixture、source。
 - 精确错误 code 只在公开契约已经声明时断言；summary 文案不参与判定。

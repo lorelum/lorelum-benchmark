@@ -1,0 +1,150 @@
+version: 1
+checks:
+  lifecycle-queued-processing-completed:
+    public_requirement: Report lifecycle exposes queued, processing, and completed states.
+    failure_reason: lifecycle-progression-violated
+  lifecycle-failure-and-retry:
+    public_requirement: Failure preserves the checkpoint and retry continues from persisted progress.
+    failure_reason: failure-retry-violated
+  progress-persistence:
+    public_requirement: Persisted progress survives a server process restart.
+    failure_reason: persisted-progress-not-visible
+  pause-at-checkpoint:
+    public_requirement: Pause applies at the next checkpoint instead of interrupting immediately.
+    failure_reason: checkpoint-pause-violated
+  resume-preserves-progress:
+    public_requirement: Resume keeps completed segments and continues processing.
+    failure_reason: resume-reset-progress
+  v1-v2-overlap-preserves-safe-state:
+    public_requirement: v1 continues processing safe v2 state without dropping unknown top-level fields.
+    failure_reason: overlap-dropped-safe-state
+  rollback-preserves-extension-fields:
+    public_requirement: A v1-only path preserves safe state or rejects without modifying it.
+    failure_reason: rollback-corrupted-state
+  unsafe-state-preserved-and-rejected:
+    public_requirement: Corrupt, missing, id-mismatched, or unsupported state is rejected without replacement.
+    failure_reason: unsafe-state-was-overwritten
+  concurrent-workers-serialize-progress:
+    public_requirement: Concurrent worker transitions do not lose persisted progress.
+    failure_reason: concurrent-update-lost
+fixtures:
+  public-starter:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: fail
+    rollback-preserves-extension-fields: fail
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  reference:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  equivalent:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  negative/lifecycle-queued-processing-completed:
+    lifecycle-queued-processing-completed: fail
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  negative/lifecycle-failure-and-retry:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: fail
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  negative/progress-persistence:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: fail
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  negative/pause-at-checkpoint:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: fail
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  negative/resume-preserves-progress:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: fail
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  negative/v1-v2-overlap-preserves-safe-state:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: fail
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  negative/rollback-preserves-extension-fields:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: fail
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: pass
+  negative/unsafe-state-preserved-and-rejected:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: fail
+    concurrent-workers-serialize-progress: pass
+  negative/concurrent-workers-serialize-progress:
+    lifecycle-queued-processing-completed: pass
+    lifecycle-failure-and-retry: pass
+    progress-persistence: pass
+    pause-at-checkpoint: pass
+    resume-preserves-progress: pass
+    v1-v2-overlap-preserves-safe-state: pass
+    rollback-preserves-extension-fields: pass
+    unsafe-state-preserved-and-rejected: pass
+    concurrent-workers-serialize-progress: fail

@@ -2,7 +2,7 @@
 
 ### Requirement: Evaluator is versioned and bound to the immutable candidate identity
 
-The deterministic evaluator MUST live under `incubator/practice-injection/async-report-lifecycle-v1/private/evaluator/v1/` and MUST bind to candidate id `async-report-lifecycle-v1`, source commit `74962ee0c98f7775b0eb626f7b49b878035d8778`, and candidate snapshot id `ee588de3877ab91f2c1dfe8219bb7f9834671dd2a275531485f9d0630e0165d2`. It MUST have its own versioned source snapshot, oracle mapping, and fixture provenance. v1 MUST freeze when the #202 PR is merged; changing evaluator behavior, oracle mapping, fixture content, or result meaning after that point MUST create a new evaluator version rather than rewrite v1.
+The deterministic evaluator MUST live under `incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/` and MUST bind to candidate id `async-report-lifecycle-v1`, source commit `74962ee0c98f7775b0eb626f7b49b878035d8778`, and candidate snapshot id `ee588de3877ab91f2c1dfe8219bb7f9834671dd2a275531485f9d0630e0165d2`. The sibling package location keeps the #196 candidate file set unchanged for #197's exact snapshot check. The evaluator MUST have its own versioned source snapshot, oracle mapping, and fixture provenance; because repository snapshot discovery requires every incubator package to carry `private/snapshot.json`, the sibling package MUST also carry an outer package snapshot while the nested evaluator snapshot remains the runtime v1 source identity. v1 MUST freeze when the #202 PR is merged; changing evaluator behavior, oracle mapping, fixture content, or result meaning after that point MUST create a new evaluator version rather than rewrite v1.
 
 #### Scenario: Candidate identity matches the frozen anchor
 
@@ -121,7 +121,7 @@ For a declared failure behavior, the evaluator MUST assert an exact error code o
 
 The evaluator MUST accept only the candidate workspace and private fixture/evaluator inputs needed to execute the deterministic checks. It MUST NOT receive or inspect timing condition, delivery node, Pack provenance, Practice id, treatment content, Judge rubric, or model output. The same evaluator command MUST be valid for every timing condition. Private oracle assertions, fixture contents, evaluator source, and internal paths MUST remain outside agent workspaces, public traces, and JudgeAgent input. A stable check id and hard-gate status summary MAY be referenced through the private orchestration boundary.
 
-The evaluator MUST be exposed as a private self-contained CLI at `private/evaluator/v1/evaluate.ts <agent-app-root>`. This change MUST NOT add a root package script or modify the #197 runner. #201 MAY retain the complete evaluator result in private artifacts, but #200 MUST receive only evaluator version, overall status, and the check id set.
+The evaluator MUST be exposed as a private self-contained CLI at `incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/evaluate.ts <agent-app-root>`. This change MUST NOT add a root package script or modify the #197 runner. #201 MAY retain the complete evaluator result in private artifacts, but #200 MUST receive only evaluator version, overall status, and the check id set.
 
 #### Scenario: Timing conditions share one hard gate
 
@@ -145,7 +145,7 @@ The evaluator MUST be exposed as a private self-contained CLI at `private/evalua
 
 ### Requirement: The evaluator remains a candidate-only validation artifact
 
-This change MUST NOT register the candidate in an active suite, freeze a task revision, create a formal record, call a model, or alter the public task/starter or #197/#199/#200 artifacts. It MUST NOT add a root package script. Validation MUST run without external network or model calls and MUST include deterministic calibration, identity/snapshot verification, public/private leakage audit, `bun run validate`, and `git diff --check`.
+This change MUST NOT register the candidate in an active suite, freeze a task revision, create a formal record, call a model, or alter the public task/starter or #197/#199/#200 artifacts. It MUST NOT add a root package script. Validation MUST run without external network or model calls and MUST include deterministic calibration, identity/snapshot verification for both evaluator and package snapshots, public/private leakage audit, `bun run validate`, and `git diff --check`.
 
 #### Scenario: Offline validation succeeds
 

@@ -1,0 +1,19 @@
+schema_version: async-report-deterministic-evaluator/v1
+evaluator_version: v1
+candidate:
+  id: async-report-lifecycle-v1
+  source_commit: 74962ee0c98f7775b0eb626f7b49b878035d8778
+  snapshot_id: ee588de3877ab91f2c1dfe8219bb7f9834671dd2a275531485f9d0630e0165d2
+oracle: oracle.yaml
+fixtures: fixtures/manifest.yaml
+snapshot: snapshot.json
+checks:
+  - lifecycle-queued-processing-completed
+  - lifecycle-failure-and-retry
+  - progress-persistence
+  - pause-at-checkpoint
+  - resume-preserves-progress
+  - v1-v2-overlap-preserves-safe-state
+  - rollback-preserves-extension-fields
+  - unsafe-state-preserved-and-rejected
+  - concurrent-workers-serialize-progress
