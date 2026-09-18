@@ -5,7 +5,9 @@ import { join } from "node:path";
 import {
   configureLocalPiModelCatalog,
   localPiApiKey,
+  localPiModelArgument,
   localPiModelBaseUrl,
+  localPiShellPath,
   modelCatalogWithDeepSeekBaseUrl,
 } from "./local-pi-model-catalog";
 
@@ -34,6 +36,10 @@ test("catalog override changes only DeepSeek model base URLs", () => {
   expect(result.deepseek.models[1].baseUrl).toBe("https://other.example");
 });
 
+test("custom gateway model arguments keep the logical model id while selecting a private Pi provider", () => {
+  expect(localPiModelArgument("deepseek/deepseek-v4-flash")).toBe("lorelum-local/deepseek/deepseek-v4-flash");
+  expect(localPiModelArgument("openai/gpt-5")).toBe("openai/gpt-5");
+});
 
 test("local Pi API key prefers the explicit variable and falls back to judge/deepseek config", () => {
   expect(localPiApiKey({})).toBeUndefined();
@@ -42,6 +48,17 @@ test("local Pi API key prefers the explicit variable and falls back to judge/dee
   expect(localPiApiKey({ LORELUM_JUDGE_API_KEY: "judge-key" })).toBe("judge-key");
   expect(localPiApiKey({ LORELUM_JUDGE_API_KEY: "judge-key", LORELUM_PI_API_KEY: "pi-key" })).toBe("pi-key");
   expect(localPiApiKey({ DEEPSEEK_API_KEY: "deepseek-key" })).toBe("deepseek-key");
+});
+
+test("local Pi shell path is opt-in and must point at an existing file", async () => {
+  const root = await mkdtemp(join(tmpdir(), "lorelum-local-pi-shell-"));
+  const shell = join(root, "bash.exe");
+  await writeFile(shell, "");
+
+  expect(await localPiShellPath({})).toBeUndefined();
+  expect(await localPiShellPath({ LORELUM_PI_SHELL_PATH: `  ${shell}  ` })).toBe(shell);
+  await expect(localPiShellPath({ LORELUM_PI_SHELL_PATH: join(root, "missing-bash.exe") })).rejects.toThrow("LORELUM_PI_SHELL_PATH");
+  await expect(localPiShellPath({ LORELUM_PI_SHELL_PATH: root })).rejects.toThrow("LORELUM_PI_SHELL_PATH");
 });
 
 test("temporary local catalog is isolated and cleanup removes it", async () => {
@@ -54,9 +71,26 @@ test("temporary local catalog is isolated and cleanup removes it", async () => {
   const override = await configureLocalPiModelCatalog({
     LORELUM_JUDGE_BASE_URL: "https://judge.example/v1",
     PI_CODING_AGENT_DIR: sourceRoot,
-  });
+  }, "deepseek/deepseek-v4-flash");
   expect(override).toBeDefined();
   expect(await readFile(join(override!.directory, "models-store.json"), "utf8")).toContain("https://judge.example/v1");
+  const modelsConfig = JSON.parse(await readFile(join(override!.directory, "models.json"), "utf8"));
+  expect(modelsConfig.providers["lorelum-local"]).toMatchObject({ baseUrl: "https://judge.example/v1", api: "openai-completions", apiKey: "$DEEPSEEK_API_KEY" });
+  expect(modelsConfig.providers["lorelum-local"].models[0].id).toBe("deepseek/deepseek-v4-flash");
   override!.cleanup();
   await expect(access(override!.directory)).rejects.toThrow();
+});
+
+test("temporary local catalog pins the configured shell path without touching the user profile", async () => {
+  const sourceRoot = await mkdtemp(join(tmpdir(), "lorelum-local-pi-shell-source-"));
+  await writeFile(join(sourceRoot, "models-store.json"), JSON.stringify({ deepseek: { models: [] } }));
+
+  const override = await configureLocalPiModelCatalog(
+    { LORELUM_PI_BASE_URL: "https://pi.example/v1", PI_CODING_AGENT_DIR: sourceRoot },
+    undefined,
+    "D:\\Git\\bin\\bash.exe",
+  );
+  expect(override).toBeDefined();
+  expect(JSON.parse(await readFile(join(override!.directory, "settings.json"), "utf8"))).toEqual({ shellPath: "D:\\Git\\bin\\bash.exe" });
+  override!.cleanup();
 });

@@ -31,7 +31,7 @@ export function parseSessionHeader(stdout: string): string {
   throw new PiStageError("Pi JSON stream did not open with a session header");
 }
 
-async function findTranscript(sessionDir: string, sessionId: string): Promise<string> {
+export async function findTranscript(sessionDir: string, sessionId: string): Promise<string> {
   const candidates: string[] = [];
   const walk = async (current: string): Promise<void> => {
     for (const entry of await readdir(current, { withFileTypes: true })) {

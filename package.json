@@ -14,6 +14,7 @@
     "pi:v1": "bun run src/benchmark/runner/pi/v1/execute.ts",
     "test:pi:v2": "bun test src/benchmark/runner/pi/v2",
     "test:sandbox": "bun run src/benchmark/runner/pi/v2/sandbox-preflight.ts",
+    "pi:staged-practice": "bun run src/benchmark/runner/pi/v2/staged/staged-practice-delivery-cli.ts",
     "test:local-sandbox": "bun run src/benchmark/runner/pi/v2/local-sandbox-preflight.ts",
     "test:realistic-repo": "bun run src/benchmark/calibrate-realistic-suite.ts",
     "calibrate:realistic-repo": "bun run src/benchmark/calibrate-realistic-suite.ts",

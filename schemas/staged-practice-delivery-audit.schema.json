@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "staged-practice-delivery-audit.schema.json",
+  "title": "Lorelum staged Practice delivery audit event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_hash", "candidate", "attempt_id", "condition_id", "delivery_node", "session_id", "treatment", "provenance", "practice_id", "card_sha256", "acknowledged", "acknowledgement", "status"],
+  "properties": {
+    "schema_version": { "const": "staged-practice-delivery-audit/v1" },
+    "plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "candidate": {
+      "type": "object", "additionalProperties": false, "required": ["source_commit", "snapshot_id"],
+      "properties": { "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" }, "snapshot_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+    },
+    "attempt_id": { "type": "string", "minLength": 1 },
+    "condition_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+    "delivery_node": { "type": "string", "enum": ["task_start", "constraint_followup", "first_implementation_checkpoint", "invalid-plan"] },
+    "session_id": { "type": ["string", "null"] },
+    "treatment": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version"],
+      "properties": { "id": { "type": "string", "minLength": 1 }, "version": { "type": "string", "pattern": "^v[1-9][0-9]*$" } }
+    },
+    "provenance": {
+      "type": ["object", "null"], "additionalProperties": false,
+      "required": ["repository", "ref", "version", "commit", "practice_id", "source_path", "content_digest", "source_sha256", "card_sha256"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 }, "ref": { "type": "string", "minLength": 1 }, "version": { "type": "string", "minLength": 1 }, "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" }, "practice_id": { "type": "string", "minLength": 1 }, "source_path": { "type": "string", "minLength": 1 }, "content_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "source_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "card_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "practice_id": { "type": ["string", "null"] },
+    "card_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "acknowledged": { "type": "boolean" },
+    "acknowledgement": { "enum": ["task-start", "constraint-followup", "checkpoint-marker", "not-declared", "not-observed"] },
+    "status": { "enum": ["delivered", "not-declared", "failed", "unsupported", "indeterminate", "invalid-plan"] },
+    "reason": { "type": "string", "minLength": 1 }
+  }
+}
