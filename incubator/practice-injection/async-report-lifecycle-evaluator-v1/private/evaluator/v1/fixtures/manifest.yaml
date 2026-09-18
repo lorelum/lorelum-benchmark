@@ -1,0 +1,67 @@
+version: 1
+base:
+  candidate_id: async-report-lifecycle-v1
+  source_commit: 74962ee0c98f7775b0eb626f7b49b878035d8778
+  snapshot_id: ee588de3877ab91f2c1dfe8219bb7f9834671dd2a275531485f9d0630e0165d2
+  public_starter: ../../../../async-report-lifecycle-v1/public/starter/app
+fixtures:
+  public-starter:
+    parent: null
+    overlay: null
+    files:
+      {}
+  reference:
+    parent: public-starter
+    overlay: fixtures/reference
+    files:
+      src/report-service.ts: 11dd68e2d177f08d7714de2e59e72d4304db4bf7bbf69ea5f8cfd0b6ab821bdc
+  equivalent:
+    parent: public-starter
+    overlay: fixtures/equivalent
+    files:
+      src/store.ts: a593435d920fb5a302573c26a92f66d1021e39776b74f850d58a39c6bd4e922d
+  negative/lifecycle-queued-processing-completed:
+    parent: reference
+    overlay: fixtures/negative/lifecycle-queued-processing-completed
+    files:
+      src/report-service.ts: 7b709a5281e386b798012af307b1181c536f392e98b1148a8706f06d9b6a7356
+  negative/lifecycle-failure-and-retry:
+    parent: reference
+    overlay: fixtures/negative/lifecycle-failure-and-retry
+    files:
+      src/report-service.ts: 7887fb6f29829b67f28d4b6026fe680be7813f645d2ae60f6254a425b1d51e0a
+  negative/progress-persistence:
+    parent: reference
+    overlay: fixtures/negative/progress-persistence
+    files:
+      src/server.ts: ac1f8250504053d60e4a91a23a8f991bbd1a3fffd803cbffe0bd1f033ef01d71
+  negative/pause-at-checkpoint:
+    parent: reference
+    overlay: fixtures/negative/pause-at-checkpoint
+    files:
+      src/report-service.ts: 53f16fb86ac71c9b06a6e3182f5d17eb20a3ee24097598ffb930640836815bc8
+  negative/resume-preserves-progress:
+    parent: reference
+    overlay: fixtures/negative/resume-preserves-progress
+    files:
+      src/report-service.ts: c2fe0bfe34307d4540902972811789187ee4c4d15e7a5de0e2993aa787413990
+  negative/v1-v2-overlap-preserves-safe-state:
+    parent: reference
+    overlay: fixtures/negative/v1-v2-overlap-preserves-safe-state
+    files:
+      src/report-service.ts: 9b6f90c3121e4527e084449b6c15d329ff691099382639b7fd75013c9e374f1f
+  negative/rollback-preserves-extension-fields:
+    parent: reference
+    overlay: fixtures/negative/rollback-preserves-extension-fields
+    files:
+      src/report-service.ts: 8629533ae196e01fb41f8246d90163e94b185ef5ef600fc51e76d7ee482ae09c
+  negative/unsafe-state-preserved-and-rejected:
+    parent: reference
+    overlay: fixtures/negative/unsafe-state-preserved-and-rejected
+    files:
+      src/server.ts: 194001e662956c314ff7e01099515761dfc253d327361694d8fbe82267e4254e
+  negative/concurrent-workers-serialize-progress:
+    parent: reference
+    overlay: fixtures/negative/concurrent-workers-serialize-progress
+    files:
+      src/report-service.ts: c476a2df6f4e5541c955b1c7214afb77908fa722efac57ce2d8b01b44e2422b0
