@@ -2,8 +2,8 @@ import type { TestApp, TestResponse, WorkerResult } from "../harness";
 import type { CheckId } from "../result";
 
 export class SemanticFailure extends Error {
-  constructor(public readonly reason: string) {
-    super(reason);
+  constructor() {
+    super("semantic failure");
     this.name = "SemanticFailure";
   }
 }
@@ -13,25 +13,25 @@ export type CheckDefinition = {
   run: (app: TestApp) => Promise<void>;
 };
 
-export function fail(reason: string): never {
-  throw new SemanticFailure(reason);
+function fail(): never {
+  throw new SemanticFailure();
 }
 
-export function expect(condition: unknown, reason: string): asserts condition {
-  if (!condition) fail(reason);
+export function expect(condition: unknown): asserts condition {
+  if (!condition) fail();
 }
 
 export function record(value: unknown): Record<string, unknown> {
-  expect(Boolean(value) && typeof value === "object" && !Array.isArray(value), "invalid-json-response");
+  expect(Boolean(value) && typeof value === "object" && !Array.isArray(value));
   return value as Record<string, unknown>;
 }
 
-export function expectStatus(response: TestResponse, status: number, reason: string): void {
-  expect(response.status === status, reason);
+export function expectStatus(response: TestResponse, status: number): void {
+  expect(response.status === status);
 }
 
-export function expectWorkerExit(result: WorkerResult, exitCode = 0): void {
-  expect(result.exitCode === exitCode, "worker-exit-code-mismatch");
+export function expectWorkerExit(result: WorkerResult): void {
+  expect(result.exitCode === 0);
 }
 
 export function expectWorkerRecord(result: WorkerResult): Record<string, unknown> {

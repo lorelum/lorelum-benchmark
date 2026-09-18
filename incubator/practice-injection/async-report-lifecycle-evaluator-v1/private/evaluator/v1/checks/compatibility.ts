@@ -13,15 +13,11 @@ const IDS = {
   concurrent: "concurrent-workers",
 } as const;
 
-function report(value: unknown): Record<string, unknown> {
-  return record(value);
-}
-
 async function createV2(app: TestApp, serverUrl: string, id: string): Promise<void> {
-  const response = await app.request("POST", `/api/v2/reports`, { id }, serverUrl);
-  expectStatus(response, 201, "report-create-failed");
-  const body = report(responseJson(response));
-  expect(body.status === "queued", "report-not-queued");
+  const response = await app.request("POST", "/api/v2/reports", serverUrl, { id });
+  expectStatus(response, 201);
+  const body = record(responseJson(response));
+  expect(body.status === "queued");
 }
 
 async function addUnknownFields(app: TestApp, id: string): Promise<void> {
@@ -33,9 +29,9 @@ async function addUnknownFields(app: TestApp, id: string): Promise<void> {
 
 async function expectUnknownFields(app: TestApp, id: string): Promise<void> {
   const persisted = JSON.parse(await app.readStateBytes(id)) as Record<string, unknown>;
-  expect(persisted.writer_version === "v2", "known-extension-field-dropped");
-  expect(record(persisted.migration_marker).source === "v2", "unknown-object-field-dropped");
-  expect(persisted.extension_sequence === 7, "unknown-scalar-field-dropped");
+  expect(persisted.writer_version === "v2");
+  expect(record(persisted.migration_marker).source === "v2");
+  expect(persisted.extension_sequence === 7);
 }
 
 const overlapPreservesSafeState: CheckDefinition = {
@@ -50,16 +46,16 @@ const overlapPreservesSafeState: CheckDefinition = {
     await addUnknownFields(app, IDS.overlap);
     const v1Step = await app.runWorker(["--report", IDS.overlap, "--step", "--api-version", "1"]);
     expectWorkerExit(v1Step);
-    expect(expectWorkerRecord(v1Step).completed_segments === 1, "v1-worker-did-not-advance");
+    expect(expectWorkerRecord(v1Step).completed_segments === 1);
     await expectUnknownFields(app, IDS.overlap);
 
     const second = await app.startServer();
     try {
       for (const version of [1, 2] as const) {
-        const response = await app.request("GET", `/api/v${version}/reports/${IDS.overlap}`, undefined, second.baseUrl);
-        expectStatus(response, 200, "overlap-read-failed");
-        const body = report(responseJson(response));
-        expect(body.status === "processing" && body.completed_segments === 1, "overlap-core-state-mismatch");
+        const response = await app.request("GET", `/api/v${version}/reports/${IDS.overlap}`, second.baseUrl);
+        expectStatus(response, 200);
+        const body = record(responseJson(response));
+        expect(body.status === "processing" && body.completed_segments === 1);
       }
       const v2Step = await app.runWorker(["--report", IDS.overlap, "--step", "--api-version", "2"]);
       expectWorkerExit(v2Step);
@@ -86,14 +82,14 @@ const rollbackPreservesExtensionFields: CheckDefinition = {
     const before = await app.readStateBytes(IDS.rollback);
     const server = await app.startServer();
     try {
-      const pause = await app.request("POST", `/api/v1/reports/${IDS.rollback}/pause`, undefined, server.baseUrl);
+      const pause = await app.request("POST", `/api/v1/reports/${IDS.rollback}/pause`, server.baseUrl);
       if (pause.status >= 400 && pause.status < 500) {
         const error = record(record(responseJson(pause)).error);
-        expect(typeof error.code === "string" && error.code.length > 0, "rollback-rejection-without-code");
-        expect(await app.readStateBytes(IDS.rollback) === before, "rollback-rejection-modified-state");
+        expect(typeof error.code === "string" && error.code.length > 0);
+        expect(await app.readStateBytes(IDS.rollback) === before);
         return;
       }
-      expectStatus(pause, 200, "rollback-v1-operation-failed");
+      expectStatus(pause, 200);
       await expectUnknownFields(app, IDS.rollback);
       const step = await app.runWorker(["--report", IDS.rollback, "--step", "--api-version", "1"]);
       expectWorkerExit(step);
@@ -114,11 +110,11 @@ async function expectUnsafeState(
   const before = await app.readStateBytes(id);
   const server = await app.startServer();
   try {
-    const response = await app.request("GET", `/api/v1/reports/${id}`, undefined, server.baseUrl);
-    expectStatus(response, 409, "unsafe-state-not-rejected");
+    const response = await app.request("GET", `/api/v1/reports/${id}`, server.baseUrl);
+    expectStatus(response, 409);
     const error = record(record(responseJson(response)).error);
-    expect(error.code === expectedCode, "unsafe-state-error-code-mismatch");
-    expect(await app.readStateBytes(id) === before, "unsafe-state-was-overwritten");
+    expect(error.code === expectedCode);
+    expect(await app.readStateBytes(id) === before);
   } finally {
     await server.stop();
   }
@@ -171,8 +167,8 @@ const concurrentWorkersSerializeProgress: CheckDefinition = {
   async run(app) {
     const server = await app.startServer();
     try {
-      const created = await app.request("POST", `/api/v1/reports`, { id: IDS.concurrent }, server.baseUrl);
-      expectStatus(created, 201, "report-create-failed");
+      const created = await app.request("POST", "/api/v1/reports", server.baseUrl, { id: IDS.concurrent });
+      expectStatus(created, 201);
     } finally {
       await server.stop();
     }
@@ -181,8 +177,8 @@ const concurrentWorkersSerializeProgress: CheckDefinition = {
     );
     for (const result of results) expectWorkerExit(result);
     const final = JSON.parse(await app.readStateBytes(IDS.concurrent)) as Record<string, unknown>;
-    expect(final.status === "completed", "concurrent-workers-did-not-complete");
-    expect(final.completed_segments === 3, "concurrent-workers-lost-progress");
+    expect(final.status === "completed");
+    expect(final.completed_segments === 3);
   },
 };
 

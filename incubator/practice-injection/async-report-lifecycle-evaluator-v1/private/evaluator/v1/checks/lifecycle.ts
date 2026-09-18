@@ -11,27 +11,23 @@ export const REPORT_IDS = {
   resume: "resume-progress",
 } as const;
 
-function report(value: unknown): Record<string, unknown> {
-  return record(value);
-}
-
 function expectReport(
   value: unknown,
   expected: { status: string; completed_segments: number; last_checkpoint?: number | null; error_code?: string },
 ): void {
-  const body = report(value);
-  expect(body.status === expected.status, "report-status-mismatch");
-  expect(body.completed_segments === expected.completed_segments, "report-progress-mismatch");
-  if (expected.last_checkpoint !== undefined) expect(body.last_checkpoint === expected.last_checkpoint, "report-checkpoint-mismatch");
+  const body = record(value);
+  expect(body.status === expected.status);
+  expect(body.completed_segments === expected.completed_segments);
+  if (expected.last_checkpoint !== undefined) expect(body.last_checkpoint === expected.last_checkpoint);
   if (expected.error_code !== undefined) {
     const error = record(body.error);
-    expect(error.code === expected.error_code, "report-error-code-mismatch");
+    expect(error.code === expected.error_code);
   }
 }
 
 async function create(app: TestApp, baseUrl: string, id: string, apiVersion: 1 | 2 = 1): Promise<unknown> {
-  const response = await app.request("POST", `/api/v${apiVersion}/reports`, { id }, baseUrl);
-  expectStatus(response, 201, "report-create-failed");
+  const response = await app.request("POST", `/api/v${apiVersion}/reports`, baseUrl, { id });
+  expectStatus(response, 201);
   return responseJson(response);
 }
 
@@ -51,8 +47,8 @@ const lifecycleQueuedProcessingCompleted: CheckDefinition = {
       const third = await app.runWorker(["--report", REPORT_IDS.lifecycle, "--step", "--api-version", "1"]);
       expectWorkerExit(third);
       expectReport(expectWorkerRecord(third), { status: "completed", completed_segments: 3, last_checkpoint: 3 });
-      const response = await app.request("GET", `/api/v1/reports/${REPORT_IDS.lifecycle}`, undefined, server.baseUrl);
-      expectStatus(response, 200, "report-read-failed");
+      const response = await app.request("GET", `/api/v1/reports/${REPORT_IDS.lifecycle}`, server.baseUrl);
+      expectStatus(response, 200);
       expectReport(responseJson(response), { status: "completed", completed_segments: 3, last_checkpoint: 3 });
     } finally {
       await server.stop();
@@ -104,8 +100,8 @@ const progressPersistence: CheckDefinition = {
 
     const secondServer = await app.startServer();
     try {
-      const resumed = await app.request("GET", `/api/v1/reports/${REPORT_IDS.progress}`, undefined, secondServer.baseUrl);
-      expectStatus(resumed, 200, "persisted-report-read-failed");
+      const resumed = await app.request("GET", `/api/v1/reports/${REPORT_IDS.progress}`, secondServer.baseUrl);
+      expectStatus(resumed, 200);
       expectReport(responseJson(resumed), { status: "processing", completed_segments: 1, last_checkpoint: 1 });
       for (const expected of [2, 3]) {
         const step = await app.runWorker(["--report", REPORT_IDS.progress, "--step", "--api-version", "1"]);
@@ -131,16 +127,16 @@ const pauseAtCheckpoint: CheckDefinition = {
       const first = await app.runWorker(["--report", REPORT_IDS.pause, "--step", "--api-version", "1"]);
       expectWorkerExit(first);
       expectReport(expectWorkerRecord(first), { status: "processing", completed_segments: 1, last_checkpoint: 1 });
-      const response = await app.request("POST", `/api/v1/reports/${REPORT_IDS.pause}/pause`, undefined, server.baseUrl);
-      expectStatus(response, 200, "pause-request-failed");
+      const response = await app.request("POST", `/api/v1/reports/${REPORT_IDS.pause}/pause`, server.baseUrl);
+      expectStatus(response, 200);
       expectReport(responseJson(response), { status: "processing", completed_segments: 1, last_checkpoint: 1 });
       const persisted = record(JSON.parse(await app.readStateBytes(REPORT_IDS.pause)) as unknown);
-      expect(persisted.pause_requested === true, "pause-request-not-persisted");
+      expect(persisted.pause_requested === true);
       const paused = await app.runWorker(["--report", REPORT_IDS.pause, "--step", "--api-version", "1"]);
       expectWorkerExit(paused);
       expectReport(expectWorkerRecord(paused), { status: "paused", completed_segments: 2, last_checkpoint: 2 });
-      const read = await app.request("GET", `/api/v1/reports/${REPORT_IDS.pause}`, undefined, server.baseUrl);
-      expectStatus(read, 200, "paused-report-read-failed");
+      const read = await app.request("GET", `/api/v1/reports/${REPORT_IDS.pause}`, server.baseUrl);
+      expectStatus(read, 200);
       expectReport(responseJson(read), { status: "paused", completed_segments: 2, last_checkpoint: 2 });
     } finally {
       await server.stop();
@@ -166,11 +162,11 @@ const resumePreservesProgress: CheckDefinition = {
     );
     const server = await app.startServer();
     try {
-      const before = await app.request("GET", `/api/v1/reports/${REPORT_IDS.resume}`, undefined, server.baseUrl);
-      expectStatus(before, 200, "seeded-report-read-failed");
+      const before = await app.request("GET", `/api/v1/reports/${REPORT_IDS.resume}`, server.baseUrl);
+      expectStatus(before, 200);
       expectReport(responseJson(before), { status: "paused", completed_segments: 2, last_checkpoint: 2 });
-      const resumed = await app.request("POST", `/api/v1/reports/${REPORT_IDS.resume}/resume`, undefined, server.baseUrl);
-      expectStatus(resumed, 200, "resume-request-failed");
+      const resumed = await app.request("POST", `/api/v1/reports/${REPORT_IDS.resume}/resume`, server.baseUrl);
+      expectStatus(resumed, 200);
       expectReport(responseJson(resumed), { status: "processing", completed_segments: 2, last_checkpoint: 2 });
       const completed = await app.runWorker(["--report", REPORT_IDS.resume, "--step", "--api-version", "1"]);
       expectWorkerExit(completed);

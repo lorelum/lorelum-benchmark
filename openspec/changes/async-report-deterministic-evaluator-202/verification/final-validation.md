@@ -1,9 +1,9 @@
 # Final validation
 
 - Planning base revision: `8edb1377b4991dcf76e9a4037fef80f17ee5076c`
-- Reviewed head revision: `1f10f26316f6d598f8b7335525c1d6035fbb1f85`
-- Nested evaluator snapshot id: `1efa42eb50c50b2303ed59db9ffd3cdb9240aefb563a97b20b39908b6d5cf109`
-- Package snapshot id: `48eba718b6b905cf77b3a85a4a1bea591d5cbe7af11b0bd79981655dc985f428`
+- Reviewed code identity: nested evaluator snapshot and package snapshot below; the reviewed head revision is recorded in `round-1-independent-review-*.md` and `round-2-thermo-review-*.md`
+- Nested evaluator snapshot id: `7d68a9e9fc32a2fc96407ad1b4f6d416f6138cddc73587614be6b6d5e8db8be1`
+- Package snapshot id: `9bb64efae32746457621b6c42c1f29035da22965e281048c2a9a73375950c5e4`
 - Candidate snapshot id: `ee588de3877ab91f2c1dfe8219bb7f9834671dd2a275531485f9d0630e0165d2`
 
 ## Commands

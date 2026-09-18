@@ -144,8 +144,8 @@ export class TestApp {
     await rm(this.statePath(id), { force: true });
   }
 
-  async request(method: string, path: string, body?: unknown, baseUrl?: string): Promise<TestResponse> {
-    const url = `${baseUrl ?? "http://127.0.0.1:1"}${path}`;
+  async request(method: string, path: string, baseUrl: string, body?: unknown): Promise<TestResponse> {
+    const url = `${baseUrl}${path}`;
     let response: Response;
     try {
       response = await fetch(url, {

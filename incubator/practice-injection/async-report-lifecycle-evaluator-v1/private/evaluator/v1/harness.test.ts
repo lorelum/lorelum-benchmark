@@ -15,7 +15,7 @@ describe("async report evaluator harness", () => {
     app = await TestApp.create(appRoot);
     const server = await app.startServer();
     try {
-      const created = await app.request("POST", "/api/v1/reports", { id: "harness-check" }, server.baseUrl);
+      const created = await app.request("POST", "/api/v1/reports", server.baseUrl, { id: "harness-check" });
       expect(created.status).toBe(201);
       expect(responseJson(created)).toMatchObject({ id: "harness-check", status: "queued" });
     } finally {
@@ -69,7 +69,7 @@ describe("async report evaluator harness", () => {
     try {
       const server = await app.startServer();
       try {
-        const response = await app.request("GET", "/", undefined, server.baseUrl);
+        const response = await app.request("GET", "/", server.baseUrl);
         expect(responseJson(response)).toEqual({
           condition: null,
           deliveryNode: null,
