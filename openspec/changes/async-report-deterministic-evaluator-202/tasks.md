@@ -1,19 +1,19 @@
 ## 1. Planning and scope gate
 
-- [ ] 1.1 在 Issue #202 中逐项确认本 change 的四个 Open Questions：黑盒验收面、public-starter 预期失败范围、`pass|fail|indeterminate`/exit code 契约，以及 #200 只可引用 check id 与状态摘要。
-- [ ] 1.2 将确认结果写回 `design.md`、必要的 delta spec 和本 `tasks.md`，并再次运行 strict validation；未确认前不得开始任何非 OpenSpec 实现。
+- [x] 1.1 在 Issue #202 中逐项确认：黑盒验收面、public-starter 预期失败范围、`pass|fail|indeterminate`/exit code 契约、独立 evaluator v1 身份、base+overlay fixtures，以及 #200 只可引用 check id 与聚合状态。
+- [x] 1.2 将确认结果写回 `design.md`、delta spec 和本 `tasks.md`，并再次运行 strict validation。
 - [ ] 1.3 写入范围保持 `openspec/changes/async-report-deterministic-evaluator-202/`、`incubator/practice-injection/async-report-lifecycle-v1/private/evaluator/v1/` 和必要的版本化 `src/benchmark/` helper；禁止修改 public task/starter、`private/candidate.yaml`、#196 `private/snapshot.json`、#197 runner、#199 treatment 或 #200 JudgeAgent。
 
 ## 2. Evaluator identity and result contract
 
-- [ ] 2.1 创建 `private/evaluator/v1/` 目录、evaluator manifest、source snapshot 生成/校验入口，并固定 candidate id、#196 source commit 和 snapshot id。
-- [ ] 2.2 定义 `async-report-deterministic-evaluator/v1` 结果类型、九个稳定 check id、逐检查 `pass|fail|indeterminate` 状态、稳定 reason 和 `0|1|2` exit code。
-- [ ] 2.3 实现 identity/oracle/fixture/source hash 预检；任何漂移、缺失、解析失败或不完整输出必须返回 `indeterminate`，不得降级为 `fail` 或 `pass`。
+- [ ] 2.1 创建 `evaluate.ts`、`evaluator.yaml`、`identity.ts`、`result.ts`、`harness.ts`、`checks/`、`calibration/` 和 `snapshot.json`；固定 candidate id、#196 source commit 与 snapshot id。
+- [ ] 2.2 定义 `async-report-deterministic-evaluator/v1` 结果类型、九个稳定 check id、逐检查 `pass|fail|indeterminate` 状态、稳定 reason 和 `0|1|2` exit code；overall 按 `indeterminate > fail > pass` 计算。
+- [ ] 2.3 实现 evaluator source、oracle、fixture manifest 和 overlay hash 预检；任何漂移、缺失、解析失败或不完整输出必须返回 `indeterminate`，不得降级为 `fail` 或 `pass`。
 - [ ] 2.4 增加 identity、结果 schema、exit code 和不完整输出的 focused tests。
 
 ## 3. Black-box behavior checks
 
-- [ ] 3.1 实现临时 workspace、自动端口 HTTP server 和 worker CLI 测试 harness；不得依赖墙钟延迟、随机失败、外部网络或模型。
+- [ ] 3.1 实现只读投影到临时 workspace、端口 `0` HTTP server、worker CLI 和有界启动/退出 timeout 的 harness；不得依赖墙钟语义等待、随机失败、外部网络或模型。
 - [ ] 3.2 实现 `lifecycle-queued-processing-completed`、`lifecycle-failure-and-retry`、`progress-persistence`、`pause-at-checkpoint` 和 `resume-preserves-progress`。
 - [ ] 3.3 实现 `v1-v2-overlap-preserves-safe-state`、`rollback-preserves-extension-fields`、`unsafe-state-preserved-and-rejected` 和 `concurrent-workers-serialize-progress`。
 - [ ] 3.4 确保检查只依赖公开 API/worker 行为和持久化结果，不解析 reference 目录、类名、函数名、模块数或 dataflow 形状。
@@ -22,7 +22,7 @@
 ## 4. Private fixtures and calibration
 
 - [ ] 4.1 建立 `oracle.yaml`，把稳定 check id 映射到公开 requirement、失败类别和 fixture expectation。
-- [ ] 4.2 建立 `fixtures/manifest.yaml` 与 base+overlay 机制，记录 #196 snapshot、每个 overlay 文件和 SHA-256；不得复制可漂移的整套 public starter。
+- [ ] 4.2 建立 `fixtures/manifest.yaml` 与 base+overlay 机制；以 #196 public starter 为唯一 base，记录 source commit、snapshot id、每个 overlay 文件和 SHA-256，不得复制整套 public starter。
 - [ ] 4.3 添加 reference 与结构等价的 equivalent fixture，证明九个检查逐项一致且不绑定 reference 布局。
 - [ ] 4.4 添加 public-starter expectation，明确哪些 lifecycle/progress/pause 检查通过、哪些兼容/回退检查必须失败。
 - [ ] 4.5 为每个稳定 check id 提供至少一个 negative/mutation fixture，并断言失败落在目标 check。
@@ -30,7 +30,7 @@
 
 ## 5. Deterministic validation and privacy audit
 
-- [ ] 5.1 增加 evaluator CLI/package script 入口，使 candidate workspace 可通过同一命令执行，不接收 condition、delivery node、Pack、Practice 或 Judge 参数。
+- [ ] 5.1 增加 `evaluate.ts <app-root>` 与 package script 入口，使 candidate workspace 可通过同一命令执行，不接收 condition、delivery node、Pack、Practice 或 Judge 参数。
 - [ ] 5.2 增加 public/private leakage audit，检查 evaluator、oracle、fixtures、私有路径和结果全文不会进入 public task/starter、公开 trace 或 Judge allowlist。
 - [ ] 5.3 验证 evaluator 在 timeline conditions 的输入完全相同；任何 condition-aware 分支、Practice provenance 读取或 rubric 依赖均视为失败。
 - [ ] 5.4 运行 focused evaluator tests、完整 calibration、identity/snapshot verification、`bun run validate` 和 `git diff --check`，并记录命令、结果和未执行原因。

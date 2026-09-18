@@ -29,9 +29,28 @@ Issue #202 要为 `incubator/practice-injection/async-report-lifecycle-v1/` 建�
 
 ```text
 incubator/practice-injection/async-report-lifecycle-v1/private/evaluator/v1/
+  evaluate.ts
+  evaluator.yaml
+  identity.ts
+  result.ts
+  harness.ts
+  checks/
+    lifecycle.ts
+    compatibility.ts
+    concurrency.ts
+  oracle.yaml
+  fixtures/
+    manifest.yaml
+    reference/
+    equivalent/
+    negative/<check-id>/
+  calibration/
+    run.ts
+  snapshot.json
+  *.test.ts
 ```
 
-版本内包含 evaluator 入口、检查模块、结果类型、`oracle.yaml`、`fixtures/manifest.yaml`、fixture overlays、calibration runner 和 evaluator source snapshot/manifest。既有 `private/candidate.yaml` 与 `private/snapshot.json` 保持逐字节不变。
+`evaluator.yaml` 固定 candidate id、#196 source commit、snapshot id、oracle 和 evaluation result schema。`snapshot.json` 列出除自身外的 evaluator source、oracle、fixture manifest 与检查模块 SHA-256；fixture overlay 的 SHA-256 由 `fixtures/manifest.yaml` 独立记录。既有 `private/candidate.yaml` 与 `private/snapshot.json` 保持逐字节不变。
 
 选择该方案是为了保持 #197 已锚定的 candidate 身份，同时让 evaluator 具备自己的版本、hash 与演进边界。把 evaluator 写回 #196 snapshot 或复用 suite 的 structured/v2 evaluator 都要求改变已合并的 candidate 身份或把 candidate 伪装成正式 task，因此不采用。
 
@@ -53,6 +72,22 @@ evaluator 会把 candidate workspace 或 fixture 投影到临时目录，通过�
 
 每个 id 由独立检查函数产生，整体只在所有检查均 `pass` 时通过。选择进程级黑盒而不是 AST/import/source pattern，是为了避免把 reference 的实现偏好变成语义门槛。
 
+具体判定如下：
+
+| check id | 外部行为判定 |
+| --- | --- |
+| `lifecycle-queued-processing-completed` | 创建后为 queued；三次单 segment worker step 依次得到 `processing/1`、`processing/2`、`completed/3`，HTTP reader 与 worker 视图一致。 |
+| `lifecycle-failure-and-retry` | 在指定 segment 得到 `failed/1` 与稳定错误；`--retry` 从最后 checkpoint 继续到 completed，不重置进度。 |
+| `progress-persistence` | 一个 worker process 推进后重建 HTTP server/reader，仍能读取同一持久化进度，再继续到 completed。 |
+| `pause-at-checkpoint` | pause 请求返回 processing 并设置 pause request；下一次 step 在下一 checkpoint 停在 paused，不能立即中断或忽略请求。 |
+| `resume-preserves-progress` | paused report resume 后状态回到 processing，已完成 segment 不变，随后完成全部工作。 |
+| `v1-v2-overlap-preserves-safe-state` | v1 与 v2 reader/writer 交替读写兼容状态时，v2 扩展字段不丢失，双方均可读取同一核心状态。 |
+| `rollback-preserves-extension-fields` | 模拟旧路径接管 v2 状态后，兼容扩展字段仍被保留；旧路径不能以默认状态覆盖原数据。 |
+| `unsafe-state-preserved-and-rejected` | corrupt JSON、unsupported schema、缺失必需字段和 id mismatch 均稳定拒绝，且原文件字节不变。 |
+| `concurrent-workers-serialize-progress` | 多个 worker 并发推进同一 report，最终进度准确、无丢失更新或重复完成。 |
+
+每个检查使用独立临时 data dir，不得修改 candidate workspace。server 端口为 `0` 并由启动输出发现；worker 通过公开 CLI 启动。允许有界启动/退出 timeout，但语义断言不得依赖墙钟等待、随机延时或外部网络。
+
 ### 3. fixtures 使用 base + private overlay，并记录完整 provenance
 
 `fixtures/manifest.yaml` 固定 #196 source commit、candidate snapshot id 和 base public starter。每个 fixture overlay 只保存相对 starter 的变更文件及 SHA-256；calibration 在临时目录重组 fixture，不复制或修改仓库中的 public starter。
@@ -65,6 +100,17 @@ evaluator 会把 candidate workspace 或 fixture 投影到临时目录，通过�
 - `negative/<check-id>` 或等价 mutation：每个检查至少有一个定向变体使其失败，且失败原因必须落在目标 check id。
 
 若任一 check 无法被 reference、equivalent 和 negative 组合区分，candidate 保持 candidate，停止模型运行。
+
+fixture 的逻辑 id 与目录如下：
+
+```text
+reference
+equivalent
+public-starter
+negative/<check-id>
+```
+
+`reference` 与 `equivalent` 必须覆盖同样九个行为且逐 check `pass`，但变更文件集合或职责分配不同。`public-starter` 不携带 overlay。每个 `negative/<check-id>` 只引入足以违反目标 check 的变更，并保留其余检查可执行性。
 
 ### 4. oracle mapping 与结果契约分离
 
@@ -84,6 +130,8 @@ evaluator 会把 candidate workspace 或 fixture 投影到临时目录，通过�
 
 不输出加权总分，不接收 condition、delivery node、Pack ref、Practice id 或 Judge input。稳定 exit code 为：`0=pass`、`1=fail`、`2=indeterminate`；内部错误、identity 漂移、fixture 缺失和超时均返回 `2`，不得降级为 `fail` 或 `pass`。
 
+overall status 的优先级固定为 `indeterminate > fail > pass`。每个 check 必须存在于输出中；semantic fail 使用稳定 reason code，运行失败使用 `indeterminate` 与稳定 reason code。passing check 不输出 reason。结果不得包含 timestamp、机器路径、环境变量、duration 或可能漂移的文本。
+
 ### 5. evaluator 身份与 fixture 身份必须冻结且可复算
 
 evaluator 运行前先验证：
@@ -101,6 +149,8 @@ evaluator invocations 对 timing conditions 完全相同，不接收 condition m
 
 #200 可以引用稳定 check id 说明 hard gate 边界，但不得读取 `oracle.yaml`、fixture 内容或 evaluator source。
 
+#200 的允许输入严格限制为 evaluator version、overall status 和稳定 check id 集合。它不得读取逐 check status、逐 check reason、`oracle.yaml`、fixtures、evaluator source 或完整 evaluator JSON。
+
 ## Risks / Trade-offs
 
 - [黑盒检查可能漏掉内部数据损坏] → 通过 v1/v2 交替读写、rollback 和原始字节保留检查覆盖外部可观察的数据安全，不把内部错误信息当 oracle。
@@ -116,9 +166,13 @@ evaluator invocations 对 timing conditions 完全相同，不接收 condition m
 3. 在 `bun run validate`、focused deterministic tests、public/private leakage audit 和 `git diff --check` 通过后，再由后续独立判断决定是否运行 #201。
 4. 回滚时删除本 change 新增的 private evaluator 目录即可；无需迁移 suite、record 或已合并 runner。
 
-## Open Questions
+## Confirmed Planning Decisions
 
-- 是否确认采用“candidate public entrypoints + 外部 API/CLI + 持久化字节”作为黑盒验收面，且不要求任何内部目录、类名或模块结构？
-- 是否确认 `public-starter` 的预期失败只需覆盖旧新并行 unknown-field preservation 与 rollback fail-closed，而 lifecycle/progress/pause/resume baseline 保持通过？
-- 是否确认 evaluator 输出使用 `pass|fail|indeterminate` 与 exit code `0|1|2`，且不引入任何 LLM 或加权分数？
-- 是否确认 #200 仅可引用 check id 和 hard-gate 状态摘要，不能读取 oracle、fixtures 或 evaluator source？
+- 验收面固定为 candidate public entrypoints、外部 HTTP API/worker CLI 与持久化字节行为；不检查内部目录、类名、函数名或模块结构。
+- `public-starter` 必须通过 lifecycle、progress、pause 与 resume 检查，并分别在 old/new overlap 的 unknown-field preservation 与 rollback fail-closed 上失败。
+- evaluator 输出固定为 `pass|fail|indeterminate` 与 exit code `0|1|2`；不调用 LLM，不使用加权分数，不把 `indeterminate` 当作低分。
+- evaluator 使用独立 `private/evaluator/v1/` 身份，不修改 #196 candidate snapshot 或 #197 anchor。
+- private fixtures 使用 #196 public starter 作为 base，每个 fixture 只存 overlay 文件与 SHA-256。
+- #200 只可读取 evaluator version、overall status 与稳定 check id 集合，不得读取逐 check status/reason 或任何 private oracle、fixture、source。
+
+无剩余阻塞性 Open Question。

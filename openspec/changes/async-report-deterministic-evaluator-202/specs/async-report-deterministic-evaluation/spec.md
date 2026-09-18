@@ -59,7 +59,7 @@ The evaluator MUST verify that v1 and v2 readers/writers and old/new workers can
 
 ### Requirement: Behavior fixtures prove discriminating power
 
-The evaluator MUST use private reference, equivalent, public-starter, and negative/mutation fixtures. The reference and equivalent fixtures MUST pass all nine checks with the same per-check results without sharing a required internal layout. The public-starter fixture MUST miss at least one declared compatibility or rollback check. Each semantic check MUST have at least one negative or mutation fixture that fails that check. Fixture provenance MUST record the #196 base snapshot and SHA-256 for every overlay or changed fixture file.
+The evaluator MUST use private reference, equivalent, public-starter, and negative/mutation fixtures. Fixtures MUST use the #196 public starter as their base and MAY add only a private overlay containing changed files. The reference and equivalent fixtures MUST pass all nine checks with the same per-check results without sharing a required internal layout. The public-starter fixture MUST pass the lifecycle, progress, pause, and resume checks and MUST fail both old/new overlap preservation and rollback fail-closed. Each semantic check MUST have at least one negative or mutation fixture that fails that check. Fixture provenance MUST record the #196 source commit, candidate snapshot id, base public starter, and SHA-256 for every overlay file.
 
 #### Scenario: Reference and equivalent are accepted
 
@@ -75,6 +75,11 @@ The evaluator MUST use private reference, equivalent, public-starter, and negati
 
 - **WHEN** a fixture violates one declared semantic check
 - **THEN** at least that stable check id fails and the calibration records the expected mismatch
+
+#### Scenario: Fixture overlays have provenance
+
+- **WHEN** calibration reconstructs a private fixture
+- **THEN** it starts from the immutable #196 public starter and each changed overlay file matches the SHA-256 recorded in the private fixture manifest
 
 #### Scenario: Fixtures cannot distinguish a behavior
 
@@ -100,6 +105,11 @@ The evaluator MUST emit JSON with `schema_version`, `evaluator_version`, `candid
 - **WHEN** the evaluator cannot start, times out, cannot read its identity or fixtures, or produces invalid output
 - **THEN** the result is `indeterminate`, the command exits `2`, and the attempt is not counted as `pass` or silently removed
 
+#### Scenario: Status priority is stable
+
+- **WHEN** checks contain a mix of semantic failures and execution/identity failures
+- **THEN** overall status resolves by `indeterminate > fail > pass`, every planned check id remains present, and no failed or indeterminate check is omitted from the result
+
 ### Requirement: Evaluation is condition-blind and private
 
 The evaluator MUST accept only the candidate workspace and private fixture/evaluator inputs needed to execute the deterministic checks. It MUST NOT receive or inspect timing condition, delivery node, Pack provenance, Practice id, treatment content, Judge rubric, or model output. The same evaluator command MUST be valid for every timing condition. Private oracle assertions, fixture contents, evaluator source, and internal paths MUST remain outside agent workspaces, public traces, and JudgeAgent input. A stable check id and hard-gate status summary MAY be referenced through the private orchestration boundary.
@@ -117,7 +127,7 @@ The evaluator MUST accept only the candidate workspace and private fixture/evalu
 #### Scenario: Check ids cross the orchestration boundary
 
 - **WHEN** #200 or #201 needs to reference the hard gate
-- **THEN** it may reference stable check ids and aggregate status, but cannot read the private oracle or fixture implementation
+- **THEN** #200 may read only evaluator version, overall status, and the stable check id set, while per-check status/reason, private oracle, fixtures, evaluator source, and full evaluator JSON remain inaccessible
 
 ### Requirement: The evaluator remains a candidate-only validation artifact
 
