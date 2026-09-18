@@ -42,6 +42,6 @@
 
 - [x] 6.1 确认 #196 public task/starter 与 `private/snapshot.json` 逐字节不变，#202 candidate 仍未进入 suite、未创建 record、未调用模型。
 - [x] 6.2 按 `docs/PR_REVIEW.md` 完成两轮独立只读 review，将证据保存在本 change 的 `verification/` 下；发现问题时仍在同一 PR/change 内修复并复审。
-- [ ] 6.3 回读 GitHub 实际保存的 Issue/PR 标题、正文和重要评论，更新 Issue #202 的实现、验证、未决风险与下一步状态。
-- [ ] 6.4 将可实施性、验证证据、剩余风险和是否满足 #201 前置条件写回 issue；本 change 不自身授权 #201 模型运行或正式结论。
+- [x] 6.3 回读 GitHub 实际保存的 Issue/PR 标题、正文和重要评论，更新 Issue #202 的实现、验证、未决风险与下一步状态。
+- [x] 6.4 将可实施性、验证证据、剩余风险和是否满足 #201 前置条件写回 issue；本 change 不自身授权 #201 模型运行或正式结论。
 - [ ] 6.5 合并前确认 evaluator v1 已冻结；合并后如需修正 semantic behavior、oracle 或 fixture，创建 v2 而不修改 v1。
