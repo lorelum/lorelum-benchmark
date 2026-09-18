@@ -19,14 +19,18 @@ function validateRegistry(registry: CheckDefinition[]): void {
   }
 }
 
-export async function runCheck(check: CheckDefinition, appRoot: string): Promise<EvaluatorCheckResult> {
+export async function runCheck(
+  check: CheckDefinition,
+  appRoot: string,
+  failureReason: string,
+): Promise<EvaluatorCheckResult> {
   let app: TestApp | undefined;
   try {
     app = await TestApp.create(appRoot);
     await check.run(app);
     return { id: check.id, status: "pass" };
   } catch (error) {
-    if (error instanceof SemanticFailure) return { id: check.id, status: "fail", reason: error.reason };
+    if (error instanceof SemanticFailure) return { id: check.id, status: "fail", reason: failureReason };
     if (error instanceof HarnessError) return { id: check.id, status: "indeterminate", reason: error.reason };
     return { id: check.id, status: "indeterminate", reason: "unexpected-evaluator-error" };
   } finally {
@@ -43,7 +47,9 @@ export async function evaluateApp(appRoot: string, evaluatorRoot = import.meta.d
     return indeterminateResult("identity-invalid");
   }
   const results: EvaluatorCheckResult[] = [];
-  for (const check of checks) results.push(await runCheck(check, resolve(appRoot)));
+  for (const check of checks) {
+    results.push(await runCheck(check, resolve(appRoot), identity.oracle.checks[check.id].failure_reason));
+  }
   return buildEvaluatorResult(results);
 }
 

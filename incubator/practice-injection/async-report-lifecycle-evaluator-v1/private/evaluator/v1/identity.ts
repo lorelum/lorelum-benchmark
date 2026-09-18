@@ -59,6 +59,10 @@ function fail(message: string): never {
   throw new Error(`Invalid evaluator identity: ${message}`);
 }
 
+function compareCodePoints(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 export async function sha256File(path: string): Promise<string> {
   return createHash("sha256").update(await readFile(path)).digest("hex");
 }
@@ -83,11 +87,11 @@ async function hashFiles(root: string, files: string[]): Promise<Record<string, 
     if (!canonicalPath(file)) fail(`snapshot path is not canonical: ${file}`);
     entries.push([file, await sha256File(join(root, file))]);
   }
-  return Object.fromEntries(entries.sort(([left], [right]) => left.localeCompare(right)));
+  return Object.fromEntries(entries.sort(([left], [right]) => compareCodePoints(left, right)));
 }
 
 function snapshotId(files: Record<string, string>): string {
-  const sorted = Object.entries(files).sort(([left], [right]) => left.localeCompare(right));
+  const sorted = Object.entries(files).sort(([left], [right]) => compareCodePoints(left, right));
   return sha256Text(JSON.stringify(Object.fromEntries(sorted)));
 }
 
@@ -170,7 +174,12 @@ function parseOracle(value: unknown): Oracle {
   const checks: Partial<Oracle["checks"]> = {};
   for (const id of CHECK_IDS) {
     const raw = value.checks[id];
-    if (!isRecord(raw) || typeof raw.public_requirement !== "string" || typeof raw.failure_reason !== "string") fail(`oracle check is invalid: ${id}`);
+    if (
+      !isRecord(raw)
+      || typeof raw.public_requirement !== "string"
+      || typeof raw.failure_reason !== "string"
+      || !/^[a-z0-9][a-z0-9-]*$/.test(raw.failure_reason)
+    ) fail(`oracle check is invalid: ${id}`);
     checks[id] = { public_requirement: raw.public_requirement, failure_reason: raw.failure_reason };
   }
   const fixtures: Oracle["fixtures"] = {};

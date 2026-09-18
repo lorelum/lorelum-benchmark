@@ -6,6 +6,23 @@ import { copyDirectory } from "./files";
 const STARTUP_TIMEOUT_MS = 10_000;
 const PROCESS_TIMEOUT_MS = 15_000;
 const REQUEST_TIMEOUT_MS = 10_000;
+const SYSTEM_ENV_KEYS = [
+  "PATH",
+  "Path",
+  "PATHEXT",
+  "SystemRoot",
+  "SystemDrive",
+  "WINDIR",
+  "COMSPEC",
+  "ComSpec",
+  "TEMP",
+  "TMP",
+  "TMPDIR",
+  "HOME",
+  "USERPROFILE",
+  "APPDATA",
+  "LOCALAPPDATA",
+] as const;
 
 export class HarnessError extends Error {
   constructor(
@@ -74,6 +91,15 @@ async function stopProcess(process: Bun.Subprocess): Promise<void> {
   }
 }
 
+function isolatedEnvironment(overrides: Record<string, string>): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const key of SYSTEM_ENV_KEYS) {
+    const value = globalThis.process.env[key];
+    if (value !== undefined) env[key] = value;
+  }
+  return { ...env, ...overrides };
+}
+
 export class TestApp {
   private constructor(
     public readonly root: string,
@@ -139,11 +165,10 @@ export class TestApp {
     try {
       child = Bun.spawn([globalThis.process.execPath, "run", "src/server.ts"], {
         cwd: this.appRoot,
-        env: {
-          ...globalThis.process.env,
+        env: isolatedEnvironment({
           REPORT_DATA_DIR: this.dataDir,
           REPORT_PORT: "0",
-        },
+        }),
         stdout: "pipe",
         stderr: "pipe",
       });
@@ -198,6 +223,9 @@ export class TestApp {
     try {
       child = Bun.spawn([process.execPath, "run", "src/worker.ts", ...args, "--data-dir", this.dataDir], {
         cwd: this.appRoot,
+        env: isolatedEnvironment({
+          REPORT_DATA_DIR: this.dataDir,
+        }),
         stdout: "pipe",
         stderr: "pipe",
       });

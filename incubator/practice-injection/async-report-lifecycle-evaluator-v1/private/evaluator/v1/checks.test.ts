@@ -6,9 +6,13 @@ import { runCheck } from "./evaluate";
 import { loadEvaluatorIdentity } from "./identity";
 
 const fixtures = new Map<string, MaterializedFixture>();
+let failureReasons: Record<string, string> = {};
 
 beforeAll(async () => {
   const identity = await loadEvaluatorIdentity();
+  failureReasons = Object.fromEntries(
+    Object.entries(identity.oracle.checks).map(([id, check]) => [id, check.failure_reason]),
+  );
   const fixtureIds = [
     "reference",
     ...checks.map((check) => `negative/${check.id}`),
@@ -29,14 +33,14 @@ describe("async report evaluator checks", () => {
       const negative = fixtures.get(`negative/${check.id}`);
       if (!reference || !negative) throw new Error(`fixture setup failed for ${check.id}`);
 
-      expect(await runCheck(check, reference.appRoot)).toEqual({ id: check.id, status: "pass" });
+      expect(await runCheck(check, reference.appRoot, failureReasons[check.id])).toEqual({ id: check.id, status: "pass" });
 
-      const failed = await runCheck(check, negative.appRoot);
+      const failed = await runCheck(check, negative.appRoot, failureReasons[check.id]);
       expect(failed.id).toBe(check.id);
       expect(failed.status).toBe("fail");
-      expect(failed.reason).toMatch(/^[a-z0-9][a-z0-9-]*$/);
+      expect(failed.reason).toBe(failureReasons[check.id]);
 
-      expect(await runCheck(check, join(import.meta.dirname, "__missing_app_root__"))).toEqual({
+      expect(await runCheck(check, join(import.meta.dirname, "__missing_app_root__"), failureReasons[check.id])).toEqual({
         id: check.id,
         status: "indeterminate",
         reason: "app-copy-failed",

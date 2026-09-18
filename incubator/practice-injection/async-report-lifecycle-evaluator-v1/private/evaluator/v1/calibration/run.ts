@@ -21,6 +21,12 @@ function matrixMatches(actual: Matrix, expected: Matrix): boolean {
   return CHECK_IDS.every((id) => actual[id] === expected[id]);
 }
 
+function reasonsMatch(result: Awaited<ReturnType<typeof evaluateApp>>, identity: EvaluatorIdentity): boolean {
+  return result.checks.every((check) => (
+    check.status !== "fail" || check.reason === identity.oracle.checks[check.id].failure_reason
+  ));
+}
+
 const identity = await loadEvaluatorIdentity();
 const fixtureIds = [
   "public-starter",
@@ -35,11 +41,13 @@ for (const fixtureId of fixtureIds) {
     const result = await evaluateApp(fixture.appRoot, identity.root);
     const actual = matrixFrom(result);
     const expected = expectedMatrix(identity, fixtureId);
+    const reasonMatches = reasonsMatch(result, identity);
     calibration.push({
       fixture: fixtureId,
       expected,
       actual,
-      passed: matrixMatches(actual, expected),
+      reason_matches: reasonMatches,
+      passed: matrixMatches(actual, expected) && reasonMatches,
     });
   } finally {
     await fixture.dispose();
