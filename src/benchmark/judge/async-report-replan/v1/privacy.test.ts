@@ -1,9 +1,12 @@
 import { expect, test } from "bun:test";
 import { runAsyncReportReplanAttempt } from "./run";
-import { calibrationIdentity } from "./calibration";
+import { runCalibration } from "./calibration";
 
 test("Judge evidence and accounting stay blind and public-safe", async () => {
-  const calibration = await calibrationIdentity();
+  const calibration = await runCalibration({ mode: "mock", score: async (evidence) => {
+    const score = evidence.blind_case_id.includes("ref") ? 80 : evidence.blind_case_id.includes("eq") ? 78 : 40;
+    return { schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never;
+  } });
   const run = await runAsyncReportReplanAttempt({
     blind_case_id: "blind-case-1",
     execution_health: "healthy",
@@ -15,7 +18,7 @@ test("Judge evidence and accounting stay blind and public-safe", async () => {
     ],
     final_candidate_diff: "diff --git a/src/report.ts b/src/report.ts\n+export function report() {}\n",
   }, {
-    calibration: { ...calibration, status: "qualified", calls: 9, medians: { reference: 80, equivalent: 78, "anti-pattern": 40 } },
+    calibration,
     complete: async () => ({ output: { criteria: [
       { id: "assumption-invalidation", points: 15, rationale: "visible" }, { id: "plan-revision", points: 15, rationale: "visible" }, { id: "implementation-scope-adjustment", points: 20, rationale: "visible" }, { id: "verification-evidence-update", points: 15, rationale: "visible" }, { id: "risk-and-uncertainty-honesty", points: 10, rationale: "visible" },
     ], confidence: 80 } }),

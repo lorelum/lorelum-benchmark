@@ -5,7 +5,7 @@ import { fixedRubricHashes } from "./score";
 import { createAsyncReportReplanProvider } from "./provider";
 import { runAsyncReportReplanAttempt } from "./run";
 import { projectReplanEvidence } from "./evidence";
-import { calibrationIdentity } from "./calibration";
+import { runCalibration } from "./calibration";
 
 function rawAttempt() {
   return {
@@ -25,9 +25,13 @@ function completion(output: unknown, withUsage = false) {
   return async () => ({ output, ...(withUsage ? { usage: { input_tokens: 10, output_tokens: 20, total_tokens: 30, cost_usd: 0.01 } } : {}) });
 }
 
-async function qualifiedCalibration() {
-  const identity = await calibrationIdentity();
-  return { ...identity, status: "qualified" as const, calls: 9, medians: { reference: 80, equivalent: 78, "anti-pattern": 40 } };
+let qualifiedCalibrationPromise: ReturnType<typeof runCalibration> | undefined;
+function qualifiedCalibration() {
+  qualifiedCalibrationPromise ??= runCalibration({ mode: "mock", score: async (evidence) => {
+    const score = evidence.blind_case_id.includes("ref") ? 80 : evidence.blind_case_id.includes("eq") ? 78 : 40;
+    return { schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never;
+  } });
+  return qualifiedCalibrationPromise;
 }
 
 test("task provider returns fixed rubric scoring without changing judge-result/v1", async () => {

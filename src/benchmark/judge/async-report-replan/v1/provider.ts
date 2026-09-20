@@ -2,10 +2,12 @@ import type { JudgeContext, JudgeProvider } from "../../provider";
 import { buildJudgeInput, type JudgeInput, type PublicRunMaterial } from "../../input";
 import { sha256Text } from "../../../fs";
 import { assertReplanEvidenceIntegrity } from "./evidence";
+import { canonicalJson } from "./canonical";
 import { asyncReportJudgeEnv, httpAsyncReportJudgeCompletion } from "./llm";
 import { fixedRubricHashes, scoreReplanEvidence, resultBase, replanScorePrompt } from "./score";
 import { loadRubric, rubricText } from "./rubric";
 import { resolveCalibrationStatus } from "./calibration";
+import { evaluationPlanHash } from "./plan";
 import type { CalibrationReport, JudgeCompletionWithUsage, ReplanEvidence } from "./types";
 
 const taskObjective = "Evaluate post-constraint replan quality only; async-report semantic correctness is outside this Judge.";
@@ -21,6 +23,7 @@ export type ParsedReplanInput = { evidence: ReplanEvidence; input: JudgeInput };
 /** Rebuilds the shared Judge input so every scoring path crosses the public-only allowlist. */
 export async function parseBridgeEvidence(input: JudgeInput): Promise<ParsedReplanInput> {
   if (!input.rubric) throw new Error("async-report replan rubric is missing");
+  if (input.task_md !== taskObjective) throw new Error("async-report replan task objective is not the frozen v1 objective");
   const validated = await buildJudgeInput({ task_md: input.task_md, candidate_diff: input.candidate_diff, rubric: input.rubric, material: input.material });
   if (validated.input_hash !== input.input_hash) throw new Error("async-report replan input hash mismatch");
   const value = JSON.parse(validated.candidate_diff) as unknown;
@@ -28,7 +31,8 @@ export async function parseBridgeEvidence(input: JudgeInput): Promise<ParsedRepl
 }
 
 export async function buildAsyncReportJudgeInput(evidence: ReplanEvidence, material: PublicRunMaterial[] = []): Promise<JudgeInput> {
-  return buildJudgeInput({ task_md: taskObjective, candidate_diff: JSON.stringify(evidence), rubric: await rubricText(), material });
+  const validatedEvidence = await assertReplanEvidenceIntegrity(evidence);
+  return buildJudgeInput({ task_md: taskObjective, candidate_diff: canonicalJson(validatedEvidence), rubric: await rubricText(), material });
 }
 
 export function createAsyncReportReplanProvider(options: AsyncReportProviderOptions = {}): JudgeProvider & { scoreInput: typeof scoreValidatedInput; planHash: () => Promise<string> } {
@@ -54,7 +58,7 @@ export function createAsyncReportReplanProvider(options: AsyncReportProviderOpti
       }
     },
     scoreInput: scoreValidatedInput,
-    planHash: async () => (await import("./plan")).evaluationPlanHash(),
+    planHash: evaluationPlanHash,
   };
 }
 
