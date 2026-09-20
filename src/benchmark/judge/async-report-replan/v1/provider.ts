@@ -12,9 +12,19 @@ import type { CalibrationReport, JudgeCompletionWithUsage, ReplanEvidence } from
 
 const taskObjective = "Evaluate post-constraint replan quality only; async-report semantic correctness is outside this Judge.";
 const hashPattern = /^[a-f0-9]{64}$/;
+const providerId = "judge-agent/async-report-replan/v1";
 
 async function safeProvenanceHash(value: unknown, fallback: string): Promise<string> {
   return typeof value === "string" && hashPattern.test(value) ? value : sha256Text(fallback);
+}
+
+async function fixedDiagnosticHashes(state: "not-run" | "judge-unavailable"): Promise<{ prompt_hash: string; rubric_hash: string; input_hash: string }> {
+  const rubric_hash = await fixedRubricHashes().then((value) => value.hash).catch(() => sha256Text(`${providerId}:fixed-rubric-unavailable`));
+  return {
+    prompt_hash: await sha256Text(`${providerId}:diagnostic-prompt:${state}`),
+    rubric_hash,
+    input_hash: await sha256Text(`${providerId}:diagnostic-input:${state}`),
+  };
 }
 
 export type AsyncReportProviderOptions = {
@@ -63,14 +73,18 @@ export function createAsyncReportReplanProvider(options: AsyncReportProviderOpti
     },
     async score(input: JudgeInput, context: JudgeContext) {
       try {
-        const safeRubricHash = await safeProvenanceHash(context.rubric_hash, "invalid async-report rubric hash");
-        const safeInputHash = await safeProvenanceHash(input.input_hash, "invalid async-report input hash");
-        if (!complete && !resolvedEnv.real) return resultBase({ id: "judge-agent/async-report-replan/v1", version: "v1" }, await sha256Text("not-run: real scoring is disabled"), safeRubricHash, safeInputHash, "not-run", 0, "real scoring requires LORELUM_JUDGE_REAL=1");
-        if (!complete && (!resolvedEnv.baseUrl || !resolvedEnv.apiKey || !resolvedEnv.model)) return resultBase({ id: "judge-agent/async-report-replan/v1", version: "v1" }, await sha256Text("judge-unavailable: missing configuration"), safeRubricHash, safeInputHash, "judge-unavailable", 0, "Judge configuration is unavailable");
+        if (!complete && !resolvedEnv.real) {
+          const hashes = await fixedDiagnosticHashes("not-run");
+          return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "not-run", 0, "real scoring requires LORELUM_JUDGE_REAL=1");
+        }
+        if (!complete && (!resolvedEnv.baseUrl || !resolvedEnv.apiKey || !resolvedEnv.model)) {
+          const hashes = await fixedDiagnosticHashes("judge-unavailable");
+          return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "judge-unavailable", 0, "Judge configuration is unavailable");
+        }
         return (await scoreValidatedInput(input, { ...context, input_hash: input.input_hash }, complete ?? httpAsyncReportJudgeCompletion(env), options.calibration)).result;
       } catch (error) {
-        const promptHash = /^[a-f0-9]{64}$/.test(context.prompt_hash) ? context.prompt_hash : await sha256Text("async-report replan provider rejected input");
-        return resultBase({ id: "judge-agent/async-report-replan/v1", version: "v1" }, promptHash, await safeProvenanceHash(context.rubric_hash, "invalid async-report rubric hash"), await safeProvenanceHash(input.input_hash, "invalid async-report input hash"), "judge-unavailable", 0, "async-report replan input or provider was unavailable");
+        const hashes = await fixedDiagnosticHashes("judge-unavailable");
+        return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "judge-unavailable", 0, "async-report replan input or provider was unavailable");
       }
     },
     scoreInput: scoreValidatedInput,

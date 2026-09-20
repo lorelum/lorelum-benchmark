@@ -1,6 +1,6 @@
 import { isAbsolute } from "node:path";
 import { sha256Text } from "../../../fs";
-import { canonicalJson, normalizeText, redactedProjectionReason } from "./canonical";
+import { absolutePathPattern, canonicalJson, normalizeText, redactedProjectionReason } from "./canonical";
 import type {
   AllowedTool,
   ProjectionResult,
@@ -30,9 +30,7 @@ const forbiddenContent = [
   /\b(?:session[_ -]?id|session identity)\b/i,
   /\b(?:system|developer) prompt\b/i,
   /\b(?:api[_ -]?key|authorization|credential|password|secret|access[_ -]?token)\b/i,
-  /(?:^|[^A-Za-z0-9])[A-Za-z]:[\\/]/i,
-  /\\\\/i,
-  /\/(?:home|Users|workspace|tmp)\//i,
+  absolutePathPattern,
   /\b(?:evaluator|oracle)[ _-]?(?:version|status|check(?:s)?|expectation|fixture|source|id|ref)\b/i,
   /\b(?:scoring|calibration)[ _-]?(?:expectation|config|fixture|identity|result|status|hash|source)\b/i,
 ];

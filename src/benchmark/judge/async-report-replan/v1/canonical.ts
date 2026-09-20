@@ -1,4 +1,5 @@
 import { sha256Text } from "../../../fs";
+import { absolutePathPattern, redactAbsolutePaths } from "../../privacy";
 
 export function normalizeText(value: string): string {
   return value.replaceAll("\r\n", "\n").replaceAll("\r", "\n").replace(/[ \t]+$/gm, "").trim();
@@ -23,9 +24,8 @@ export function redactedProjectionReason(reason: string): string {
 }
 
 export function redactSensitiveText(reason: string): string {
-  return reason
-    .replace(/(?:^|[^A-Za-z0-9])[A-Za-z]:[\\/][^\s"'`]+/g, "[redacted-path]")
-    .replace(/\\\\[^\s"'`]+/g, "[redacted-path]")
-    .replace(/\/(?:home|Users|workspace|tmp)\/[^\s"'`]+/gi, "[redacted-path]")
+  return redactAbsolutePaths(reason)
     .replace(/(?:private|oracle|condition|delivery|practice|pack|session|secret|credential|token|password|api[_ -]?key|system|developer|thinking|toolresult|evaluator|scoring|absolute path)/gi, "[redacted]");
 }
+
+export { absolutePathPattern };

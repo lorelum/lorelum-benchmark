@@ -136,6 +136,16 @@ test("missing real opt-in is not-run and raw evidence cannot reach the provider"
   expect(rejected.state).toBe("not-run");
 });
 
+test("diagnostic provider states use fixed provenance instead of caller-supplied hashes", async () => {
+  const instance = await getAsyncReportReplanEvaluationInstance();
+  const callerHash = "a".repeat(64);
+  const result = await instance.provider.score({ task_md: "x", candidate_diff: "x", rubric: "x", input_hash: callerHash, material: [] }, { judge: { id: instance.provider.id, version: instance.provider.version }, prompt: "x", prompt_hash: callerHash, rubric_hash: callerHash });
+  expect(result.state).toBe("not-run");
+  expect(result.prompt_hash).not.toBe(callerHash);
+  expect(result.rubric_hash).not.toBe(callerHash);
+  expect(result.input_hash).not.toBe(callerHash);
+});
+
 test("real configuration gaps are judge-unavailable without a provider call", async () => {
   const result = await runAsyncReportReplanAttempt(rawAttempt(), { env: { LORELUM_JUDGE_REAL: "1" }, calibration: await qualifiedCalibration() });
   expect(result.result.state).toBe("judge-unavailable");
