@@ -1,7 +1,7 @@
 import { asyncReportJudgeEnv, httpAsyncReportJudgeCompletion } from "./llm";
 import { fixedRubricHashes } from "./score";
 import { buildAsyncReportJudgeInput, scoreForCalibration } from "./provider";
-import { runCalibration } from "./calibration";
+import { calibrationScope, runCalibration } from "./calibration";
 
 export async function runRealCalibration(env: Record<string, string | undefined> = Bun.env) {
   const resolved = asyncReportJudgeEnv(env);
@@ -11,6 +11,7 @@ export async function runRealCalibration(env: Record<string, string | undefined>
   return runCalibration({
     mode: "real",
     env,
+    scope: calibrationScope(resolved.model ?? null),
     score: async (evidence) => {
       complete ??= httpAsyncReportJudgeCompletion(env);
       const input = await buildAsyncReportJudgeInput(evidence);

@@ -96,6 +96,7 @@ export type EvaluationPlan = {
 
 export type CalibrationStatus = "qualified" | "diagnostic" | "not-run";
 export type CalibrationMedians = Partial<Record<"reference" | "equivalent" | "anti-pattern", number>>;
+export type CalibrationScope = { provider_id: typeof providerId; provider_version: "v1"; model: string | null };
 export type CalibrationReport = {
   id: string;
   version: string;
@@ -103,6 +104,7 @@ export type CalibrationReport = {
   status: CalibrationStatus;
   calls: number;
   medians: CalibrationMedians;
+  scope: CalibrationScope;
   attestation: string;
   reason?: string;
 };

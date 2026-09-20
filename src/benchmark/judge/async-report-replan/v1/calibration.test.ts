@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { evaluateCalibrationMedians, loadCalibrationFixtures, runCalibration, verifyCalibrationSnapshot } from "./calibration";
+import { calibrationScope, evaluateCalibrationMedians, loadCalibrationFixtures, resolveCalibrationStatus, runCalibration, verifyCalibrationSnapshot } from "./calibration";
 
 test("mock calibration uses three repetitions per fixture and qualifies only at the declared gate", async () => {
   const result = await runCalibration({ mode: "mock", score: async (evidence) => {
@@ -41,4 +41,10 @@ test("calibration fixtures are private evidence with distinct observable structu
 
 test("private calibration snapshot verifies fixture and rubric hashes", async () => {
   expect(await verifyCalibrationSnapshot()).toBe(true);
+});
+
+test("qualified calibration is bound to the scoring provider model scope", async () => {
+  const report = await runCalibration({ mode: "mock", score: async (evidence) => ({ schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score: evidence.blind_case_id.includes("ref") ? 80 : evidence.blind_case_id.includes("eq") ? 78 : 40, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never) });
+  expect((await resolveCalibrationStatus(report, calibrationScope("different-model"))).status).toBe("diagnostic");
+  expect((await resolveCalibrationStatus(report, calibrationScope("mock"))).status).toBe("qualified");
 });

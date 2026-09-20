@@ -6,7 +6,7 @@ import { evaluationPlan, evaluationPlanHash } from "./plan";
 import { fixedRubricHashes, replanScorePrompt, resultBase } from "./score";
 import { buildAsyncReportJudgeInput, scoreValidatedInput } from "./provider";
 import { loadRubric } from "./rubric";
-import { calibrationIdentity, resolveCalibrationStatus } from "./calibration";
+import { calibrationIdentity, calibrationScope, resolveCalibrationStatus } from "./calibration";
 import type { AsyncReportAccounting, CalibrationReport, JudgeCompletionWithUsage, RawReplanAttempt, ReplanEvidence } from "./types";
 import type { JudgeResultV1 } from "../../../outcome/v1/contract";
 
@@ -31,7 +31,7 @@ export async function runAsyncReportReplanAttempt(raw: RawReplanAttempt, options
   const judge = { id: "judge-agent/async-report-replan/v1", version: "v1" };
   const provider = { ...judge, model: env.model ?? null };
   const [planHash, rubric, rubricDocument] = await Promise.all([evaluationPlanHash(), fixedRubricHashes(), loadRubric()]);
-  const calibration = await resolveCalibrationStatus(options.calibration);
+  const calibration = await resolveCalibrationStatus(options.calibration, calibrationScope(options.complete ? "mock" : env.real ? env.model ?? null : "mock"));
   const projected = await projectReplanEvidence(raw);
   const blindCaseId = safeBlindCaseId(raw?.blind_case_id);
   const elapsed = () => Math.max(0, (options.now?.() ?? performance.now()) - start);
@@ -57,10 +57,6 @@ export async function runAsyncReportReplanAttempt(raw: RawReplanAttempt, options
     const result = await diagnosticResult(judge, rubric.hash, inputHash, "indeterminate", "attempt execution is not healthy", promptHash);
     return { evidence, result, accounting: buildAccounting({ state: "indeterminate", blind_case_id: evidence.blind_case_id, ...baseRefs, evidence: evidenceRef(evidence), prompt_hash: result.prompt_hash, input_hash: inputHash, provider, calls: { calibration: calibration.calls, scoring: 0 }, duration_ms: elapsed(), failure_reason: result.reason }) };
   }
-  if (calibration.status !== "qualified") {
-    const result = await diagnosticResult(judge, rubric.hash, inputHash, "indeterminate", calibration.reason ?? "calibration is not qualified", promptHash);
-    return { evidence, result, accounting: buildAccounting({ state: "indeterminate", blind_case_id: evidence.blind_case_id, ...baseRefs, evidence: evidenceRef(evidence), prompt_hash: result.prompt_hash, input_hash: inputHash, provider, calls: { calibration: calibration.calls, scoring: 0 }, duration_ms: elapsed(), failure_reason: result.reason }) };
-  }
   if (!options.complete && !env.real) {
     const result = await diagnosticResult(judge, rubric.hash, inputHash, "not-run", "real scoring requires LORELUM_JUDGE_REAL=1", promptHash);
     return { evidence, result, accounting: buildAccounting({ state: "not-run", blind_case_id: evidence.blind_case_id, ...baseRefs, evidence: evidenceRef(evidence), prompt_hash: result.prompt_hash, input_hash: inputHash, provider, calls: { calibration: calibration.calls, scoring: 0 }, duration_ms: elapsed(), failure_reason: result.reason }) };
@@ -69,10 +65,14 @@ export async function runAsyncReportReplanAttempt(raw: RawReplanAttempt, options
     const result = await diagnosticResult(judge, rubric.hash, inputHash, "judge-unavailable", "Judge configuration is unavailable", promptHash);
     return { evidence, result, accounting: buildAccounting({ state: "judge-unavailable", blind_case_id: evidence.blind_case_id, ...baseRefs, evidence: evidenceRef(evidence), prompt_hash: result.prompt_hash, input_hash: inputHash, provider, calls: { calibration: calibration.calls, scoring: 0 }, duration_ms: elapsed(), failure_reason: result.reason }) };
   }
+  if (calibration.status !== "qualified") {
+    const result = await diagnosticResult(judge, rubric.hash, inputHash, "indeterminate", calibration.reason ?? "calibration is not qualified", promptHash);
+    return { evidence, result, accounting: buildAccounting({ state: "indeterminate", blind_case_id: evidence.blind_case_id, ...baseRefs, evidence: evidenceRef(evidence), prompt_hash: result.prompt_hash, input_hash: inputHash, provider, calls: { calibration: calibration.calls, scoring: 0 }, duration_ms: elapsed(), failure_reason: result.reason }) };
+  }
 
   try {
     const complete = options.complete ?? httpAsyncReportJudgeCompletion(options.env ?? Bun.env);
-    const scored = await scoreValidatedInput(input, { judge, rubric_hash: rubric.hash, input_hash: inputHash }, complete, options.calibration);
+    const scored = await scoreValidatedInput(input, { judge, rubric_hash: rubric.hash, input_hash: inputHash }, complete, options.calibration, calibrationScope(options.complete ? "mock" : env.model ?? null));
     const state = accountingStateFromJudgeState(scored.result.state);
     return { evidence, result: scored.result, accounting: buildAccounting({ state, blind_case_id: evidence.blind_case_id, ...baseRefs, evidence: evidenceRef(evidence), prompt_hash: scored.prompt_hash, input_hash: inputHash, provider, calls: { calibration: calibration.calls, scoring: 1 }, duration_ms: elapsed(), usage: scored.usage, ...(scored.result.state === "observed" ? {} : { failure_reason: scored.result.reason ?? "Judge did not produce an observed result" }) }) };
   } catch (error) {

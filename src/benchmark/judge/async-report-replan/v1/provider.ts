@@ -6,7 +6,7 @@ import { canonicalJson } from "./canonical";
 import { asyncReportJudgeEnv, httpAsyncReportJudgeCompletion } from "./llm";
 import { fixedRubricHashes, scoreReplanEvidence, resultBase, replanPromptHashes, replanScorePrompt } from "./score";
 import { loadRubric, rubricText } from "./rubric";
-import { resolveCalibrationStatus } from "./calibration";
+import { calibrationScope, resolveCalibrationStatus } from "./calibration";
 import { evaluationPlanHash } from "./plan";
 import type { CalibrationReport, JudgeCompletionWithUsage, ReplanEvidence } from "./types";
 
@@ -81,7 +81,8 @@ export function createAsyncReportReplanProvider(options: AsyncReportProviderOpti
           const hashes = await fixedDiagnosticHashes("judge-unavailable");
           return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "judge-unavailable", 0, "Judge configuration is unavailable");
         }
-        return (await scoreValidatedInput(input, { ...context, input_hash: input.input_hash }, complete ?? httpAsyncReportJudgeCompletion(env), options.calibration)).result;
+        const scoringComplete = complete ?? httpAsyncReportJudgeCompletion(env);
+        return (await scoreValidatedInput(input, { ...context, input_hash: input.input_hash }, scoringComplete, options.calibration, calibrationScope(complete ? "mock" : resolvedEnv.model ?? null))).result;
       } catch (error) {
         const hashes = await fixedDiagnosticHashes("judge-unavailable");
         return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "judge-unavailable", 0, "async-report replan input or provider was unavailable");
@@ -97,6 +98,7 @@ export async function scoreValidatedInput(
   context: Pick<JudgeContext, "judge" | "rubric_hash"> & { input_hash: string },
   complete: JudgeCompletionWithUsage,
   calibration?: CalibrationReport,
+  expectedCalibrationScope = calibrationScope("mock"),
 ) {
   const parsed = await parseBridgeEvidence(input);
   const hashes = await fixedRubricHashes();
@@ -105,7 +107,7 @@ export async function scoreValidatedInput(
   const safeContextInputHash = await safeProvenanceHash(context.input_hash, "invalid async-report input hash");
   if (hashes.hash !== safeContextRubricHash || safeContextInputHash !== parsed.input.input_hash) return { result: resultBase(context.judge, promptHash, hashes.hash, parsed.input.input_hash, "judge-unavailable", 0, "fixed provenance hash mismatch"), prompt_hash: promptHash, usage: {} };
   if (parsed.evidence.execution_health !== "healthy") return { result: resultBase(context.judge, promptHash, hashes.hash, parsed.input.input_hash, "indeterminate", 0, "attempt execution is not healthy"), prompt_hash: promptHash, usage: {} };
-  const qualification = await resolveCalibrationStatus(calibration);
+  const qualification = await resolveCalibrationStatus(calibration, expectedCalibrationScope);
   if (qualification.status !== "qualified") return { result: resultBase(context.judge, promptHash, hashes.hash, parsed.input.input_hash, "indeterminate", 0, qualification.reason ?? "calibration is not qualified"), prompt_hash: promptHash, usage: {} };
   try {
     return await scoreReplanEvidence({ evidence: parsed.evidence, rubric: await loadRubric(), rubric_hash: hashes.hash, input_hash: parsed.input.input_hash, judge: context.judge, complete, material: parsed.input.material });

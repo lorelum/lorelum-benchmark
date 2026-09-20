@@ -77,6 +77,26 @@ describe("replan evidence projection", () => {
     expect(result.ok).toBe(false);
   });
 
+  test("does not treat shell wrappers or output commands as verification", async () => {
+    for (const command of ["echo bun test", "printf bun test", "echo x && bun test", "node -e \\\"bun test\\\""]) {
+      const result = await projectReplanEvidence(raw({ events: [
+        { type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "initial" }] } },
+        { type: "message_end", message: { role: "assistant", stage: "post-constraint", content: [{ type: "text", text: "post" }] } },
+        { type: "tool_action", stage: "post-constraint", tool: "bash", args: { command }, status: "success", summary: "claimed verification" },
+      ] }));
+      expect(result).toMatchObject({ ok: false, state: "indeterminate" });
+    }
+  });
+
+  test("does not accept a direct tool summary without a matching execution result", async () => {
+    const result = await projectReplanEvidence(raw({ events: [
+      { type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "initial" }] } },
+      { type: "message_end", message: { role: "assistant", stage: "post-constraint", content: [{ type: "text", text: "post" }] } },
+      { type: "tool_action", stage: "post-constraint", tool: "bash", args: { command: "bun test" }, status: "success", summary: "claimed verification" },
+    ] }));
+    expect(result).toMatchObject({ ok: false, state: "indeterminate" });
+  });
+
   test("allows ordinary public domain words that are not private identity markers", async () => {
     const result = await projectReplanEvidence(raw({ public_user_turns: [{ stage: "initial", text: "Practice the public scoring workflow." }, { stage: "post-constraint", text: "Calibration is a public verification term here." }] }));
     expect(result.ok).toBe(true);
@@ -87,7 +107,8 @@ describe("replan evidence projection", () => {
       { type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "initial" }] } },
       { type: "message_end", message: { role: "assistant", stage: "post-constraint", content: [{ type: "text", text: "post" }, { type: "toolCall", id: "pi-1", name: "read", arguments: { path: "src/report.ts" } }] } },
       { type: "tool_result", id: "pi-1", isError: false, result: { raw: "do not forward" } },
-      { type: "tool_action", stage: "post-constraint", tool: "bash", args: { command: "bun test" }, status: "success", summary: "tests passed" },
+      { type: "tool_execution_start", toolCallId: "t2", stage: "post-constraint", toolName: "bash", args: { command: "bun test" } },
+      { type: "tool_execution_end", toolCallId: "t2", isError: false, result: { summary: "tests passed" } },
     ] }));
     expect(result.ok).toBe(true);
     if (result.ok) {

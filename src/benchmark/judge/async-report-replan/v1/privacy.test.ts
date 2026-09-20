@@ -14,7 +14,8 @@ test("Judge evidence and accounting stay blind and public-safe", async () => {
     events: [
       { type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "I will inspect the current assumptions." }] } },
       { type: "message_end", message: { role: "assistant", stage: "post-constraint", content: [{ type: "text", text: "I will revise the plan and report the remaining risk." }] } },
-      { type: "tool_action", stage: "post-constraint", tool: "bash", args: { command: "bun test" }, status: "success", summary: "tests passed" },
+      { type: "tool_execution_start", toolCallId: "t1", stage: "post-constraint", toolName: "bash", args: { command: "bun test" } },
+      { type: "tool_execution_end", toolCallId: "t1", isError: false, result: { summary: "tests passed" } },
     ],
     final_candidate_diff: "diff --git a/src/report.ts b/src/report.ts\n+export function report() {}\n",
   }, {

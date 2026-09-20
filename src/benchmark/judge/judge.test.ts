@@ -79,10 +79,28 @@ test("material must resolve inside a public root and exist", async () => {
 test("isAllowedPublicPath enforces the workspace boundary", () => {
   expect(isAllowedPublicPath("src/benchmark/kernel/fixtures/neutral/public/starter/src/index.ts").allowed).toBe(true);
   expect(isAllowedPublicPath("suites/react-skill-comparison/tasks/workspace-overview-loader/v1/public/task.md").allowed).toBe(true);
+  expect(isAllowedPublicPath("incubator/practice-injection/async-report-lifecycle-v1/public/task.md").allowed).toBe(true);
+  expect(isAllowedPublicPath("incubator/skill-trigger-orchestration/async-cleanup-v1/public/task.md").allowed).toBe(true);
   expect(isAllowedPublicPath("suites/react-skill-comparison/tasks/workspace-overview-loader/v1/private/public/task.md").allowed).toBe(false);
   expect(isAllowedPublicPath("suites/react-skill-comparison/private/public/task.md").allowed).toBe(false);
   expect(isAllowedPublicPath("private/evaluator").allowed).toBe(false);
   expect(isAllowedPublicPath("../../etc/passwd").allowed).toBe(false);
+});
+
+test("incubator public material is accepted only through its explicit public root", async () => {
+  const input = await buildJudgeInput({
+    task_md: publicTask,
+    candidate_diff: candidateDiff,
+    rubric,
+    material: [{ path: "incubator/practice-injection/async-report-lifecycle-v1/public/task.md", kind: "public/task.md" }]
+  });
+  expect(input.material[0].content).toContain("异步报表");
+  await expect(buildJudgeInput({
+    task_md: publicTask,
+    candidate_diff: candidateDiff,
+    rubric,
+    material: [{ path: "incubator/practice-injection/async-report-lifecycle-v1/private/public/task.md", kind: "declared-public" }]
+  })).rejects.toThrow("judge input rejected");
 });
 
 test("public material content is checked for private and absolute-path leakage", async () => {

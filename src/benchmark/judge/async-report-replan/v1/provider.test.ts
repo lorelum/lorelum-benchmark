@@ -15,7 +15,8 @@ function rawAttempt() {
     events: [
       { type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "I will inspect the current assumption." }] } },
       { type: "message_end", message: { role: "assistant", stage: "post-constraint", content: [{ type: "text", text: "I will revise the plan, narrow compatibility, update tests, and state the residual risk." }] } },
-      { type: "tool_action", stage: "post-constraint", tool: "bash", args: { command: "bun test" }, status: "success", summary: "tests passed" },
+      { type: "tool_execution_start", toolCallId: "t1", stage: "post-constraint", toolName: "bash", args: { command: "bun test" } },
+      { type: "tool_execution_end", toolCallId: "t1", isError: false, result: { summary: "tests passed" } },
     ],
     final_candidate_diff: "diff --git a/src/report.ts b/src/report.ts\n+export function report() {}\n",
   };
@@ -80,11 +81,11 @@ test("provider rejects caller-supplied alternate rubric before any completion", 
 test("invalid calibration counts fail closed without throwing or entering accounting", async () => {
   const valid = await qualifiedCalibration();
   const invalid = { ...valid, calls: 10 };
-  const result = await runAsyncReportReplanAttempt(rawAttempt(), { calibration: invalid });
+  const result = await runAsyncReportReplanAttempt(rawAttempt(), { calibration: invalid, complete: async () => { throw new Error("must not score"); } });
   expect(result.result.state).toBe("indeterminate");
   expect(result.accounting.calls.calibration).toBe(0);
   const nan = { ...valid, medians: { ...valid.medians, reference: Number.NaN } };
-  const nanResult = await runAsyncReportReplanAttempt(rawAttempt(), { calibration: nan });
+  const nanResult = await runAsyncReportReplanAttempt(rawAttempt(), { calibration: nan, complete: async () => { throw new Error("must not score"); } });
   expect(nanResult.result.state).toBe("indeterminate");
   expect(nanResult.accounting.calls.calibration).toBe(9);
 });

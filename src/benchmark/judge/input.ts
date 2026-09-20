@@ -43,7 +43,8 @@ export function looksPrivate(text: string): boolean {
 function redactToken(text: string): string {
   let out = redactAbsolutePaths(text);
   for (const marker of privateMarkers) {
-    out = out.replaceAll(marker.toLowerCase(), "[redacted]").replaceAll(marker.toUpperCase(), "[redacted]");
+    const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp(escaped, "gi"), "[redacted]");
   }
   return out;
 }
@@ -61,6 +62,9 @@ function publicRootRelativePath(path: string): string | undefined {
   if (segments[0] === "public") return "public";
   if (segments[0] === "suites" && segments[2] === "tasks" && /^v[0-9]+$/.test(segments[4] ?? "") && segments[5] === "public") {
     return segments.slice(0, 6).join("/");
+  }
+  if (segments[0] === "incubator" && ["practice-injection", "skill-trigger-orchestration"].includes(segments[1] ?? "") && segments[3] === "public") {
+    return segments.slice(0, 4).join("/");
   }
   if (segments[0] === "src" && segments[1] === "benchmark" && segments[2] === "kernel" && segments[3] === "fixtures" && segments[5] === "public") {
     return segments.slice(0, 6).join("/");

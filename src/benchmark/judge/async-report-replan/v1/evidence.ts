@@ -88,9 +88,17 @@ function safeRelativePath(value: unknown, label: string): string {
 }
 
 function commandCategory(command: string): VerificationCategory | undefined {
-  const normalized = command.toLowerCase().replaceAll("\\", "/");
-  if (/\b(?:bun|npm|pnpm|yarn)\s+(?:run\s+)?(?:test|check|lint)\b|\b(?:vitest|jest|pytest)\b/.test(normalized)) return "test";
-  if (/\b(?:bun|npm|pnpm|yarn)\s+(?:run\s+)?(?:typecheck|check-types)\b|\btsc(?:\.exe)?\b/.test(normalized)) return "typecheck";
+  const normalized = command.trim().toLowerCase().replaceAll("\\", "/");
+  if (!normalized || /[;&|<>`$()\r\n]/.test(normalized)) return undefined;
+  const tokens = normalized.split(/\s+/);
+  const executable = tokens[0];
+  if (["vitest", "jest", "pytest"].includes(executable)) return "test";
+  if (executable === "tsc" || executable === "tsc.exe") return "typecheck";
+  if (!["bun", "npm", "pnpm", "yarn"].includes(executable)) return undefined;
+  const commandIndex = tokens[1] === "run" ? 2 : 1;
+  const script = tokens[commandIndex];
+  if (["test", "check", "lint"].some((name) => script === name || script.startsWith(`${name}:`))) return "test";
+  if (["typecheck", "check-types"].includes(script)) return "typecheck";
   return undefined;
 }
 
@@ -172,13 +180,8 @@ function directToolAction(event: RecordValue, order: number): { action: ReplanTo
   const args = record(event.args ?? event.arguments) ?? {};
   const targetInfo = toolTarget(tool, args);
   const status = statusOf(event, "tool action");
-  const summary = addSummary(event.summary, "tool summary", targetInfo.category);
-  const action: ReplanToolAction = { order, stage, tool, target: targetInfo.target, status, ...(summary ? { summary, summary_sha256: "" } : {}) };
-  if (summary) {
-    action.summary_sha256 = "";
-    return { action, verification: { order, stage, command_category: targetInfo.category!, summary, summary_sha256: "" } };
-  }
-  return { action };
+  if (targetInfo.category && event.summary !== undefined) fail("verification summary requires a matching execution result");
+  return { action: { order, stage, tool, target: targetInfo.target, status } };
 }
 
 async function failureHash(reason: string): Promise<string> {

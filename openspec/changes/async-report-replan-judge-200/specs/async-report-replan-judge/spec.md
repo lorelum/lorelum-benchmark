@@ -47,6 +47,8 @@ The projector MUST allow only `read`, `ls`, `grep`, `edit`, and `bash` tool acti
 - **WHEN** an allowlisted tool call has a valid relative path or recognized command category and a matching execution result
 - **THEN** the evidence contains the normalized metadata and status without raw output
 
+Recognized verification commands MUST use an explicit allowlisted executable/script form without shell control syntax, and a verification summary MUST come from a matching execution-end/result event. A direct tool-action summary or a shell wrapper such as `echo bun test` MUST NOT become verification evidence.
+
 #### Scenario: Unknown tool shape fails closed
 
 - **WHEN** a tool call is not allowlisted, has an absolute/escaping path, or cannot be associated with a safe status
@@ -108,6 +110,8 @@ The change MUST provide offline projection contract tests and a separate real-Ju
 
 - **WHEN** calibration exceeds nine real calls, fails a threshold, or cannot establish discrimination
 - **THEN** the Judge channel is diagnostic/indeterminate and MUST NOT support a timing-direction conclusion
+
+Calibration qualification MUST bind the fixed provider id/version and model identity used by the scoring attempt. A report produced for a different provider/model scope MUST be diagnostic/indeterminate.
 
 ### Requirement: Accounting is versioned and independent from hard evaluation
 

@@ -65,6 +65,8 @@ The allowlist is `read`, `ls`, `grep`, `edit`, and `bash`. Thinking/reasoning an
 
 Missing required fields, cap overflow, unknown tool shapes, or incomplete stage boundaries produce `indeterminate`; the implementation does not truncate and continue scoring.
 
+The projector treats `public_user_turns` as public content carried by a private, runner-produced attempt artifact: it hashes and validates the two supplied stages but does not authenticate them against #202 or infer condition/timing. The upstream #197 runner and the future #209 task adapter own the fixed-task/snapshot provenance for those turns. A caller that cannot provide that upstream provenance is outside the formal record path and must remain diagnostic-only; #200 does not solve that join by reading private evaluator material.
+
 ### 3. Fixed rubric and scoring semantics
 
 The five rubric dimensions total 100 points:
@@ -105,6 +107,8 @@ Scoring calibration uses three repetitions per fixture, median aggregation, and 
 - reference at least 15 points above anti-pattern.
 
 Failure marks the Judge channel diagnostic/indeterminate and prevents directional use.
+
+Every calibration report is also scoped to `judge-agent/async-report-replan/v1`, provider version `v1`, and the model identity used for calibration. A scoring attempt with a different provider/model scope is diagnostic/indeterminate and cannot reuse the qualified report. The provider/model scope is task-specific calibration provenance; #201 still owns the later experiment-level join.
 
 ### 5. Accounting without hard-gate coupling
 
