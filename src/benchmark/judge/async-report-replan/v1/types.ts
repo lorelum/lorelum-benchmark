@@ -95,6 +95,16 @@ export type EvaluationPlan = {
 };
 
 export type CalibrationStatus = "qualified" | "diagnostic" | "not-run";
+export type CalibrationMedians = Partial<Record<"reference" | "equivalent" | "anti-pattern", number>>;
+export type CalibrationReport = {
+  id: string;
+  version: string;
+  hash: string;
+  status: CalibrationStatus;
+  calls: number;
+  medians: CalibrationMedians;
+  reason?: string;
+};
 export type AccountingState = "observed" | "indeterminate" | "judge-unavailable" | "not-run";
 export type UsageValue = number | "unavailable";
 
@@ -127,4 +137,3 @@ export type JudgeCompletionWithUsage = (system: string, user: string) => Promise
   output: unknown;
   usage?: Partial<JudgeUsage>;
 }>;
-

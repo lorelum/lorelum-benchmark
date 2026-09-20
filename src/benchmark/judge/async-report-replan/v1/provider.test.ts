@@ -5,6 +5,7 @@ import { fixedRubricHashes } from "./score";
 import { createAsyncReportReplanProvider } from "./provider";
 import { runAsyncReportReplanAttempt } from "./run";
 import { projectReplanEvidence } from "./evidence";
+import { calibrationIdentity } from "./calibration";
 
 function rawAttempt() {
   return {
@@ -24,11 +25,16 @@ function completion(output: unknown, withUsage = false) {
   return async () => ({ output, ...(withUsage ? { usage: { input_tokens: 10, output_tokens: 20, total_tokens: 30, cost_usd: 0.01 } } : {}) });
 }
 
+async function qualifiedCalibration() {
+  const identity = await calibrationIdentity();
+  return { ...identity, status: "qualified" as const, calls: 9, medians: { reference: 80, equivalent: 78, "anti-pattern": 40 } };
+}
+
 test("task provider returns fixed rubric scoring without changing judge-result/v1", async () => {
   const projected = await projectReplanEvidence(rawAttempt());
   expect(projected.ok).toBe(true);
   if (!projected.ok) return;
-  const provider = createAsyncReportReplanProvider({ calibrationStatus: "qualified", complete: completion({ criteria: [
+  const provider = createAsyncReportReplanProvider({ calibration: await qualifiedCalibration(), complete: completion({ criteria: [
     { id: "assumption-invalidation", points: 16, rationale: "post-constraint text names the invalidated assumption" },
     { id: "plan-revision", points: 15, rationale: "post-constraint plan changes sequence" },
     { id: "implementation-scope-adjustment", points: 20, rationale: "compatibility scope is narrowed" },
@@ -47,7 +53,7 @@ test("task provider returns fixed rubric scoring without changing judge-result/v
 test("invalid structured output becomes judge-unavailable instead of a low score", async () => {
   const projected = await projectReplanEvidence(rawAttempt());
   if (!projected.ok) throw new Error("fixture did not project");
-  const provider = createAsyncReportReplanProvider({ calibrationStatus: "qualified", complete: completion({ criteria: [], confidence: 10 }) });
+  const provider = createAsyncReportReplanProvider({ calibration: await qualifiedCalibration(), complete: completion({ criteria: [], confidence: 10 }) });
   const input = await buildReplanJudgeInput(projected.evidence);
   const hashes = await fixedRubricHashes();
   const result = await provider.score(input, { judge: { id: provider.id, version: provider.version }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: hashes.hash });
@@ -56,12 +62,23 @@ test("invalid structured output becomes judge-unavailable instead of a low score
   expect(result.criteria).toEqual([]);
 });
 
+test("a forged qualified calibration report cannot enable scoring", async () => {
+  const projected = await projectReplanEvidence(rawAttempt());
+  if (!projected.ok) throw new Error("fixture did not project");
+  let calls = 0;
+  const provider = createAsyncReportReplanProvider({ calibration: { id: "cal", version: "v1", hash: "b".repeat(64), status: "qualified", calls: 9, medians: { reference: 100, equivalent: 100, "anti-pattern": 0 } }, complete: async () => { calls += 1; return { output: {} }; } });
+  const input = await buildReplanJudgeInput(projected.evidence);
+  const result = await provider.score(input, { judge: { id: provider.id, version: provider.version }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: (await fixedRubricHashes()).hash });
+  expect(result.state).toBe("indeterminate");
+  expect(calls).toBe(0);
+});
+
 test("attempt runner captures usage and records unavailable values when absent", async () => {
   const scored = await runAsyncReportReplanAttempt(rawAttempt(), {
     complete: completion({ criteria: [
       { id: "assumption-invalidation", points: 20, rationale: "r" }, { id: "plan-revision", points: 20, rationale: "r" }, { id: "implementation-scope-adjustment", points: 25, rationale: "r" }, { id: "verification-evidence-update", points: 20, rationale: "r" }, { id: "risk-and-uncertainty-honesty", points: 15, rationale: "r" },
     ], confidence: 90 }, true),
-    calibration: { id: "cal", version: "v1", hash: "b".repeat(64), status: "qualified" },
+    calibration: await qualifiedCalibration(),
   });
   expect(scored.result.state).toBe("observed");
   expect(scored.accounting.calls.scoring).toBe(1);
@@ -72,21 +89,22 @@ test("attempt runner captures usage and records unavailable values when absent",
     complete: completion({ criteria: [
       { id: "assumption-invalidation", points: 20, rationale: "r" }, { id: "plan-revision", points: 20, rationale: "r" }, { id: "implementation-scope-adjustment", points: 25, rationale: "r" }, { id: "verification-evidence-update", points: 20, rationale: "r" }, { id: "risk-and-uncertainty-honesty", points: 15, rationale: "r" },
     ], confidence: 90 }),
-    calibration: { id: "cal", version: "v1", hash: "b".repeat(64), status: "qualified" },
+    calibration: await qualifiedCalibration(),
   });
   expect(noUsage.accounting.usage.input_tokens).toBe("unavailable");
 });
 
 test("missing real opt-in is not-run and raw evidence cannot reach the provider", async () => {
-  const notRun = await runAsyncReportReplanAttempt(rawAttempt(), { calibration: { id: "cal", version: "v1", hash: "b".repeat(64), status: "qualified" } });
+  const notRun = await runAsyncReportReplanAttempt(rawAttempt(), { calibration: await qualifiedCalibration() });
   expect(notRun.result.state).toBe("not-run");
   const instance = await getAsyncReportReplanEvaluationInstance();
   expect(instance.plan.method).toBe("llm-subjective");
-  await expect(instance.provider.score({ task_md: "x", candidate_diff: JSON.stringify({ session_id: "bad" }), rubric: "x", input_hash: "a".repeat(64), material: [] }, { judge: { id: instance.provider.id, version: instance.provider.version }, prompt: "x", prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64) })).rejects.toThrow();
+  const rejected = await instance.provider.score({ task_md: "x", candidate_diff: JSON.stringify({ session_id: "bad" }), rubric: "x", input_hash: "a".repeat(64), material: [] }, { judge: { id: instance.provider.id, version: instance.provider.version }, prompt: "x", prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64) });
+  expect(rejected.state).toBe("not-run");
 });
 
 test("real configuration gaps are judge-unavailable without a provider call", async () => {
-  const result = await runAsyncReportReplanAttempt(rawAttempt(), { env: { LORELUM_JUDGE_REAL: "1" }, calibration: { id: "cal", version: "v1", hash: "b".repeat(64), status: "qualified" } });
+  const result = await runAsyncReportReplanAttempt(rawAttempt(), { env: { LORELUM_JUDGE_REAL: "1" }, calibration: await qualifiedCalibration() });
   expect(result.result.state).toBe("judge-unavailable");
   expect(result.accounting.calls.scoring).toBe(0);
 });
@@ -102,7 +120,7 @@ test("adapter material is checked by the existing public-only Judge allowlist", 
 test("a future adapter can invoke the fixed instance without changing scoring semantics", async () => {
   const projected = await projectReplanEvidence(rawAttempt());
   if (!projected.ok) throw new Error("fixture did not project");
-  const provider = createAsyncReportReplanProvider({ calibrationStatus: "qualified", complete: completion({ criteria: [
+  const provider = createAsyncReportReplanProvider({ calibration: await qualifiedCalibration(), complete: completion({ criteria: [
     { id: "assumption-invalidation", points: 10, rationale: "r" }, { id: "plan-revision", points: 10, rationale: "r" }, { id: "implementation-scope-adjustment", points: 10, rationale: "r" }, { id: "verification-evidence-update", points: 10, rationale: "r" }, { id: "risk-and-uncertainty-honesty", points: 10, rationale: "r" },
   ], confidence: 70 }) });
   const instance = await getAsyncReportReplanEvaluationInstance(provider);

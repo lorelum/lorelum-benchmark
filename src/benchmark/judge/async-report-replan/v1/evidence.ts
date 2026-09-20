@@ -70,7 +70,7 @@ function stageOf(value: unknown, label: string): ReplanStage {
 }
 
 function validBlindCaseId(value: string): string {
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value) || forbiddenContent.some((pattern) => pattern.test(value))) fail("blind_case_id is not an opaque safe identifier");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value) || forbiddenContent.some((pattern) => pattern.test(value)) || /(?:condition|delivery|timing)/i.test(value) || /^(?:baseline|oracle|retrieval|irrelevant|task-start|constraint-followup|first-implementation-checkpoint)$/i.test(value)) fail("blind_case_id is not an opaque safe identifier");
   return value;
 }
 
@@ -80,7 +80,7 @@ function isAbsoluteOrEscaping(value: string): boolean {
 
 function safeRelativePath(value: unknown, label: string): string {
   const raw = stringField(value, label).replaceAll("\\", "/").trim();
-  if (!raw || isAbsoluteOrEscaping(raw) || forbiddenContent.some((pattern) => pattern.test(raw))) fail(`${label} is not a safe relative path`);
+  if (!raw || raw.length > 512 || isAbsoluteOrEscaping(raw) || forbiddenContent.some((pattern) => pattern.test(raw))) fail(`${label} is not a safe relative path`);
   const normalized = raw.split("/").filter((part) => part && part !== ".").join("/") || ".";
   if (!normalized || normalized.startsWith("../") || normalized === "..") fail(`${label} escapes the public workspace`);
   return normalized;
@@ -318,6 +318,33 @@ export function assertReplanEvidence(value: unknown): asserts value is ReplanEvi
   validBlindCaseId(stringField(root.blind_case_id, "blind_case_id"));
   if (root.execution_health !== "healthy" && root.execution_health !== "unhealthy") throw new Error("replan evidence execution_health is invalid");
   if (!Array.isArray(root.public_user_turns) || root.public_user_turns.length !== 2 || !Array.isArray(root.assistant_stages) || root.assistant_stages.length !== 2 || !Array.isArray(root.tool_actions) || !Array.isArray(root.verification_summaries) || typeof root.final_candidate_diff !== "string") throw new Error("replan evidence shape is incomplete");
+  const hashPattern = /^[a-f0-9]{64}$/;
+  for (const [index, item] of root.public_user_turns.entries()) {
+    const turn = record(item);
+    if (!turn) throw new Error(`public user turn ${index} is invalid`);
+    exactKeys(turn, ["stage", "text", "text_sha256"], `public user turn ${index}`);
+    if (!stageSet.has(turn.stage as ReplanStage) || typeof turn.text !== "string" || turn.text.length > stageCap || typeof turn.text_sha256 !== "string" || !hashPattern.test(turn.text_sha256)) throw new Error(`public user turn ${index} violates the v1 schema`);
+  }
+  for (const [index, item] of root.assistant_stages.entries()) {
+    const stage = record(item);
+    if (!stage) throw new Error(`assistant stage ${index} is invalid`);
+    exactKeys(stage, ["stage", "text", "text_sha256"], `assistant stage ${index}`);
+    if (!stageSet.has(stage.stage as ReplanStage) || typeof stage.text !== "string" || stage.text.length > stageCap || typeof stage.text_sha256 !== "string" || !hashPattern.test(stage.text_sha256)) throw new Error(`assistant stage ${index} violates the v1 schema`);
+  }
+  for (const [index, item] of root.tool_actions.entries()) {
+    const action = record(item);
+    if (!action) throw new Error(`tool action ${index} is invalid`);
+    exactKeys(action, ["order", "stage", "tool", "target", "status", "summary", "summary_sha256"], `tool action ${index}`);
+    if (!Number.isInteger(action.order) || action.order < 0 || !stageSet.has(action.stage as ReplanStage) || !allowedTools.has(action.tool as AllowedTool) || typeof action.target !== "string" || !action.target || action.target.length > 512 || action.status !== "success" && action.status !== "failure") throw new Error(`tool action ${index} violates the v1 schema`);
+    if (action.summary !== undefined && (typeof action.summary !== "string" || action.summary.length > summaryCap || typeof action.summary_sha256 !== "string" || !hashPattern.test(action.summary_sha256))) throw new Error(`tool action ${index} summary violates the v1 schema`);
+    if (action.summary === undefined && action.summary_sha256 !== undefined) throw new Error(`tool action ${index} has an orphan summary hash`);
+  }
+  for (const [index, item] of root.verification_summaries.entries()) {
+    const summary = record(item);
+    if (!summary) throw new Error(`verification summary ${index} is invalid`);
+    exactKeys(summary, ["order", "stage", "command_category", "summary", "summary_sha256"], `verification summary ${index}`);
+    if (!Number.isInteger(summary.order) || summary.order < 0 || !stageSet.has(summary.stage as ReplanStage) || summary.command_category !== "test" && summary.command_category !== "typecheck" || typeof summary.summary !== "string" || !summary.summary || summary.summary.length > summaryCap || typeof summary.summary_sha256 !== "string" || !hashPattern.test(summary.summary_sha256)) throw new Error(`verification summary ${index} violates the v1 schema`);
+  }
   const publicTurnStages = root.public_user_turns.map((item) => record(item)?.stage);
   const assistantStages = root.assistant_stages.map((item) => record(item)?.stage);
   if (JSON.stringify(publicTurnStages) !== JSON.stringify(stages) || JSON.stringify(assistantStages) !== JSON.stringify(stages)) throw new Error("replan evidence stage boundaries are invalid");

@@ -84,5 +84,11 @@
       }
     },
     "failure_reason": { "type": "string", "minLength": 1 }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "not": { "const": "observed" } } }, "required": ["state"] },
+      "then": { "required": ["failure_reason"] }
+    }
+  ]
 }

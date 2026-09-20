@@ -79,8 +79,9 @@ export function assertAsyncReportAccounting(value: unknown): asserts value is As
   if (!Number.isInteger(value.duration_ms) || value.duration_ms < 0 || !record(value.usage)) throw new Error("async-report accounting duration or usage is invalid");
   for (const key of ["input_tokens", "output_tokens", "total_tokens", "cost_usd"] as const) {
     const item = value.usage[key];
-    if (item !== "unavailable" && (typeof item !== "number" || !Number.isFinite(item) || item < 0)) throw new Error(`async-report accounting usage.${key} is invalid`);
+    if (item !== "unavailable" && (typeof item !== "number" || !Number.isFinite(item) || item < 0 || (key !== "cost_usd" && !Number.isInteger(item)))) throw new Error(`async-report accounting usage.${key} is invalid`);
   }
+  if (value.state !== "observed" && (typeof value.failure_reason !== "string" || !value.failure_reason)) throw new Error("non-observed async-report accounting requires a failure reason");
   if (value.failure_reason !== undefined && (typeof value.failure_reason !== "string" || !value.failure_reason)) throw new Error("async-report accounting failure reason is invalid");
 }
 

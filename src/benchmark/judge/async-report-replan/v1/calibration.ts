@@ -3,7 +3,7 @@ import { listFiles, sha256File, sha256Text } from "../../../fs";
 import { canonicalJson } from "./canonical";
 import { assertReplanEvidence } from "./evidence";
 import type { JudgeResultV1 } from "../../../outcome/v1/contract";
-import type { CalibrationStatus, ReplanEvidence } from "./types";
+import type { CalibrationReport, CalibrationStatus, ReplanEvidence } from "./types";
 
 export const calibrationId = "async-report-replan-judge-calibration" as const;
 export const calibrationVersion = "v1" as const;
@@ -11,15 +11,6 @@ export const calibrationThresholds = Object.freeze({ reference_min: 75, equivale
 
 export type CalibrationFixtureId = "reference" | "equivalent" | "anti-pattern";
 export type CalibrationFixture = { id: CalibrationFixtureId; evidence: ReplanEvidence };
-export type CalibrationReport = {
-  id: typeof calibrationId;
-  version: typeof calibrationVersion;
-  identity_hash: string;
-  status: CalibrationStatus;
-  calls: number;
-  medians: Partial<Record<CalibrationFixtureId, number>>;
-  reason?: string;
-};
 
 const calibrationDir = join(import.meta.dir, "private", "calibration");
 
@@ -50,9 +41,22 @@ export async function calibrationIdentity(): Promise<{ id: typeof calibrationId;
   return { id: calibrationId, version: calibrationVersion, hash: await sha256Text(entries.join("\n")) };
 }
 
+export async function resolveCalibrationStatus(report?: CalibrationReport): Promise<{ id: string; version: string; hash: string; status: CalibrationStatus; calls: number; reason?: string }> {
+  const identity = await calibrationIdentity();
+  if (!report) return { ...identity, status: "not-run", calls: 0, reason: "no calibration report was supplied" };
+  if (report.id !== identity.id || report.version !== identity.version || report.hash !== identity.hash) return { ...identity, status: "diagnostic", calls: report.calls, reason: "calibration identity does not match the frozen v1 package" };
+  if (!(await verifyCalibrationSnapshot())) return { ...identity, status: "diagnostic", calls: report.calls, reason: "calibration snapshot is not verified" };
+  const gate = evaluateCalibrationMedians(report.medians);
+  if (report.status !== "qualified" || report.calls !== calibrationThresholds.max_calls || !gate.qualified) return { ...identity, status: "diagnostic", calls: report.calls, reason: report.reason ?? gate.reason ?? "calibration gate is not qualified" };
+  return { ...identity, status: "qualified", calls: report.calls };
+}
+
 export async function verifyCalibrationSnapshot(): Promise<boolean> {
   const snapshot = await Bun.file(join(calibrationDir, "snapshot.json")).json() as { source_files?: Record<string, string>; rubric_hash?: string };
   if (!snapshot.source_files || typeof snapshot.rubric_hash !== "string") return false;
+  const actualFiles = (await listFiles(calibrationDir)).filter((file) => file !== "snapshot.json").sort();
+  const snapshotFiles = Object.keys(snapshot.source_files).sort();
+  if (JSON.stringify(actualFiles) !== JSON.stringify(snapshotFiles)) return false;
   for (const [file, expected] of Object.entries(snapshot.source_files)) if (await sha256File(join(calibrationDir, file)) !== expected) return false;
   return snapshot.rubric_hash === await (await import("./rubric")).rubricHash();
 }
@@ -80,6 +84,7 @@ export async function runCalibration(options: {
   max_calls?: number;
   env?: Record<string, string | undefined>;
 }): Promise<CalibrationReport> {
+  if (!(await verifyCalibrationSnapshot())) return { id: calibrationId, version: calibrationVersion, hash: await sha256Text("unverified calibration snapshot"), status: "diagnostic", calls: 0, medians: {}, reason: "calibration snapshot is not verified" };
   const identity = await calibrationIdentity();
   const repetitions = options.repetitions ?? calibrationThresholds.repetitions;
   const maxCalls = options.max_calls ?? calibrationThresholds.max_calls;

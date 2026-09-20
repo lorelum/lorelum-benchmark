@@ -59,6 +59,7 @@ describe("replan evidence projection", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.reason).not.toContain("private/evaluator");
     }
+    await expect(projectReplanEvidence(raw({ blind_case_id: "constraint-followup" }))).resolves.toMatchObject({ ok: false, state: "indeterminate" });
   });
 
   test("fails closed for unknown tools, incomplete boundaries, and caps", async () => {
@@ -86,6 +87,19 @@ describe("replan evidence projection", () => {
     if (result.ok) {
       expect(result.evidence.tool_actions).toEqual([{ order: 0, stage: "post-constraint", tool: "read", target: "src/report.ts", status: "success" }]);
       expect(JSON.stringify(result.evidence)).not.toContain("do not forward");
+    }
+  });
+
+  test("provider-facing evidence validation rejects nested extras and cap violations before scoring", async () => {
+    const projected = await projectReplanEvidence(raw());
+    expect(projected.ok).toBe(true);
+    if (projected.ok) {
+      const extra = structuredClone(projected.evidence) as Record<string, unknown>;
+      (extra.assistant_stages as Array<Record<string, unknown>>)[0].unexpected = "reject";
+      await expect(assertReplanEvidenceIntegrity(extra)).rejects.toThrow();
+      const overCap = structuredClone(projected.evidence) as Record<string, unknown>;
+      (overCap.assistant_stages as Array<Record<string, unknown>>)[0].text = "x".repeat(8001);
+      await expect(assertReplanEvidenceIntegrity(overCap)).rejects.toThrow();
     }
   });
 });
