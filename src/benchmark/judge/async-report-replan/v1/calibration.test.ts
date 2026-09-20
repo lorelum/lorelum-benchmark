@@ -22,6 +22,16 @@ test("real calibration is not-run without explicit opt-in", async () => {
   expect(result.calls).toBe(0);
 });
 
+test("malformed calibration budgets are diagnostic before any fixture call", async () => {
+  let calls = 0;
+  const score = async () => { calls += 1; throw new Error("must not call"); };
+  const fractional = await runCalibration({ mode: "mock", max_calls: 8.5, score });
+  const nan = await runCalibration({ mode: "mock", max_calls: Number.NaN, score });
+  expect(fractional.status).toBe("diagnostic");
+  expect(nan.status).toBe("diagnostic");
+  expect(calls).toBe(0);
+});
+
 test("calibration fixtures are private evidence with distinct observable structure", async () => {
   const fixtures = await loadCalibrationFixtures();
   expect(fixtures).toHaveLength(3);

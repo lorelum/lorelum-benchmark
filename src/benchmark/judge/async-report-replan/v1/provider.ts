@@ -4,7 +4,7 @@ import { sha256Text } from "../../../fs";
 import { assertReplanEvidenceIntegrity } from "./evidence";
 import { canonicalJson } from "./canonical";
 import { asyncReportJudgeEnv, httpAsyncReportJudgeCompletion } from "./llm";
-import { fixedRubricHashes, scoreReplanEvidence, resultBase, replanScorePrompt } from "./score";
+import { fixedRubricHashes, scoreReplanEvidence, resultBase, replanPromptHashes, replanScorePrompt } from "./score";
 import { loadRubric, rubricText } from "./rubric";
 import { resolveCalibrationStatus } from "./calibration";
 import { evaluationPlanHash } from "./plan";
@@ -18,26 +18,30 @@ export type AsyncReportProviderOptions = {
   calibration?: CalibrationReport;
 };
 
-export type ParsedReplanInput = { evidence: ReplanEvidence; input: JudgeInput };
-
-export async function replanInputHash(input: Pick<JudgeInput, "task_md" | "candidate_diff" | "rubric" | "material">): Promise<string> {
-  return sha256Text(canonicalJson({ schema_version: "async-report-replan-judge-input/v1", task_md: input.task_md, candidate_diff: input.candidate_diff, rubric: input.rubric, material: input.material.map((item) => ({ path: item.path, kind: item.kind, content: item.content ?? "" })) }));
-}
+export type ParsedReplanInput = { evidence: ReplanEvidence; input: JudgeInput; prompt_hash: string; input_hash: string };
 
 /** Rebuilds the shared Judge input so every scoring path crosses the public-only allowlist. */
 export async function parseBridgeEvidence(input: JudgeInput): Promise<ParsedReplanInput> {
   if (!input.rubric) throw new Error("async-report replan rubric is missing");
   if (input.task_md !== taskObjective) throw new Error("async-report replan task objective is not the frozen v1 objective");
   const validated = await buildJudgeInput({ task_md: input.task_md, candidate_diff: input.candidate_diff, rubric: input.rubric, material: input.material });
-  if (await replanInputHash(validated) !== input.input_hash) throw new Error("async-report replan input hash mismatch");
   const value = JSON.parse(validated.candidate_diff) as unknown;
-  return { evidence: await assertReplanEvidenceIntegrity(value), input: validated };
+  const evidence = await assertReplanEvidenceIntegrity(value);
+  const fixedRubric = await loadRubric();
+  const fixedRubricText = await rubricText();
+  if (input.rubric !== fixedRubricText) throw new Error("async-report replan rubric is not the frozen v1 rubric");
+  const hashes = await replanPromptHashes(evidence, fixedRubric, validated.material);
+  if (hashes.input_hash !== input.input_hash) throw new Error("async-report replan input hash mismatch");
+  return { evidence, input: { ...validated, input_hash: hashes.input_hash }, prompt_hash: hashes.prompt_hash, input_hash: hashes.input_hash };
 }
 
 export async function buildAsyncReportJudgeInput(evidence: ReplanEvidence, material: PublicRunMaterial[] = []): Promise<JudgeInput> {
   const validatedEvidence = await assertReplanEvidenceIntegrity(evidence);
-  const base = await buildJudgeInput({ task_md: taskObjective, candidate_diff: canonicalJson(validatedEvidence), rubric: await rubricText(), material });
-  return { ...base, input_hash: await replanInputHash(base) };
+  const fixedRubricText = await rubricText();
+  const fixedRubric = await loadRubric();
+  const base = await buildJudgeInput({ task_md: taskObjective, candidate_diff: canonicalJson(validatedEvidence), rubric: fixedRubricText, material });
+  const hashes = await replanPromptHashes(validatedEvidence, fixedRubric, base.material);
+  return { ...base, input_hash: hashes.input_hash };
 }
 
 export function createAsyncReportReplanProvider(options: AsyncReportProviderOptions = {}): JudgeProvider & { scoreInput: typeof scoreValidatedInput; planHash: () => Promise<string> } {
@@ -75,7 +79,7 @@ export async function scoreValidatedInput(
 ) {
   const parsed = await parseBridgeEvidence(input);
   const hashes = await fixedRubricHashes();
-  const promptHash = await sha256Text(replanScorePrompt(parsed.evidence, await loadRubric(), parsed.input.material));
+  const promptHash = parsed.prompt_hash;
   if (hashes.hash !== context.rubric_hash) return { result: resultBase(context.judge, promptHash, context.rubric_hash, parsed.input.input_hash, "judge-unavailable", 0, "fixed rubric hash mismatch"), prompt_hash: promptHash, usage: {} };
   if (parsed.evidence.execution_health !== "healthy") return { result: resultBase(context.judge, promptHash, hashes.hash, parsed.input.input_hash, "indeterminate", 0, "attempt execution is not healthy"), prompt_hash: promptHash, usage: {} };
   const qualification = await resolveCalibrationStatus(calibration);

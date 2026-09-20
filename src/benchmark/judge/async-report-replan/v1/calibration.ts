@@ -110,7 +110,7 @@ export async function runCalibration(options: {
   const identity = await calibrationIdentity();
   const repetitions = options.repetitions ?? calibrationThresholds.repetitions;
   const maxCalls = options.max_calls ?? calibrationThresholds.max_calls;
-  if (repetitions !== 3 || maxCalls > 9) return issueReport({ ...identity, status: "diagnostic", calls: 0, medians: {}, reason: "calibration budget does not match v1" });
+  if (!Number.isInteger(repetitions) || repetitions !== calibrationThresholds.repetitions || !Number.isInteger(maxCalls) || maxCalls !== calibrationThresholds.max_calls) return issueReport({ ...identity, status: "diagnostic", calls: 0, medians: {}, reason: "calibration budget does not match v1" });
   if (options.mode === "real" && options.env?.LORELUM_JUDGE_REAL !== "1") return issueReport({ ...identity, status: "not-run", calls: 0, medians: {}, reason: "real calibration requires LORELUM_JUDGE_REAL=1" });
   const medians: Partial<Record<CalibrationFixtureId, number>> = {};
   let calls = 0;

@@ -19,5 +19,9 @@ export async function hashJson(value: unknown): Promise<string> {
 }
 
 export function redactedProjectionReason(reason: string): string {
-  return `replan evidence rejected: ${reason.replace(/(?:private|oracle|condition|delivery|practice|pack|session|secret|credential|token|password|api[_ -]?key|system|developer|thinking|toolresult)/gi, "[redacted]").slice(0, 240)}`;
+  return `replan evidence rejected: ${redactSensitiveText(reason).slice(0, 240)}`;
+}
+
+export function redactSensitiveText(reason: string): string {
+  return reason.replace(/(?:private|oracle|condition|delivery|practice|pack|session|secret|credential|token|password|api[_ -]?key|system|developer|thinking|toolresult|evaluator|scoring|absolute path)/gi, "[redacted]");
 }

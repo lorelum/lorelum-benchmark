@@ -77,6 +77,11 @@ describe("replan evidence projection", () => {
     expect(result.ok).toBe(false);
   });
 
+  test("allows ordinary public domain words that are not private identity markers", async () => {
+    const result = await projectReplanEvidence(raw({ public_user_turns: [{ stage: "initial", text: "Practice the public scoring workflow." }, { stage: "post-constraint", text: "Calibration is a public verification term here." }] }));
+    expect(result.ok).toBe(true);
+  });
+
   test("projects Pi assistant toolCall plus tool_result metadata without raw result content", async () => {
     const result = await projectReplanEvidence(raw({ events: [
       { type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "initial" }] } },

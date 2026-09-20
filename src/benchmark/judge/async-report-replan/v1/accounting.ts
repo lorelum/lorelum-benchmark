@@ -1,5 +1,5 @@
 import { sha256Text } from "../../../fs";
-import { canonicalJson, redactedProjectionReason } from "./canonical";
+import { canonicalJson, redactSensitiveText } from "./canonical";
 import type { AsyncReportAccounting, AccountingState, CalibrationStatus, JudgeUsage, ReplanEvidence, UsageValue } from "./types";
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -61,7 +61,7 @@ export function buildAccounting(input: {
     calls: { calibration: input.calls.calibration, scoring: input.calls.scoring },
     duration_ms: Math.max(0, Math.round(input.duration_ms)),
     usage: normalizeUsage(input.usage),
-    ...(input.failure_reason ? { failure_reason: redactedProjectionReason(input.failure_reason) } : {}),
+    ...(input.failure_reason ? { failure_reason: redactSensitiveText(input.failure_reason).slice(0, 240) } : {}),
   };
   assertAsyncReportAccounting(result);
   return result;
@@ -76,19 +76,19 @@ export function assertAsyncReportAccounting(value: unknown): asserts value is As
   for (const key of ["prompt_hash", "input_hash"] as const) if (typeof value[key] !== "string" || !/^[a-f0-9]{64}$/.test(value[key])) throw new Error(`async-report accounting ${key} is invalid`);
   if (!record(value.plan)) throw new Error("async-report accounting plan is invalid");
   exactKeys(value.plan, ["id", "version", "hash"], "plan");
-  if (typeof value.plan.id !== "string" || typeof value.plan.version !== "string" || typeof value.plan.hash !== "string" || !/^[a-f0-9]{64}$/.test(value.plan.hash)) throw new Error("async-report accounting plan is invalid");
+  if (typeof value.plan.id !== "string" || !value.plan.id || typeof value.plan.version !== "string" || !value.plan.version || typeof value.plan.hash !== "string" || !/^[a-f0-9]{64}$/.test(value.plan.hash)) throw new Error("async-report accounting plan is invalid");
   if (!record(value.evidence)) throw new Error("async-report accounting evidence is invalid");
   exactKeys(value.evidence, ["schema_version", "hash"], "evidence");
   if (value.evidence.schema_version !== "replan-evidence/v1" || typeof value.evidence.hash !== "string" || !/^[a-f0-9]{64}$/.test(value.evidence.hash)) throw new Error("async-report accounting evidence is invalid");
   if (!record(value.rubric)) throw new Error("async-report accounting rubric is invalid");
   exactKeys(value.rubric, ["id", "version", "hash"], "rubric");
-  if (typeof value.rubric.id !== "string" || typeof value.rubric.version !== "string" || typeof value.rubric.hash !== "string" || !/^[a-f0-9]{64}$/.test(value.rubric.hash)) throw new Error("async-report accounting rubric is invalid");
+  if (typeof value.rubric.id !== "string" || !value.rubric.id || typeof value.rubric.version !== "string" || !value.rubric.version || typeof value.rubric.hash !== "string" || !/^[a-f0-9]{64}$/.test(value.rubric.hash)) throw new Error("async-report accounting rubric is invalid");
   if (!record(value.provider)) throw new Error("async-report accounting provider is invalid");
   exactKeys(value.provider, ["id", "version", "model"], "provider");
-  if (typeof value.provider.id !== "string" || typeof value.provider.version !== "string" || (value.provider.model !== null && typeof value.provider.model !== "string")) throw new Error("async-report accounting provider is invalid");
+  if (typeof value.provider.id !== "string" || !value.provider.id || typeof value.provider.version !== "string" || !value.provider.version || (value.provider.model !== null && typeof value.provider.model !== "string")) throw new Error("async-report accounting provider is invalid");
   if (!record(value.calibration)) throw new Error("async-report accounting calibration is invalid");
   exactKeys(value.calibration, ["id", "version", "hash", "status"], "calibration");
-  if (typeof value.calibration.id !== "string" || typeof value.calibration.version !== "string" || typeof value.calibration.hash !== "string" || !/^[a-f0-9]{64}$/.test(value.calibration.hash) || !["qualified", "diagnostic", "not-run"].includes(String(value.calibration.status))) throw new Error("async-report accounting calibration is invalid");
+  if (typeof value.calibration.id !== "string" || !value.calibration.id || typeof value.calibration.version !== "string" || !value.calibration.version || typeof value.calibration.hash !== "string" || !/^[a-f0-9]{64}$/.test(value.calibration.hash) || !["qualified", "diagnostic", "not-run"].includes(String(value.calibration.status))) throw new Error("async-report accounting calibration is invalid");
   if (!record(value.calls)) throw new Error("async-report accounting call counts are invalid");
   exactKeys(value.calls, ["calibration", "scoring"], "calls");
   if (!Number.isInteger(value.calls.calibration) || value.calls.calibration < 0 || value.calls.calibration > 9 || !Number.isInteger(value.calls.scoring) || value.calls.scoring < 0 || value.calls.scoring > 1) throw new Error("async-report accounting call counts are invalid");
@@ -99,7 +99,7 @@ export function assertAsyncReportAccounting(value: unknown): asserts value is As
     if (item !== "unavailable" && (typeof item !== "number" || !Number.isFinite(item) || item < 0 || (key !== "cost_usd" && !Number.isInteger(item)))) throw new Error(`async-report accounting usage.${key} is invalid`);
   }
   if (value.state !== "observed" && (typeof value.failure_reason !== "string" || !value.failure_reason)) throw new Error("non-observed async-report accounting requires a failure reason");
-  if (value.failure_reason !== undefined && (typeof value.failure_reason !== "string" || !value.failure_reason)) throw new Error("async-report accounting failure reason is invalid");
+  if (value.failure_reason !== undefined && (typeof value.failure_reason !== "string" || !value.failure_reason || redactSensitiveText(value.failure_reason) !== value.failure_reason)) throw new Error("async-report accounting failure reason is unsafe");
 }
 
 export function accountingStateFromJudgeState(state: string): AccountingState {

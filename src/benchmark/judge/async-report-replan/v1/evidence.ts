@@ -23,15 +23,16 @@ const diffCap = 120_000;
 const summaryCap = 2_000;
 
 const forbiddenContent = [
-  /(?:^|[\\/])private(?:[\\/]|$)/i,
-  /(?:^|[\\/])oracle(?:[\\/]|\.|$)/i,
+  /\bprivate[\\/]/i,
+  /\boracle[\\/]/i,
   /\b(?:condition[_ -]?id|delivery[_ -]?node|timing(?:[_ -]?assignment|[_ -]?node)?)\b/i,
-  /\b(?:pack|practice)[ _-]?(?:id|ref|payload|provenance|body|text)?\b/i,
+  /\b(?:pack|practice)[ _-](?:id|ref|payload|provenance|body|text)\b/i,
   /\b(?:session[_ -]?id|session identity)\b/i,
   /\b(?:system|developer) prompt\b/i,
   /\b(?:api[_ -]?key|authorization|credential|password|secret|access[_ -]?token)\b/i,
   /(?:^|\s)(?:[A-Za-z]:[\\/]|\\\\|\/home\/|\/Users\/|\/workspace\/|\/tmp\/)/i,
-  /\b(?:evaluator|oracle|scoring|calibration)[ _-]?(?:version|status|check|expectation|fixture|source|config)?\b/i,
+  /\b(?:evaluator|oracle)[ _-]?(?:version|status|check(?:s)?|expectation|fixture|source|id|ref)\b/i,
+  /\b(?:scoring|calibration)[ _-]?(?:expectation|config|fixture|identity|result|status|hash|source)\b/i,
 ];
 
 type RecordValue = Record<string, unknown>;

@@ -66,6 +66,17 @@ test("invalid structured output becomes judge-unavailable instead of a low score
   expect(result.criteria).toEqual([]);
 });
 
+test("provider rejects caller-supplied alternate rubric before any completion", async () => {
+  const projected = await projectReplanEvidence(rawAttempt());
+  if (!projected.ok) throw new Error("fixture did not project");
+  let calls = 0;
+  const provider = createAsyncReportReplanProvider({ calibration: await qualifiedCalibration(), complete: async () => { calls += 1; return { output: {} }; } });
+  const input = await buildReplanJudgeInput(projected.evidence);
+  const result = await provider.score({ ...input, rubric: `${input.rubric}\ncaller alteration` }, { judge: { id: provider.id, version: provider.version }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: (await fixedRubricHashes()).hash });
+  expect(result.state).toBe("judge-unavailable");
+  expect(calls).toBe(0);
+});
+
 test("invalid calibration counts fail closed without throwing or entering accounting", async () => {
   const valid = await qualifiedCalibration();
   const invalid = { ...valid, calls: 10 };

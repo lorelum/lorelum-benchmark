@@ -57,6 +57,12 @@ export function replanScorePrompt(evidence: ReplanEvidence, rubric: ReplanRubric
   ].join("\n\n");
 }
 
+export async function replanPromptHashes(evidence: ReplanEvidence, rubric: ReplanRubric, material: PublicRunMaterial[] = []): Promise<{ prompt_hash: string; input_hash: string }> {
+  const system = replanScoreSystemPrompt();
+  const user = replanScorePrompt(evidence, rubric, material);
+  return { prompt_hash: await sha256Text(user), input_hash: await sha256Text(canonicalJson({ schema_version: "async-report-replan-prompt-input/v1", system, user })) };
+}
+
 function resultBase(judge: { id: string; version: string }, promptHash: string, rubricHashValue: string, inputHash: string, state: "indeterminate" | "judge-unavailable" | "not-run", confidence: number, reason: string): JudgeResultV1 {
   return assertJudgeResultV1({ schema_version: "judge-result/v1", judge_version: 1, judge, state, score: 0, criteria: [], prompt_hash: promptHash, rubric_hash: rubricHashValue, input_hash: inputHash, confidence, reason });
 }
@@ -71,7 +77,9 @@ export async function scoreReplanEvidence(input: {
   material?: PublicRunMaterial[];
 }): Promise<{ result: JudgeResultV1; prompt_hash: string; usage: Partial<import("./types").JudgeUsage>; }> {
   const prompt = replanScorePrompt(input.evidence, input.rubric, input.material);
-  const promptHash = await sha256Text(prompt);
+  const hashes = await replanPromptHashes(input.evidence, input.rubric, input.material);
+  const promptHash = hashes.prompt_hash;
+  if (input.input_hash !== hashes.input_hash) fail("input hash is not bound to the fixed scoring prompt");
   const completion = await input.complete(replanScoreSystemPrompt(), prompt);
   const scored = assertReplanScoredOutput(completion.output);
   if (scored.state === "indeterminate") return { result: resultBase(input.judge, promptHash, input.rubric_hash, input.input_hash, "indeterminate", scored.confidence, scored.reason), prompt_hash: promptHash, usage: completion.usage ?? {} };
