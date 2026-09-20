@@ -84,9 +84,11 @@ export async function runAsyncReportReplanAttempt(raw: RawReplanAttempt, options
 
 if (import.meta.main) {
   const inputPath = Bun.argv[2];
+  const calibrationPath = Bun.argv[3];
   if (!inputPath) {
-    console.error("usage: bun run src/benchmark/judge/async-report-replan/v1/run.ts <private-attempt.json>");
+    console.error("usage: bun run src/benchmark/judge/async-report-replan/v1/run.ts <private-attempt.json> [calibration-report.json]");
     process.exit(2);
   }
-  console.log(JSON.stringify(await runAsyncReportReplanAttempt(await Bun.file(inputPath).json() as RawReplanAttempt), null, 2));
+  const calibration = calibrationPath ? await Bun.file(calibrationPath).json() as CalibrationReport : undefined;
+  console.log(JSON.stringify(await runAsyncReportReplanAttempt(await Bun.file(inputPath).json() as RawReplanAttempt, { calibration }), null, 2));
 }

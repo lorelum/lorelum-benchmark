@@ -15,6 +15,8 @@ export type JudgeInput = {
   material: PublicRunMaterial[];
 };
 
+const publicMaterialKinds = new Set<PublicRunMaterial["kind"]>(["public/task.md", "public/starter", "candidate-diff", "candidate-source", "declared-public"]);
+
 // Known private markers. Path-level allowlist is the enforcement gate; these
 // markers are a secondary guard for non-path string fields and only match
 // path-like or key-like tokens to avoid rejecting legitimate public text.
@@ -69,6 +71,9 @@ export function isAllowedPublicPath(path: string): { allowed: boolean; reason?: 
 }
 
 async function readMaterial(item: PublicRunMaterial): Promise<PublicRunMaterial> {
+  if (!item || typeof item.path !== "string" || typeof item.kind !== "string" || !publicMaterialKinds.has(item.kind) || Object.keys(item).some((key) => !["path", "kind", "content"].includes(key))) {
+    throw new Error(redactedReason("material shape or kind is not allowlisted"));
+  }
   const check = isAllowedPublicPath(item.path);
   if (!check.allowed) {
     throw new Error(redactedReason(`material outside allowlist: ${check.reason}`));

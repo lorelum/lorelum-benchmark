@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { listFiles, sha256File, sha256Text } from "../../../fs";
+import { canonicalJson } from "./canonical";
 import { assertReplanEvidence } from "./evidence";
 import type { JudgeResultV1 } from "../../../outcome/v1/contract";
 import type { CalibrationReport, CalibrationStatus, ReplanEvidence } from "./types";
@@ -12,11 +13,16 @@ export type CalibrationFixtureId = "reference" | "equivalent" | "anti-pattern";
 export type CalibrationFixture = { id: CalibrationFixtureId; evidence: ReplanEvidence };
 
 const calibrationDir = join(import.meta.dir, "private", "calibration");
-const issuedQualifiedReports = new WeakSet<object>();
+const calibrationSnapshotPath = join(calibrationDir, "snapshot.json");
 
-function issueReport(report: CalibrationReport): CalibrationReport {
-  if (report.status === "qualified") issuedQualifiedReports.add(report);
-  return report;
+async function issueReport(report: Omit<CalibrationReport, "attestation">): Promise<CalibrationReport> {
+  return { ...report, attestation: await calibrationAttestation(report) };
+}
+
+async function calibrationAttestation(report: Omit<CalibrationReport, "attestation">): Promise<string> {
+  const snapshotHash = await sha256File(calibrationSnapshotPath).catch(() => "unavailable");
+  const rubricHash = await (await import("./rubric")).rubricHash().catch(() => "unavailable");
+  return sha256Text(canonicalJson({ schema_version: "async-report-replan-calibration-attestation/v1", report, snapshot_hash: snapshotHash, rubric_hash: rubricHash }));
 }
 
 function safeCallCount(value: unknown): number | undefined {
@@ -61,10 +67,12 @@ export async function calibrationIdentity(): Promise<{ id: typeof calibrationId;
 export async function resolveCalibrationStatus(report?: CalibrationReport): Promise<{ id: string; version: string; hash: string; status: CalibrationStatus; calls: number; reason?: string }> {
   const identity = await calibrationIdentity();
   if (!report) return { ...identity, status: "not-run", calls: 0, reason: "no calibration report was supplied" };
+  if (!report || typeof report !== "object" || Object.keys(report).some((key) => !["id", "version", "hash", "status", "calls", "medians", "attestation", "reason"].includes(key)) || typeof report.attestation !== "string") return { ...identity, status: "diagnostic", calls: 0, reason: "calibration report shape is invalid" };
   const calls = safeCallCount(report.calls);
   if (calls === undefined) return { ...identity, status: "diagnostic", calls: 0, reason: "calibration call count is invalid" };
   if (!validMedians(report.medians)) return { ...identity, status: "diagnostic", calls, reason: "calibration medians are invalid" };
-  if (report.status === "qualified" && !issuedQualifiedReports.has(report)) return { ...identity, status: "diagnostic", calls, reason: "qualified calibration was not issued by the v1 calibration runner" };
+  const { attestation: _attestation, ...reportWithoutAttestation } = report;
+  if (report.attestation !== await calibrationAttestation(reportWithoutAttestation)) return { ...identity, status: "diagnostic", calls, reason: "calibration attestation does not match the frozen package" };
   if (report.id !== identity.id || report.version !== identity.version || report.hash !== identity.hash) return { ...identity, status: "diagnostic", calls, reason: "calibration identity does not match the frozen v1 package" };
   if (!(await verifyCalibrationSnapshot())) return { ...identity, status: "diagnostic", calls, reason: "calibration snapshot is not verified" };
   const gate = evaluateCalibrationMedians(report.medians);
@@ -73,7 +81,7 @@ export async function resolveCalibrationStatus(report?: CalibrationReport): Prom
 }
 
 export async function verifyCalibrationSnapshot(): Promise<boolean> {
-  const snapshot = await Bun.file(join(calibrationDir, "snapshot.json")).json() as { source_files?: Record<string, string>; rubric_hash?: string };
+  const snapshot = await Bun.file(calibrationSnapshotPath).json() as { source_files?: Record<string, string>; rubric_hash?: string };
   if (!snapshot.source_files || typeof snapshot.rubric_hash !== "string") return false;
   const actualFiles = (await listFiles(calibrationDir)).filter((file) => file !== "snapshot.json").sort();
   const snapshotFiles = Object.keys(snapshot.source_files).sort();

@@ -30,7 +30,9 @@ const forbiddenContent = [
   /\b(?:session[_ -]?id|session identity)\b/i,
   /\b(?:system|developer) prompt\b/i,
   /\b(?:api[_ -]?key|authorization|credential|password|secret|access[_ -]?token)\b/i,
-  /(?:^|\s)(?:[A-Za-z]:[\\/]|\\\\|\/home\/|\/Users\/|\/workspace\/|\/tmp\/)/i,
+  /(?:^|[^A-Za-z0-9])[A-Za-z]:[\\/]/i,
+  /\\\\/i,
+  /\/(?:home|Users|workspace|tmp)\//i,
   /\b(?:evaluator|oracle)[ _-]?(?:version|status|check(?:s)?|expectation|fixture|source|id|ref)\b/i,
   /\b(?:scoring|calibration)[ _-]?(?:expectation|config|fixture|identity|result|status|hash|source)\b/i,
 ];

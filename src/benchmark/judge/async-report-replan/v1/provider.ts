@@ -11,6 +11,11 @@ import { evaluationPlanHash } from "./plan";
 import type { CalibrationReport, JudgeCompletionWithUsage, ReplanEvidence } from "./types";
 
 const taskObjective = "Evaluate post-constraint replan quality only; async-report semantic correctness is outside this Judge.";
+const hashPattern = /^[a-f0-9]{64}$/;
+
+async function safeProvenanceHash(value: unknown, fallback: string): Promise<string> {
+  return typeof value === "string" && hashPattern.test(value) ? value : sha256Text(fallback);
+}
 
 export type AsyncReportProviderOptions = {
   env?: Record<string, string | undefined>;
@@ -58,12 +63,14 @@ export function createAsyncReportReplanProvider(options: AsyncReportProviderOpti
     },
     async score(input: JudgeInput, context: JudgeContext) {
       try {
-        if (!complete && !resolvedEnv.real) return resultBase({ id: "judge-agent/async-report-replan/v1", version: "v1" }, await sha256Text("not-run: real scoring is disabled"), context.rubric_hash, input.input_hash, "not-run", 0, "real scoring requires LORELUM_JUDGE_REAL=1");
-        if (!complete && (!resolvedEnv.baseUrl || !resolvedEnv.apiKey || !resolvedEnv.model)) return resultBase({ id: "judge-agent/async-report-replan/v1", version: "v1" }, await sha256Text("judge-unavailable: missing configuration"), context.rubric_hash, input.input_hash, "judge-unavailable", 0, "Judge configuration is unavailable");
+        const safeRubricHash = await safeProvenanceHash(context.rubric_hash, "invalid async-report rubric hash");
+        const safeInputHash = await safeProvenanceHash(input.input_hash, "invalid async-report input hash");
+        if (!complete && !resolvedEnv.real) return resultBase({ id: "judge-agent/async-report-replan/v1", version: "v1" }, await sha256Text("not-run: real scoring is disabled"), safeRubricHash, safeInputHash, "not-run", 0, "real scoring requires LORELUM_JUDGE_REAL=1");
+        if (!complete && (!resolvedEnv.baseUrl || !resolvedEnv.apiKey || !resolvedEnv.model)) return resultBase({ id: "judge-agent/async-report-replan/v1", version: "v1" }, await sha256Text("judge-unavailable: missing configuration"), safeRubricHash, safeInputHash, "judge-unavailable", 0, "Judge configuration is unavailable");
         return (await scoreValidatedInput(input, { ...context, input_hash: input.input_hash }, complete ?? httpAsyncReportJudgeCompletion(env), options.calibration)).result;
       } catch (error) {
         const promptHash = /^[a-f0-9]{64}$/.test(context.prompt_hash) ? context.prompt_hash : await sha256Text("async-report replan provider rejected input");
-        return resultBase({ id: "judge-agent/async-report-replan/v1", version: "v1" }, promptHash, context.rubric_hash, input.input_hash, "judge-unavailable", 0, "async-report replan input or provider was unavailable");
+        return resultBase({ id: "judge-agent/async-report-replan/v1", version: "v1" }, promptHash, await safeProvenanceHash(context.rubric_hash, "invalid async-report rubric hash"), await safeProvenanceHash(input.input_hash, "invalid async-report input hash"), "judge-unavailable", 0, "async-report replan input or provider was unavailable");
       }
     },
     scoreInput: scoreValidatedInput,
@@ -80,7 +87,9 @@ export async function scoreValidatedInput(
   const parsed = await parseBridgeEvidence(input);
   const hashes = await fixedRubricHashes();
   const promptHash = parsed.prompt_hash;
-  if (hashes.hash !== context.rubric_hash) return { result: resultBase(context.judge, promptHash, context.rubric_hash, parsed.input.input_hash, "judge-unavailable", 0, "fixed rubric hash mismatch"), prompt_hash: promptHash, usage: {} };
+  const safeContextRubricHash = await safeProvenanceHash(context.rubric_hash, "invalid async-report rubric hash");
+  const safeContextInputHash = await safeProvenanceHash(context.input_hash, "invalid async-report input hash");
+  if (hashes.hash !== safeContextRubricHash || safeContextInputHash !== parsed.input.input_hash) return { result: resultBase(context.judge, promptHash, hashes.hash, parsed.input.input_hash, "judge-unavailable", 0, "fixed provenance hash mismatch"), prompt_hash: promptHash, usage: {} };
   if (parsed.evidence.execution_health !== "healthy") return { result: resultBase(context.judge, promptHash, hashes.hash, parsed.input.input_hash, "indeterminate", 0, "attempt execution is not healthy"), prompt_hash: promptHash, usage: {} };
   const qualification = await resolveCalibrationStatus(calibration);
   if (qualification.status !== "qualified") return { result: resultBase(context.judge, promptHash, hashes.hash, parsed.input.input_hash, "indeterminate", 0, qualification.reason ?? "calibration is not qualified"), prompt_hash: promptHash, usage: {} };

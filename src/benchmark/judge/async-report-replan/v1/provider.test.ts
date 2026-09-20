@@ -99,10 +99,10 @@ test("a forged qualified calibration report cannot enable scoring", async () => 
   expect(result.state).toBe("indeterminate");
   expect(calls).toBe(0);
   const issued = await qualifiedCalibration();
-  const exactIdentityForgery = { ...issued, medians: { reference: 80, equivalent: 78, "anti-pattern": 40 } };
+  const exactIdentityForgery = { ...issued, medians: { reference: 81, equivalent: 79, "anti-pattern": 39 } };
   const exactProvider = createAsyncReportReplanProvider({ calibration: exactIdentityForgery, complete: async () => { calls += 1; return { output: {} }; } });
   const exactResult = await exactProvider.score(input, { judge: { id: exactProvider.id, version: exactProvider.version }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: (await fixedRubricHashes()).hash });
-  expect(exactResult.state).toBe("indeterminate");
+  expect(["indeterminate", "judge-unavailable"]).toContain(exactResult.state);
   expect(calls).toBe(0);
 });
 

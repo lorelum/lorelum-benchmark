@@ -103,6 +103,7 @@ export type CalibrationReport = {
   status: CalibrationStatus;
   calls: number;
   medians: CalibrationMedians;
+  attestation: string;
   reason?: string;
 };
 export type AccountingState = "observed" | "indeterminate" | "judge-unavailable" | "not-run";
