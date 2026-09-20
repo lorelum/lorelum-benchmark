@@ -10,9 +10,9 @@ Issue #200（https://github.com/lorelum/lorelum-benchmark/issues/200）需要为
 - 新增确定性的 `replan-evidence/v1` 投影，只从公开任务、用户约束、assistant 可见输出、脱敏工具行为和最终 candidate diff 生成 Judge 可读证据；不直接读取 Pi raw transcript，不包含 System prompt、thinking/reasoning、raw tool result、Practice 正文、condition、delivery node、Pack provenance、Practice ID、session id 或私有路径。
 - 使用稳定 `blind_case_id` 对 Judge 隐藏 condition/timing 映射；真实映射只由评分后的确定性编排层 join。
 - 新增固定 rubric 和任务专用 Judge provider，评价旧假设失效、计划修订、实施范围/兼容策略调整、验证证据更新及未覆盖风险；不重新判断异步报表语义正确性。
-- 新增 Judge 专用 reference / equivalent / surface-only anti-pattern calibration，验证判别力并避免偏好 reference 的叙述结构或文件布局。
+- 新增两层 calibration：无模型的 projection contract tests，以及显式 opt-in 的 Judge scoring calibration；私有资产放在 Judge 模块的版本化 `private/` 子树。
 - 新增任务专用结果/provenance envelope，记录 plan、evidence、rubric、prompt、input hash、provider/model、calibration identity、失败状态与独立成本；不静默扩展 `judge-result/v1`。
-- 保留 mock/CI 与显式 opt-in 真实 Judge 路径，CI 不调用真实模型；Agent 运行、hard evaluator、Judge calibration 与 Judge scoring 成本分账。
+- 保留 mock/CI 与显式 opt-in 真实 Judge 路径，CI 不调用真实模型；#200 记录自身 Judge calibration/scoring 成本，#201 负责与 Agent/hard evaluator 结果关联。
 - 在 design 中记录 #209 兼容和迁移映射：本 change 的固定 plan、evidence、rubric、calibration 和结果边界预计保留，未来由 #209 选择或组合。
 
 ## Capabilities
@@ -29,6 +29,6 @@ Issue #200（https://github.com/lorelum/lorelum-benchmark/issues/200）需要为
 
 - 预计新增 `src/benchmark/judge/async-report-replan/v1/` 下的 evaluation plan、evidence projection、rubric/provider、calibration、result/accounting 和 focused tests。
 - 预计新增 `schemas/async-report-replan-evidence-v1.schema.json` 与任务专用结果/provenance schema；不会修改共享 `judge-result-v1.schema.json`。
-- 预计新增 sibling private calibration package（例如 `incubator/practice-injection/async-report-replan-judge-v1/private/`）及其 snapshot，避免修改 #196 candidate 的冻结文件集合或 #197 anchor。
+- 预计在 `src/benchmark/judge/async-report-replan/v1/private/` 新增版本化 calibration 资产，避免修改 #196 candidate 的冻结文件集合或 #197 anchor；该目录不会进入 Agent workspace 或 Judge input。
 - #196 public task/starter、#197 staged runner、#199 treatment、#202 deterministic evaluator、suite revision、正式 record 和模型运行均不在本 change 内修改或创建。
 - 初始 PR 仅包含本 OpenSpec change artifacts；strict validation 和初始 PR 完成后，按仓库流程先进行实现前规划确认，再开始任何非 OpenSpec 实现。

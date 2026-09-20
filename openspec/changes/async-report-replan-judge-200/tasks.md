@@ -1,8 +1,8 @@
 ## 1. Planning and contract lock
 
-- [ ] 1.1 After this OpenSpec passes strict validation and the OpenSpec-only PR is created, enter the equivalent Plan stage and confirm the exact five-dimension weights, calibration thresholds/repetitions, evidence caps/tool allowlist, budgets, schema names, accounting sidecar shape, and #202 provenance binding with the requester.
-- [ ] 1.2 Write the planning answers back to Issue #200, this `design.md`, this delta spec if behavior changes, and this `tasks.md` before any non-OpenSpec implementation starts.
-- [ ] 1.3 Keep the initial PR limited to `openspec/changes/async-report-replan-judge-200/`; do not add source, schema, fixture, candidate, runner, evaluator, treatment, or model artifacts before Plan confirmation.
+- [x] 1.1 After this OpenSpec passes strict validation and the OpenSpec-only PR is created, enter the equivalent Plan stage and confirm the exact five-dimension weights, calibration thresholds/repetitions, evidence caps/tool allowlist, budgets, schema names, accounting sidecar shape, and the independent #201 post-score join boundary with the requester.
+- [x] 1.2 Write the planning answers back to Issue #200, this `design.md`, this delta spec if behavior changes, and this `tasks.md` before any non-OpenSpec implementation starts.
+- [x] 1.3 Keep the initial PR limited to `openspec/changes/async-report-replan-judge-200/`; do not add source, schema, fixture, candidate, runner, evaluator, treatment, or model artifacts before Plan confirmation.
 
 ## 2. Evaluation plan and evidence contract
 
@@ -24,7 +24,7 @@
 
 ## 4. Calibration package
 
-- [ ] 4.1 Add the sibling private package `incubator/practice-injection/async-report-replan-judge-v1/private/` with calibration manifest, expected outcomes, fixtures, and a verified snapshot; do not modify the #196 candidate snapshot or #197 anchor.
+- [ ] 4.1 Add the module-owned private package `src/benchmark/judge/async-report-replan/v1/private/calibration/` with calibration manifest, expected outcomes, fixtures, and a verified snapshot; do not create a new candidate and do not modify the #196 candidate snapshot or #197 anchor.
 - [ ] 4.2 Add reference, equivalent, and surface-only anti-pattern `replan-evidence/v1` fixtures; reference/equivalent must use different observable structure and anti-pattern must show acknowledgement without substantive plan/scope/verification change.
 - [ ] 4.3 Implement the calibration runner with separate calibration accounting, explicit real-Judge opt-in, stable hashes, declared thresholds/repetitions, and no CI external model call.
 - [ ] 4.4 Add deterministic mock tests for discrimination, equivalence tolerance, anti-pattern separation, fixture provenance, and insufficient-discrimination diagnostic behavior.
