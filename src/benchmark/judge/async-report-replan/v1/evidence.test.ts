@@ -82,10 +82,12 @@ describe("replan evidence projection", () => {
       { type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "initial" }] } },
       { type: "message_end", message: { role: "assistant", stage: "post-constraint", content: [{ type: "text", text: "post" }, { type: "toolCall", id: "pi-1", name: "read", arguments: { path: "src/report.ts" } }] } },
       { type: "tool_result", id: "pi-1", isError: false, result: { raw: "do not forward" } },
+      { type: "tool_action", stage: "post-constraint", tool: "bash", args: { command: "bun test" }, status: "success", summary: "tests passed" },
     ] }));
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.evidence.tool_actions).toEqual([{ order: 0, stage: "post-constraint", tool: "read", target: "src/report.ts", status: "success" }]);
+      expect(result.evidence.tool_actions[0]).toEqual({ order: 0, stage: "post-constraint", tool: "read", target: "src/report.ts", status: "success" });
+      expect(result.evidence.verification_summaries).toHaveLength(1);
       expect(JSON.stringify(result.evidence)).not.toContain("do not forward");
     }
   });

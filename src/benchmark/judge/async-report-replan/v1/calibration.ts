@@ -1,6 +1,5 @@
 import { join } from "node:path";
 import { listFiles, sha256File, sha256Text } from "../../../fs";
-import { canonicalJson } from "./canonical";
 import { assertReplanEvidence } from "./evidence";
 import type { JudgeResultV1 } from "../../../outcome/v1/contract";
 import type { CalibrationReport, CalibrationStatus, ReplanEvidence } from "./types";
@@ -18,6 +17,18 @@ const issuedQualifiedReports = new WeakSet<object>();
 function issueReport(report: CalibrationReport): CalibrationReport {
   if (report.status === "qualified") issuedQualifiedReports.add(report);
   return report;
+}
+
+function safeCallCount(value: unknown): number | undefined {
+  return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= calibrationThresholds.max_calls ? value as number : undefined;
+}
+
+function validMedians(value: unknown): value is Partial<Record<CalibrationFixtureId, number>> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const medians = value as Record<string, unknown>;
+  const allowed = ["reference", "equivalent", "anti-pattern"];
+  if (Object.keys(medians).some((key) => !allowed.includes(key))) return false;
+  return allowed.every((key) => Number.isInteger(medians[key]) && Number.isFinite(medians[key]) && (medians[key] as number) >= 0 && (medians[key] as number) <= 100);
 }
 
 function median(values: number[]): number {
@@ -50,12 +61,15 @@ export async function calibrationIdentity(): Promise<{ id: typeof calibrationId;
 export async function resolveCalibrationStatus(report?: CalibrationReport): Promise<{ id: string; version: string; hash: string; status: CalibrationStatus; calls: number; reason?: string }> {
   const identity = await calibrationIdentity();
   if (!report) return { ...identity, status: "not-run", calls: 0, reason: "no calibration report was supplied" };
-  if (report.status === "qualified" && !issuedQualifiedReports.has(report)) return { ...identity, status: "diagnostic", calls: report.calls, reason: "qualified calibration was not issued by the v1 calibration runner" };
-  if (report.id !== identity.id || report.version !== identity.version || report.hash !== identity.hash) return { ...identity, status: "diagnostic", calls: report.calls, reason: "calibration identity does not match the frozen v1 package" };
-  if (!(await verifyCalibrationSnapshot())) return { ...identity, status: "diagnostic", calls: report.calls, reason: "calibration snapshot is not verified" };
+  const calls = safeCallCount(report.calls);
+  if (calls === undefined) return { ...identity, status: "diagnostic", calls: 0, reason: "calibration call count is invalid" };
+  if (!validMedians(report.medians)) return { ...identity, status: "diagnostic", calls, reason: "calibration medians are invalid" };
+  if (report.status === "qualified" && !issuedQualifiedReports.has(report)) return { ...identity, status: "diagnostic", calls, reason: "qualified calibration was not issued by the v1 calibration runner" };
+  if (report.id !== identity.id || report.version !== identity.version || report.hash !== identity.hash) return { ...identity, status: "diagnostic", calls, reason: "calibration identity does not match the frozen v1 package" };
+  if (!(await verifyCalibrationSnapshot())) return { ...identity, status: "diagnostic", calls, reason: "calibration snapshot is not verified" };
   const gate = evaluateCalibrationMedians(report.medians);
-  if (report.status !== "qualified" || report.calls !== calibrationThresholds.max_calls || !gate.qualified) return { ...identity, status: "diagnostic", calls: report.calls, reason: report.reason ?? gate.reason ?? "calibration gate is not qualified" };
-  return { ...identity, status: "qualified", calls: report.calls };
+  if (report.status !== "qualified" || calls !== calibrationThresholds.max_calls || !gate.qualified) return { ...identity, status: "diagnostic", calls, reason: report.reason ?? gate.reason ?? "calibration gate is not qualified" };
+  return { ...identity, status: "qualified", calls };
 }
 
 export async function verifyCalibrationSnapshot(): Promise<boolean> {
@@ -73,6 +87,7 @@ function observedScore(result: JudgeResultV1): number | undefined {
 }
 
 export function evaluateCalibrationMedians(medians: Partial<Record<CalibrationFixtureId, number>>): { qualified: boolean; reason?: string } {
+  if (!validMedians(medians)) return { qualified: false, reason: "calibration medians are invalid" };
   const reference = medians.reference;
   const equivalent = medians.equivalent;
   const antiPattern = medians["anti-pattern"];
@@ -117,8 +132,4 @@ export async function runCalibration(options: {
   }
   const gate = evaluateCalibrationMedians(medians);
   return issueReport({ ...identity, status: gate.qualified ? "qualified" : "diagnostic", calls, medians, ...(gate.reason ? { reason: gate.reason } : {}) });
-}
-
-export function calibrationReportHash(report: CalibrationReport): Promise<string> {
-  return sha256Text(canonicalJson(report));
 }

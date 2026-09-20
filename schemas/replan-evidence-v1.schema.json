@@ -30,7 +30,7 @@
         "required": ["stage", "text", "text_sha256"],
         "properties": {
           "stage": { "enum": ["initial", "post-constraint"] },
-          "text": { "type": "string", "maxLength": 8000 },
+          "text": { "type": "string", "minLength": 1, "maxLength": 8000 },
           "text_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
         }
       }
@@ -45,13 +45,14 @@
         "required": ["stage", "text", "text_sha256"],
         "properties": {
           "stage": { "enum": ["initial", "post-constraint"] },
-          "text": { "type": "string", "maxLength": 8000 },
+          "text": { "type": "string", "minLength": 1, "maxLength": 8000 },
           "text_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
         }
       }
     },
     "tool_actions": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -69,6 +70,7 @@
     },
     "verification_summaries": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,

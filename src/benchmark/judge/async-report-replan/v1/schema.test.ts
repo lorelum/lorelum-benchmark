@@ -19,4 +19,7 @@ test("versioned v1 schema documents and fixture/accounting shapes are present", 
   const fractional = structuredClone(accounting) as Record<string, unknown>;
   (fractional.usage as Record<string, unknown>).input_tokens = 1.5;
   expect(() => assertAsyncReportAccounting(fractional)).toThrow();
+  const nestedExtra = structuredClone(accounting) as Record<string, unknown>;
+  (nestedExtra.provider as Record<string, unknown>).secret = "must reject";
+  expect(() => assertAsyncReportAccounting(nestedExtra)).toThrow();
 });

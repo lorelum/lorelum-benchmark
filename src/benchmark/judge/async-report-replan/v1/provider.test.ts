@@ -66,6 +66,18 @@ test("invalid structured output becomes judge-unavailable instead of a low score
   expect(result.criteria).toEqual([]);
 });
 
+test("invalid calibration counts fail closed without throwing or entering accounting", async () => {
+  const valid = await qualifiedCalibration();
+  const invalid = { ...valid, calls: 10 };
+  const result = await runAsyncReportReplanAttempt(rawAttempt(), { calibration: invalid });
+  expect(result.result.state).toBe("indeterminate");
+  expect(result.accounting.calls.calibration).toBe(0);
+  const nan = { ...valid, medians: { ...valid.medians, reference: Number.NaN } };
+  const nanResult = await runAsyncReportReplanAttempt(rawAttempt(), { calibration: nan });
+  expect(nanResult.result.state).toBe("indeterminate");
+  expect(nanResult.accounting.calls.calibration).toBe(9);
+});
+
 test("a forged qualified calibration report cannot enable scoring", async () => {
   const projected = await projectReplanEvidence(rawAttempt());
   if (!projected.ok) throw new Error("fixture did not project");
@@ -74,6 +86,12 @@ test("a forged qualified calibration report cannot enable scoring", async () => 
   const input = await buildReplanJudgeInput(projected.evidence);
   const result = await provider.score(input, { judge: { id: provider.id, version: provider.version }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: (await fixedRubricHashes()).hash });
   expect(result.state).toBe("indeterminate");
+  expect(calls).toBe(0);
+  const issued = await qualifiedCalibration();
+  const exactIdentityForgery = { ...issued, medians: { reference: 80, equivalent: 78, "anti-pattern": 40 } };
+  const exactProvider = createAsyncReportReplanProvider({ calibration: exactIdentityForgery, complete: async () => { calls += 1; return { output: {} }; } });
+  const exactResult = await exactProvider.score(input, { judge: { id: exactProvider.id, version: exactProvider.version }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: (await fixedRubricHashes()).hash });
+  expect(exactResult.state).toBe("indeterminate");
   expect(calls).toBe(0);
 });
 

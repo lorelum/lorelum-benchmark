@@ -2,6 +2,7 @@ import { sha256Text } from "../../../fs";
 import { assertJudgeResultV1, type JudgeResultV1 } from "../../../outcome/v1/contract";
 import { canonicalJson } from "./canonical";
 import { rubricHash, rubricText } from "./rubric";
+import type { PublicRunMaterial } from "../../input";
 import type { JudgeCompletionWithUsage, ReplanEvidence, ReplanRubric } from "./types";
 
 export type ReplanScoredCriterion = { id: string; points: number; rationale: string };
@@ -45,13 +46,14 @@ export function replanScoreSystemPrompt(): string {
   ].join("\n");
 }
 
-export function replanScorePrompt(evidence: ReplanEvidence, rubric: ReplanRubric): string {
+export function replanScorePrompt(evidence: ReplanEvidence, rubric: ReplanRubric, material: PublicRunMaterial[] = []): string {
   return [
     "Task-specific objective: determine whether the agent genuinely replanned after the public deployment constraint was added.",
     "Rubric:",
     canonicalJson(rubric),
     "Public-safe evidence:",
     canonicalJson(evidence),
+    ...(material.length > 0 ? ["Allowlisted public material:", canonicalJson(material.map((item) => ({ path: item.path, kind: item.kind, content: item.content ?? "" })))] : []),
   ].join("\n\n");
 }
 
@@ -66,8 +68,9 @@ export async function scoreReplanEvidence(input: {
   input_hash: string;
   judge: { id: string; version: string };
   complete: JudgeCompletionWithUsage;
+  material?: PublicRunMaterial[];
 }): Promise<{ result: JudgeResultV1; prompt_hash: string; usage: Partial<import("./types").JudgeUsage>; }> {
-  const prompt = replanScorePrompt(input.evidence, input.rubric);
+  const prompt = replanScorePrompt(input.evidence, input.rubric, input.material);
   const promptHash = await sha256Text(prompt);
   const completion = await input.complete(replanScoreSystemPrompt(), prompt);
   const scored = assertReplanScoredOutput(completion.output);

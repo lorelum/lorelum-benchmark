@@ -323,22 +323,28 @@ export function assertReplanEvidence(value: unknown): asserts value is ReplanEvi
     const turn = record(item);
     if (!turn) throw new Error(`public user turn ${index} is invalid`);
     exactKeys(turn, ["stage", "text", "text_sha256"], `public user turn ${index}`);
-    if (!stageSet.has(turn.stage as ReplanStage) || typeof turn.text !== "string" || turn.text.length > stageCap || typeof turn.text_sha256 !== "string" || !hashPattern.test(turn.text_sha256)) throw new Error(`public user turn ${index} violates the v1 schema`);
+    if (!stageSet.has(turn.stage as ReplanStage) || typeof turn.text !== "string" || !turn.text || turn.text.length > stageCap || typeof turn.text_sha256 !== "string" || !hashPattern.test(turn.text_sha256)) throw new Error(`public user turn ${index} violates the v1 schema`);
   }
   for (const [index, item] of root.assistant_stages.entries()) {
     const stage = record(item);
     if (!stage) throw new Error(`assistant stage ${index} is invalid`);
     exactKeys(stage, ["stage", "text", "text_sha256"], `assistant stage ${index}`);
-    if (!stageSet.has(stage.stage as ReplanStage) || typeof stage.text !== "string" || stage.text.length > stageCap || typeof stage.text_sha256 !== "string" || !hashPattern.test(stage.text_sha256)) throw new Error(`assistant stage ${index} violates the v1 schema`);
+    if (!stageSet.has(stage.stage as ReplanStage) || typeof stage.text !== "string" || !stage.text || stage.text.length > stageCap || typeof stage.text_sha256 !== "string" || !hashPattern.test(stage.text_sha256)) throw new Error(`assistant stage ${index} violates the v1 schema`);
   }
   for (const [index, item] of root.tool_actions.entries()) {
     const action = record(item);
     if (!action) throw new Error(`tool action ${index} is invalid`);
     exactKeys(action, ["order", "stage", "tool", "target", "status", "summary", "summary_sha256"], `tool action ${index}`);
     if (!Number.isInteger(action.order) || action.order < 0 || !stageSet.has(action.stage as ReplanStage) || !allowedTools.has(action.tool as AllowedTool) || typeof action.target !== "string" || !action.target || action.target.length > 512 || action.status !== "success" && action.status !== "failure") throw new Error(`tool action ${index} violates the v1 schema`);
+    if (action.tool === "bash") {
+      if (!/^command:(?:test|typecheck|other)$/.test(action.target)) throw new Error(`tool action ${index} has an invalid command category`);
+    } else {
+      if (safeRelativePath(action.target, `tool action ${index}.target`) !== action.target) throw new Error(`tool action ${index} path is not normalized`);
+    }
     if (action.summary !== undefined && (typeof action.summary !== "string" || action.summary.length > summaryCap || typeof action.summary_sha256 !== "string" || !hashPattern.test(action.summary_sha256))) throw new Error(`tool action ${index} summary violates the v1 schema`);
     if (action.summary === undefined && action.summary_sha256 !== undefined) throw new Error(`tool action ${index} has an orphan summary hash`);
   }
+  if (root.tool_actions.length === 0 || root.verification_summaries.length === 0) throw new Error("replan evidence is missing required tool or verification evidence");
   for (const [index, item] of root.verification_summaries.entries()) {
     const summary = record(item);
     if (!summary) throw new Error(`verification summary ${index} is invalid`);
