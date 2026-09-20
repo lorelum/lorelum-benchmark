@@ -45,7 +45,7 @@ The plan is not a generic cross-study schema. #209 may adapt it later but must n
 
 ### 2. Evidence projection
 
-The projector accepts a private raw transcript location, public task/follow-up files, and the final candidate diff. It emits a public-safe evidence object and hash. It never accepts `condition_id`, `delivery_node`, treatment, Pack, Practice, evaluator, oracle, or scoring arguments.
+The projector accepts structured private attempt artifacts, public task/follow-up turns, and the final candidate diff. It emits a public-safe evidence object and hash. It never accepts `condition_id`, `delivery_node`, treatment, Pack, Practice, evaluator, oracle, or scoring arguments.
 
 The evidence contains:
 
@@ -56,7 +56,7 @@ The evidence contains:
 - at most 2,000 characters of sanitized output for recognized test/typecheck commands;
 - the final candidate diff and its hash.
 
-The allowlist is `read`, `ls`, `grep`, `edit`, and `bash`. Raw `toolResult` content is never forwarded. Absolute paths, private markers, Practice/Pack identifiers, condition/timing identifiers, secrets, System/developer content, and thinking fields cause fail-closed rejection. The projector applies these caps:
+The allowlist is `read`, `ls`, `grep`, `edit`, and `bash`. Thinking/reasoning and raw `toolResult` bodies are discarded; only safe tool metadata and recognized verification summaries survive. Absolute paths, private markers, Practice/Pack identifiers, condition/timing identifiers, secrets, and System/developer content cause fail-closed rejection. The projector applies these caps:
 
 - assistant-visible text: 8,000 characters per stage;
 - tool metadata: 20,000 characters total;

@@ -1,0 +1,114 @@
+import { expect, test } from "bun:test";
+import { assertAsyncReportAccounting } from "./accounting";
+import { buildReplanJudgeInput, getAsyncReportReplanEvaluationInstance } from "./adapter";
+import { fixedRubricHashes } from "./score";
+import { createAsyncReportReplanProvider } from "./provider";
+import { runAsyncReportReplanAttempt } from "./run";
+import { projectReplanEvidence } from "./evidence";
+
+function rawAttempt() {
+  return {
+    blind_case_id: "provider-case-001",
+    execution_health: "healthy" as const,
+    public_user_turns: [{ stage: "initial" as const, text: "Start with the current plan." }, { stage: "post-constraint" as const, text: "New constraints require a replan." }],
+    events: [
+      { type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "I will inspect the current assumption." }] } },
+      { type: "message_end", message: { role: "assistant", stage: "post-constraint", content: [{ type: "text", text: "I will revise the plan, narrow compatibility, update tests, and state the residual risk." }] } },
+      { type: "tool_action", stage: "post-constraint", tool: "bash", args: { command: "bun test" }, status: "success", summary: "tests passed" },
+    ],
+    final_candidate_diff: "diff --git a/src/report.ts b/src/report.ts\n+export function report() {}\n",
+  };
+}
+
+function completion(output: unknown, withUsage = false) {
+  return async () => ({ output, ...(withUsage ? { usage: { input_tokens: 10, output_tokens: 20, total_tokens: 30, cost_usd: 0.01 } } : {}) });
+}
+
+test("task provider returns fixed rubric scoring without changing judge-result/v1", async () => {
+  const projected = await projectReplanEvidence(rawAttempt());
+  expect(projected.ok).toBe(true);
+  if (!projected.ok) return;
+  const provider = createAsyncReportReplanProvider({ calibrationStatus: "qualified", complete: completion({ criteria: [
+    { id: "assumption-invalidation", points: 16, rationale: "post-constraint text names the invalidated assumption" },
+    { id: "plan-revision", points: 15, rationale: "post-constraint plan changes sequence" },
+    { id: "implementation-scope-adjustment", points: 20, rationale: "compatibility scope is narrowed" },
+    { id: "verification-evidence-update", points: 14, rationale: "tests are rerun" },
+    { id: "risk-and-uncertainty-honesty", points: 12, rationale: "residual risk is stated" },
+  ], confidence: 88 }) });
+  const input = await buildReplanJudgeInput(projected.evidence);
+  const hashes = await fixedRubricHashes();
+  const result = await provider.score(input, { judge: { id: provider.id, version: provider.version }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: hashes.hash });
+  expect(result.state).toBe("observed");
+  expect(result.score).toBe(77);
+  expect(result.criteria.map((criterion) => criterion.id)).toEqual(["assumption-invalidation", "plan-revision", "implementation-scope-adjustment", "verification-evidence-update", "risk-and-uncertainty-honesty"]);
+  expect(result.schema_version).toBe("judge-result/v1");
+});
+
+test("invalid structured output becomes judge-unavailable instead of a low score", async () => {
+  const projected = await projectReplanEvidence(rawAttempt());
+  if (!projected.ok) throw new Error("fixture did not project");
+  const provider = createAsyncReportReplanProvider({ calibrationStatus: "qualified", complete: completion({ criteria: [], confidence: 10 }) });
+  const input = await buildReplanJudgeInput(projected.evidence);
+  const hashes = await fixedRubricHashes();
+  const result = await provider.score(input, { judge: { id: provider.id, version: provider.version }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: hashes.hash });
+  expect(result.state).toBe("judge-unavailable");
+  expect(result.score).toBe(0);
+  expect(result.criteria).toEqual([]);
+});
+
+test("attempt runner captures usage and records unavailable values when absent", async () => {
+  const scored = await runAsyncReportReplanAttempt(rawAttempt(), {
+    complete: completion({ criteria: [
+      { id: "assumption-invalidation", points: 20, rationale: "r" }, { id: "plan-revision", points: 20, rationale: "r" }, { id: "implementation-scope-adjustment", points: 25, rationale: "r" }, { id: "verification-evidence-update", points: 20, rationale: "r" }, { id: "risk-and-uncertainty-honesty", points: 15, rationale: "r" },
+    ], confidence: 90 }, true),
+    calibration: { id: "cal", version: "v1", hash: "b".repeat(64), status: "qualified" },
+  });
+  expect(scored.result.state).toBe("observed");
+  expect(scored.accounting.calls.scoring).toBe(1);
+  expect(scored.accounting.usage.total_tokens).toBe(30);
+  assertAsyncReportAccounting(scored.accounting);
+
+  const noUsage = await runAsyncReportReplanAttempt(rawAttempt(), {
+    complete: completion({ criteria: [
+      { id: "assumption-invalidation", points: 20, rationale: "r" }, { id: "plan-revision", points: 20, rationale: "r" }, { id: "implementation-scope-adjustment", points: 25, rationale: "r" }, { id: "verification-evidence-update", points: 20, rationale: "r" }, { id: "risk-and-uncertainty-honesty", points: 15, rationale: "r" },
+    ], confidence: 90 }),
+    calibration: { id: "cal", version: "v1", hash: "b".repeat(64), status: "qualified" },
+  });
+  expect(noUsage.accounting.usage.input_tokens).toBe("unavailable");
+});
+
+test("missing real opt-in is not-run and raw evidence cannot reach the provider", async () => {
+  const notRun = await runAsyncReportReplanAttempt(rawAttempt(), { calibration: { id: "cal", version: "v1", hash: "b".repeat(64), status: "qualified" } });
+  expect(notRun.result.state).toBe("not-run");
+  const instance = await getAsyncReportReplanEvaluationInstance();
+  expect(instance.plan.method).toBe("llm-subjective");
+  await expect(instance.provider.score({ task_md: "x", candidate_diff: JSON.stringify({ session_id: "bad" }), rubric: "x", input_hash: "a".repeat(64), material: [] }, { judge: { id: instance.provider.id, version: instance.provider.version }, prompt: "x", prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64) })).rejects.toThrow();
+});
+
+test("real configuration gaps are judge-unavailable without a provider call", async () => {
+  const result = await runAsyncReportReplanAttempt(rawAttempt(), { env: { LORELUM_JUDGE_REAL: "1" }, calibration: { id: "cal", version: "v1", hash: "b".repeat(64), status: "qualified" } });
+  expect(result.result.state).toBe("judge-unavailable");
+  expect(result.accounting.calls.scoring).toBe(0);
+});
+
+test("adapter material is checked by the existing public-only Judge allowlist", async () => {
+  const projected = await projectReplanEvidence(rawAttempt());
+  if (!projected.ok) throw new Error("fixture did not project");
+  const input = await (await import("./adapter")).buildReplanJudgeInput(projected.evidence, [{ path: "suites/react-skill-comparison/tasks/workspace-overview-loader/v1/public/task.md", kind: "public/task.md" }]);
+  expect(input.material).toHaveLength(1);
+  await expect((await import("./adapter")).buildReplanJudgeInput(projected.evidence, [{ path: "private/task.md", kind: "declared-public" }])).rejects.toThrow("judge input rejected");
+});
+
+test("a future adapter can invoke the fixed instance without changing scoring semantics", async () => {
+  const projected = await projectReplanEvidence(rawAttempt());
+  if (!projected.ok) throw new Error("fixture did not project");
+  const provider = createAsyncReportReplanProvider({ calibrationStatus: "qualified", complete: completion({ criteria: [
+    { id: "assumption-invalidation", points: 10, rationale: "r" }, { id: "plan-revision", points: 10, rationale: "r" }, { id: "implementation-scope-adjustment", points: 10, rationale: "r" }, { id: "verification-evidence-update", points: 10, rationale: "r" }, { id: "risk-and-uncertainty-honesty", points: 10, rationale: "r" },
+  ], confidence: 70 }) });
+  const instance = await getAsyncReportReplanEvaluationInstance(provider);
+  const input = await instance.buildInput(projected.evidence);
+  const result = await instance.provider.score(input, { judge: { id: instance.provider.id, version: instance.provider.version }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: instance.rubric_hash });
+  expect(result.score).toBe(50);
+  expect(instance.result_schema).toBe("judge-result/v1");
+  expect(instance.accounting_schema).toBe("async-report-replan-judge-accounting/v1");
+});

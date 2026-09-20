@@ -1,0 +1,24 @@
+{
+  "schema_version": "replan-evidence/v1",
+  "blind_case_id": "cal-eq-001",
+  "execution_health": "healthy",
+  "public_user_turns": [
+    { "stage": "initial", "text": "Implement the report path and check the existing behavior.", "text_sha256": "6dfb3fa004d6f7abf26dec11f8918ca6853f057a5ca193bfbd5168518b14c820" },
+    { "stage": "post-constraint", "text": "Deployment constraints changed; revisit the assumptions before continuing.", "text_sha256": "830d0b1da154c47ffc20a94dee68b70e4ade1a0cb173cf4ea4ce84e061894c83" }
+  ],
+  "assistant_stages": [
+    { "stage": "initial", "text": "I will implement the report path and then run checks.", "text_sha256": "dce45711223593ee9fd71351b317dc0d1f515100ac0bdb36d85b132122cb300f" },
+    { "stage": "post-constraint", "text": "The deployment constraint breaks my first assumption. I am revising the sequence, isolating compatibility, adding a fallback boundary, running tests and type checking again, and noting what remains unverified.", "text_sha256": "b705d222c8df3ad9bd1b27cf25bcbf269ff3e02309c145964bf0bcf0dd84f804" }
+  ],
+  "tool_actions": [
+    { "order": 0, "stage": "initial", "tool": "read", "target": "src/report.ts", "status": "success" },
+    { "order": 1, "stage": "post-constraint", "tool": "edit", "target": "src/report.ts", "status": "success" },
+    { "order": 2, "stage": "post-constraint", "tool": "bash", "target": "command:typecheck", "status": "success", "summary": "typecheck passed", "summary_sha256": "e23365b413e53968145c84834125e1b8d0d18a5f242a1800eb260fd0c28e79b5" }
+  ],
+  "verification_summaries": [
+    { "order": 2, "stage": "post-constraint", "command_category": "typecheck", "summary": "typecheck passed", "summary_sha256": "e23365b413e53968145c84834125e1b8d0d18a5f242a1800eb260fd0c28e79b5" }
+  ],
+  "final_candidate_diff": "diff --git a/src/report.ts b/src/report.ts\n+export function reportWithCompatibilityBoundary() {}\n",
+  "final_candidate_diff_sha256": "dc3a217d5f001e6a7c413f40d0d6f9a86a62a7456b50783132cba2743a680546",
+  "evidence_hash": "cee966a26d31d2169cbf38fb0d5b72e4d26bbeab098b5f0635e4e0bcce6da0f3"
+}

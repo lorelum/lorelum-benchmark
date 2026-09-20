@@ -16,7 +16,7 @@ The async-report Judge MUST use a versioned task-specific `llm-subjective` plan 
 
 ### Requirement: Deterministic public-safe evidence projection
 
-The Judge MUST consume a schema-validated `replan-evidence/v1` projection rather than a raw Pi transcript. The projection MUST contain public task-turn hashes, visible assistant text, allowlisted tool metadata, safe test/typecheck summaries, a blind case ID, and the final candidate diff/hash. It MUST exclude System/developer prompts, thinking/reasoning, raw tool results, Practice/Pack identity, condition/timing identity, session IDs, private/absolute paths, secrets, evaluator/oracle/scoring content, and calibration expectations.
+The Judge MUST consume a schema-validated `replan-evidence/v1` projection rather than a raw Pi transcript. The projection MUST contain public task-turn hashes, visible assistant text, allowlisted tool metadata, safe test/typecheck summaries, a blind case ID, and the final candidate diff/hash. The projector MUST discard thinking/reasoning and raw tool-result bodies before output, and MUST exclude System/developer prompts, Practice/Pack identity, condition/timing identity, session IDs, private/absolute paths, secrets, evaluator/oracle/scoring content, and calibration expectations.
 
 #### Scenario: Complete attempt projects successfully
 
@@ -30,7 +30,7 @@ The Judge MUST consume a schema-validated `replan-evidence/v1` projection rather
 
 #### Scenario: Forbidden material is detected
 
-- **WHEN** projection sees a private marker, absolute path, Practice/Pack identifier, condition/timing field, secret, System content, or thinking field
+- **WHEN** projection sees a private marker, absolute path, Practice/Pack identifier, condition/timing field, secret, or System/developer content in retained input
 - **THEN** it returns a redacted failure/indeterminate reason and forwards no partial evidence
 
 #### Scenario: Evidence limits are exceeded

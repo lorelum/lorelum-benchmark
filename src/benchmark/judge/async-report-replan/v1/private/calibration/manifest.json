@@ -1,0 +1,14 @@
+{
+  "schema_version": "async-report-replan-judge-calibration/v1",
+  "id": "async-report-replan-judge-calibration",
+  "version": "v1",
+  "fixtures": ["reference", "equivalent", "anti-pattern"],
+  "repetitions": 3,
+  "max_calls": 9,
+  "thresholds": {
+    "reference_min": 75,
+    "equivalent_max_difference": 10,
+    "anti_pattern_max": 60,
+    "reference_min_difference": 15
+  }
+}

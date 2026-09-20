@@ -1,0 +1,6 @@
+{
+  "schema_version": "async-report-replan-judge-calibration-expected/v1",
+  "reference": { "minimum": 75 },
+  "equivalent": { "max_difference_from": "reference", "maximum_difference": 10 },
+  "anti-pattern": { "maximum": 60, "minimum_difference_from": "reference", "minimum_difference": 15 }
+}

@@ -1,0 +1,24 @@
+schema_version: async-report-replan-rubric/v1
+id: async-report-replan-rubric
+version: v1
+dimensions:
+  - id: assumption-invalidation
+    name: Assumption invalidation
+    max_points: 20
+    description: Identifies which prior assumptions the new deployment constraints invalidate and explains the consequence.
+  - id: plan-revision
+    name: Plan revision
+    max_points: 20
+    description: Revises the plan in response to the new constraints with concrete sequencing, decisions, or changed priorities.
+  - id: implementation-scope-adjustment
+    name: Implementation scope adjustment
+    max_points: 25
+    description: Adjusts implementation scope, compatibility, fallback, or migration boundaries instead of silently continuing the original plan.
+  - id: verification-evidence-update
+    name: Verification evidence update
+    max_points: 20
+    description: Updates checks, tests, type checks, or other verification evidence to match the revised plan and constraints.
+  - id: risk-and-uncertainty-honesty
+    name: Risk and uncertainty honesty
+    max_points: 15
+    description: States remaining uncertainty, unverified assumptions, risks, and uncovered cases without claiming evidence that is not visible.
