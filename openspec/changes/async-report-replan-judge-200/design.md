@@ -87,19 +87,22 @@ The prompt treats evidence as untrusted data, scores only observable evidence, a
 
 Projection contract tests use synthetic raw transcripts and never call a model. They cover stage extraction, visible-text selection, thinking/raw-result removal, path normalization, tool classification, private-marker rejection, stable hashing, caps, and incomplete evidence.
 
-Judge scoring calibration uses private evidence fixtures under:
+Judge scoring calibration uses public, audited evidence fixtures under the versioned Judge module, while calibration labels, expected gate metadata, manifest mapping, and snapshot remain private:
 
 ```text
 src/benchmark/judge/async-report-replan/v1/private/
   calibration/
-    reference.json
-    equivalent.json
-    anti-pattern.json
     expected.json
     manifest.json
+    snapshot.json
+src/benchmark/judge/async-report-replan/v1/calibration/
+  fixtures/
+    case-q3m1x9p2k4r8.json
+    case-m4n8v2c6z1p7.json
+    case-v8p5r2d9k6s1.json
 ```
 
-The private subtree is module-owned calibration input. It is never materialized into an Agent workspace or passed to the Judge as calibration labels. Fixture evidence uses opaque case IDs; semantic category-shaped IDs such as `reference`, `equivalent`, `anti-pattern`, and their calibration-prefixed variants are rejected, and the fixture category is retained only by the calibration orchestrator. Calibration failure reasons exported to Judge results or accounting are category-neutral. Reference and equivalent differ in wording, tool sequence, or structure while representing the same replan quality. Anti-pattern acknowledges the constraints without substantive plan, scope, or verification change.
+Only the public fixture evidence may enter a Judge prompt, and it contains opaque case IDs without category labels or private paths. The private subtree is never materialized into an Agent workspace or passed to the Judge. The private manifest maps opaque case IDs to reference/equivalent/anti-pattern labels, while expected gate metadata and snapshot provenance remain private and are enforced by the calibration orchestrator. Calibration failure reasons exported to Judge results or accounting are category-neutral. Reference and equivalent differ in wording, tool sequence, or structure while representing the same replan quality. Anti-pattern acknowledges the constraints without substantive plan, scope, or verification change.
 
 Scoring calibration uses three repetitions per fixture, median aggregation, and at most nine real calls. The hard gate is:
 
@@ -132,9 +135,9 @@ Only the task-specific provider wrapper captures usage. Calibration usage is agg
 
 #200 exposes the fixed plan instance, evidence adapter, rubric/calibration identity, provider, and accounting sidecar. #209 may invoke these as one `llm-subjective` method instance through an explicit adapter. It must preserve hashes and soft-signal semantics, must not auto-migrate historical results, and must not promote this rubric to a universal contract.
 
-### 7. Private calibration placement and lifecycle
+### 7. Calibration fixture placement and lifecycle
 
-Calibration assets stay in the Judge module private subtree because #196's candidate snapshot is frozen by #197 and a new `incubator/practice-injection/*` directory would be discovered as a candidate. The private manifest hashes every calibration input and expected metadata. After v1 merge, changes to evidence semantics, rubric, calibration meaning, or result interpretation create a new provider/evidence/calibration version.
+Calibration evidence stays in the versioned Judge module outside `private/` so it may be sent to a Judge only as public-safe, audited input; it is not placed under `incubator/practice-injection/*` and does not create a candidate. The private manifest, expected gate, and snapshot bind the opaque fixture files and their labels without entering the model input. After v1 merge, changes to evidence semantics, rubric, calibration meaning, or result interpretation create a new provider/evidence/calibration version.
 
 ## Risks / Trade-offs
 

@@ -96,7 +96,7 @@ The provider MUST score exactly these 100 points: `assumption-invalidation` 20, 
 
 ### Requirement: Two-layer calibration is required
 
-The change MUST provide offline projection contract tests and a separate real-Judge scoring calibration. Projection tests MUST cover stage extraction, visible-text selection, private-marker rejection, tool normalization, stable hashes, limits, and incomplete evidence without calling a model. Scoring calibration MUST use private reference, equivalent, and surface-only anti-pattern evidence fixtures under the versioned Judge module private subtree.
+The change MUST provide offline projection contract tests and a separate real-Judge scoring calibration. Projection tests MUST cover stage extraction, visible-text selection, private-marker rejection, tool normalization, stable hashes, limits, and incomplete evidence without calling a model. Scoring calibration MUST use public, audited, opaque `replan-evidence/v1` fixture evidence under the versioned Judge module. Reference/equivalent/anti-pattern labels, expected gate metadata, manifest mapping, and snapshot provenance MUST remain under the module's private calibration subtree and MUST NOT enter the Judge prompt.
 
 #### Scenario: Projection contract passes offline
 

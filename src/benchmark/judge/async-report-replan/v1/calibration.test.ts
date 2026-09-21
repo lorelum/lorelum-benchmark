@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { calibrationScope, evaluateCalibrationMedians, loadCalibrationFixtures, resolveCalibrationStatus, runCalibration, verifyCalibrationSnapshot } from "./calibration";
+import { buildAsyncReportJudgeInput, scoreForCalibration } from "./provider";
+import { fixedRubricHashes } from "./score";
 import { replanScorePrompt } from "./score";
 import { loadRubric } from "./rubric";
 
@@ -13,7 +15,7 @@ test("mock calibration uses three repetitions per fixture and qualifies only at 
   expect(result.medians).toEqual({ reference: 80, equivalent: 78, "anti-pattern": 40 });
   expect(result.usage.input_tokens).toBe("unavailable");
   expect(result.duration_ms).toBeGreaterThanOrEqual(0);
-  expect(evaluateCalibrationMedians(result.medians).qualified).toBe(true);
+  expect((await evaluateCalibrationMedians(result.medians)).qualified).toBe(true);
 });
 
 test("calibration fixture prompts expose only opaque case identities", async () => {
@@ -33,8 +35,8 @@ test("calibration aggregates provider usage separately from scoring", async () =
   expect(report.usage).toEqual({ input_tokens: 18, output_tokens: 27, total_tokens: 45, cost_usd: 0.09 });
 });
 
-test("calibration becomes diagnostic when the discrimination gate fails", () => {
-  expect(evaluateCalibrationMedians({ reference: 70, equivalent: 70, "anti-pattern": 65 })).toEqual({ qualified: false, reason: "reference median is below the minimum" });
+test("calibration becomes diagnostic when the discrimination gate fails", async () => {
+  expect(await evaluateCalibrationMedians({ reference: 70, equivalent: 70, "anti-pattern": 65 })).toEqual({ qualified: false, reason: "reference median is below the minimum" });
 });
 
 test("calibration gate details stay inside the private orchestrator", async () => {
@@ -72,11 +74,46 @@ test("malformed calibration budgets are diagnostic before any fixture call", asy
   expect(calls).toBe(0);
 });
 
-test("calibration fixtures are private evidence with distinct observable structure", async () => {
+test("public calibration evidence has distinct observable structure while labels stay private", async () => {
   const fixtures = await loadCalibrationFixtures();
   expect(fixtures).toHaveLength(3);
   expect(fixtures[0].evidence.assistant_stages[1].text).not.toBe(fixtures[1].evidence.assistant_stages[1].text);
   expect(fixtures[2].evidence.tool_actions.length).toBeLessThan(fixtures[0].evidence.tool_actions.length);
+});
+
+test("real calibration ingress sends only public opaque evidence to completion", async () => {
+  const payloads: Array<{ system: string; user: string }> = [];
+  const rubric = await fixedRubricHashes();
+  const result = await runCalibration({
+    mode: "real",
+    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_MODEL: "model-a", LORELUM_JUDGE_CALIBRATION_KEY: "calibration-secret" },
+    score: async (evidence, capability) => {
+      const input = await buildAsyncReportJudgeInput(evidence);
+      return scoreForCalibration(
+        input,
+        { judge: { id: "judge-agent/async-report-replan/v1", version: "v1" }, rubric_hash: rubric.hash, input_hash: input.input_hash },
+        async (system, user) => {
+          payloads.push({ system, user });
+          const points = user.includes("case-q3m1x9p2k4r8") ? [20, 20, 25, 20, 15] : user.includes("case-m4n8v2c6z1p7") ? [20, 20, 25, 20, 15] : [8, 8, 10, 8, 6];
+          return { output: { criteria: [
+            { id: "assumption-invalidation", points: points[0], rationale: "visible" },
+            { id: "plan-revision", points: points[1], rationale: "visible" },
+            { id: "implementation-scope-adjustment", points: points[2], rationale: "visible" },
+            { id: "verification-evidence-update", points: points[3], rationale: "visible" },
+            { id: "risk-and-uncertainty-honesty", points: points[4], rationale: "visible" },
+          ], confidence: 90 } };
+        },
+        capability,
+      );
+    },
+  });
+  expect(result.status).toBe("qualified");
+  expect(payloads).toHaveLength(9);
+  for (const payload of payloads) {
+    const serialized = JSON.stringify(payload).toLowerCase();
+    expect(serialized).toContain("case-");
+    for (const forbidden of ["private/", "private\\", "manifest.json", "expected.json", "snapshot.json", "reference", "equivalent", "anti-pattern"]) expect(serialized).not.toContain(forbidden);
+  }
 });
 
 test("private calibration snapshot verifies fixture and rubric hashes", async () => {

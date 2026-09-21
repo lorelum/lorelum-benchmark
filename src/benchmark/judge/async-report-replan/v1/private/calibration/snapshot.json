@@ -2,10 +2,10 @@
   "schema_version": "async-report-replan-judge-calibration-snapshot/v1",
   "rubric_hash": "2ff71b4208479e5bd3f246c9450264f52ec01f59de2944916d8e540bd03afe98",
   "source_files": {
-    "manifest.json": "9a74830cbbbba4f8c69de70559870d36030cd37cb5c6cd5b85b1c1210fa4a6d2",
-    "expected.json": "3b11a95241c762579ff6300b0334dff6804014edc053e601e14a7089ca43bbc4",
-    "reference.json": "a20693737f465325a4837657b96bc2f9026865745c2505c3d2c9409ddf726f91",
-    "equivalent.json": "1918066fa4231e9e69427ee0d1a97eecbb4a7a5153061aac152e945fd97a115b",
-    "anti-pattern.json": "f88dfae2127462493b91e5f09ded445a469b790daa7f7b12c3a83093dfb13892"
+    "private/expected.json": "3b11a95241c762579ff6300b0334dff6804014edc053e601e14a7089ca43bbc4",
+    "private/manifest.json": "d5d352ea91a585f08ada447d006528a465f8a6702a421ed8659adf9b2d5f12b1",
+    "public/case-m4n8v2c6z1p7.json": "1918066fa4231e9e69427ee0d1a97eecbb4a7a5153061aac152e945fd97a115b",
+    "public/case-q3m1x9p2k4r8.json": "a20693737f465325a4837657b96bc2f9026865745c2505c3d2c9409ddf726f91",
+    "public/case-v8p5r2d9k6s1.json": "f88dfae2127462493b91e5f09ded445a469b790daa7f7b12c3a83093dfb13892"
   }
 }

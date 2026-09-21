@@ -24,8 +24,8 @@
 
 ## 4. Calibration package
 
-- [x] 4.1 Add the module-owned private package `src/benchmark/judge/async-report-replan/v1/private/calibration/` with calibration manifest, expected outcomes, fixtures, and a verified snapshot; do not create a new candidate and do not modify the #196 candidate snapshot or #197 anchor.
-- [x] 4.2 Add reference, equivalent, and surface-only anti-pattern `replan-evidence/v1` fixtures; reference/equivalent must use different observable structure and anti-pattern must show acknowledgement without substantive plan/scope/verification change.
+- [x] 4.1 Add the module-owned calibration package with public opaque evidence fixtures plus private calibration manifest, expected outcomes, labels, and verified snapshot; do not create a new candidate and do not modify the #196 candidate snapshot or #197 anchor.
+- [x] 4.2 Add public opaque reference, equivalent, and surface-only anti-pattern `replan-evidence/v1` fixtures; keep category labels and gate metadata private, while reference/equivalent use different observable structure and anti-pattern shows acknowledgement without substantive plan/scope/verification change.
 - [x] 4.3 Implement the calibration runner with separate calibration accounting, explicit real-Judge opt-in, stable hashes, declared thresholds/repetitions, and no CI external model call.
 - [x] 4.4 Add deterministic mock tests for discrimination, equivalence tolerance, anti-pattern separation, fixture provenance, and insufficient-discrimination diagnostic behavior.
 - [x] 4.5 Record that no real calibration result is claimed unless explicitly executed with available credentials; do not convert a failed or unavailable real path into a low score.
