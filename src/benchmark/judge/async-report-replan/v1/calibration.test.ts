@@ -37,6 +37,13 @@ test("calibration becomes diagnostic when the discrimination gate fails", () => 
   expect(evaluateCalibrationMedians({ reference: 70, equivalent: 70, "anti-pattern": 65 })).toEqual({ qualified: false, reason: "reference median is below the minimum" });
 });
 
+test("calibration failure reasons do not expose fixture category labels", async () => {
+  const report = await runCalibration({ mode: "mock", score: async () => { throw new Error("provider unavailable"); } });
+  expect(report.status).toBe("diagnostic");
+  expect(report.reason).toBe("calibration Judge call was unavailable");
+  expect(report.reason).not.toMatch(/reference|equivalent|anti-pattern/i);
+});
+
 test("real calibration is not-run without explicit opt-in", async () => {
   const result = await runCalibration({ mode: "real", env: {}, score: async () => { throw new Error("must not call"); } });
   expect(result.status).toBe("not-run");

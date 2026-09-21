@@ -58,7 +58,7 @@ The projector MUST issue an in-process provenance handle for the evidence and ta
 
 ### Requirement: Condition and delivery timing are blinded
 
-The Judge input MUST use an opaque `blind_case_id` and MUST NOT contain condition ID, delivery node, timing assignment, treatment identity, Pack ref, Practice ID, or a recoverable mapping. The condition mapping remains outside #200 and MAY be restored by #201 only after scoring.
+The Judge input MUST use an opaque `blind_case_id` and MUST NOT contain condition ID, delivery node, timing assignment, treatment identity, Pack ref, Practice ID, calibration category labels, or a recoverable mapping. Exact and prefixed semantic labels such as `reference`, `equivalent`, `anti-pattern`, `cal-reference`, and `cal-anti-pattern` MUST fail closed. The condition mapping remains outside #200 and MAY be restored by #201 only after scoring.
 
 #### Scenario: Timing attempts share one input shape
 
@@ -113,7 +113,7 @@ The change MUST provide offline projection contract tests and a separate real-Ju
 - **WHEN** calibration exceeds nine real calls, fails a threshold, or cannot establish discrimination
 - **THEN** the Judge channel is diagnostic/indeterminate and MUST NOT support a timing-direction conclusion
 
-Calibration qualification MUST bind the fixed provider id/version and model identity used by the scoring attempt. A report produced for a different provider/model scope MUST be diagnostic/indeterminate. Calibration fixtures MUST expose only opaque case identities to the Judge; reference/equivalent/anti-pattern labels remain in the calibration orchestrator.
+Calibration qualification MUST bind the fixed provider id/version and model identity used by the scoring attempt. A report produced for a different provider/model scope MUST be diagnostic/indeterminate. Calibration fixtures MUST expose only opaque case identities to the Judge; reference/equivalent/anti-pattern labels remain in the calibration orchestrator, and category-specific failure reasons MUST NOT leave it through `judge-result/v1` or accounting.
 
 Real calibration qualification MUST also verify an HMAC attestation using `LORELUM_JUDGE_CALIBRATION_KEY`; missing or mismatched key material MUST be diagnostic/indeterminate. The offline mock key MUST NOT authorize real scoring.
 

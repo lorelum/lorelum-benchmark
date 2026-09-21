@@ -1,7 +1,7 @@
 import type { JudgeContext, JudgeProvider } from "../../provider";
 import { buildJudgeInput, type JudgeInput, type PublicRunMaterial } from "../../input";
 import { sha256Text } from "../../../fs";
-import { assertReplanEvidenceIntegrity, isReplanEvidenceIssued } from "./evidence";
+import { assertReplanEvidenceIntegrity, issuedReplanEvidenceHash, isReplanEvidenceIssued } from "./evidence";
 import { canonicalJson } from "./canonical";
 import { asyncReportJudgeEnv, httpAsyncReportJudgeCompletion } from "./llm";
 import { fixedRubricHashes, scoreReplanEvidence, resultBase, replanPromptHashes, replanScorePrompt } from "./score";
@@ -10,15 +10,19 @@ import { calibrationAttestationKey, calibrationCapabilityAllows, calibrationScop
 import { evaluationPlanHash } from "./plan";
 import type { CalibrationReport, JudgeCompletionWithUsage, ReplanEvidence } from "./types";
 
-const issuedJudgeInputs = new WeakSet<object>();
+const issuedJudgeInputs = new WeakMap<object, string>();
 
 function markReplanJudgeInputIssued<T extends JudgeInput>(input: T): T {
-  issuedJudgeInputs.add(input);
+  issuedJudgeInputs.set(input, input.input_hash);
   return input;
 }
 
 function isReplanJudgeInputIssued(value: unknown): value is JudgeInput {
   return Boolean(value) && typeof value === "object" && issuedJudgeInputs.has(value as object);
+}
+
+function issuedReplanJudgeInputHash(value: unknown): string | undefined {
+  return Boolean(value) && typeof value === "object" ? issuedJudgeInputs.get(value as object) : undefined;
 }
 
 const taskObjective = "Evaluate post-constraint replan quality only; async-report semantic correctness is outside this Judge.";
@@ -51,6 +55,7 @@ export type ParsedReplanInput = { evidence: ReplanEvidence; input: JudgeInput; p
 /** Rebuilds the shared Judge input so every scoring path crosses the public-only allowlist. */
 export async function parseBridgeEvidence(input: JudgeInput): Promise<ParsedReplanInput> {
   if (!isReplanJudgeInputIssued(input)) throw new Error("async-report replan input was not issued by the projector adapter");
+  if (issuedReplanJudgeInputHash(input) !== input.input_hash) throw new Error("async-report replan input was modified after issuance");
   if (!input.rubric) throw new Error("async-report replan rubric is missing");
   if (input.task_md !== taskObjective) throw new Error("async-report replan task objective is not the frozen v1 objective");
   const validated = await buildJudgeInput({ task_md: input.task_md, candidate_diff: input.candidate_diff, rubric: input.rubric, material: input.material });
@@ -67,6 +72,7 @@ export async function parseBridgeEvidence(input: JudgeInput): Promise<ParsedRepl
 export async function buildAsyncReportJudgeInput(evidence: ReplanEvidence, material: PublicRunMaterial[] = []): Promise<JudgeInput> {
   if (!isReplanEvidenceIssued(evidence)) throw new Error("async-report replan evidence was not issued by the projector");
   const validatedEvidence = await assertReplanEvidenceIntegrity(evidence);
+  if (issuedReplanEvidenceHash(evidence) !== validatedEvidence.evidence_hash) throw new Error("async-report replan evidence was modified after issuance");
   const fixedRubricText = await rubricText();
   const fixedRubric = await loadRubric();
   const base = await buildJudgeInput({ task_md: taskObjective, candidate_diff: canonicalJson(validatedEvidence), rubric: fixedRubricText, material });
@@ -96,6 +102,10 @@ export function createAsyncReportReplanProvider(options: AsyncReportProviderOpti
         if (complete && mode !== "mock") {
           const hashes = await fixedDiagnosticHashes("not-run");
           return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "not-run", 0, "injected Judge completion requires explicit mode=mock");
+        }
+        if (mode === "mock" && !complete) {
+          const hashes = await fixedDiagnosticHashes("not-run");
+          return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "not-run", 0, "mock scoring requires an injected completion");
         }
         if (mode === "real" && !resolvedEnv.real) {
           const hashes = await fixedDiagnosticHashes("not-run");

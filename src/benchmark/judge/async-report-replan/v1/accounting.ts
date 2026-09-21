@@ -1,5 +1,5 @@
 import { sha256Text } from "../../../fs";
-import { canonicalJson, redactSensitiveText } from "./canonical";
+import { canonicalJson, isOpaqueBlindCaseId, redactSensitiveText } from "./canonical";
 import type { AsyncReportAccounting, AccountingState, CalibrationStatus, JudgeUsage, ReplanEvidence, UsageValue } from "./types";
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -72,7 +72,7 @@ export function assertAsyncReportAccounting(value: unknown): asserts value is As
   const allowed = ["schema_version", "accounting_version", "state", "blind_case_id", "plan", "evidence", "rubric", "prompt_hash", "input_hash", "provider", "calibration", "calls", "duration_ms", "usage", "failure_reason"];
   if (Object.keys(value).some((key) => !allowed.includes(key))) throw new Error("async-report accounting contains unsupported fields");
   if (!["observed", "indeterminate", "judge-unavailable", "not-run"].includes(String(value.state))) throw new Error("async-report accounting state is invalid");
-  if (typeof value.blind_case_id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value.blind_case_id)) throw new Error("async-report accounting blind case is invalid");
+  if (!isOpaqueBlindCaseId(value.blind_case_id)) throw new Error("async-report accounting blind case is invalid");
   for (const key of ["prompt_hash", "input_hash"] as const) if (typeof value[key] !== "string" || !/^[a-f0-9]{64}$/.test(value[key])) throw new Error(`async-report accounting ${key} is invalid`);
   if (!record(value.plan)) throw new Error("async-report accounting plan is invalid");
   exactKeys(value.plan, ["id", "version", "hash"], "plan");

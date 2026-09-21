@@ -4,6 +4,7 @@ import { projectReplanEvidence } from "./evidence";
 import { asyncReportJudgeEnv, httpAsyncReportJudgeCompletion } from "./llm";
 import { evaluationPlan, evaluationPlanHash } from "./plan";
 import { fixedRubricHashes, replanScorePrompt, resultBase } from "./score";
+import { isOpaqueBlindCaseId } from "./canonical";
 import { buildAsyncReportJudgeInput, scoreValidatedInput } from "./provider";
 import { loadRubric } from "./rubric";
 import { calibrationAttestationKey, calibrationIdentity, calibrationScope, resolveCalibrationStatus } from "./calibration";
@@ -13,7 +14,7 @@ import type { JudgeResultV1 } from "../../../outcome/v1/contract";
 export type AsyncReportAttemptRun = { evidence?: ReplanEvidence; result: JudgeResultV1; accounting: AsyncReportAccounting };
 
 function safeBlindCaseId(value: unknown): string {
-  return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value) && !/(?:condition|delivery|timing)/i.test(value) && !/^(?:baseline|oracle|retrieval|irrelevant|task-start|constraint-followup|first-implementation-checkpoint)$/i.test(value) ? value : "indeterminate";
+  return isOpaqueBlindCaseId(value) ? value : "indeterminate";
 }
 
 async function diagnosticResult(judge: { id: string; version: string }, rubricHash: string, inputHash: string, state: "indeterminate" | "judge-unavailable" | "not-run", reason: string, promptHash?: string): Promise<JudgeResultV1> {

@@ -60,6 +60,9 @@ describe("replan evidence projection", () => {
       if (!result.ok) expect(result.reason).not.toContain("private/evaluator");
     }
     await expect(projectReplanEvidence(raw({ blind_case_id: "constraint-followup" }))).resolves.toMatchObject({ ok: false, state: "indeterminate" });
+    for (const blindCaseId of ["reference", "equivalent", "anti-pattern", "cal-reference", "cal-equivalent", "cal-anti-pattern"]) {
+      await expect(projectReplanEvidence(raw({ blind_case_id: blindCaseId }))).resolves.toMatchObject({ ok: false, state: "indeterminate" });
+    }
   });
 
   test("fails closed for credential-shaped secrets without relying on field names", async () => {

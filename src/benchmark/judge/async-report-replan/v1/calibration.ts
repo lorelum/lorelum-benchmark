@@ -242,10 +242,10 @@ export async function runCalibration(options: {
           score = observedScore(attempt.result);
         } catch {
           addUsage(usageAccumulator);
-          return finish({ ...identity, status: "diagnostic", calls: calls + 1, medians, scope, reason: `fixture ${fixture.id} Judge call was unavailable` }, attestationKey);
+          return finish({ ...identity, status: "diagnostic", calls: calls + 1, medians, scope, reason: "calibration Judge call was unavailable" }, attestationKey);
         }
         calls += 1;
-        if (score === undefined) return finish({ ...identity, status: "diagnostic", calls, medians, scope, reason: `fixture ${fixture.id} did not produce an observed score` }, attestationKey);
+        if (score === undefined) return finish({ ...identity, status: "diagnostic", calls, medians, scope, reason: "calibration did not produce an observed score" }, attestationKey);
         scores.push(score);
       }
       medians[fixture.id] = median(scores);

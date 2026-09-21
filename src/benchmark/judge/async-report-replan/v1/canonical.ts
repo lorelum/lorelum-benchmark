@@ -1,6 +1,16 @@
 import { sha256Text } from "../../../fs";
 import { absolutePathPattern, containsSensitiveCredential, redactAbsolutePaths, redactSensitiveCredentials } from "../../privacy";
 
+const blindCaseSemanticPattern = /(?:^|[-_.])(?:reference|equivalent|anti[-_.]?pattern)(?:$|[-_.])|^cal(?:ibration)?[-_.](?:ref(?:erence)?|eq(?:uivalent)?|anti[-_.]?pattern)(?:$|[-_.])/i;
+
+export function isOpaqueBlindCaseId(value: unknown): value is string {
+  return typeof value === "string"
+    && /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value)
+    && !/(?:condition|delivery|timing)/i.test(value)
+    && !/^(?:baseline|oracle|retrieval|irrelevant|task-start|constraint-followup|first-implementation-checkpoint)$/i.test(value)
+    && !blindCaseSemanticPattern.test(value);
+}
+
 export function normalizeText(value: string): string {
   return value.replaceAll("\r\n", "\n").replaceAll("\r", "\n").replace(/[ \t]+$/gm, "").trim();
 }

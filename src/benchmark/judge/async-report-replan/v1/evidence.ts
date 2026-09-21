@@ -1,6 +1,6 @@
 import { isAbsolute } from "node:path";
 import { sha256Text } from "../../../fs";
-import { absolutePathPattern, canonicalJson, containsSensitiveCredential, normalizeText, redactedProjectionReason } from "./canonical";
+import { absolutePathPattern, canonicalJson, containsSensitiveCredential, isOpaqueBlindCaseId, normalizeText, redactedProjectionReason } from "./canonical";
 import type {
   AllowedTool,
   ProjectionResult,
@@ -13,15 +13,19 @@ import type {
   VerificationSummary,
 } from "./types";
 
-const issuedEvidence = new WeakSet<object>();
+const issuedEvidence = new WeakMap<object, string>();
 
 function issueReplanEvidence<T extends ReplanEvidence>(evidence: T): T {
-  issuedEvidence.add(evidence);
+  issuedEvidence.set(evidence, evidence.evidence_hash);
   return evidence;
 }
 
 export function isReplanEvidenceIssued(value: unknown): value is ReplanEvidence {
   return Boolean(value) && typeof value === "object" && issuedEvidence.has(value as object);
+}
+
+export function issuedReplanEvidenceHash(value: unknown): string | undefined {
+  return Boolean(value) && typeof value === "object" ? issuedEvidence.get(value as object) : undefined;
 }
 
 const allowedTools = new Set<AllowedTool>(["read", "ls", "grep", "edit", "bash"]);
@@ -86,7 +90,7 @@ function stageOf(value: unknown, label: string): ReplanStage {
 }
 
 function validBlindCaseId(value: string): string {
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value) || containsForbiddenContent(value) || /(?:condition|delivery|timing)/i.test(value) || /^(?:baseline|oracle|retrieval|irrelevant|task-start|constraint-followup|first-implementation-checkpoint)$/i.test(value)) fail("blind_case_id is not an opaque safe identifier");
+  if (!isOpaqueBlindCaseId(value) || containsForbiddenContent(value)) fail("blind_case_id is not an opaque safe identifier");
   return value;
 }
 

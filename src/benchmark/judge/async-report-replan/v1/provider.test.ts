@@ -2,10 +2,12 @@ import { expect, test } from "bun:test";
 import { assertAsyncReportAccounting } from "./accounting";
 import { buildReplanJudgeInput, getAsyncReportReplanEvaluationInstance } from "./adapter";
 import { fixedRubricHashes } from "./score";
-import { createAsyncReportReplanProvider, scoreForCalibration } from "./provider";
+import { buildAsyncReportJudgeInput, createAsyncReportReplanProvider, parseBridgeEvidence, scoreForCalibration } from "./provider";
 import { runAsyncReportReplanAttempt } from "./run";
 import { projectReplanEvidence } from "./evidence";
 import { runCalibration } from "./calibration";
+import { canonicalJson } from "./canonical";
+import { sha256Text } from "../../../fs";
 
 function rawAttempt() {
   return {
@@ -77,6 +79,20 @@ test("injected completion requires explicit mock mode", async () => {
   expect(calls).toBe(0);
 });
 
+test("explicit mock mode without a completion never constructs a real caller", async () => {
+  let calls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => { calls += 1; throw new Error("mock mode must not fetch"); }) as typeof fetch;
+  try {
+    const provider = createAsyncReportReplanProvider({ mode: "mock", env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.invalid", LORELUM_JUDGE_API_KEY: "secret", LORELUM_JUDGE_MODEL: "model" } });
+    const result = await provider.score({ task_md: "x", candidate_diff: "x", rubric: "x", input_hash: "a".repeat(64), material: [] }, { judge: { id: provider.id, version: provider.version }, prompt: "x", prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64) });
+    expect(result.state).toBe("not-run");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  expect(calls).toBe(0);
+});
+
 test("provider rejects caller-supplied alternate rubric before any completion", async () => {
   const projected = await projectReplanEvidence(rawAttempt());
   if (!projected.ok) throw new Error("fixture did not project");
@@ -93,6 +109,24 @@ test("calibration scoring requires a runner-issued capability", async () => {
   if (!projected.ok) throw new Error("fixture did not project");
   const input = await buildReplanJudgeInput(projected.evidence);
   await expect(scoreForCalibration(input, { judge: { id: "judge-agent/async-report-replan/v1", version: "v1" }, rubric_hash: (await fixedRubricHashes()).hash, input_hash: input.input_hash }, async () => ({ output: {} }), {})).rejects.toThrow("runner-issued capability");
+});
+
+test("issued evidence and input reject post-issuance content changes", async () => {
+  const projected = await projectReplanEvidence(rawAttempt());
+  if (!projected.ok) throw new Error("fixture did not project");
+  const evidence = projected.evidence;
+  evidence.final_candidate_diff += "+changed after issuance\n";
+  evidence.final_candidate_diff_sha256 = await sha256Text(evidence.final_candidate_diff);
+  const { evidence_hash: _ignored, ...withoutHash } = evidence;
+  evidence.evidence_hash = await sha256Text(canonicalJson(withoutHash));
+  await expect(buildAsyncReportJudgeInput(evidence)).rejects.toThrow("modified after issuance");
+
+  const fresh = await projectReplanEvidence(rawAttempt());
+  if (!fresh.ok) throw new Error("fixture did not project");
+  const input = await buildAsyncReportJudgeInput(fresh.evidence);
+  input.candidate_diff = input.candidate_diff.replace("report()", "changedReport()");
+  input.input_hash = await sha256Text("caller-rehashed-input");
+  await expect(parseBridgeEvidence(input)).rejects.toThrow("modified after issuance");
 });
 
 test("provider rejects unissued evidence and alternate Judge identities", async () => {

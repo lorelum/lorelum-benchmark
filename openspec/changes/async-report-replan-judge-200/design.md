@@ -65,7 +65,7 @@ The allowlist is `read`, `ls`, `grep`, `edit`, and `bash`. Thinking/reasoning an
 
 Missing required fields, cap overflow, unknown tool shapes, or incomplete stage boundaries produce `indeterminate`; the implementation does not truncate and continue scoring.
 
-The projector and task adapter issue process-local provenance handles for projected evidence and the resulting Judge input. The issuance capability remains module-private; provider scoring rejects deserialized, caller-constructed, or re-marked objects that did not cross this projector-owned boundary. Calibration fixtures are reprojected through the same projector before scoring. This is an in-process issuance guard, not a replacement for the upstream #197 runner's private artifact provenance; the future #209/#201 adapter remains responsible for supplying only runner-produced attempts.
+The projector and task adapter issue process-local provenance handles for projected evidence and the resulting Judge input. The issuance capability remains module-private, and the handle retains the issuance-time canonical hash; provider scoring rejects deserialized, caller-constructed, re-marked, or post-issuance-mutated objects. Calibration fixtures are reprojected through the same projector before scoring. This is an in-process issuance guard, not a replacement for the upstream #197 runner's private artifact provenance; the future #209/#201 adapter remains responsible for supplying only runner-produced attempts.
 
 The projector treats `public_user_turns` as public content carried by a private, runner-produced attempt artifact: it hashes and validates the two supplied stages but does not authenticate them against #202 or infer condition/timing. The upstream #197 runner and the future #209 task adapter own the fixed-task/snapshot provenance for those turns. A caller that cannot provide that upstream provenance is outside the formal record path and must remain diagnostic-only; #200 does not solve that join by reading private evaluator material.
 
@@ -99,7 +99,7 @@ src/benchmark/judge/async-report-replan/v1/private/
     manifest.json
 ```
 
-The private subtree is module-owned calibration input. It is never materialized into an Agent workspace or passed to the Judge as calibration labels. Fixture evidence uses opaque case IDs, and the fixture category is retained only by the calibration orchestrator. Reference and equivalent differ in wording, tool sequence, or structure while representing the same replan quality. Anti-pattern acknowledges the constraints without substantive plan, scope, or verification change.
+The private subtree is module-owned calibration input. It is never materialized into an Agent workspace or passed to the Judge as calibration labels. Fixture evidence uses opaque case IDs; semantic category-shaped IDs such as `reference`, `equivalent`, `anti-pattern`, and their calibration-prefixed variants are rejected, and the fixture category is retained only by the calibration orchestrator. Calibration failure reasons exported to Judge results or accounting are category-neutral. Reference and equivalent differ in wording, tool sequence, or structure while representing the same replan quality. Anti-pattern acknowledges the constraints without substantive plan, scope, or verification change.
 
 Scoring calibration uses three repetitions per fixture, median aggregation, and at most nine real calls. The hard gate is:
 
