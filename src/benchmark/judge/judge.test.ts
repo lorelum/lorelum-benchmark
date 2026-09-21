@@ -3,7 +3,7 @@ import { rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { sha256Text } from "../fs";
 import { assertJudgeResultV1 } from "../outcome/v1/contract";
-import { buildJudgeInput, isAllowedPublicPath, looksPrivate, redactedReason } from "./input";
+import { buildJudgeInput, isAllowedPublicPath, looksPrivate, redactedReason, workspaceRoot } from "./input";
 import { mockJudgeProvider, mockContext } from "./mock";
 import { classifyProviderResult, notRun, unavailable } from "./classify";
 
@@ -32,7 +32,11 @@ test("known private markers in string fields are rejected", async () => {
     "condition_id: oracle-practice",
     "practice payload: layered design",
     "private/calibration/fixtures.yaml",
-    "oracle/oracle.yaml"
+    "oracle/oracle.yaml",
+    "delivery_node: after-user",
+    "practice_id: hidden-condition",
+    "pack_ref: hidden-pack",
+    "session_id: private-session"
   ]) {
     await expect(buildJudgeInput({ task_md: publicTask, candidate_diff: bad, rubric })).rejects.toThrow("judge input rejected");
     await expect(buildJudgeInput({ task_md: bad, candidate_diff: candidateDiff, rubric })).rejects.toThrow("judge input rejected");
@@ -82,6 +86,7 @@ test("isAllowedPublicPath enforces the workspace boundary", () => {
   expect(isAllowedPublicPath("incubator/practice-injection/async-report-lifecycle-v1/public/task.md").allowed).toBe(true);
   expect(isAllowedPublicPath("incubator/skill-trigger-orchestration/async-cleanup-v1/public/task.md").allowed).toBe(true);
   expect(isAllowedPublicPath("suites/react-skill-comparison/tasks/workspace-overview-loader/v1/private/public/task.md").allowed).toBe(false);
+  expect(isAllowedPublicPath(join(workspaceRoot, "suites/react-skill-comparison/tasks/workspace-overview-loader/v1/public/task.md")).allowed).toBe(false);
   expect(isAllowedPublicPath("suites/react-skill-comparison/private/public/task.md").allowed).toBe(false);
   expect(isAllowedPublicPath("private/evaluator").allowed).toBe(false);
   expect(isAllowedPublicPath("../../etc/passwd").allowed).toBe(false);

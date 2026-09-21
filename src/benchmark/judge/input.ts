@@ -27,6 +27,14 @@ const privateMarkers = [
   "oracle/",
   "oracle.yaml",
   "condition_id:",
+  "delivery_node:",
+  "timing_assignment:",
+  "timing_node:",
+  "practice_id:",
+  "pack_ref:",
+  "pack_id:",
+  "session_id:",
+  "treatment_id:",
   "practice_payload",
   "practice payload",
   "calibration/",
@@ -88,6 +96,10 @@ function samePath(left: string, right: string): boolean {
 // pass through a directory segment named exactly "public" (for example
 // public/... or suites/<suite>/tasks/<slug>/vN/public/...).
 export function isAllowedPublicPath(path: string): { allowed: boolean; reason?: string } {
+  const normalized = normalizedPath(path);
+  if (isAbsolute(path) || /^[A-Za-z]:[\\/]/.test(path) || /^\\\\/.test(path)) {
+    return { allowed: false, reason: `absolute path is not accepted: ${normalized}` };
+  }
   const resolved = resolve(workspaceRoot, path);
   const fromRoot = relative(workspaceRoot, resolved);
   if (isAbsolute(fromRoot) || fromRoot.startsWith("..") || normalizedPath(fromRoot).startsWith("..")) {
@@ -129,7 +141,7 @@ async function readMaterial(item: PublicRunMaterial): Promise<PublicRunMaterial>
   }
   const content = await file.text();
   if (looksPrivate(content)) throw new Error(redactedReason("material content contains private or absolute-path material"));
-  return { ...item, content };
+  return { ...item, path: normalizedPath(relative(workspaceRoot, resolvedFile)), content };
 }
 
 export async function buildJudgeInput(input: {

@@ -136,7 +136,7 @@ The provider MUST preserve `judge-result/v1` unchanged and MUST emit a separate 
 - **WHEN** token or cost fields are absent from the provider response
 - **THEN** accounting records `unavailable` and does not fabricate token/cost values
 
-Public material validation MUST resolve both the workspace root and the selected public root. A public root whose real path differs from its expected workspace-relative public path, or whose file resolves outside both roots, MUST be rejected before reading content.
+Public material validation MUST accept only relative paths, emit workspace-relative canonical paths, and resolve both the workspace root and the selected public root. A public root whose real path differs from its expected workspace-relative public path, whose file resolves outside both roots, or whose content contains task-specific condition/timing/Practice/Pack/session marker fields MUST be rejected before reading content into the Judge prompt.
 
 #### Scenario: Shared provider contract remains unchanged
 
