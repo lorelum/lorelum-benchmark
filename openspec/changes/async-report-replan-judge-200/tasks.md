@@ -39,7 +39,7 @@
 
 ## 6. Validation, review, and lifecycle
 
-- [ ] 6.1 Run focused Judge tests, evidence/privacy tests, calibration mock tests, `bun run validate`, `git diff --check`, and OpenSpec strict validation; record commands, results, and any unimplemented real-model checks.
+- [x] 6.1 Run focused Judge tests, evidence/privacy tests, calibration mock tests, `bun run validate`, `git diff --check`, and OpenSpec strict validation; record commands, results, and any unimplemented real-model checks.
 - [ ] 6.2 Run the public/private leakage audit across evidence, fixtures, sidecars, traces, and Agent-workspace boundaries.
 - [ ] 6.3 Complete the repository-required two independent read-only reviews for this benchmark-contract PR and record findings and rechecks in the change evidence chain.
 - [ ] 6.4 Read back the actual GitHub Issue/PR title, body, important comments, and validation summaries; update Issue #200 and the PR with implementation/status evidence.

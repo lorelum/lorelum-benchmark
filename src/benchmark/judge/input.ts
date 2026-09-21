@@ -43,13 +43,18 @@ const privateMarkers = [
   "rule-audit"
 ];
 
+const privateFieldPattern = /\b(?:condition_id|delivery_node|timing_assignment|timing_node|practice_id|pack_ref|pack_id|session_id|treatment_id)\b["']?\s*[:=]/i;
+const privatePathPattern = /\b(?:private|oracle|evaluator|scoring|calibration)[\\/]/i;
+
 export function looksPrivate(text: string): boolean {
   const lower = text.toLowerCase();
-  return privateMarkers.some((marker) => lower.includes(marker.toLowerCase())) || absolutePathPattern.test(text) || containsSensitiveCredential(text);
+  return privateMarkers.some((marker) => lower.includes(marker.toLowerCase())) || privateFieldPattern.test(text) || privatePathPattern.test(text) || absolutePathPattern.test(text) || containsSensitiveCredential(text);
 }
 
 function redactToken(text: string): string {
   let out = redactSensitiveCredentials(redactAbsolutePaths(text));
+  out = out.replace(privateFieldPattern, "[redacted-field]");
+  out = out.replace(privatePathPattern, "[redacted]");
   for (const marker of privateMarkers) {
     const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     out = out.replace(new RegExp(escaped, "gi"), "[redacted]");
@@ -135,13 +140,14 @@ async function readMaterial(item: PublicRunMaterial): Promise<PublicRunMaterial>
   }
   const expectedRealRoot = resolve(realWorkspaceRoot, publicRootRelative);
   if (!samePath(realRoot, expectedRealRoot) || !isInside(realWorkspaceRoot, realRoot) || !isInside(realWorkspaceRoot, realFile) || !isInside(realRoot, realFile)) throw new Error(redactedReason("material realpath escapes the workspace or public root"));
-  const file = Bun.file(resolvedFile);
+  const file = Bun.file(realFile);
   if (!(await file.exists())) {
     throw new Error(redactedReason(`material does not exist: ${item.path}`));
   }
   const content = await file.text();
   if (looksPrivate(content)) throw new Error(redactedReason("material content contains private or absolute-path material"));
-  return { ...item, path: normalizedPath(relative(workspaceRoot, resolvedFile)), content };
+  const canonicalPath = normalizedPath(relative(realWorkspaceRoot, realFile));
+  return { ...item, path: canonicalPath, content };
 }
 
 export async function buildJudgeInput(input: {

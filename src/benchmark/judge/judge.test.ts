@@ -33,7 +33,10 @@ test("known private markers in string fields are rejected", async () => {
     "practice payload: layered design",
     "private/calibration/fixtures.yaml",
     "oracle/oracle.yaml",
+    "private\\evaluator\\evaluate.ts",
     "delivery_node: after-user",
+    "{\"delivery_node\":\"after-user\"}",
+    "practice_id=hidden-condition",
     "practice_id: hidden-condition",
     "pack_ref: hidden-pack",
     "session_id: private-session"
