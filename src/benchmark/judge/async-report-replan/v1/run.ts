@@ -6,7 +6,7 @@ import { evaluationPlan, evaluationPlanHash } from "./plan";
 import { fixedRubricHashes, replanScorePrompt, resultBase } from "./score";
 import { buildAsyncReportJudgeInput, scoreValidatedInput } from "./provider";
 import { loadRubric } from "./rubric";
-import { calibrationIdentity, calibrationScope, resolveCalibrationStatus } from "./calibration";
+import { calibrationAttestationKey, calibrationIdentity, calibrationScope, resolveCalibrationStatus } from "./calibration";
 import type { AsyncReportAccounting, CalibrationReport, JudgeCompletionWithUsage, RawReplanAttempt, ReplanEvidence } from "./types";
 import type { JudgeResultV1 } from "../../../outcome/v1/contract";
 
@@ -28,10 +28,12 @@ export async function runAsyncReportReplanAttempt(raw: RawReplanAttempt, options
 } = {}): Promise<AsyncReportAttemptRun> {
   const start = options.now?.() ?? performance.now();
   const env = asyncReportJudgeEnv(options.env ?? Bun.env);
+  const calibrationMode = options.complete || !env.real ? "mock" : "real";
+  const attestationKey = calibrationAttestationKey(calibrationMode, options.env ?? Bun.env);
   const judge = { id: "judge-agent/async-report-replan/v1", version: "v1" };
   const provider = { ...judge, model: env.model ?? null };
   const [planHash, rubric, rubricDocument] = await Promise.all([evaluationPlanHash(), fixedRubricHashes(), loadRubric()]);
-  const calibration = await resolveCalibrationStatus(options.calibration, calibrationScope(options.complete ? "mock" : env.real ? env.model ?? null : "mock"));
+  const calibration = await resolveCalibrationStatus(options.calibration, calibrationScope(options.complete ? "mock" : env.real ? env.model ?? null : "mock"), attestationKey);
   const projected = await projectReplanEvidence(raw);
   const blindCaseId = safeBlindCaseId(raw?.blind_case_id);
   const elapsed = () => Math.max(0, (options.now?.() ?? performance.now()) - start);
@@ -72,7 +74,7 @@ export async function runAsyncReportReplanAttempt(raw: RawReplanAttempt, options
 
   try {
     const complete = options.complete ?? httpAsyncReportJudgeCompletion(options.env ?? Bun.env);
-    const scored = await scoreValidatedInput(input, { judge, rubric_hash: rubric.hash, input_hash: inputHash }, complete, options.calibration, calibrationScope(options.complete ? "mock" : env.model ?? null));
+    const scored = await scoreValidatedInput(input, { judge, rubric_hash: rubric.hash, input_hash: inputHash }, complete, options.calibration, calibrationScope(options.complete ? "mock" : env.model ?? null), attestationKey);
     const state = accountingStateFromJudgeState(scored.result.state);
     return { evidence, result: scored.result, accounting: buildAccounting({ state, blind_case_id: evidence.blind_case_id, ...baseRefs, evidence: evidenceRef(evidence), prompt_hash: scored.prompt_hash, input_hash: inputHash, provider, calls: { calibration: calibration.calls, scoring: 1 }, duration_ms: elapsed(), usage: scored.usage, ...(scored.result.state === "observed" ? {} : { failure_reason: scored.result.reason ?? "Judge did not produce an observed result" }) }) };
   } catch (error) {

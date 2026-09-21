@@ -49,6 +49,8 @@ The projector MUST allow only `read`, `ls`, `grep`, `edit`, and `bash` tool acti
 
 Recognized verification commands MUST use an explicit allowlisted executable/script form without shell control syntax, and a verification summary MUST come from a matching execution-end/result event. A direct tool-action summary or a shell wrapper such as `echo bun test` MUST NOT become verification evidence.
 
+The projector MUST issue an in-process provenance handle for the evidence and task-specific Judge input. The provider MUST reject an otherwise schema-valid evidence/input object that did not cross that projector-owned boundary.
+
 #### Scenario: Unknown tool shape fails closed
 
 - **WHEN** a tool call is not allowlisted, has an absolute/escaping path, or cannot be associated with a safe status
@@ -112,6 +114,8 @@ The change MUST provide offline projection contract tests and a separate real-Ju
 - **THEN** the Judge channel is diagnostic/indeterminate and MUST NOT support a timing-direction conclusion
 
 Calibration qualification MUST bind the fixed provider id/version and model identity used by the scoring attempt. A report produced for a different provider/model scope MUST be diagnostic/indeterminate.
+
+Real calibration qualification MUST also verify an HMAC attestation using `LORELUM_JUDGE_CALIBRATION_KEY`; missing or mismatched key material MUST be diagnostic/indeterminate. The offline mock key MUST NOT authorize real scoring.
 
 ### Requirement: Accounting is versioned and independent from hard evaluation
 

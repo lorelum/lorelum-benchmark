@@ -1,13 +1,16 @@
 import { join } from "node:path";
+import { createHmac } from "node:crypto";
 import { listFiles, sha256File, sha256Text } from "../../../fs";
 import { canonicalJson } from "./canonical";
 import { assertReplanEvidence } from "./evidence";
+import { markReplanEvidenceIssued } from "./provenance";
 import { providerId, type CalibrationReport, type CalibrationScope, type CalibrationStatus, type ReplanEvidence } from "./types";
 import type { JudgeResultV1 } from "../../../outcome/v1/contract";
 
 export const calibrationId = "async-report-replan-judge-calibration" as const;
 export const calibrationVersion = "v1" as const;
 export const calibrationThresholds = Object.freeze({ reference_min: 75, equivalent_max_difference: 10, anti_pattern_max: 60, reference_min_difference: 15, repetitions: 3, max_calls: 9 });
+const mockCalibrationKey = "mock-calibration-key-v1";
 
 export function calibrationScope(model: string | null): CalibrationScope {
   return { provider_id: providerId, provider_version: "v1", model };
@@ -19,14 +22,19 @@ export type CalibrationFixture = { id: CalibrationFixtureId; evidence: ReplanEvi
 const calibrationDir = join(import.meta.dir, "private", "calibration");
 const calibrationSnapshotPath = join(calibrationDir, "snapshot.json");
 
-async function issueReport(report: Omit<CalibrationReport, "attestation">): Promise<CalibrationReport> {
-  return { ...report, attestation: await calibrationAttestation(report) };
+async function issueReport(report: Omit<CalibrationReport, "attestation">, attestationKey?: string): Promise<CalibrationReport> {
+  return { ...report, attestation: await calibrationAttestation(report, attestationKey) };
 }
 
-async function calibrationAttestation(report: Omit<CalibrationReport, "attestation">): Promise<string> {
+async function calibrationAttestation(report: Omit<CalibrationReport, "attestation">, attestationKey?: string): Promise<string> {
   const snapshotHash = await sha256File(calibrationSnapshotPath).catch(() => "unavailable");
   const rubricHash = await (await import("./rubric")).rubricHash().catch(() => "unavailable");
-  return sha256Text(canonicalJson({ schema_version: "async-report-replan-calibration-attestation/v1", report, snapshot_hash: snapshotHash, rubric_hash: rubricHash }));
+  const payload = canonicalJson({ schema_version: "async-report-replan-calibration-attestation/v1", report, snapshot_hash: snapshotHash, rubric_hash: rubricHash });
+  return attestationKey ? createHmac("sha256", attestationKey).update(payload).digest("hex") : "unavailable";
+}
+
+export function calibrationAttestationKey(mode: "mock" | "real", env: Record<string, string | undefined> = Bun.env): string | undefined {
+  return mode === "mock" ? mockCalibrationKey : env.LORELUM_JUDGE_CALIBRATION_KEY;
 }
 
 function safeCallCount(value: unknown): number | undefined {
@@ -57,7 +65,7 @@ export async function loadCalibrationFixtures(): Promise<CalibrationFixture[]> {
   for (const id of ids) {
     const value = await Bun.file(fixturePath(id)).json();
     assertReplanEvidence(value);
-    fixtures.push({ id, evidence: value });
+    fixtures.push({ id, evidence: markReplanEvidenceIssued(value) });
   }
   return fixtures;
 }
@@ -68,7 +76,7 @@ export async function calibrationIdentity(): Promise<{ id: typeof calibrationId;
   return { id: calibrationId, version: calibrationVersion, hash: await sha256Text(entries.join("\n")) };
 }
 
-export async function resolveCalibrationStatus(report?: CalibrationReport, expectedScope?: CalibrationScope): Promise<{ id: string; version: string; hash: string; status: CalibrationStatus; calls: number; reason?: string }> {
+export async function resolveCalibrationStatus(report?: CalibrationReport, expectedScope?: CalibrationScope, attestationKey?: string): Promise<{ id: string; version: string; hash: string; status: CalibrationStatus; calls: number; reason?: string }> {
   const identity = await calibrationIdentity();
   if (!report) return { ...identity, status: "not-run", calls: 0, reason: "no calibration report was supplied" };
   if (!report || typeof report !== "object" || Object.keys(report).some((key) => !["id", "version", "hash", "status", "calls", "medians", "scope", "attestation", "reason"].includes(key)) || typeof report.attestation !== "string") return { ...identity, status: "diagnostic", calls: 0, reason: "calibration report shape is invalid" };
@@ -76,8 +84,10 @@ export async function resolveCalibrationStatus(report?: CalibrationReport, expec
   if (calls === undefined) return { ...identity, status: "diagnostic", calls: 0, reason: "calibration call count is invalid" };
   if (!validMedians(report.medians)) return { ...identity, status: "diagnostic", calls, reason: "calibration medians are invalid" };
   if (!report.scope || report.scope.provider_id !== providerId || report.scope.provider_version !== "v1" || (typeof report.scope.model !== "string" && report.scope.model !== null)) return { ...identity, status: "diagnostic", calls, reason: "calibration scope is invalid" };
+  const verificationKey = attestationKey ?? (expectedScope?.model === "mock" ? calibrationAttestationKey("mock") : undefined);
+  if (!verificationKey) return { ...identity, status: "diagnostic", calls, reason: "calibration attestation key is unavailable" };
   const { attestation: _attestation, ...reportWithoutAttestation } = report;
-  if (report.attestation !== await calibrationAttestation(reportWithoutAttestation)) return { ...identity, status: "diagnostic", calls, reason: "calibration attestation does not match the frozen package" };
+  if (report.attestation !== await calibrationAttestation(reportWithoutAttestation, verificationKey)) return { ...identity, status: "diagnostic", calls, reason: "calibration attestation does not match the issued package" };
   if (report.id !== identity.id || report.version !== identity.version || report.hash !== identity.hash) return { ...identity, status: "diagnostic", calls, reason: "calibration identity does not match the frozen v1 package" };
   if (expectedScope && canonicalJson(report.scope) !== canonicalJson(expectedScope)) return { ...identity, status: "diagnostic", calls, reason: "calibration scope does not match the scoring provider/model" };
   if (!(await verifyCalibrationSnapshot())) return { ...identity, status: "diagnostic", calls, reason: "calibration snapshot is not verified" };
@@ -120,32 +130,35 @@ export async function runCalibration(options: {
   max_calls?: number;
   env?: Record<string, string | undefined>;
   scope?: CalibrationScope;
+  attestation_key?: string;
 }): Promise<CalibrationReport> {
   const scope = options.scope ?? calibrationScope(options.mode === "real" ? options.env?.LORELUM_JUDGE_MODEL ?? null : "mock");
-  if (!(await verifyCalibrationSnapshot())) return issueReport({ id: calibrationId, version: calibrationVersion, hash: await sha256Text("unverified calibration snapshot"), status: "diagnostic", calls: 0, medians: {}, scope, reason: "calibration snapshot is not verified" });
+  const attestationKey = options.attestation_key ?? calibrationAttestationKey(options.mode, options.env);
+  if (!(await verifyCalibrationSnapshot())) return issueReport({ id: calibrationId, version: calibrationVersion, hash: await sha256Text("unverified calibration snapshot"), status: "diagnostic", calls: 0, medians: {}, scope, reason: "calibration snapshot is not verified" }, attestationKey);
   const identity = await calibrationIdentity();
   const repetitions = options.repetitions ?? calibrationThresholds.repetitions;
   const maxCalls = options.max_calls ?? calibrationThresholds.max_calls;
-  if (!Number.isInteger(repetitions) || repetitions !== calibrationThresholds.repetitions || !Number.isInteger(maxCalls) || maxCalls !== calibrationThresholds.max_calls) return issueReport({ ...identity, status: "diagnostic", calls: 0, medians: {}, scope, reason: "calibration budget does not match v1" });
-  if (options.mode === "real" && options.env?.LORELUM_JUDGE_REAL !== "1") return issueReport({ ...identity, status: "not-run", calls: 0, medians: {}, scope, reason: "real calibration requires LORELUM_JUDGE_REAL=1" });
+  if (!Number.isInteger(repetitions) || repetitions !== calibrationThresholds.repetitions || !Number.isInteger(maxCalls) || maxCalls !== calibrationThresholds.max_calls) return issueReport({ ...identity, status: "diagnostic", calls: 0, medians: {}, scope, reason: "calibration budget does not match v1" }, attestationKey);
+  if (options.mode === "real" && options.env?.LORELUM_JUDGE_REAL !== "1") return issueReport({ ...identity, status: "not-run", calls: 0, medians: {}, scope, reason: "real calibration requires LORELUM_JUDGE_REAL=1" }, attestationKey);
+  if (options.mode === "real" && !attestationKey) return issueReport({ ...identity, status: "diagnostic", calls: 0, medians: {}, scope, reason: "real calibration requires LORELUM_JUDGE_CALIBRATION_KEY" }, attestationKey);
   const medians: Partial<Record<CalibrationFixtureId, number>> = {};
   let calls = 0;
   for (const fixture of await loadCalibrationFixtures()) {
     const scores: number[] = [];
     for (let repeat = 0; repeat < repetitions; repeat += 1) {
-      if (calls >= maxCalls) return issueReport({ ...identity, status: "diagnostic", calls, medians, scope, reason: "calibration call budget exceeded" });
+      if (calls >= maxCalls) return issueReport({ ...identity, status: "diagnostic", calls, medians, scope, reason: "calibration call budget exceeded" }, attestationKey);
       let score: number | undefined;
       try {
         score = observedScore(await options.score(fixture.evidence));
       } catch {
-        return issueReport({ ...identity, status: "diagnostic", calls: calls + 1, medians, scope, reason: `fixture ${fixture.id} Judge call was unavailable` });
+        return issueReport({ ...identity, status: "diagnostic", calls: calls + 1, medians, scope, reason: `fixture ${fixture.id} Judge call was unavailable` }, attestationKey);
       }
       calls += 1;
-      if (score === undefined) return issueReport({ ...identity, status: "diagnostic", calls, medians, scope, reason: `fixture ${fixture.id} did not produce an observed score` });
+      if (score === undefined) return issueReport({ ...identity, status: "diagnostic", calls, medians, scope, reason: `fixture ${fixture.id} did not produce an observed score` }, attestationKey);
       scores.push(score);
     }
     medians[fixture.id] = median(scores);
   }
   const gate = evaluateCalibrationMedians(medians);
-  return issueReport({ ...identity, status: gate.qualified ? "qualified" : "diagnostic", calls, medians, scope, ...(gate.reason ? { reason: gate.reason } : {}) });
+  return issueReport({ ...identity, status: gate.qualified ? "qualified" : "diagnostic", calls, medians, scope, ...(gate.reason ? { reason: gate.reason } : {}) }, attestationKey);
 }

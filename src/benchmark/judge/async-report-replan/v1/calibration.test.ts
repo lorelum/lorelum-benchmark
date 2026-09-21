@@ -48,3 +48,11 @@ test("qualified calibration is bound to the scoring provider model scope", async
   expect((await resolveCalibrationStatus(report, calibrationScope("different-model"))).status).toBe("diagnostic");
   expect((await resolveCalibrationStatus(report, calibrationScope("mock"))).status).toBe("qualified");
 });
+
+test("real calibration requires the private attestation key and rejects a wrong key", async () => {
+  const env = { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_MODEL: "model-a", LORELUM_JUDGE_CALIBRATION_KEY: "calibration-secret" };
+  const report = await runCalibration({ mode: "real", env, score: async (evidence) => ({ schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score: evidence.blind_case_id.includes("ref") ? 80 : evidence.blind_case_id.includes("eq") ? 78 : 40, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never) });
+  expect(report.status).toBe("qualified");
+  expect((await resolveCalibrationStatus(report, calibrationScope("model-a"), "wrong-secret")).status).toBe("diagnostic");
+  expect((await resolveCalibrationStatus(report, calibrationScope("model-a"), "calibration-secret")).status).toBe("qualified");
+});

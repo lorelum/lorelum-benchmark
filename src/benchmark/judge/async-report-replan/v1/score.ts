@@ -3,7 +3,7 @@ import { assertJudgeResultV1, type JudgeResultV1 } from "../../../outcome/v1/con
 import { canonicalJson } from "./canonical";
 import { rubricHash, rubricText } from "./rubric";
 import type { PublicRunMaterial } from "../../input";
-import type { JudgeCompletionWithUsage, ReplanEvidence, ReplanRubric } from "./types";
+import { providerId, type JudgeCompletionWithUsage, type ReplanEvidence, type ReplanRubric } from "./types";
 
 export type ReplanScoredCriterion = { id: string; points: number; rationale: string };
 export type ReplanScoredOutput =
@@ -76,6 +76,7 @@ export async function scoreReplanEvidence(input: {
   complete: JudgeCompletionWithUsage;
   material?: PublicRunMaterial[];
 }): Promise<{ result: JudgeResultV1; prompt_hash: string; usage: Partial<import("./types").JudgeUsage>; }> {
+  if (input.judge.id !== providerId || input.judge.version !== "v1") fail("fixed Judge identity mismatch");
   const prompt = replanScorePrompt(input.evidence, input.rubric, input.material);
   const hashes = await replanPromptHashes(input.evidence, input.rubric, input.material);
   const promptHash = hashes.prompt_hash;

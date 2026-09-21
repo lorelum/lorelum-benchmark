@@ -1,6 +1,7 @@
 import { isAbsolute } from "node:path";
 import { sha256Text } from "../../../fs";
 import { absolutePathPattern, canonicalJson, normalizeText, redactedProjectionReason } from "./canonical";
+import { markReplanEvidenceIssued } from "./provenance";
 import type {
   AllowedTool,
   ProjectionResult,
@@ -308,7 +309,7 @@ export async function projectReplanEvidence(input: unknown): Promise<ProjectionR
     const evidenceHash = await sha256Text(canonicalJson(evidenceWithoutHash));
     const evidence = { ...evidenceWithoutHash, evidence_hash: evidenceHash } as ReplanEvidence;
     assertReplanEvidence(evidence);
-    return { ok: true, evidence };
+    return { ok: true, evidence: markReplanEvidenceIssued(evidence) };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return { ok: false, state: "indeterminate", reason: redactedProjectionReason(reason), evidence_hash: await failureHash(reason) };

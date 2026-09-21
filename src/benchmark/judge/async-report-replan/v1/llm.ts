@@ -5,10 +5,11 @@ export type AsyncReportJudgeEnv = {
   baseUrl?: string;
   apiKey?: string;
   model?: string;
+  calibrationKey?: string;
 };
 
 export function asyncReportJudgeEnv(env: Record<string, string | undefined> = Bun.env): AsyncReportJudgeEnv {
-  return { real: env.LORELUM_JUDGE_REAL === "1", baseUrl: env.LORELUM_JUDGE_BASE_URL, apiKey: env.LORELUM_JUDGE_API_KEY, model: env.LORELUM_JUDGE_MODEL };
+  return { real: env.LORELUM_JUDGE_REAL === "1", baseUrl: env.LORELUM_JUDGE_BASE_URL, apiKey: env.LORELUM_JUDGE_API_KEY, model: env.LORELUM_JUDGE_MODEL, calibrationKey: env.LORELUM_JUDGE_CALIBRATION_KEY };
 }
 
 export function requireAsyncReportJudgeConfig(env: AsyncReportJudgeEnv): { baseUrl: string; apiKey: string; model: string } {

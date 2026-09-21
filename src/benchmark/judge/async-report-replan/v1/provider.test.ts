@@ -78,6 +78,18 @@ test("provider rejects caller-supplied alternate rubric before any completion", 
   expect(calls).toBe(0);
 });
 
+test("provider rejects unissued evidence and alternate Judge identities", async () => {
+  const projected = await projectReplanEvidence(rawAttempt());
+  if (!projected.ok) throw new Error("fixture did not project");
+  const provider = createAsyncReportReplanProvider({ calibration: await qualifiedCalibration(), complete: completion({ criteria: [], confidence: 10 }) });
+  await expect(buildReplanJudgeInput(structuredClone(projected.evidence))).rejects.toThrow("not issued by the projector");
+  const input = await buildReplanJudgeInput(projected.evidence);
+  const hashes = await fixedRubricHashes();
+  const result = await provider.score(input, { judge: { id: "other-provider", version: "v1" }, prompt: "unused", prompt_hash: "a".repeat(64), rubric_hash: hashes.hash });
+  expect(result.state).toBe("judge-unavailable");
+  expect(result.judge).toEqual({ id: provider.id, version: provider.version });
+});
+
 test("invalid calibration counts fail closed without throwing or entering accounting", async () => {
   const valid = await qualifiedCalibration();
   const invalid = { ...valid, calls: 10 };
