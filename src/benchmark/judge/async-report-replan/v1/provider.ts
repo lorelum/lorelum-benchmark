@@ -1,15 +1,25 @@
 import type { JudgeContext, JudgeProvider } from "../../provider";
 import { buildJudgeInput, type JudgeInput, type PublicRunMaterial } from "../../input";
 import { sha256Text } from "../../../fs";
-import { assertReplanEvidenceIntegrity } from "./evidence";
+import { assertReplanEvidenceIntegrity, isReplanEvidenceIssued } from "./evidence";
 import { canonicalJson } from "./canonical";
 import { asyncReportJudgeEnv, httpAsyncReportJudgeCompletion } from "./llm";
 import { fixedRubricHashes, scoreReplanEvidence, resultBase, replanPromptHashes, replanScorePrompt } from "./score";
 import { loadRubric, rubricText } from "./rubric";
-import { calibrationAttestationKey, calibrationScope, resolveCalibrationStatus } from "./calibration";
+import { calibrationAttestationKey, calibrationCapabilityAllows, calibrationScope, isCalibrationScoreCapability, resolveCalibrationStatus } from "./calibration";
 import { evaluationPlanHash } from "./plan";
-import { isReplanEvidenceIssued, isReplanJudgeInputIssued, markReplanJudgeInputIssued } from "./provenance";
 import type { CalibrationReport, JudgeCompletionWithUsage, ReplanEvidence } from "./types";
+
+const issuedJudgeInputs = new WeakSet<object>();
+
+function markReplanJudgeInputIssued<T extends JudgeInput>(input: T): T {
+  issuedJudgeInputs.add(input);
+  return input;
+}
+
+function isReplanJudgeInputIssued(value: unknown): value is JudgeInput {
+  return Boolean(value) && typeof value === "object" && issuedJudgeInputs.has(value as object);
+}
 
 const taskObjective = "Evaluate post-constraint replan quality only; async-report semantic correctness is outside this Judge.";
 const hashPattern = /^[a-f0-9]{64}$/;
@@ -32,6 +42,7 @@ async function fixedDiagnosticHashes(state: "not-run" | "judge-unavailable"): Pr
 export type AsyncReportProviderOptions = {
   env?: Record<string, string | undefined>;
   complete?: JudgeCompletionWithUsage;
+  mode?: "mock" | "real";
   calibration?: CalibrationReport;
 };
 
@@ -67,6 +78,7 @@ export function createAsyncReportReplanProvider(options: AsyncReportProviderOpti
   const env = options.env ?? Bun.env;
   const resolvedEnv = asyncReportJudgeEnv(env);
   const complete = options.complete;
+  const mode = options.mode ?? (complete ? undefined : "real");
   return {
     id: "judge-agent/async-report-replan/v1",
     version: "v1",
@@ -77,17 +89,25 @@ export function createAsyncReportReplanProvider(options: AsyncReportProviderOpti
     },
     async score(input: JudgeInput, context: JudgeContext) {
       try {
-        if (!complete && !resolvedEnv.real) {
+        if (mode !== "mock" && mode !== "real") {
+          const hashes = await fixedDiagnosticHashes("not-run");
+          return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "not-run", 0, "mock scoring requires explicit mode=mock");
+        }
+        if (complete && mode !== "mock") {
+          const hashes = await fixedDiagnosticHashes("not-run");
+          return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "not-run", 0, "injected Judge completion requires explicit mode=mock");
+        }
+        if (mode === "real" && !resolvedEnv.real) {
           const hashes = await fixedDiagnosticHashes("not-run");
           return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "not-run", 0, "real scoring requires LORELUM_JUDGE_REAL=1");
         }
-        if (!complete && (!resolvedEnv.baseUrl || !resolvedEnv.apiKey || !resolvedEnv.model)) {
+        if (mode === "real" && (!resolvedEnv.baseUrl || !resolvedEnv.apiKey || !resolvedEnv.model)) {
           const hashes = await fixedDiagnosticHashes("judge-unavailable");
           return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "judge-unavailable", 0, "Judge configuration is unavailable");
         }
         const scoringComplete = complete ?? httpAsyncReportJudgeCompletion(env);
-        const scoringScope = calibrationScope(complete ? "mock" : resolvedEnv.model ?? null);
-        return (await scoreValidatedInput(input, { ...context, input_hash: input.input_hash }, scoringComplete, options.calibration, scoringScope, calibrationAttestationKey(complete ? "mock" : "real", env))).result;
+        const scoringScope = calibrationScope(mode === "mock" ? "mock" : resolvedEnv.model ?? null);
+        return (await scoreValidatedInput(input, { ...context, input_hash: input.input_hash }, scoringComplete, options.calibration, scoringScope, calibrationAttestationKey(mode, env), mode, env)).result;
       } catch (error) {
         const hashes = await fixedDiagnosticHashes("judge-unavailable");
         return resultBase({ id: providerId, version: "v1" }, hashes.prompt_hash, hashes.rubric_hash, hashes.input_hash, "judge-unavailable", 0, "async-report replan input or provider was unavailable");
@@ -104,7 +124,9 @@ export async function scoreValidatedInput(
   complete: JudgeCompletionWithUsage,
   calibration?: CalibrationReport,
   expectedCalibrationScope = calibrationScope("mock"),
-  expectedCalibrationKey = calibrationAttestationKey(expectedCalibrationScope.model === "mock" ? "mock" : "real"),
+  expectedCalibrationKey: string | undefined,
+  mode: "mock" | "real",
+  env: Record<string, string | undefined> = Bun.env,
 ) {
   const parsed = await parseBridgeEvidence(input);
   const hashes = await fixedRubricHashes();
@@ -113,6 +135,8 @@ export async function scoreValidatedInput(
   const safeContextRubricHash = await safeProvenanceHash(context.rubric_hash, "invalid async-report rubric hash");
   const safeContextInputHash = await safeProvenanceHash(context.input_hash, "invalid async-report input hash");
   if (hashes.hash !== safeContextRubricHash || safeContextInputHash !== parsed.input.input_hash) return { result: resultBase(fixedJudge, promptHash, hashes.hash, parsed.input.input_hash, "judge-unavailable", 0, "fixed provenance hash mismatch"), prompt_hash: promptHash, usage: {} };
+  if (mode === "real" && env.LORELUM_JUDGE_REAL !== "1") return { result: resultBase(fixedJudge, promptHash, hashes.hash, parsed.input.input_hash, "not-run", 0, "real scoring requires LORELUM_JUDGE_REAL=1"), prompt_hash: promptHash, usage: {} };
+  if (mode === "real" && (!env.LORELUM_JUDGE_BASE_URL || !env.LORELUM_JUDGE_API_KEY || !env.LORELUM_JUDGE_MODEL)) return { result: resultBase(fixedJudge, promptHash, hashes.hash, parsed.input.input_hash, "judge-unavailable", 0, "Judge configuration is unavailable"), prompt_hash: promptHash, usage: {} };
   if (parsed.evidence.execution_health !== "healthy") return { result: resultBase(fixedJudge, promptHash, hashes.hash, parsed.input.input_hash, "indeterminate", 0, "attempt execution is not healthy"), prompt_hash: promptHash, usage: {} };
   const qualification = await resolveCalibrationStatus(calibration, expectedCalibrationScope, expectedCalibrationKey);
   if (qualification.status !== "qualified") return { result: resultBase(fixedJudge, promptHash, hashes.hash, parsed.input.input_hash, "indeterminate", 0, qualification.reason ?? "calibration is not qualified"), prompt_hash: promptHash, usage: {} };
@@ -124,8 +148,10 @@ export async function scoreValidatedInput(
 }
 
 /** Calibration is the only path allowed to score before a qualification report exists. */
-export async function scoreForCalibration(input: JudgeInput, context: Pick<JudgeContext, "judge" | "rubric_hash"> & { input_hash: string }, complete: JudgeCompletionWithUsage) {
+export async function scoreForCalibration(input: JudgeInput, context: Pick<JudgeContext, "judge" | "rubric_hash"> & { input_hash: string }, complete: JudgeCompletionWithUsage, capability: unknown) {
+  if (!isCalibrationScoreCapability(capability)) throw new Error("calibration scoring requires a runner-issued capability");
   const parsed = await parseBridgeEvidence(input);
+  if (!calibrationCapabilityAllows(capability, parsed.evidence.evidence_hash)) throw new Error("calibration scoring evidence is not one of the frozen fixtures");
   const hashes = await fixedRubricHashes();
   if (context.judge.id !== providerId || context.judge.version !== "v1") return { result: resultBase(fixedJudge, parsed.prompt_hash, hashes.hash, parsed.input.input_hash, "judge-unavailable", 0, "fixed Judge identity mismatch"), prompt_hash: parsed.prompt_hash, usage: {} };
   return scoreReplanEvidence({ evidence: parsed.evidence, rubric: await loadRubric(), rubric_hash: hashes.hash, input_hash: parsed.input.input_hash, judge: fixedJudge, complete, material: parsed.input.material });

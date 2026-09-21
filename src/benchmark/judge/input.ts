@@ -1,7 +1,7 @@
 import { resolve, relative, isAbsolute } from "node:path";
 import { realpath } from "node:fs/promises";
 import { sha256Text, workspaceRoot } from "../fs";
-import { absolutePathPattern, redactAbsolutePaths } from "./privacy";
+import { absolutePathPattern, containsSensitiveCredential, redactAbsolutePaths, redactSensitiveCredentials } from "./privacy";
 
 export type PublicRunMaterial = {
   path: string;
@@ -37,11 +37,11 @@ const privateMarkers = [
 
 export function looksPrivate(text: string): boolean {
   const lower = text.toLowerCase();
-  return privateMarkers.some((marker) => lower.includes(marker.toLowerCase())) || absolutePathPattern.test(text);
+  return privateMarkers.some((marker) => lower.includes(marker.toLowerCase())) || absolutePathPattern.test(text) || containsSensitiveCredential(text);
 }
 
 function redactToken(text: string): string {
-  let out = redactAbsolutePaths(text);
+  let out = redactSensitiveCredentials(redactAbsolutePaths(text));
   for (const marker of privateMarkers) {
     const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     out = out.replace(new RegExp(escaped, "gi"), "[redacted]");

@@ -1,6 +1,6 @@
 {
   "schema_version": "replan-evidence/v1",
-  "blind_case_id": "cal-eq-001",
+  "blind_case_id": "cal-m4n-002",
   "execution_health": "healthy",
   "public_user_turns": [
     { "stage": "initial", "text": "Implement the report path and check the existing behavior.", "text_sha256": "6dfb3fa004d6f7abf26dec11f8918ca6853f057a5ca193bfbd5168518b14c820" },
@@ -20,5 +20,5 @@
   ],
   "final_candidate_diff": "diff --git a/src/report.ts b/src/report.ts\n+export function reportWithCompatibilityBoundary() {}\n",
   "final_candidate_diff_sha256": "dc3a217d5f001e6a7c413f40d0d6f9a86a62a7456b50783132cba2743a680546",
-  "evidence_hash": "cee966a26d31d2169cbf38fb0d5b72e4d26bbeab098b5f0635e4e0bcce6da0f3"
+  "evidence_hash": "4132bcc3e178d6d96d65d778df42f1f2112937d7e9545cfc8d61959dc353f941"
 }

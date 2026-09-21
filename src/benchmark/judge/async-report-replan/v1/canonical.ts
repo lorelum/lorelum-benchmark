@@ -1,5 +1,5 @@
 import { sha256Text } from "../../../fs";
-import { absolutePathPattern, redactAbsolutePaths } from "../../privacy";
+import { absolutePathPattern, containsSensitiveCredential, redactAbsolutePaths, redactSensitiveCredentials } from "../../privacy";
 
 export function normalizeText(value: string): string {
   return value.replaceAll("\r\n", "\n").replaceAll("\r", "\n").replace(/[ \t]+$/gm, "").trim();
@@ -24,8 +24,8 @@ export function redactedProjectionReason(reason: string): string {
 }
 
 export function redactSensitiveText(reason: string): string {
-  return redactAbsolutePaths(reason)
+  return redactSensitiveCredentials(redactAbsolutePaths(reason))
     .replace(/(?:private|oracle|condition|delivery|practice|pack|session|secret|credential|token|password|api[_ -]?key|system|developer|thinking|toolresult|evaluator|scoring|absolute path)/gi, "[redacted]");
 }
 
-export { absolutePathPattern };
+export { absolutePathPattern, containsSensitiveCredential };

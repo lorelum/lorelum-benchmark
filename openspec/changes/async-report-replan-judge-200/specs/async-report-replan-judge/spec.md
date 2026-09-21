@@ -49,7 +49,7 @@ The projector MUST allow only `read`, `ls`, `grep`, `edit`, and `bash` tool acti
 
 Recognized verification commands MUST use an explicit allowlisted executable/script form without shell control syntax, and a verification summary MUST come from a matching execution-end/result event. A direct tool-action summary or a shell wrapper such as `echo bun test` MUST NOT become verification evidence.
 
-The projector MUST issue an in-process provenance handle for the evidence and task-specific Judge input. The provider MUST reject an otherwise schema-valid evidence/input object that did not cross that projector-owned boundary.
+The projector MUST issue an in-process provenance handle for the evidence and task-specific Judge input. The issuance capability MUST remain private to the projector/adapter modules; the provider MUST reject an otherwise schema-valid evidence/input object that did not cross that projector-owned boundary, including an object that a caller attempts to re-mark.
 
 #### Scenario: Unknown tool shape fails closed
 
@@ -113,13 +113,13 @@ The change MUST provide offline projection contract tests and a separate real-Ju
 - **WHEN** calibration exceeds nine real calls, fails a threshold, or cannot establish discrimination
 - **THEN** the Judge channel is diagnostic/indeterminate and MUST NOT support a timing-direction conclusion
 
-Calibration qualification MUST bind the fixed provider id/version and model identity used by the scoring attempt. A report produced for a different provider/model scope MUST be diagnostic/indeterminate.
+Calibration qualification MUST bind the fixed provider id/version and model identity used by the scoring attempt. A report produced for a different provider/model scope MUST be diagnostic/indeterminate. Calibration fixtures MUST expose only opaque case identities to the Judge; reference/equivalent/anti-pattern labels remain in the calibration orchestrator.
 
 Real calibration qualification MUST also verify an HMAC attestation using `LORELUM_JUDGE_CALIBRATION_KEY`; missing or mismatched key material MUST be diagnostic/indeterminate. The offline mock key MUST NOT authorize real scoring.
 
 ### Requirement: Accounting is versioned and independent from hard evaluation
 
-The provider MUST preserve `judge-result/v1` unchanged and MUST emit a separate `async-report-replan-judge-accounting/v1` sidecar containing plan/evidence/rubric/prompt/input/provider/model/calibration identities, blind-case identity, call count, duration, usage when reported, explicit `unavailable` usage otherwise, state, and failure reason. It MUST NOT contain #202 evaluator identity/status/checks, condition, delivery node, Pack/Practice identity, session ID, or private oracle/evaluator/scoring content.
+The provider MUST preserve `judge-result/v1` unchanged and MUST emit a separate `async-report-replan-judge-accounting/v1` sidecar containing plan/evidence/rubric/prompt/input/provider/model/calibration identities, blind-case identity, separate calibration/scoring call counts, durations and usage when reported, explicit `unavailable` usage otherwise, state, and failure reason. It MUST NOT contain #202 evaluator identity/status/checks, condition, delivery node, Pack/Practice identity, session ID, or private oracle/evaluator/scoring content.
 
 #### Scenario: Complete accounting is recorded
 
@@ -138,7 +138,7 @@ The provider MUST preserve `judge-result/v1` unchanged and MUST emit a separate 
 
 ### Requirement: Real Judge is opt-in and failures are fail-closed
 
-Real scoring and calibration MUST require `LORELUM_JUDGE_REAL=1` and valid Judge configuration. Offline tests MUST use mocks or deterministic stubs. Provider unavailability, invalid structured output, missing rubric/evidence, and missing opt-in MUST become `judge-unavailable`, `not-run`, or `indeterminate` with a reason and MUST NOT become a low score.
+Real scoring and calibration MUST require `LORELUM_JUDGE_REAL=1` and valid Judge configuration. An injected completion callback MUST require an explicit `mode=mock` test boundary; an injected callback without that mode MUST NOT be invoked. Offline tests MUST use mocks or deterministic stubs. Provider unavailability, invalid structured output, missing rubric/evidence, and missing opt-in MUST become `judge-unavailable`, `not-run`, or `indeterminate` with a reason and MUST NOT become a low score.
 
 #### Scenario: Offline tests do not call a model
 

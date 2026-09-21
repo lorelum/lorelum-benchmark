@@ -40,7 +40,7 @@ export function buildAccounting(input: {
   prompt_hash: string;
   input_hash: string;
   provider: { id: string; version: string; model: string | null };
-  calibration: { id: string; version: string; hash: string; status: CalibrationStatus };
+  calibration: { id: string; version: string; hash: string; status: CalibrationStatus; duration_ms: number; usage: JudgeUsage };
   calls: { calibration: number; scoring: number };
   duration_ms: number;
   usage?: Partial<JudgeUsage>;
@@ -57,7 +57,7 @@ export function buildAccounting(input: {
     prompt_hash: input.prompt_hash,
     input_hash: input.input_hash,
     provider: { id: input.provider.id, version: input.provider.version, model: input.provider.model },
-    calibration: { id: input.calibration.id, version: input.calibration.version, hash: input.calibration.hash, status: input.calibration.status },
+    calibration: { id: input.calibration.id, version: input.calibration.version, hash: input.calibration.hash, status: input.calibration.status, duration_ms: Math.max(0, Math.round(input.calibration.duration_ms)), usage: normalizeUsage(input.calibration.usage) },
     calls: { calibration: input.calls.calibration, scoring: input.calls.scoring },
     duration_ms: Math.max(0, Math.round(input.duration_ms)),
     usage: normalizeUsage(input.usage),
@@ -87,8 +87,14 @@ export function assertAsyncReportAccounting(value: unknown): asserts value is As
   exactKeys(value.provider, ["id", "version", "model"], "provider");
   if (typeof value.provider.id !== "string" || !value.provider.id || typeof value.provider.version !== "string" || !value.provider.version || (value.provider.model !== null && typeof value.provider.model !== "string")) throw new Error("async-report accounting provider is invalid");
   if (!record(value.calibration)) throw new Error("async-report accounting calibration is invalid");
-  exactKeys(value.calibration, ["id", "version", "hash", "status"], "calibration");
+  exactKeys(value.calibration, ["id", "version", "hash", "status", "duration_ms", "usage"], "calibration");
   if (typeof value.calibration.id !== "string" || !value.calibration.id || typeof value.calibration.version !== "string" || !value.calibration.version || typeof value.calibration.hash !== "string" || !/^[a-f0-9]{64}$/.test(value.calibration.hash) || !["qualified", "diagnostic", "not-run"].includes(String(value.calibration.status))) throw new Error("async-report accounting calibration is invalid");
+  if (!Number.isInteger(value.calibration.duration_ms) || value.calibration.duration_ms < 0 || !record(value.calibration.usage)) throw new Error("async-report accounting calibration duration or usage is invalid");
+  exactKeys(value.calibration.usage, ["input_tokens", "output_tokens", "total_tokens", "cost_usd"], "calibration.usage");
+  for (const key of ["input_tokens", "output_tokens", "total_tokens", "cost_usd"] as const) {
+    const item = value.calibration.usage[key];
+    if (item !== "unavailable" && (typeof item !== "number" || !Number.isFinite(item) || item < 0 || (key !== "cost_usd" && !Number.isInteger(item)))) throw new Error(`async-report accounting calibration.usage.${key} is invalid`);
+  }
   if (!record(value.calls)) throw new Error("async-report accounting call counts are invalid");
   exactKeys(value.calls, ["calibration", "scoring"], "calls");
   if (!Number.isInteger(value.calls.calibration) || value.calls.calibration < 0 || value.calls.calibration > 9 || !Number.isInteger(value.calls.scoring) || value.calls.scoring < 0 || value.calls.scoring > 1) throw new Error("async-report accounting call counts are invalid");

@@ -65,7 +65,7 @@ The allowlist is `read`, `ls`, `grep`, `edit`, and `bash`. Thinking/reasoning an
 
 Missing required fields, cap overflow, unknown tool shapes, or incomplete stage boundaries produce `indeterminate`; the implementation does not truncate and continue scoring.
 
-The projector and task adapter issue process-local provenance handles for projected evidence and the resulting Judge input. Provider scoring rejects deserialized or caller-constructed objects that did not cross this projector-owned boundary. This is an in-process issuance guard, not a replacement for the upstream #197 runner's private artifact provenance; the future #209/#201 adapter remains responsible for supplying only runner-produced attempts.
+The projector and task adapter issue process-local provenance handles for projected evidence and the resulting Judge input. The issuance capability remains module-private; provider scoring rejects deserialized, caller-constructed, or re-marked objects that did not cross this projector-owned boundary. Calibration fixtures are reprojected through the same projector before scoring. This is an in-process issuance guard, not a replacement for the upstream #197 runner's private artifact provenance; the future #209/#201 adapter remains responsible for supplying only runner-produced attempts.
 
 The projector treats `public_user_turns` as public content carried by a private, runner-produced attempt artifact: it hashes and validates the two supplied stages but does not authenticate them against #202 or infer condition/timing. The upstream #197 runner and the future #209 task adapter own the fixed-task/snapshot provenance for those turns. A caller that cannot provide that upstream provenance is outside the formal record path and must remain diagnostic-only; #200 does not solve that join by reading private evaluator material.
 
@@ -99,7 +99,7 @@ src/benchmark/judge/async-report-replan/v1/private/
     manifest.json
 ```
 
-The private subtree is module-owned calibration input. It is never materialized into an Agent workspace or passed to the Judge as calibration labels. Reference and equivalent differ in wording, tool sequence, or structure while representing the same replan quality. Anti-pattern acknowledges the constraints without substantive plan, scope, or verification change.
+The private subtree is module-owned calibration input. It is never materialized into an Agent workspace or passed to the Judge as calibration labels. Fixture evidence uses opaque case IDs, and the fixture category is retained only by the calibration orchestrator. Reference and equivalent differ in wording, tool sequence, or structure while representing the same replan quality. Anti-pattern acknowledges the constraints without substantive plan, scope, or verification change.
 
 Scoring calibration uses three repetitions per fixture, median aggregation, and at most nine real calls. The hard gate is:
 
@@ -120,14 +120,13 @@ Keep `judge-result/v1` unchanged. Add `async-report-replan-judge-accounting/v1` 
 
 - plan, evidence, rubric, prompt, input, provider/model, and calibration identities/hashes;
 - opaque blind-case identity;
-- call count and duration;
-- provider-reported token/cost fields when available;
+- separate calibration and scoring call counts, durations, and provider-reported token/cost fields when available;
 - explicit `unavailable` values when usage is not reported;
 - observed, indeterminate, judge-unavailable, or not-run state and a reason.
 
 The sidecar does not record #202 evaluator identity/status/checks, condition, delivery node, Pack/Practice identity, session ID, or private oracle/evaluator/scoring material. #201 owns the later deterministic join.
 
-Only the task-specific provider wrapper captures usage. Shared `JudgeCompletion`, generic providers, and historical consumers remain unchanged.
+Only the task-specific provider wrapper captures usage. Calibration usage is aggregated into the calibration report and sidecar; scoring usage remains separate. Shared `JudgeCompletion`, generic providers, and historical consumers remain unchanged.
 
 ### 6. #209 adapter boundary
 

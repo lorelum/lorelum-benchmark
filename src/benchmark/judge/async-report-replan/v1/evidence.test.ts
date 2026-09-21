@@ -62,6 +62,20 @@ describe("replan evidence projection", () => {
     await expect(projectReplanEvidence(raw({ blind_case_id: "constraint-followup" }))).resolves.toMatchObject({ ok: false, state: "indeterminate" });
   });
 
+  test("fails closed for credential-shaped secrets without relying on field names", async () => {
+    for (const secret of [
+      `ghp_${"a".repeat(36)}`,
+      `sk-proj-${"b".repeat(32)}`,
+      `AKIA${"C".repeat(16)}`,
+      `xoxb-${"d".repeat(24)}`,
+      `eyJ${"e".repeat(16)}.${"f".repeat(16)}.${"g".repeat(16)}`,
+    ]) {
+      const result = await projectReplanEvidence(raw({ final_candidate_diff: `diff --git a/src/report.ts b/src/report.ts\n+const value = "${secret}";\n` }));
+      expect(result).toMatchObject({ ok: false, state: "indeterminate" });
+      if (!result.ok) expect(result.reason).not.toContain(secret);
+    }
+  });
+
   test("fails closed for unknown tools, incomplete boundaries, and caps", async () => {
     await expect(projectReplanEvidence(raw({ events: [{ type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "a" }] } }, { type: "message_end", message: { role: "assistant", stage: "post-constraint", content: [{ type: "text", text: "b" }] } }, { type: "tool_action", stage: "post-constraint", tool: "write", args: { path: "x" }, status: "success" }] }))).resolves.toMatchObject({ ok: false, state: "indeterminate" });
     await expect(projectReplanEvidence(raw({ events: [{ type: "message_end", message: { role: "assistant", stage: "initial", content: [{ type: "text", text: "a" }] } }, { type: "message_end", message: { role: "assistant", stage: "post-constraint", content: [{ type: "text", text: "b" }] } }, { type: "tool_execution_start", toolCallId: "t1", stage: "post-constraint", toolName: "read", args: { path: "src/a.ts" } }] }))).resolves.toMatchObject({ ok: false, state: "indeterminate" });

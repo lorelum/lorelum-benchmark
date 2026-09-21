@@ -105,6 +105,8 @@ export type CalibrationReport = {
   calls: number;
   medians: CalibrationMedians;
   scope: CalibrationScope;
+  duration_ms: number;
+  usage: JudgeUsage;
   attestation: string;
   reason?: string;
 };
@@ -129,7 +131,7 @@ export type AsyncReportAccounting = {
   prompt_hash: string;
   input_hash: string;
   provider: { id: string; version: string; model: string | null };
-  calibration: { id: string; version: string; hash: string; status: CalibrationStatus };
+  calibration: { id: string; version: string; hash: string; status: CalibrationStatus; duration_ms: number; usage: JudgeUsage };
   calls: { calibration: number; scoring: number };
   duration_ms: number;
   usage: JudgeUsage;

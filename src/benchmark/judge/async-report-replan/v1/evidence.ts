@@ -1,7 +1,6 @@
 import { isAbsolute } from "node:path";
 import { sha256Text } from "../../../fs";
-import { absolutePathPattern, canonicalJson, normalizeText, redactedProjectionReason } from "./canonical";
-import { markReplanEvidenceIssued } from "./provenance";
+import { absolutePathPattern, canonicalJson, containsSensitiveCredential, normalizeText, redactedProjectionReason } from "./canonical";
 import type {
   AllowedTool,
   ProjectionResult,
@@ -13,6 +12,17 @@ import type {
   VerificationCategory,
   VerificationSummary,
 } from "./types";
+
+const issuedEvidence = new WeakSet<object>();
+
+function issueReplanEvidence<T extends ReplanEvidence>(evidence: T): T {
+  issuedEvidence.add(evidence);
+  return evidence;
+}
+
+export function isReplanEvidenceIssued(value: unknown): value is ReplanEvidence {
+  return Boolean(value) && typeof value === "object" && issuedEvidence.has(value as object);
+}
 
 const allowedTools = new Set<AllowedTool>(["read", "ls", "grep", "edit", "bash"]);
 const stages: ReplanStage[] = ["initial", "post-constraint"];
@@ -48,6 +58,10 @@ function fail(reason: string): never {
   throw new ProjectionFailure(reason);
 }
 
+function containsForbiddenContent(value: string): boolean {
+  return forbiddenContent.some((pattern) => pattern.test(value)) || containsSensitiveCredential(value);
+}
+
 function stringField(value: unknown, label: string): string {
   if (typeof value !== "string") fail(`${label} is missing or not text`);
   return value;
@@ -55,13 +69,13 @@ function stringField(value: unknown, label: string): string {
 
 function safeText(value: string, label: string): string {
   const normalized = normalizeText(value);
-  if (forbiddenContent.some((pattern) => pattern.test(normalized))) fail(`${label} contains forbidden material`);
+  if (containsForbiddenContent(normalized)) fail(`${label} contains forbidden material`);
   return normalized;
 }
 
 function safeDiff(value: string): string {
   const normalized = value.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
-  if (forbiddenContent.some((pattern) => pattern.test(normalized))) fail("final candidate diff contains forbidden material");
+  if (containsForbiddenContent(normalized)) fail("final candidate diff contains forbidden material");
   if (normalized.length > diffCap) fail("final candidate diff exceeds the v1 cap");
   return normalized;
 }
@@ -72,7 +86,7 @@ function stageOf(value: unknown, label: string): ReplanStage {
 }
 
 function validBlindCaseId(value: string): string {
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value) || forbiddenContent.some((pattern) => pattern.test(value)) || /(?:condition|delivery|timing)/i.test(value) || /^(?:baseline|oracle|retrieval|irrelevant|task-start|constraint-followup|first-implementation-checkpoint)$/i.test(value)) fail("blind_case_id is not an opaque safe identifier");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value) || containsForbiddenContent(value) || /(?:condition|delivery|timing)/i.test(value) || /^(?:baseline|oracle|retrieval|irrelevant|task-start|constraint-followup|first-implementation-checkpoint)$/i.test(value)) fail("blind_case_id is not an opaque safe identifier");
   return value;
 }
 
@@ -82,7 +96,7 @@ function isAbsoluteOrEscaping(value: string): boolean {
 
 function safeRelativePath(value: unknown, label: string): string {
   const raw = stringField(value, label).replaceAll("\\", "/").trim();
-  if (!raw || raw.length > 512 || isAbsoluteOrEscaping(raw) || forbiddenContent.some((pattern) => pattern.test(raw))) fail(`${label} is not a safe relative path`);
+  if (!raw || raw.length > 512 || isAbsoluteOrEscaping(raw) || containsForbiddenContent(raw)) fail(`${label} is not a safe relative path`);
   const normalized = raw.split("/").filter((part) => part && part !== ".").join("/") || ".";
   if (!normalized || normalized.startsWith("../") || normalized === "..") fail(`${label} escapes the public workspace`);
   return normalized;
@@ -105,7 +119,7 @@ function commandCategory(command: string): VerificationCategory | undefined {
 
 function bashTarget(args: RecordValue): { target: string; category?: VerificationCategory } {
   const command = stringField(args.command, "bash.command");
-  if (!command.trim() || isAbsoluteOrEscaping(command) || forbiddenContent.some((pattern) => pattern.test(command))) fail("bash command is not a safe command category");
+  if (!command.trim() || isAbsoluteOrEscaping(command) || containsForbiddenContent(command)) fail("bash command is not a safe command category");
   const category = commandCategory(command);
   return { target: category ? `command:${category}` : "command:other", category };
 }
@@ -309,7 +323,7 @@ export async function projectReplanEvidence(input: unknown): Promise<ProjectionR
     const evidenceHash = await sha256Text(canonicalJson(evidenceWithoutHash));
     const evidence = { ...evidenceWithoutHash, evidence_hash: evidenceHash } as ReplanEvidence;
     assertReplanEvidence(evidence);
-    return { ok: true, evidence: markReplanEvidenceIssued(evidence) };
+    return { ok: true, evidence: issueReplanEvidence(evidence) };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return { ok: false, state: "indeterminate", reason: redactedProjectionReason(reason), evidence_hash: await failureHash(reason) };
@@ -361,7 +375,7 @@ export function assertReplanEvidence(value: unknown): asserts value is ReplanEvi
   if (JSON.stringify(publicTurnStages) !== JSON.stringify(stages) || JSON.stringify(assistantStages) !== JSON.stringify(stages)) throw new Error("replan evidence stage boundaries are invalid");
   if (root.final_candidate_diff.length > diffCap || root.tool_actions.some((item) => !record(item) || !allowedTools.has(record(item)!.tool as AllowedTool) || !stageSet.has(record(item)!.stage as ReplanStage)) || root.verification_summaries.some((item) => !record(item) || !stageSet.has(record(item)!.stage as ReplanStage))) throw new Error("replan evidence contains an invalid action or summary");
   if (canonicalJson(root.tool_actions).length > toolMetadataCap || root.verification_summaries.reduce((sum, item) => sum + (typeof record(item)?.summary === "string" ? String(record(item)?.summary).length : 0), 0) > verificationCap) throw new Error("replan evidence exceeds a v1 cap");
-  if (forbiddenContent.some((pattern) => pattern.test(canonicalJson(root)))) throw new Error("replan evidence contains forbidden material");
+  if (containsForbiddenContent(canonicalJson(root))) throw new Error("replan evidence contains forbidden material");
   if (!/^[a-f0-9]{64}$/.test(stringField(root.final_candidate_diff_sha256, "final_candidate_diff_sha256")) || !/^[a-f0-9]{64}$/.test(stringField(root.evidence_hash, "evidence_hash"))) throw new Error("replan evidence hashes are invalid");
 }
 

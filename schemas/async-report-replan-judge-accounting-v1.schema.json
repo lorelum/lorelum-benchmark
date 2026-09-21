@@ -54,12 +54,24 @@
     "calibration": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "version", "hash", "status"],
+      "required": ["id", "version", "hash", "status", "duration_ms", "usage"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "version": { "type": "string", "minLength": 1 },
         "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-        "status": { "enum": ["qualified", "diagnostic", "not-run"] }
+        "status": { "enum": ["qualified", "diagnostic", "not-run"] },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input_tokens", "output_tokens", "total_tokens", "cost_usd"],
+          "properties": {
+            "input_tokens": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "const": "unavailable" }] },
+            "output_tokens": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "const": "unavailable" }] },
+            "total_tokens": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "const": "unavailable" }] },
+            "cost_usd": { "anyOf": [{ "type": "number", "minimum": 0 }, { "const": "unavailable" }] }
+          }
+        }
       }
     },
     "calls": {

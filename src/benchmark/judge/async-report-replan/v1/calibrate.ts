@@ -13,10 +13,10 @@ export async function runRealCalibration(env: Record<string, string | undefined>
     env,
     scope: calibrationScope(resolved.model ?? null),
     attestation_key: calibrationAttestationKey("real", env),
-    score: async (evidence) => {
+    score: async (evidence, capability) => {
       complete ??= httpAsyncReportJudgeCompletion(env);
       const input = await buildAsyncReportJudgeInput(evidence);
-      return (await scoreForCalibration(input, { judge: { id: "judge-agent/async-report-replan/v1", version: "v1" }, rubric_hash: rubric.hash, input_hash: input.input_hash }, complete)).result;
+      return scoreForCalibration(input, { judge: { id: "judge-agent/async-report-replan/v1", version: "v1" }, rubric_hash: rubric.hash, input_hash: input.input_hash }, complete, capability);
     },
   });
 }
