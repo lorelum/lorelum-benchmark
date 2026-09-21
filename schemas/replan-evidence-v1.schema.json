@@ -18,7 +18,7 @@
   ],
   "properties": {
     "schema_version": { "const": "replan-evidence/v1" },
-    "blind_case_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+    "blind_case_id": { "type": "string", "pattern": "^case-[a-z0-9]{12,64}$" },
     "execution_health": { "enum": ["healthy", "unhealthy"] },
     "public_user_turns": {
       "type": "array",

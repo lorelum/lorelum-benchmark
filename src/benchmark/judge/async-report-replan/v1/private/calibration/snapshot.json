@@ -4,8 +4,8 @@
   "source_files": {
     "manifest.json": "9a74830cbbbba4f8c69de70559870d36030cd37cb5c6cd5b85b1c1210fa4a6d2",
     "expected.json": "3b11a95241c762579ff6300b0334dff6804014edc053e601e14a7089ca43bbc4",
-    "reference.json": "52475f8df7b65c3dfdda6241257f39e2c34ea8a2fa308104b7cd61438eddf273",
-    "equivalent.json": "f1a1d622619e0a83b50fe73e26c8fc2a5ca9125da1113e5e2ef3af57ec99cd82",
-    "anti-pattern.json": "4c1ca78dc20a5767c37dbc199ded4103f45ba26a951647765b8f817a693ea845"
+    "reference.json": "a20693737f465325a4837657b96bc2f9026865745c2505c3d2c9409ddf726f91",
+    "equivalent.json": "1918066fa4231e9e69427ee0d1a97eecbb4a7a5153061aac152e945fd97a115b",
+    "anti-pattern.json": "f88dfae2127462493b91e5f09ded445a469b790daa7f7b12c3a83093dfb13892"
   }
 }

@@ -171,7 +171,7 @@ export async function resolveCalibrationStatus(report?: CalibrationReport, expec
   if (expectedScope && canonicalJson(report.scope) !== canonicalJson(expectedScope)) return resolution("diagnostic", calls, report, "calibration scope does not match the scoring provider/model");
   if (!(await verifyCalibrationSnapshot())) return resolution("diagnostic", calls, report, "calibration snapshot is not verified");
   const gate = evaluateCalibrationMedians(report.medians);
-  if (report.status !== "qualified" || calls !== calibrationThresholds.max_calls || !gate.qualified) return resolution("diagnostic", calls, report, report.reason ?? gate.reason ?? "calibration gate is not qualified");
+  if (report.status !== "qualified" || calls !== calibrationThresholds.max_calls || !gate.qualified) return resolution("diagnostic", calls, report, "calibration gate is not qualified");
   return resolution("qualified", calls, report);
 }
 

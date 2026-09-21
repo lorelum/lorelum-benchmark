@@ -5,7 +5,7 @@ import { loadRubric } from "./rubric";
 
 test("mock calibration uses three repetitions per fixture and qualifies only at the declared gate", async () => {
   const result = await runCalibration({ mode: "mock", score: async (evidence) => {
-    const points = evidence.blind_case_id === "cal-x7q-001" ? 80 : evidence.blind_case_id === "cal-m4n-002" ? 78 : 40;
+    const points = evidence.blind_case_id === "case-q3m1x9p2k4r8" ? 80 : evidence.blind_case_id === "case-m4n8v2c6z1p7" ? 78 : 40;
     return { schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score: points, criteria: [{ id: "x", points: points, max_points: 100, rationale: "mock" }], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never;
   } });
   expect(result.status).toBe("qualified");
@@ -27,7 +27,7 @@ test("calibration fixture prompts expose only opaque case identities", async () 
 
 test("calibration aggregates provider usage separately from scoring", async () => {
   const report = await runCalibration({ mode: "mock", score: async (evidence) => ({
-    result: { schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score: evidence.blind_case_id === "cal-x7q-001" ? 80 : evidence.blind_case_id === "cal-m4n-002" ? 78 : 40, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never,
+    result: { schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score: evidence.blind_case_id === "case-q3m1x9p2k4r8" ? 80 : evidence.blind_case_id === "case-m4n8v2c6z1p7" ? 78 : 40, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never,
     usage: { input_tokens: 2, output_tokens: 3, total_tokens: 5, cost_usd: 0.01 },
   }) });
   expect(report.usage).toEqual({ input_tokens: 18, output_tokens: 27, total_tokens: 45, cost_usd: 0.09 });
@@ -35,6 +35,18 @@ test("calibration aggregates provider usage separately from scoring", async () =
 
 test("calibration becomes diagnostic when the discrimination gate fails", () => {
   expect(evaluateCalibrationMedians({ reference: 70, equivalent: 70, "anti-pattern": 65 })).toEqual({ qualified: false, reason: "reference median is below the minimum" });
+});
+
+test("calibration gate details stay inside the private orchestrator", async () => {
+  const report = await runCalibration({ mode: "mock", score: async (evidence) => ({
+    schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed",
+    score: evidence.blind_case_id === "case-q3m1x9p2k4r8" ? 70 : evidence.blind_case_id === "case-m4n8v2c6z1p7" ? 70 : 65,
+    criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90,
+  } as never) });
+  expect(report.reason).toBe("reference median is below the minimum");
+  const resolved = await resolveCalibrationStatus(report, calibrationScope("mock"));
+  expect(resolved.reason).toBe("calibration gate is not qualified");
+  expect(resolved.reason).not.toMatch(/reference|equivalent|anti-pattern/i);
 });
 
 test("calibration failure reasons do not expose fixture category labels", async () => {
@@ -72,14 +84,14 @@ test("private calibration snapshot verifies fixture and rubric hashes", async ()
 });
 
 test("qualified calibration is bound to the scoring provider model scope", async () => {
-  const report = await runCalibration({ mode: "mock", score: async (evidence) => ({ schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score: evidence.blind_case_id === "cal-x7q-001" ? 80 : evidence.blind_case_id === "cal-m4n-002" ? 78 : 40, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never) });
+  const report = await runCalibration({ mode: "mock", score: async (evidence) => ({ schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score: evidence.blind_case_id === "case-q3m1x9p2k4r8" ? 80 : evidence.blind_case_id === "case-m4n8v2c6z1p7" ? 78 : 40, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never) });
   expect((await resolveCalibrationStatus(report, calibrationScope("different-model"))).status).toBe("diagnostic");
   expect((await resolveCalibrationStatus(report, calibrationScope("mock"))).status).toBe("qualified");
 });
 
 test("real calibration requires the private attestation key and rejects a wrong key", async () => {
   const env = { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_MODEL: "model-a", LORELUM_JUDGE_CALIBRATION_KEY: "calibration-secret" };
-  const report = await runCalibration({ mode: "real", env, score: async (evidence) => ({ schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score: evidence.blind_case_id === "cal-x7q-001" ? 80 : evidence.blind_case_id === "cal-m4n-002" ? 78 : 40, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never) });
+  const report = await runCalibration({ mode: "real", env, score: async (evidence) => ({ schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score: evidence.blind_case_id === "case-q3m1x9p2k4r8" ? 80 : evidence.blind_case_id === "case-m4n8v2c6z1p7" ? 78 : 40, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never) });
   expect(report.status).toBe("qualified");
   expect((await resolveCalibrationStatus(report, calibrationScope("model-a"), "wrong-secret")).status).toBe("diagnostic");
   expect((await resolveCalibrationStatus(report, calibrationScope("model-a"), "calibration-secret")).status).toBe("qualified");

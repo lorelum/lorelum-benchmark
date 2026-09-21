@@ -58,7 +58,7 @@ The projector MUST issue an in-process provenance handle for the evidence and ta
 
 ### Requirement: Condition and delivery timing are blinded
 
-The Judge input MUST use an opaque `blind_case_id` and MUST NOT contain condition ID, delivery node, timing assignment, treatment identity, Pack ref, Practice ID, calibration category labels, or a recoverable mapping. Exact and prefixed semantic labels such as `reference`, `equivalent`, `anti-pattern`, `cal-reference`, and `cal-anti-pattern` MUST fail closed. The condition mapping remains outside #200 and MAY be restored by #201 only after scoring.
+The Judge input MUST use an opaque `blind_case_id` matching the fixed v1 form `case-` plus 12–64 lowercase alphanumeric characters, and MUST NOT contain condition ID, delivery node, timing assignment, treatment identity, Pack ref, Practice ID, calibration category labels, or a recoverable mapping. Exact and prefixed semantic labels such as `reference`, `equivalent`, `anti-pattern`, `cal-reference`, and `cal-anti-pattern` MUST fail closed. The condition mapping remains outside #200 and MAY be restored by #201 only after scoring.
 
 #### Scenario: Timing attempts share one input shape
 

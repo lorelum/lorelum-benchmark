@@ -3,7 +3,7 @@ import { assertReplanEvidenceIntegrity, projectReplanEvidence } from "./evidence
 
 function raw(overrides: Record<string, unknown> = {}) {
   return {
-    blind_case_id: "case-001",
+    blind_case_id: "case-a1b2c3d4e5f6",
     execution_health: "healthy",
     public_user_turns: [
       { stage: "initial", text: "Implement the report path." },

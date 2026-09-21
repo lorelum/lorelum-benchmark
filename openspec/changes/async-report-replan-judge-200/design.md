@@ -49,7 +49,7 @@ The projector accepts structured private attempt artifacts, public task/follow-u
 
 The evidence contains:
 
-- opaque `blind_case_id`;
+- opaque `blind_case_id` in the fixed v1 form `case-` plus 12–64 lowercase alphanumeric characters;
 - hashes of the two public user turns;
 - assistant-visible text grouped into initial and post-constraint stages;
 - ordered tool metadata: allowlisted tool name, normalized relative path or command category, stage, and success/failure;

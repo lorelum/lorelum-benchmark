@@ -1,14 +1,9 @@
 import { sha256Text } from "../../../fs";
 import { absolutePathPattern, containsSensitiveCredential, redactAbsolutePaths, redactSensitiveCredentials } from "../../privacy";
 
-const blindCaseSemanticPattern = /(?:^|[-_.])(?:reference|equivalent|anti[-_.]?pattern)(?:$|[-_.])|^cal(?:ibration)?[-_.](?:ref(?:erence)?|eq(?:uivalent)?|anti[-_.]?pattern)(?:$|[-_.])/i;
-
 export function isOpaqueBlindCaseId(value: unknown): value is string {
   return typeof value === "string"
-    && /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value)
-    && !/(?:condition|delivery|timing)/i.test(value)
-    && !/^(?:baseline|oracle|retrieval|irrelevant|task-start|constraint-followup|first-implementation-checkpoint)$/i.test(value)
-    && !blindCaseSemanticPattern.test(value);
+    && /^case-[a-z0-9]{12,64}$/.test(value);
 }
 
 export function normalizeText(value: string): string {
@@ -35,7 +30,7 @@ export function redactedProjectionReason(reason: string): string {
 
 export function redactSensitiveText(reason: string): string {
   return redactSensitiveCredentials(redactAbsolutePaths(reason))
-    .replace(/(?:private|oracle|condition|delivery|practice|pack|session|secret|credential|token|password|api[_ -]?key|system|developer|thinking|toolresult|evaluator|scoring|absolute path)/gi, "[redacted]");
+    .replace(/(?:private|oracle|condition|delivery|practice|pack|session|secret|credential|token|password|api[_ -]?key|system|developer|thinking|toolresult|evaluator|scoring|reference|equivalent|anti[- ]?pattern|cal(?:ibration)?[- ]?(?:ref(?:erence)?|eq(?:uivalent)?|anti[- ]?pattern)|absolute path)/gi, "[redacted]");
 }
 
 export { absolutePathPattern, containsSensitiveCredential };

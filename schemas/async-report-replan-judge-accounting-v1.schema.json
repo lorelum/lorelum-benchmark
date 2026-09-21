@@ -9,7 +9,7 @@
     "schema_version": { "const": "async-report-replan-judge-accounting/v1" },
     "accounting_version": { "const": 1 },
     "state": { "enum": ["observed", "indeterminate", "judge-unavailable", "not-run"] },
-    "blind_case_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+    "blind_case_id": { "type": "string", "pattern": "^case-[a-z0-9]{12,64}$" },
     "plan": {
       "type": "object",
       "additionalProperties": false,

@@ -11,7 +11,7 @@ import { sha256Text } from "../../../fs";
 
 function rawAttempt() {
   return {
-    blind_case_id: "provider-case-001",
+    blind_case_id: "case-6f3a9c1d2e7b",
     execution_health: "healthy" as const,
     public_user_turns: [{ stage: "initial" as const, text: "Start with the current plan." }, { stage: "post-constraint" as const, text: "New constraints require a replan." }],
     events: [
@@ -31,7 +31,7 @@ function completion(output: unknown, withUsage = false) {
 let qualifiedCalibrationPromise: ReturnType<typeof runCalibration> | undefined;
 function qualifiedCalibration() {
   qualifiedCalibrationPromise ??= runCalibration({ mode: "mock", score: async (evidence) => {
-    const score = evidence.blind_case_id === "cal-x7q-001" ? 80 : evidence.blind_case_id === "cal-m4n-002" ? 78 : 40;
+    const score = evidence.blind_case_id === "case-q3m1x9p2k4r8" ? 80 : evidence.blind_case_id === "case-m4n8v2c6z1p7" ? 78 : 40;
     return { schema_version: "judge-result/v1", judge_version: 1, judge: { id: "mock", version: "v1" }, state: "observed", score, criteria: [], prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64), input_hash: "c".repeat(64), confidence: 90 } as never;
   } });
   return qualifiedCalibrationPromise;

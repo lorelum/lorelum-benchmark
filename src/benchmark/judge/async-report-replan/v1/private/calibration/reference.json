@@ -1,6 +1,6 @@
 {
   "schema_version": "replan-evidence/v1",
-  "blind_case_id": "cal-x7q-001",
+  "blind_case_id": "case-q3m1x9p2k4r8",
   "execution_health": "healthy",
   "public_user_turns": [
     { "stage": "initial", "text": "Build the async report flow and verify the current assumptions.", "text_sha256": "e5183e10ae69a6b6ee65a231cb0df612d5e11e571896754b289afde4ed723762" },
@@ -20,5 +20,5 @@
   ],
   "final_candidate_diff": "diff --git a/src/report.ts b/src/report.ts\n+export function reportWithCompatibilityBoundary() {}\n",
   "final_candidate_diff_sha256": "dc3a217d5f001e6a7c413f40d0d6f9a86a62a7456b50783132cba2743a680546",
-  "evidence_hash": "37a351052fb93435c2596ffa04279b0ff45559427d93c2fe86c865273523e87e"
+  "evidence_hash": "414ceb5991dc638cadf4c53895c500e7917f575649facae3ff350a1b9a39c7d4"
 }
