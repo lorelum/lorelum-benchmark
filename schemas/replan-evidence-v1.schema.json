@@ -18,7 +18,7 @@
   ],
   "properties": {
     "schema_version": { "const": "replan-evidence/v1" },
-    "blind_case_id": { "type": "string", "pattern": "^case-[a-z0-9]{12,64}$" },
+    "blind_case_id": { "type": "string", "pattern": "^case-(?!(?:ref(?:erence)?|equiv(?:alent)?|anti(?:[-_.]?pattern)?|cal(?:ibration)?|condition|delivery|timing|oracle|baseline|retrieval|irrelevant|practice|pack|session|treatment))[a-z0-9]{12,64}$" },
     "execution_health": { "enum": ["healthy", "unhealthy"] },
     "public_user_turns": {
       "type": "array",

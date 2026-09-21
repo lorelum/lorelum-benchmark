@@ -1,9 +1,12 @@
 import { sha256Text } from "../../../fs";
 import { absolutePathPattern, containsSensitiveCredential, redactAbsolutePaths, redactSensitiveCredentials } from "../../privacy";
 
+const blindCaseReservedPrefix = /^case-(?:ref(?:erence)?|equiv(?:alent)?|anti(?:[-_.]?pattern)?|cal(?:ibration)?|condition|delivery|timing|oracle|baseline|retrieval|irrelevant|practice|pack|session|treatment)[a-z0-9._-]*$/i;
+
 export function isOpaqueBlindCaseId(value: unknown): value is string {
   return typeof value === "string"
-    && /^case-[a-z0-9]{12,64}$/.test(value);
+    && /^case-[a-z0-9]{12,64}$/.test(value)
+    && !blindCaseReservedPrefix.test(value);
 }
 
 export function normalizeText(value: string): string {

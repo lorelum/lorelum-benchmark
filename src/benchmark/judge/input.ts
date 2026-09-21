@@ -77,6 +77,13 @@ function isInside(root: string, target: string): boolean {
   return !isAbsolute(fromRoot) && fromRoot !== ".." && !fromRoot.startsWith("../");
 }
 
+function samePath(left: string, right: string): boolean {
+  const normalize = (value: string) => normalizedPath(value).replace(/\/$/, "");
+  const a = normalize(left);
+  const b = normalize(right);
+  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
 // Path-level allowlist: the resolved path must stay inside the workspace and
 // pass through a directory segment named exactly "public" (for example
 // public/... or suites/<suite>/tasks/<slug>/vN/public/...).
@@ -106,13 +113,16 @@ async function readMaterial(item: PublicRunMaterial): Promise<PublicRunMaterial>
   const publicRoot = resolve(workspaceRoot, publicRootRelative);
   let realFile: string;
   let realRoot: string;
+  let realWorkspaceRoot: string;
   try {
     realFile = await realpath(resolvedFile);
     realRoot = await realpath(publicRoot);
+    realWorkspaceRoot = await realpath(workspaceRoot);
   } catch {
     throw new Error(redactedReason("material realpath could not be verified"));
   }
-  if (!isInside(realRoot, realFile)) throw new Error(redactedReason("material realpath escapes the public root"));
+  const expectedRealRoot = resolve(realWorkspaceRoot, publicRootRelative);
+  if (!samePath(realRoot, expectedRealRoot) || !isInside(realWorkspaceRoot, realRoot) || !isInside(realWorkspaceRoot, realFile) || !isInside(realRoot, realFile)) throw new Error(redactedReason("material realpath escapes the workspace or public root"));
   const file = Bun.file(resolvedFile);
   if (!(await file.exists())) {
     throw new Error(redactedReason(`material does not exist: ${item.path}`));

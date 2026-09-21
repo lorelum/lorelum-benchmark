@@ -56,6 +56,11 @@ The projector MUST issue an in-process provenance handle for the evidence and ta
 - **WHEN** a tool call is not allowlisted, has an absolute/escaping path, or cannot be associated with a safe status
 - **THEN** projection returns `indeterminate` without invoking the Judge
 
+#### Scenario: Invalid blind identity remains auditable
+
+- **WHEN** a raw attempt has a missing, malformed, or semantic blind-case identity
+- **THEN** projection returns `indeterminate` and the runner emits a valid accounting sidecar using only the fixed opaque diagnostic sentinel
+
 ### Requirement: Condition and delivery timing are blinded
 
 The Judge input MUST use an opaque `blind_case_id` matching the fixed v1 form `case-` plus 12–64 lowercase alphanumeric characters, and MUST NOT contain condition ID, delivery node, timing assignment, treatment identity, Pack ref, Practice ID, calibration category labels, or a recoverable mapping. Exact and prefixed semantic labels such as `reference`, `equivalent`, `anti-pattern`, `cal-reference`, and `cal-anti-pattern` MUST fail closed. The condition mapping remains outside #200 and MAY be restored by #201 only after scoring.
@@ -130,6 +135,8 @@ The provider MUST preserve `judge-result/v1` unchanged and MUST emit a separate 
 
 - **WHEN** token or cost fields are absent from the provider response
 - **THEN** accounting records `unavailable` and does not fabricate token/cost values
+
+Public material validation MUST resolve both the workspace root and the selected public root. A public root whose real path differs from its expected workspace-relative public path, or whose file resolves outside both roots, MUST be rejected before reading content.
 
 #### Scenario: Shared provider contract remains unchanged
 

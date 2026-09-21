@@ -60,7 +60,7 @@ describe("replan evidence projection", () => {
       if (!result.ok) expect(result.reason).not.toContain("private/evaluator");
     }
     await expect(projectReplanEvidence(raw({ blind_case_id: "constraint-followup" }))).resolves.toMatchObject({ ok: false, state: "indeterminate" });
-    for (const blindCaseId of ["reference", "equivalent", "anti-pattern", "cal-reference", "cal-equivalent", "cal-anti-pattern"]) {
+    for (const blindCaseId of ["reference", "equivalent", "anti-pattern", "cal-reference", "cal-equivalent", "cal-anti-pattern", "case-reference1234", "case-equiv1234567", "case-antipattern123", "case-calibration123", "case-condition1234"]) {
       await expect(projectReplanEvidence(raw({ blind_case_id: blindCaseId }))).resolves.toMatchObject({ ok: false, state: "indeterminate" });
     }
   });

@@ -14,7 +14,7 @@ import type { JudgeResultV1 } from "../../../outcome/v1/contract";
 export type AsyncReportAttemptRun = { evidence?: ReplanEvidence; result: JudgeResultV1; accounting: AsyncReportAccounting };
 
 function safeBlindCaseId(value: unknown): string {
-  return isOpaqueBlindCaseId(value) ? value : "indeterminate";
+  return isOpaqueBlindCaseId(value) ? value : "case-000000000000";
 }
 
 async function diagnosticResult(judge: { id: string; version: string }, rubricHash: string, inputHash: string, state: "indeterminate" | "judge-unavailable" | "not-run", reason: string, promptHash?: string): Promise<JudgeResultV1> {

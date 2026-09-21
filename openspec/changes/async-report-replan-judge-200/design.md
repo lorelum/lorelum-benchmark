@@ -56,7 +56,7 @@ The evidence contains:
 - at most 2,000 characters of sanitized output for recognized test/typecheck commands;
 - the final candidate diff and its hash.
 
-The allowlist is `read`, `ls`, `grep`, `edit`, and `bash`. Thinking/reasoning and raw `toolResult` bodies are discarded; only safe tool metadata and recognized verification summaries survive. Absolute paths, private markers, Practice/Pack identifiers, condition/timing identifiers, secrets, and System/developer content cause fail-closed rejection. The projector applies these caps:
+The allowlist is `read`, `ls`, `grep`, `edit`, and `bash`. Thinking/reasoning and raw `toolResult` bodies are discarded; only safe tool metadata and recognized verification summaries survive. Absolute paths, private markers, Practice/Pack identifiers, condition/timing identifiers, secrets, and System/developer content cause fail-closed rejection. Public material roots must resolve to the expected real workspace public directories; public-root symlink/junction substitution is rejected. The projector applies these caps:
 
 - assistant-visible text: 8,000 characters per stage;
 - tool metadata: 20,000 characters total;

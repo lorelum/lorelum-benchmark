@@ -9,7 +9,7 @@ import { runCalibration } from "./calibration";
 import { canonicalJson } from "./canonical";
 import { sha256Text } from "../../../fs";
 
-function rawAttempt() {
+function rawAttempt(overrides: Record<string, unknown> = {}) {
   return {
     blind_case_id: "case-6f3a9c1d2e7b",
     execution_health: "healthy" as const,
@@ -21,6 +21,7 @@ function rawAttempt() {
       { type: "tool_execution_end", toolCallId: "t1", isError: false, result: { summary: "tests passed" } },
     ],
     final_candidate_diff: "diff --git a/src/report.ts b/src/report.ts\n+export function report() {}\n",
+    ...overrides,
   };
 }
 
@@ -200,6 +201,13 @@ test("missing real opt-in is not-run and raw evidence cannot reach the provider"
   expect(instance.plan.method).toBe("llm-subjective");
   const rejected = await instance.provider.score({ task_md: "x", candidate_diff: JSON.stringify({ session_id: "bad" }), rubric: "x", input_hash: "a".repeat(64), material: [] }, { judge: { id: instance.provider.id, version: instance.provider.version }, prompt: "x", prompt_hash: "a".repeat(64), rubric_hash: "b".repeat(64) });
   expect(rejected.state).toBe("not-run");
+});
+
+test("invalid blind identity returns an auditable indeterminate sidecar", async () => {
+  const result = await runAsyncReportReplanAttempt(rawAttempt({ blind_case_id: "reference" }), { mode: "mock", calibration: await qualifiedCalibration(), complete: async () => ({ output: {} }) });
+  expect(result.result.state).toBe("indeterminate");
+  expect(result.accounting.blind_case_id).toBe("case-000000000000");
+  expect(() => assertAsyncReportAccounting(result.accounting)).not.toThrow();
 });
 
 test("diagnostic provider states use fixed provenance instead of caller-supplied hashes", async () => {
