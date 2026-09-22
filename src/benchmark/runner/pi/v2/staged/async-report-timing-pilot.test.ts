@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   buildTimingPilotSchedule,
   dryRunTimingPilot,
+  hashTimingPilotPlan,
   parseTimingPilotPlan,
   readTimingPilotPlan,
   runTimingPilotPreflight,
@@ -18,6 +19,8 @@ const planPath = join(workspaceRoot, timingPilotPlanPath);
 async function plan(): Promise<TimingPilotPlan> {
   return readTimingPilotPlan(planPath);
 }
+
+const testRuntimeProbe = async () => ({ bun: "1.4.2", node: "24.21.0" });
 
 function qualifiedCalibration() {
   return {
@@ -65,11 +68,27 @@ test("invalid plan preflight emits a complete blocked gate summary", async () =>
   expect(summary.gates[0]?.id).toBe("plan");
 });
 
+test("host runtime drift blocks the pilot before the model probe", async () => {
+  const value = await plan();
+  let probeCalled = false;
+  const summary = await runTimingPilotPreflight({
+    root: workspaceRoot,
+    plan: value,
+    runtime_probe: async () => ({ bun: "1.4.2", node: "22.21.0" }),
+    model_probe: async () => { probeCalled = true; return { version: "0.85.1" }; },
+  });
+  expect(summary.allowed_to_start).toBe(false);
+  expect(probeCalled).toBe(false);
+  expect(summary.gates.find((entry) => entry.id === "runtime")?.status).toBe("failed");
+  expect(summary.gates.find((entry) => entry.id === "pi-model-probe")?.status).toBe("blocked");
+});
+
 test("model probe version drift blocks the pilot before Judge calibration", async () => {
   const value = await plan();
   let calibrationCalled = false;
   const summary = await runTimingPilotPreflight({
     root: workspaceRoot,
+    runtime_probe: testRuntimeProbe,
     plan: value,
     env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek-v4-flash" },
     model_probe: async () => ({ version: "0.80.10" }),
@@ -89,9 +108,11 @@ test("model probe runs before a dry-run drift becomes invalid-plan", async () =>
     ...value,
     prompts: { ...value.prompts, system_prompt_sha256: "0".repeat(64) },
   } as TimingPilotPlan;
+  const driftedWithHash = { ...drifted, plan_hash: await hashTimingPilotPlan(drifted) };
   const summary = await runTimingPilotPreflight({
     root: workspaceRoot,
-    plan: drifted,
+    runtime_probe: testRuntimeProbe,
+    plan: driftedWithHash,
     env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek-v4-flash" },
     model_probe: async () => { probeCalled = true; return { version: "0.85.1" }; },
     judge_calibration: async () => { calibrationCalled = true; return qualifiedCalibration(); },
@@ -100,7 +121,7 @@ test("model probe runs before a dry-run drift becomes invalid-plan", async () =>
   expect(calibrationCalled).toBe(false);
   expect(summary.status).toBe("invalid-plan");
   expect(summary.allowed_to_start).toBe(false);
-  expect(summary.gates.map((entry) => entry.id)).toEqual(["environment", "pi-model-probe", "plan-dry-run", "judge-provider", "judge-calibration"]);
+  expect(summary.gates.map((entry) => entry.id)).toEqual(["environment", "runtime", "pi-model-probe", "plan-dry-run", "judge-provider", "judge-calibration"]);
   expect(summary.gates.find((entry) => entry.id === "pi-model-probe")?.status).toBe("passed");
   expect(summary.gates.find((entry) => entry.id === "plan-dry-run")?.status).toBe("failed");
 });
@@ -111,7 +132,8 @@ test("dry-run rejects treatment provenance drift", async () => {
     ...value,
     treatment: { ...value.treatment, practice: { ...value.treatment.practice, card_sha256: "0".repeat(64) } },
   } as TimingPilotPlan;
-  await expect(dryRunTimingPilot({ root: workspaceRoot, plan: drifted })).rejects.toThrow("treatment provenance");
+  const driftedWithHash = { ...drifted, plan_hash: await hashTimingPilotPlan(drifted) };
+  await expect(dryRunTimingPilot({ root: workspaceRoot, plan: driftedWithHash })).rejects.toThrow("treatment provenance");
 });
 
 test("retired timing pilot plans are blocked before the model probe", async () => {
@@ -119,6 +141,7 @@ test("retired timing pilot plans are blocked before the model probe", async () =
   let probeCalled = false;
   const summary = await runTimingPilotPreflight({
     root: workspaceRoot,
+    runtime_probe: testRuntimeProbe,
     plan: { ...value, lifecycle_stage: "retired" } as TimingPilotPlan,
     model_probe: async () => { probeCalled = true; return { version: "0.85.1" }; },
   });
@@ -137,6 +160,7 @@ test("preflight requires a qualified Judge calibration before allowing the pilot
   const value = await plan();
   const summary = await runTimingPilotPreflight({
     root: workspaceRoot,
+    runtime_probe: testRuntimeProbe,
     plan: value,
     env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek-v4-flash" },
     model_probe: async () => ({ version: "0.85.1" }),
@@ -153,6 +177,7 @@ test("missing Judge opt-in blocks the pilot without starting calibration", async
   let calibrationCalled = false;
   const summary = await runTimingPilotPreflight({
     root: workspaceRoot,
+    runtime_probe: testRuntimeProbe,
     plan: value,
     env: {},
     model_probe: async () => ({ version: "0.85.1" }),
@@ -169,6 +194,7 @@ test("preflight summary is human-readable and does not contain credentials", asy
   const value = await plan();
   const summary = await runTimingPilotPreflight({
     root: workspaceRoot,
+    runtime_probe: testRuntimeProbe,
     plan: value,
     env: {},
     run_model_probe: false,

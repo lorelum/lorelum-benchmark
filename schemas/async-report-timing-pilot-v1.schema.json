@@ -60,7 +60,7 @@
       "properties": {
         "agent": { "type": "object", "additionalProperties": false, "required": ["id", "version", "command"], "properties": { "id": { "const": "pi" }, "version": { "const": "0.85.1" }, "command": { "const": "pi" } } },
         "model": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "const": "deepseek/deepseek-v4-flash" }, "version": { "const": "operator-local-experiment" } } },
-        "environment": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "const": "local-pi" }, "version": { "const": "v4" } } },
+        "environment": { "type": "object", "additionalProperties": false, "required": ["id", "version", "bun", "node", "manifest_sha256"], "properties": { "id": { "const": "local-pi" }, "version": { "const": "v4" }, "bun": { "const": "1.4.2" }, "node": { "const": "24.21.0" }, "manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" } } },
         "tools": { "type": "array", "const": ["read", "bash", "edit", "write", "grep", "find", "ls"] },
         "tool_policy_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
         "budget": { "type": "object", "additionalProperties": false, "required": ["max_turns", "max_duration_ms"], "properties": { "max_turns": { "const": 128 }, "max_duration_ms": { "const": 1500000 } } }

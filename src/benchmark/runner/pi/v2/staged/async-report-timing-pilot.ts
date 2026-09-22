@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, realpath, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { sha256File, sha256Text, workspaceRoot } from "../../../../fs";
 import { asyncReportJudgeEnv } from "../../../../judge/async-report-replan/v1/llm";
@@ -11,11 +11,15 @@ import type { CalibrationReport } from "../../../../judge/async-report-replan/v1
 import { configureLocalPiModelCatalog, localPiApiKey, localPiModelArgument, localPiShellPath } from "../local-pi-model-catalog";
 import { piCommand, preflightPiAndModel } from "../preflight";
 import { assertSeparateRoots, prepareStagedPracticeDelivery, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
+import { loadEvaluatorIdentity } from "../../../../../../incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/identity";
 
 export const timingPilotSchemaVersion = "async-report-timing-pilot/v1" as const;
 export const timingPilotPreflightSchemaVersion = "async-report-timing-pilot-preflight/v1" as const;
 export const timingPilotPlanPath = "incubator/practice-injection-plans/async-report-timing-pilot-v1.yaml" as const;
 export const timingPilotEnvironmentPath = "environments/local-pi/v4/environment.yaml" as const;
+export const timingPilotEnvironmentManifestSha256 = "555acce5f7cc79e203113b0f5025f715fe5a6de88dd4e2b54f308b71a3f20247" as const;
+export const timingPilotBunVersion = "1.4.2" as const;
+export const timingPilotNodeVersion = "24.21.0" as const;
 export const timingPilotEvaluatorManifestPath = "incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/evaluator.yaml" as const;
 export const timingPilotEvaluatorSnapshotPath = "incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/snapshot.json" as const;
 export const timingPilotEvaluatorId = "async-report-deterministic-evaluator" as const;
@@ -64,7 +68,7 @@ export type TimingPilotPlan = Readonly<{
   execution: Readonly<{
     agent: Readonly<{ id: "pi"; version: "0.85.1"; command: "pi" }>;
     model: Readonly<{ id: typeof timingPilotModel; version: typeof timingPilotModelVersion }>;
-    environment: Readonly<{ id: "local-pi"; version: "v4" }>;
+    environment: Readonly<{ id: "local-pi"; version: "v4"; bun: typeof timingPilotBunVersion; node: typeof timingPilotNodeVersion; manifest_sha256: typeof timingPilotEnvironmentManifestSha256 }>;
     tools: readonly ["read", "bash", "edit", "write", "grep", "find", "ls"];
     tool_policy_hash: typeof timingPilotToolPolicyHash;
     budget: Readonly<{ max_turns: 128; max_duration_ms: 1_500_000 }>;
@@ -119,6 +123,7 @@ export type TimingPilotPreflightOptions = Readonly<{
   env?: Record<string, string | undefined>;
   run_model_probe?: boolean;
   run_judge_calibration?: boolean;
+  runtime_probe?: () => Promise<{ bun: string; node: string }>;
   model_probe?: (input: { root: string; model: string }) => Promise<{ version: string }>;
   judge_calibration?: (env: Record<string, string | undefined>) => Promise<CalibrationReport>;
 }>;
@@ -252,9 +257,9 @@ export async function parseTimingPilotPlan(value: unknown): Promise<TimingPilotP
   const execution = value.execution;
   exactKeys(execution, ["agent", "model", "environment", "tools", "tool_policy_hash", "budget"], "execution");
   if (!isRecord(execution.agent) || !isRecord(execution.model) || !isRecord(execution.environment) || !isRecord(execution.budget) || !Array.isArray(execution.tools)) fail("execution sections are invalid");
-  exactKeys(execution.agent, ["id", "version", "command"], "execution.agent"); exactKeys(execution.model, ["id", "version"], "execution.model"); exactKeys(execution.environment, ["id", "version"], "execution.environment"); exactKeys(execution.budget, ["max_turns", "max_duration_ms"], "execution.budget");
-  if (execution.agent.id !== "pi" || execution.agent.version !== "0.85.1" || execution.agent.command !== "pi" || execution.model.id !== timingPilotModel || execution.model.version !== timingPilotModelVersion || execution.environment.id !== "local-pi" || execution.environment.version !== "v4" || JSON.stringify(execution.tools) !== JSON.stringify(["read", "bash", "edit", "write", "grep", "find", "ls"]) || execution.tool_policy_hash !== timingPilotToolPolicyHash || execution.budget.max_turns !== timingPilotMaxTurns || execution.budget.max_duration_ms !== timingPilotMaxDurationMs) fail("execution identity or budget is not frozen");
-  const parsedExecution = { agent: { id: "pi" as const, version: "0.85.1" as const, command: "pi" as const }, model: { id: timingPilotModel, version: timingPilotModelVersion }, environment: { id: "local-pi" as const, version: "v4" as const }, tools: ["read", "bash", "edit", "write", "grep", "find", "ls"] as const, tool_policy_hash: timingPilotToolPolicyHash, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } };
+  exactKeys(execution.agent, ["id", "version", "command"], "execution.agent"); exactKeys(execution.model, ["id", "version"], "execution.model"); exactKeys(execution.environment, ["id", "version", "bun", "node", "manifest_sha256"], "execution.environment"); exactKeys(execution.budget, ["max_turns", "max_duration_ms"], "execution.budget");
+  if (execution.agent.id !== "pi" || execution.agent.version !== "0.85.1" || execution.agent.command !== "pi" || execution.model.id !== timingPilotModel || execution.model.version !== timingPilotModelVersion || execution.environment.id !== "local-pi" || execution.environment.version !== "v4" || execution.environment.bun !== timingPilotBunVersion || execution.environment.node !== timingPilotNodeVersion || execution.environment.manifest_sha256 !== timingPilotEnvironmentManifestSha256 || JSON.stringify(execution.tools) !== JSON.stringify(["read", "bash", "edit", "write", "grep", "find", "ls"]) || execution.tool_policy_hash !== timingPilotToolPolicyHash || execution.budget.max_turns !== timingPilotMaxTurns || execution.budget.max_duration_ms !== timingPilotMaxDurationMs) fail("execution identity or budget is not frozen");
+  const parsedExecution = { agent: { id: "pi" as const, version: "0.85.1" as const, command: "pi" as const }, model: { id: timingPilotModel, version: timingPilotModelVersion }, environment: { id: "local-pi" as const, version: "v4" as const, bun: timingPilotBunVersion, node: timingPilotNodeVersion, manifest_sha256: timingPilotEnvironmentManifestSha256 }, tools: ["read", "bash", "edit", "write", "grep", "find", "ls"] as const, tool_policy_hash: timingPilotToolPolicyHash, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } };
   const judge = value.judge;
   exactKeys(judge, ["provider_id", "provider_version", "model", "evaluation_plan_hash", "rubric_hash", "evidence_schema", "accounting_schema", "real_opt_in_env", "calibration", "scoring"], "judge");
   if (!isRecord(judge.calibration) || !isRecord(judge.scoring)) fail("judge budget sections are invalid");
@@ -282,10 +287,32 @@ function envText(value: Record<string, string | undefined>): Record<string, stri
   return { ...Bun.env, ...value };
 }
 
+async function resolveContainedPath(root: string, path: string, label: string): Promise<string> {
+  if (isAbsolute(path) || path.split(/[\\/]/).some((part) => part === ".." || part.length === 0)) throw new Error(`${label} must be a normalized relative path`);
+  const rootReal = await realpath(resolve(root));
+  const targetReal = await realpath(resolve(root, path));
+  const fromRoot = relative(rootReal, targetReal);
+  if (fromRoot === ".." || fromRoot.startsWith(`..${"/"}`) || fromRoot.startsWith(`..${"\\"}`) || isAbsolute(fromRoot)) throw new Error(`${label} escapes runner root`);
+  return targetReal;
+}
+
+async function canonicalFileHash(path: string): Promise<string> {
+  return sha256Text((await Bun.file(path).text()).replace(/\r\n?/g, "\n"));
+}
+
+async function readHostRuntime(): Promise<{ bun: string; node: string }> {
+  const child = Bun.spawn(["node", "--version"], { stdout: "pipe", stderr: "pipe" });
+  const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()]);
+  if (code !== 0) throw new Error(`Node runtime probe failed: ${(stderr || stdout).trim()}`);
+  return { bun: Bun.version, node: (stdout || stderr).trim().replace(/^v/, "") };
+}
+
 async function readEnvironment(root: string, plan: TimingPilotPlan): Promise<Record<string, unknown>> {
-  const path = resolve(root, timingPilotEnvironmentPath);
-  const environment = Bun.YAML.parse(await Bun.file(path).text()) as Record<string, unknown>;
-  if (environment.id !== plan.execution.environment.id || environment.version !== plan.execution.environment.version) throw new Error("environment identity does not match timing pilot plan");
+  const path = await resolveContainedPath(root, timingPilotEnvironmentPath, "environment manifest");
+  const environmentText = await Bun.file(path).text();
+  const environment = Bun.YAML.parse(environmentText) as Record<string, unknown>;
+  if (environment.id !== plan.execution.environment.id || environment.version !== plan.execution.environment.version || environment.bun !== plan.execution.environment.bun || environment.node !== plan.execution.environment.node) throw new Error("environment identity does not match timing pilot plan");
+  if (await canonicalFileHash(path) !== plan.execution.environment.manifest_sha256) throw new Error("environment manifest hash does not match timing pilot plan");
   const model = environment.model as Record<string, unknown> | undefined;
   if (!model || model.id !== plan.execution.model.id || model.version !== plan.execution.model.version) throw new Error("environment model does not match timing pilot plan");
   const runtime = environment.agent_runtime as Record<string, unknown> | undefined;
@@ -296,11 +323,11 @@ async function readEnvironment(root: string, plan: TimingPilotPlan): Promise<Rec
   if (!dependencies || typeof dependencies.package !== "string" || typeof dependencies.manifest !== "string" || typeof dependencies.lockfile !== "string" || typeof dependencies.lockfile_sha256 !== "string") throw new Error("environment dependency identity is incomplete");
   const expectedPackage = `@earendil-works/pi-coding-agent@${plan.execution.agent.version}`;
   if (dependencies.package !== expectedPackage) throw new Error("environment Pi package identity does not match the timing pilot plan");
-  const manifestPath = resolve(root, dependencies.manifest);
+  const manifestPath = await resolveContainedPath(root, dependencies.manifest, "environment package manifest");
   const manifest = await Bun.file(manifestPath).json() as { dependencies?: Record<string, unknown>; devDependencies?: Record<string, unknown> };
   const declaredPiVersion = manifest.devDependencies?.["@earendil-works/pi-coding-agent"] ?? manifest.dependencies?.["@earendil-works/pi-coding-agent"];
   if (declaredPiVersion !== plan.execution.agent.version) throw new Error("package manifest Pi version does not match the timing pilot plan");
-  const lockfilePath = resolve(root, dependencies.lockfile);
+  const lockfilePath = await resolveContainedPath(root, dependencies.lockfile, "environment lockfile");
   if (await sha256File(lockfilePath) !== dependencies.lockfile_sha256) throw new Error("environment lockfile hash does not match");
   return environment;
 }
@@ -318,10 +345,14 @@ function commandIdentity(command: string): string {
 }
 
 async function validateEvaluatorAndJudge(root: string, plan: TimingPilotPlan): Promise<void> {
-  const evaluatorManifest = Bun.YAML.parse(await Bun.file(resolve(root, timingPilotEvaluatorManifestPath)).text()) as Record<string, unknown>;
+  const evaluatorRoot = await resolveContainedPath(root, "incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1", "evaluator root");
+  await loadEvaluatorIdentity(evaluatorRoot);
+  const evaluatorManifestPath = await resolveContainedPath(root, timingPilotEvaluatorManifestPath, "evaluator manifest");
+  const evaluatorManifest = Bun.YAML.parse(await Bun.file(evaluatorManifestPath).text()) as Record<string, unknown>;
   const evaluatorCandidate = evaluatorManifest.candidate as Record<string, unknown> | undefined;
   if (evaluatorManifest.schema_version !== "async-report-deterministic-evaluator/v1" || evaluatorManifest.evaluator_version !== plan.evaluator.version || evaluatorCandidate?.id !== plan.candidate.path.split("/").pop() || evaluatorCandidate.source_commit !== plan.candidate.source_commit || evaluatorCandidate.snapshot_id !== plan.candidate.snapshot_id) throw new Error("evaluator identity does not match timing pilot plan");
-  const evaluatorSnapshot = JSON.parse(await Bun.file(resolve(root, timingPilotEvaluatorSnapshotPath)).text()) as Record<string, unknown>;
+  const evaluatorSnapshotPath = await resolveContainedPath(root, timingPilotEvaluatorSnapshotPath, "evaluator snapshot");
+  const evaluatorSnapshot = JSON.parse(await Bun.file(evaluatorSnapshotPath).text()) as Record<string, unknown>;
   if (evaluatorSnapshot.snapshot_id !== plan.evaluator.snapshot_id) throw new Error("evaluator snapshot does not match timing pilot plan");
   if (plan.judge.evidence_schema !== replanEvidenceSchemaVersion || plan.judge.accounting_schema !== accountingSchemaVersion) throw new Error("Judge evidence contract does not match timing pilot plan");
   if (await evaluationPlanHash() !== plan.judge.evaluation_plan_hash) throw new Error("Judge evaluation plan hash does not match timing pilot plan");
@@ -339,7 +370,7 @@ async function validatePromptAndCandidate(root: string, plan: TimingPilotPlan): 
     treatment: { root: plan.treatment.root, id: plan.treatment.id, version: plan.treatment.version },
     delivery: { condition_id: slot.condition_id, delivery_node: slot.delivery_node },
     prompts: { task_path: plan.prompts.task_path, followup_path: plan.prompts.followup_path, task_sha256: plan.prompts.task_sha256, followup_sha256: plan.prompts.followup_sha256, checkpoint_marker: plan.prompts.checkpoint_marker, checkpoint_resume_message: plan.prompts.checkpoint_resume_message },
-    execution: { model: plan.execution.model.id, model_version: plan.execution.model.version, system_prompt_hash: plan.prompts.system_prompt_sha256, tool_policy_hash: plan.execution.tool_policy_hash, environment: plan.execution.environment, budget: plan.execution.budget },
+    execution: { model: plan.execution.model.id, model_version: plan.execution.model.version, system_prompt_hash: plan.prompts.system_prompt_sha256, tool_policy_hash: plan.execution.tool_policy_hash, environment: { id: plan.execution.environment.id, version: plan.execution.environment.version }, budget: plan.execution.budget },
   };
   const deliveryPlan = { ...deliveryPlanWithoutHash, plan_hash: await sha256Text(JSON.stringify(sortKeys(deliveryPlanWithoutHash))) } as StagedPracticeDeliveryPlan;
   const prepared = await prepareStagedPracticeDelivery(deliveryPlan, root);
@@ -368,6 +399,7 @@ function invalidPlanSummary(plan: TimingPilotPlan, reason: unknown): TimingPilot
   const gates = [
     gate("plan", "failed", safeReason),
     gate("environment", "blocked", "plan validation failed"),
+    gate("runtime", "blocked", "plan validation failed"),
     gate("pi-model-probe", "blocked", "plan validation failed"),
     gate("plan-dry-run", "blocked", "plan validation failed"),
     gate("judge-provider", "blocked", "plan validation failed"),
@@ -378,24 +410,25 @@ function invalidPlanSummary(plan: TimingPilotPlan, reason: unknown): TimingPilot
 
 export async function dryRunTimingPilot(options: { root?: string; plan: TimingPilotPlan }): Promise<TimingPilotDryRun> {
   const root = resolve(options.root ?? workspaceRoot);
-  assertActiveTimingPilot(options.plan);
-  await readEnvironment(root, options.plan);
-  await validateEvaluatorAndJudge(root, options.plan);
-  await validatePromptAndCandidate(root, options.plan);
+  const plan = await parseTimingPilotPlan(options.plan);
+  assertActiveTimingPilot(plan);
+  await readEnvironment(root, plan);
+  await validateEvaluatorAndJudge(root, plan);
+  await validatePromptAndCandidate(root, plan);
   await validateIsolation(root);
-  return { plan_hash: options.plan.plan_hash, slot_count: options.plan.schedule.slots.length, slots: options.plan.schedule.slots, candidate_ready: true, environment_ready: true, prompt_ready: true, isolation_ready: true };
+  return { plan_hash: plan.plan_hash, slot_count: plan.schedule.slots.length, slots: plan.schedule.slots, candidate_ready: true, environment_ready: true, prompt_ready: true, isolation_ready: true };
 }
 
 export async function runTimingPilotPreflight(options: TimingPilotPreflightOptions = {}): Promise<TimingPilotPreflightSummary> {
   const root = resolve(options.root ?? workspaceRoot);
   let plan: TimingPilotPlan;
   try {
-    plan = options.plan ?? await readTimingPilotPlan(resolve(root, options.plan_path ?? timingPilotPlanPath));
+    plan = options.plan ? await parseTimingPilotPlan(options.plan) : await readTimingPilotPlan(resolve(root, options.plan_path ?? timingPilotPlanPath));
   } catch (error) {
-    const fallback = options.plan ?? {
+    const fallback = {
       plan_hash: "0".repeat(64),
       evaluator: { id: timingPilotEvaluatorId, version: timingPilotEvaluatorVersion, snapshot_id: timingPilotEvaluatorSnapshotId },
-      execution: { model: { id: timingPilotModel, version: timingPilotModelVersion }, agent: { id: "pi", version: "0.85.1" }, environment: { id: "local-pi", version: "v4" }, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } },
+      execution: { model: { id: timingPilotModel, version: timingPilotModelVersion }, agent: { id: "pi", version: "0.85.1" }, environment: { id: "local-pi", version: "v4", bun: timingPilotBunVersion, node: timingPilotNodeVersion, manifest_sha256: timingPilotEnvironmentManifestSha256 }, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } },
       judge: { provider_id: timingPilotJudgeProvider, model: timingPilotJudgeModel, evaluation_plan_hash: timingPilotJudgeEvaluationPlanHash, rubric_hash: timingPilotJudgeRubricHash },
     } as TimingPilotPlan;
     return invalidPlanSummary(fallback, error);
@@ -414,14 +447,25 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
     }
   })();
   gates.push(environmentGate);
+  const runtimeGate = await (async () => {
+    if (environmentGate.status !== "passed") return gate("runtime", "blocked", "environment manifest validation failed");
+    try {
+      const runtime = await (options.runtime_probe ?? readHostRuntime)();
+      if (runtime.bun !== plan.execution.environment.bun || runtime.node !== plan.execution.environment.node) throw new Error(`host runtime ${runtime.bun}/${runtime.node} does not match plan ${plan.execution.environment.bun}/${plan.execution.environment.node}`);
+      return gate("runtime", "passed");
+    } catch (error) {
+      return gate("runtime", "failed", redactedReason(error));
+    }
+  })();
+  gates.push(runtimeGate);
 
   // The short Pi/model probe is deliberately before the scratch dry-run. It is
   // the cheap reachability check that prevents a later long attempt from being
   // started against a drifted or unavailable Agent route.
   if (options.run_model_probe === false) {
     gates.push(gate("pi-model-probe", "not-run", "model probe disabled by caller"));
-  } else if (environmentGate.status !== "passed") {
-    gates.push(gate("pi-model-probe", "blocked", "environment manifest validation failed"));
+  } else if (environmentGate.status !== "passed" || runtimeGate.status !== "passed") {
+    gates.push(gate("pi-model-probe", "blocked", "environment or host runtime validation failed"));
   } else {
     try {
       const probe = options.model_probe ?? (async ({ root: probeRoot, model }) => {
@@ -432,8 +476,14 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
         const catalog = await configureLocalPiModelCatalog(env, model, shellPath);
         if (catalog) { env.PI_CODING_AGENT_DIR = catalog.directory; env.PI_OFFLINE = "1"; }
         const key = localPiApiKey(env);
-        if (key) env.DEEPSEEK_API_KEY = key;
-        try { return await preflightPiAndModel(command, localPiModelArgument(model), undefined, env); } finally { catalog?.cleanup(); }
+        const probeEnv: Record<string, string> = {};
+        for (const name of ["PATH", "Path", "PATHEXT", "SystemRoot", "HOME", "USERPROFILE", "TEMP", "TMP"]) {
+          const value = env[name];
+          if (value) probeEnv[name] = value;
+        }
+        if (catalog) { probeEnv.PI_CODING_AGENT_DIR = catalog.directory; probeEnv.PI_OFFLINE = "1"; }
+        if (key) probeEnv.DEEPSEEK_API_KEY = key;
+        try { return await preflightPiAndModel(command, localPiModelArgument(model), undefined, probeEnv, false); } finally { catalog?.cleanup(); }
       });
       const result = await probe({ root, model: plan.execution.model.id });
       if (result.version !== plan.execution.agent.version) throw new Error(`Pi probe version ${result.version} does not match plan ${plan.execution.agent.version}`);
@@ -467,7 +517,7 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
     } catch (error) { calibrationStatus = "unavailable"; gates.push(gate("judge-calibration", "failed", redactedReason(error))); }
   } else gates.push(gate("judge-calibration", "blocked", "Judge provider preflight or earlier gate failed"));
   const failedGate = gates.find((entry) => entry.status !== "passed");
-  const invalidPlan = environmentGate.status === "passed" && dryRunGate.status === "failed";
+  const invalidPlan = environmentGate.status === "passed" && runtimeGate.status === "passed" && dryRunGate.status === "failed";
   const base = summaryBase(plan, calibrationStatus, calibrationCalls);
   return {
     ...base,

@@ -44,6 +44,9 @@ execution:
   environment:
     id: local-pi
     version: v4
+    bun: 1.4.2
+    node: 24.21.0
+    manifest_sha256: 555acce5f7cc79e203113b0f5025f715fe5a6de88dd4e2b54f308b71a3f20247
   tools: [read, bash, edit, write, grep, find, ls]
   tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
   budget:
@@ -78,4 +81,4 @@ schedule:
     - { attempt_id: block-3-position-2-task-start, block: 3, position: 2, repetition: 3, condition_id: task_start, delivery_node: task_start }
     - { attempt_id: block-3-position-3-constraint-followup, block: 3, position: 3, repetition: 3, condition_id: constraint_followup, delivery_node: constraint_followup }
 claim_boundary: "diagnostic-only; no formal record, suite revision, or general/product conclusion"
-plan_hash: dcb9b5c497fab69536f975050524b94ba72622941cbe5aec0b71ceb956dab184
+plan_hash: c6326775d8d51547e46e9c36555693f064c1b421d323a3ae5db89ed3f456cd3d

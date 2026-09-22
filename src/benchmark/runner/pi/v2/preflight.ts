@@ -6,7 +6,7 @@ import { terminateProcessTree } from "./process-tree";
 export type CommandResult = { code: number | null; stdout: string; stderr: string; timedOut: boolean; durationMs: number };
 
 export const preflightTimeoutMs = 90_000;
-export type CommandRunner = (command: string[], cwd: string, timeoutMs?: number, env?: Record<string, string>) => Promise<CommandResult>;
+export type CommandRunner = (command: string[], cwd: string, timeoutMs?: number, env?: Record<string, string>, inheritEnvironment?: boolean) => Promise<CommandResult>;
 
 function fail(message: string): never {
   throw new Error(message);
@@ -31,9 +31,10 @@ export async function piCommand(repositoryRoot: string): Promise<string> {
   return "pi";
 }
 
-async function run(command: string[], cwd: string, timeoutMs?: number, env?: Record<string, string>): Promise<CommandResult> {
+async function run(command: string[], cwd: string, timeoutMs?: number, env?: Record<string, string>, inheritEnvironment = true): Promise<CommandResult> {
   const started = performance.now();
-  const child = Bun.spawn(command, { cwd, env: env ? { ...Bun.env, ...env } : Bun.env, stdout: "pipe", stderr: "pipe" });
+  const childEnv = env === undefined ? Bun.env : inheritEnvironment ? { ...Bun.env, ...env } : env;
+  const child = Bun.spawn(command, { cwd, env: childEnv, stdout: "pipe", stderr: "pipe" });
   let timedOut = false;
   const timeout = timeoutMs === undefined ? undefined : setTimeout(() => {
     timedOut = true;
@@ -67,13 +68,13 @@ export function classifyPreflightFailure(result: CommandResult): string {
   return `model unreachable: ${redactSecrets(stderr).trim() || "unknown error"}`;
 }
 
-export async function preflightPiAndModel(command: string, modelId: string, commandRunner: CommandRunner = run, environment?: Record<string, string | undefined>): Promise<{ version: string }> {
+export async function preflightPiAndModel(command: string, modelId: string, commandRunner: CommandRunner = run, environment?: Record<string, string | undefined>, inheritEnvironment = true): Promise<{ version: string }> {
   const probeDirectory = await mkdtemp(join(tmpdir(), "lorelum-pi-preflight-"));
   try {
-    const version = await commandRunner([command, "--version"], probeDirectory, preflightTimeoutMs, environment);
+    const version = await commandRunner([command, "--version"], probeDirectory, preflightTimeoutMs, environment, inheritEnvironment);
     if (version.timedOut) fail(classifyPreflightFailure(version));
     if (version.code !== 0) fail(`Unable to start Pi command ${command}: ${(version.stderr || version.stdout).trim()}`);
-    const probe = await commandRunner(preflightPiArgs(command, modelId), probeDirectory, preflightTimeoutMs, environment);
+    const probe = await commandRunner(preflightPiArgs(command, modelId), probeDirectory, preflightTimeoutMs, environment, inheritEnvironment);
     if (probe.code !== 0 || probe.timedOut) fail(classifyPreflightFailure(probe));
     return { version: version.stdout.trim() };
   } finally {
