@@ -272,7 +272,13 @@ async function readEnvironment(root: string, plan: TimingPilotPlan): Promise<Rec
   const sandbox = environment.sandbox as Record<string, unknown> | undefined;
   if (!sandbox || sandbox.policy_hash !== plan.execution.tool_policy_hash) throw new Error("environment policy hash does not match timing pilot plan");
   const dependencies = environment.dependencies as Record<string, unknown> | undefined;
-  if (!dependencies || typeof dependencies.lockfile !== "string" || typeof dependencies.lockfile_sha256 !== "string") throw new Error("environment dependency identity is incomplete");
+  if (!dependencies || typeof dependencies.package !== "string" || typeof dependencies.manifest !== "string" || typeof dependencies.lockfile !== "string" || typeof dependencies.lockfile_sha256 !== "string") throw new Error("environment dependency identity is incomplete");
+  const expectedPackage = `@earendil-works/pi-coding-agent@${plan.execution.agent.version}`;
+  if (dependencies.package !== expectedPackage) throw new Error("environment Pi package identity does not match the timing pilot plan");
+  const manifestPath = resolve(root, dependencies.manifest);
+  const manifest = await Bun.file(manifestPath).json() as { dependencies?: Record<string, unknown>; devDependencies?: Record<string, unknown> };
+  const declaredPiVersion = manifest.devDependencies?.["@earendil-works/pi-coding-agent"] ?? manifest.dependencies?.["@earendil-works/pi-coding-agent"];
+  if (declaredPiVersion !== plan.execution.agent.version) throw new Error("package manifest Pi version does not match the timing pilot plan");
   const lockfilePath = resolve(root, dependencies.lockfile);
   if (await sha256File(lockfilePath) !== dependencies.lockfile_sha256) throw new Error("environment lockfile hash does not match");
   return environment;
