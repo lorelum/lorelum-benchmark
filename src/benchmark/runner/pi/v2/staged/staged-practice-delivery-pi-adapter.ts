@@ -15,6 +15,7 @@ export type StagedPracticePiConfig = Readonly<{
   stage_budget_ms: number;
   log_directory: string;
   checkpoint_extension_path?: string;
+  base_system_prompt_path?: string;
 }>;
 
 export class StagedPracticePiError extends Error {}
@@ -55,6 +56,7 @@ function buildCommand(config: StagedPracticePiConfig, invocation: StagedPractice
   const command = [config.command, "--print", "--mode", "json", "--no-context-files", "--no-extensions", "--no-skills", "--no-prompt-templates", "--tools", config.tools, "--model", config.model, "--session-dir", invocation.session_dir];
   if (invocation.session_id) command.push("--session", invocation.session_id);
   if (checkpointExtensionPath) command.push("--extension", checkpointExtensionPath);
+  if (config.base_system_prompt_path) command.push("--append-system-prompt", config.base_system_prompt_path);
   if (runtimeCardPath) command.push("--append-system-prompt", runtimeCardPath);
   if (invocation.prompt_path) command.push(`@${invocation.prompt_path}`);
   if (invocation.checkpoint_resume_message) command.push(invocation.checkpoint_resume_message);

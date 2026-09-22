@@ -32,6 +32,32 @@ Preflight MUST verify the frozen candidate snapshot/lifecycle, treatment/card pr
 - **THEN** the pilot MUST fail closed without calling the model or writing `results/records/`
 - **AND** it MUST preserve the failure reason and plan hash for diagnosis.
 
+### Requirement: Long-running pilot execution MUST be gated by successful reachability and calibration checks
+
+The pilot MUST run a target-model Pi probe, a complete plan dry-run, and the frozen #200 Judge calibration before starting any of the nine long Agent attempts. A failed probe, invalid environment/plan, missing real opt-in, unavailable provider, or unqualified calibration MUST block the long pilot.
+
+#### Scenario: All preflight gates pass
+
+- **WHEN** the `local-pi/v4` identity, target-model probe, plan dry-run, Judge configuration, and qualified calibration all pass
+- **THEN** the pilot MUST emit a human-readable preflight summary with the model, Pi, environment, plan, budget, calibration state, and cost estimate
+- **AND** only then MAY it start the nine pre-registered Agent slots.
+
+#### Scenario: A preflight gate fails
+
+- **WHEN** the Pi/model probe, plan dry-run, Judge provider check, or calibration fails
+- **THEN** the pilot MUST emit a `preflight-blocked` or `invalid-plan` diagnostic state with a redacted reason
+- **AND** it MUST NOT start any long Agent attempt, replace a failed slot, or write a formal run record.
+
+### Requirement: The pilot MUST expose a redacted preflight summary before long execution
+
+The preflight summary MUST show the fixed model and version, Pi version, environment identity, plan hash, budget, Judge model/calibration status, and an explicit `allowed_to_start` boolean. It MUST NOT show credentials, raw API keys, private Practice body, Pack private paths, evaluator oracle, or private Judge calibration labels.
+
+#### Scenario: Summary is safe and actionable
+
+- **WHEN** preflight completes successfully or is blocked
+- **THEN** the summary MUST distinguish `allowed_to_start=true` from the blocking reason
+- **AND** its serialized contents MUST pass public/private leakage checks.
+
 ### Requirement: Each planned attempt MUST use one same-session delivery
 
 Each timing attempt MUST reuse the #197 runner semantics, deliver the same fixed Practice card at only its assigned node, and preserve the same Agent session across task start, scripted constraint follow-up, checkpoint stop, and resume. The pilot MUST NOT query, reorder, replace, or re-deliver the Practice based on intermediate output.

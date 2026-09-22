@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "async-report-timing-pilot-preflight-v1.schema.json",
+  "title": "Async report timing pilot preflight summary v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "allowed_to_start", "plan_hash", "model", "agent", "environment", "budget", "cost_estimate", "judge", "gates"],
+  "properties": {
+    "schema_version": { "const": "async-report-timing-pilot-preflight/v1" },
+    "status": { "enum": ["ready", "preflight-blocked", "invalid-plan"] },
+    "allowed_to_start": { "type": "boolean" },
+    "plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "model": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "type": "string" }, "version": { "type": "string" } } },
+    "agent": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "type": "string" }, "version": { "type": "string" } } },
+    "environment": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "type": "string" }, "version": { "type": "string" } } },
+    "budget": { "type": "object", "additionalProperties": false, "required": ["max_turns", "max_duration_ms"], "properties": { "max_turns": { "type": "integer", "minimum": 1 }, "max_duration_ms": { "type": "integer", "minimum": 1 } } },
+    "cost_estimate": { "type": "object", "additionalProperties": false, "required": ["agent_attempts", "judge_calibration_calls", "judge_scoring_calls", "agent_max_duration_ms", "total_judge_calls", "cost_usd"], "properties": { "agent_attempts": { "const": 9 }, "judge_calibration_calls": { "const": 9 }, "judge_scoring_calls": { "const": 9 }, "agent_max_duration_ms": { "type": "integer", "minimum": 1 }, "total_judge_calls": { "const": 18 }, "cost_usd": { "const": "unavailable" } } },
+    "judge": { "type": "object", "additionalProperties": false, "required": ["provider_id", "model", "real_opt_in", "calibration_status", "calibration_calls"], "properties": { "provider_id": { "type": "string" }, "model": { "type": "string" }, "real_opt_in": { "type": "boolean" }, "calibration_status": { "enum": ["qualified", "diagnostic", "not-run", "unavailable"] }, "calibration_calls": { "type": "integer", "minimum": 0, "maximum": 9 } } },
+    "gates": { "type": "array", "minItems": 4, "items": { "type": "object", "additionalProperties": false, "required": ["id", "status"], "properties": { "id": { "type": "string" }, "status": { "enum": ["passed", "failed", "blocked", "not-run"] }, "reason": { "type": "string" } } } },
+    "failure_reason": { "type": "string" }
+  }
+}

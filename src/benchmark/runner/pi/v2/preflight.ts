@@ -67,13 +67,13 @@ export function classifyPreflightFailure(result: CommandResult): string {
   return `model unreachable: ${redactSecrets(stderr).trim() || "unknown error"}`;
 }
 
-export async function preflightPiAndModel(command: string, modelId: string, commandRunner: CommandRunner = run): Promise<{ version: string }> {
+export async function preflightPiAndModel(command: string, modelId: string, commandRunner: CommandRunner = run, environment?: Record<string, string | undefined>): Promise<{ version: string }> {
   const probeDirectory = await mkdtemp(join(tmpdir(), "lorelum-pi-preflight-"));
   try {
-    const version = await commandRunner([command, "--version"], probeDirectory, preflightTimeoutMs);
+    const version = await commandRunner([command, "--version"], probeDirectory, preflightTimeoutMs, environment);
     if (version.timedOut) fail(classifyPreflightFailure(version));
     if (version.code !== 0) fail(`Unable to start Pi command ${command}: ${(version.stderr || version.stdout).trim()}`);
-    const probe = await commandRunner(preflightPiArgs(command, modelId), probeDirectory, preflightTimeoutMs);
+    const probe = await commandRunner(preflightPiArgs(command, modelId), probeDirectory, preflightTimeoutMs, environment);
     if (probe.code !== 0 || probe.timedOut) fail(classifyPreflightFailure(probe));
     return { version: version.stdout.trim() };
   } finally {

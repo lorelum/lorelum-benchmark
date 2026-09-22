@@ -365,6 +365,8 @@ test("production adapter uses a private append-system-prompt file without puttin
   const workspace = join(root, "workspace");
   const sessionDir = join(root, "sessions");
   const logs = join(root, "logs");
+  const basePrompt = join(root, "system-prompt.md");
+  await Bun.write(basePrompt, "neutral system prompt\n");
   await mkdir(workspace, { recursive: true });
   await mkdir(sessionDir, { recursive: true });
   const commands: string[][] = [];
@@ -375,10 +377,12 @@ test("production adapter uses a private append-system-prompt file without puttin
     await Bun.write(join(sessionDir, `session-${sessionId}.jsonl`), `{"type":"session","id":"${sessionId}"}\n`);
     return { code: 0, stdout: `{"type":"session","id":"${sessionId}"}\n`, stderr: "", timedOut: false, durationMs: 1 };
   };
-  const adapter = productionStagedPracticePiAdapter({ command: "pi", model: "mock/model", tools: "read", stage_budget_ms: 1_000, log_directory: logs }, commandRunner);
+  const adapter = productionStagedPracticePiAdapter({ command: "pi", model: "mock/model", tools: "read", stage_budget_ms: 1_000, log_directory: logs, base_system_prompt_path: basePrompt }, commandRunner);
   const prepared = (await prepareStagedPracticeDelivery(await planFor("task_start"))).prepared;
   await adapter.start({ phase: "task_start", workspace, session_dir: sessionDir, prompt_path: "task.md", practice: prepared.payload });
   expect(commands[0]).toContain("--append-system-prompt");
+  expect(commands[0]).toContain(basePrompt);
+  expect(commands[0]?.filter((arg) => arg === "--append-system-prompt")).toHaveLength(2);
   expect(commands[0]?.join(" ")).not.toContain(prepared.payload.text);
   expect(commands[0]?.join(" ")).not.toContain(prepared.payload.card_sha256);
 });

@@ -1,17 +1,19 @@
 ## 0. 流程门禁（initial OpenSpec PR 前）
 
-- [ ] 0.1 确认 Issue #201 仍是单一问题，回读 #196/#197/#199/#200/#202 的 merged 状态、source/snapshot/treatment/evaluator/Judge identity；不修改已有冻结 revision。 [写入范围：Issue #201、`proposal.md`、`design.md`]
-- [ ] 0.2 运行 `openspec validate async-report-timing-pilot-201 --type change --strict --json`，从最新 `origin/main` 创建 `codex/async-report-timing-pilot-201`，并创建只含 OpenSpec artifacts 的 draft PR；此 PR 不得包含 schema、runner、plan、fixture、模型运行或结果。 [写入范围：`openspec/changes/async-report-timing-pilot-201/`、GitHub PR]
+- [x] 0.1 确认 Issue #201 仍是单一问题，回读 #196/#197/#199/#200/#202 的 merged 状态、source/snapshot/treatment/evaluator/Judge identity；不修改已有冻结 revision。 [写入范围：Issue #201、`proposal.md`、`design.md`]
+- [x] 0.2 运行 `openspec validate async-report-timing-pilot-201 --type change --strict --json`，从最新 `origin/main` 创建 `codex/async-report-timing-pilot-201`，并创建只含 OpenSpec artifacts 的 draft PR；此 PR 不得包含 schema、runner、plan、fixture、模型运行或结果。 [写入范围：`openspec/changes/async-report-timing-pilot-201/`、GitHub PR]
 
 ## 1. Planning confirmation（initial PR 后、实现前）
 
-- [ ] 1.1 在 Issue #201 与 `design.md` 回写需求方对九次矩阵、baseline/irrelevant scope、Agent model/environment/budget、Judge real opt-in/provider 和 diagnostic-only boundary 的明确确认。 [写入范围：Issue #201、`design.md`、`tasks.md`]
-- [ ] 1.2 仅在 strict validation、initial PR 和规划确认完成后，进入等效 Plan 阶段；若任一决定改变题面、oracle、对照、评测、treatment、environment 或结论解释，先重新规划。 [写入范围：`design.md`、`tasks.md`]
+- [x] 1.1 在 Issue #201 与 `design.md` 回写需求方对九次矩阵、baseline/irrelevant scope、Agent model/environment/budget、Judge real opt-in/provider 和 diagnostic-only boundary 的明确确认。 [写入范围：Issue #201、`design.md`、`tasks.md`]
+- [x] 1.2 仅在 strict validation、initial PR 和规划确认完成后，进入等效 Plan 阶段；若任一决定改变题面、oracle、对照、评测、treatment、environment 或结论解释，先重新规划。 [写入范围：`design.md`、`tasks.md`]
+- [x] 1.3 在任何长时间 Agent attempt 前，执行目标 `deepseek-v4-flash` 的 Pi/model short probe；校验 Pi `0.85.1`、gateway route、credential 和目标 model identity，失败时阻断 pilot。实现了环境可注入的 bounded probe；2026-09-22 实际 route probe 已通过。 [写入范围：`src/benchmark/runner/pi/v2/`、验证证据]
+- [x] 1.4 在 Agent attempt 前执行 plan dry-run 与 #200 完整 Judge calibration gate；实现已通过 mock calibration 验证，真实 calibration 保留为启动九次 pilot 前的运行门禁。 [写入范围：`src/benchmark/runner/pi/v2/`、`src/benchmark/judge/`、验证证据]
 
 ## 2. Pre-registration contract
 
-- [ ] 2.1 新增 `async-report-timing-pilot/v1` plan schema 和版本化 plan 文件，固定 candidate/task/treatment/runner/evaluator/Judge/environment/model/budget/hash、九次 schedule、failure taxonomy、workspace/privacy 和 claim boundary；生成并校验 canonical plan hash。 [写入范围：`schemas/`、`incubator/practice-injection-plans/`、`src/benchmark/`]
-- [ ] 2.2 为 plan parser/validator 添加 deterministic tests：额外字段、identity/hash drift、重复/缺失 node、非 3×3 repetitions、baseline/irrelevant 偷换、非隔离 workspace、model/budget/environment 缺失均 fail closed。 [写入范围：`src/benchmark/`、`schemas/`]
+- [x] 2.1 新增 `local-pi/v4` environment、版本化 system prompt、`async-report-timing-pilot/v1` plan schema 和 plan 文件，固定 candidate/task/treatment/runner/evaluator/Judge/environment/model/budget/hash、九次 schedule、failure taxonomy、workspace/privacy 和 claim boundary；生成并校验 canonical plan hash。 [写入范围：`schemas/`、`incubator/practice-injection-plans/`、`src/benchmark/`]
+- [x] 2.2 为 plan parser/validator 添加 deterministic tests：额外字段、identity/hash drift、重复/缺失 node、非 3×3 repetitions、baseline/irrelevant 偷换、非隔离 workspace、model/budget/environment 缺失均 fail closed。 [写入范围：`src/benchmark/`、`schemas/`]
 - [ ] 2.3 完成 `bun run validate` 和 plan/snapshot/public-private leakage audit；未通过不得进入真实运行。 [写入范围：验证产物，不提交 generated output]
 
 ## 3. Nine-attempt orchestration
@@ -29,7 +31,7 @@
 
 ## 5. Authorized scratch-only execution and retrospective
 
-- [ ] 5.1 在 preflight、planning confirmation、模型/Judge explicit opt-in 和 deterministic tests 全部通过后，执行九个预注册 attempt；运行结果只写被忽略的 `scratch/`，不写 `results/records/`，不升级 suite/candidate revision。 [写入范围：`scratch/`，不得提交]
+- [ ] 5.1 在 Pi/model short probe、plan dry-run、Judge calibration、planning confirmation、模型/Judge explicit opt-in 和 deterministic tests 全部通过后，执行九个预注册 attempt；运行结果只写被忽略的 `scratch/`，不写 `results/records/`，不升级 suite/candidate revision。 [写入范围：`scratch/`，不得提交]
 - [ ] 5.2 对每个 attempt 运行 hard evaluator 和 blinded Judge；分别记 Agent、Judge calibration、Judge scoring、失败和 indeterminate 的 duration/usage/cost/state；不补跑替换失败槽位。 [写入范围：`scratch/`，不得提交]
 - [ ] 5.3 运行后验证九个槽位、condition/node 一致性、trace/provenance/plan hash、hard/Judge independence、cost ledger、failure/indeterminate 状态和 no-leakage；执行 `bun run validate`、相关测试和 `git diff --check`。 [写入范围：验证证据]
 - [ ] 5.4 生成脱敏 diagnostic retrospective，区分观察到的信号、失败/不确定、成本、限制和下一步；不写正式 record 或普遍效果结论。 [写入范围：`scratch/`，必要时更新 Issue/PR]

@@ -25,7 +25,8 @@
     "test:openspec-purpose": "bun test scripts/check-openspec-purpose.test.ts",
     "check:runtime": "bun run scripts/check-runtime.ts",
     "test:contracts:core": "bun test scripts/ci-change-classifier.test.ts src/benchmark/validate.test.ts src/benchmark/snapshot.test.ts src/benchmark/evaluator/v2/harness.test.ts src/benchmark/judge src/benchmark/outcome/v1",
-    "test:contracts:runner": "bun run scripts/run-runner-contracts.ts"
+    "test:contracts:runner": "bun run scripts/run-runner-contracts.ts",
+    "pi:timing-pilot": "bun run src/benchmark/runner/pi/v2/staged/async-report-timing-pilot.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1"

@@ -8,16 +8,17 @@
 - runner：`staged-practice-delivery/v1`，三个正式 delivery nodes 为 `task_start`、`constraint_followup`、`first_implementation_checkpoint`；每个 attempt 只交付一次 card，并保持同一 Pi session。
 - hard evaluator：#202 的 deterministic evaluator v1；Judge：#200 的 `judge-agent/async-report-replan/v1`、`replan-evidence/v1` 和 `async-report-replan-judge-accounting/v1`。
 
-## Planning gate: decisions requiring confirmation
+## Planning confirmation (2026-09-22)
 
-以下是本 change 的建议默认值；它们会改变运行身份或结果解释，因此在 initial OpenSpec PR 创建后必须由需求方确认，并写回本文件、Issue #201 和 tasks.md，确认前不得实施或调用模型：
+需求方已确认以下实施边界，并要求先验证可达性再进入长时间 pilot：
 
-1. **九次矩阵**：严格执行三个 timing node 各三次，共九次；baseline/未声明 condition 只做无模型 preflight isolation，不进入九次分母；不加入等长无关 Practice。若要保留无关对照，应另立计划并改变分母。
-2. **Agent runtime**：建议使用已声明的 `local-pi/v3`，Pi `0.85.1`，model `deepseek/deepseek-v4-pro`，model version `local-native-skill-2026-07-19`，并以环境声明的 tool policy hash 绑定；每 attempt 的 max duration 建议固定为 25 分钟，max turns 由 adapter/runtime 实际上限显式记录，不用墙钟延迟模拟时机。
-3. **Judge runtime**：建议执行 #200 真实 Judge calibration（最多 9 calls、3 repetitions）后进行每 attempt 一次、零 retry 的 scoring；provider/model、API endpoint、预算和显式 `LORELUM_JUDGE_REAL=1` opt-in 必须在 preflight 通过后才可使用。缺少配置时标记 `judge-unavailable`，不伪造分数、不阻止 hard evaluator 记录。
-4. **运行授权**：九次探索仍是 scratch-only diagnostic，不是 formal run；不写 `results/records/`、不升级 suite、不把 pilot 结果用于发布。但真实 Agent/Judge 调用会产生外部成本，必须在实施前确认上述 provider/预算与 opt-in 已可用。
+1. **九次矩阵**：严格执行三个 timing node 各三次，共九次；baseline/未声明 condition 只做无模型 no-payload/isolation 校验，不进入九次分母；不加入等长无关 Practice。
+2. **Agent runtime**：新增并固定 `local-pi/v4`，Pi `0.85.1`，model `deepseek/deepseek-v4-flash`，model version `operator-local-experiment`；每 attempt 固定 `max_turns=128` 和 `max_duration_ms=1_500_000`，并以环境声明的 tool policy hash 绑定。
+3. **Judge runtime**：#200 的真实 calibration/scoring 使用同一 `deepseek-v4-flash` 档位；calibration 最多 9 calls、3 repetitions，scoring 每 attempt 1 call、0 retry；必须配置新的 provider/key 并显式设置 `LORELUM_JUDGE_REAL=1`。不复用历史 Judge key、model、calibration 或结果。
+4. **运行顺序**：先执行 Pi/model short probe，再执行 plan dry-run，再执行完整 Judge calibration；三者全部通过后才允许启动九次 Agent pilot。任一前置 gate 失败都不启动长时间 pilot。
+5. **运行授权**：九次探索仍是 scratch-only diagnostic；不写 `results/records/`，不升级 suite/candidate revision，不把 pilot 结果用于发布或普遍效果结论。
 
-如果需求方确认上述默认值，后续实现将只围绕该边界推进；任一不同选择都需要重新写回 planning gate 后再实施。
+当前已有非破坏性 Pi/model probe 已通过：Pi `0.85.1`、目标模型 `deepseek/deepseek-v4-flash`、本地 gateway route 和 credential 可完成 `Reply with exactly: ok`。该结果只证明当前 route 可达；实现后的 preflight 仍必须校验 `local-pi/v4` manifest 与同一目标 model identity。
 
 ## Execution design
 
@@ -31,7 +32,15 @@
 
 preflight 必须在第一条 Agent 请求前完成：candidate path 只能从冻结 source/snapshot materialize；public workspace 只能包含 task/starter 与声明的 condition-scoped runtime；private evaluator/oracle/rubric/Pack body 不得复制到 Agent workspace 或 prompt。校验 candidate/snapshot、task/stage-2 hash、treatment manifest/card identity、runner/evaluator/Judge/rubric hash、environment/model/budget、plan hash 和 clean workspace。
 
-每个 attempt 都使用全新 workspace 和独立 artifact directory；artifact root 与 Agent workspace 必须 realpath 分离。attempt 结束后才在 host side 读取 private transcript、运行 #202 evaluator 和构造 #200 evidence projection；任何失败都 fail closed 并保留状态。
+长时间 pilot 采用 fail-closed gate，顺序固定为：
+
+1. 读取并校验 `local-pi/v4` environment、Pi 版本、model ID/version、tool policy、runtime/package/lockfile；
+2. 使用目标 model 执行一次不写 workspace 的短 probe，确认 Pi route、gateway 和 credential 可完成最小请求；
+3. 解析 master plan，执行 scratch dry-run，生成 9 个 slot、循环拉丁方顺序并验证 snapshot/hash/isolation；
+4. 校验 Judge provider/model/credential/`LORELUM_JUDGE_REAL=1`，执行 #200 完整 calibration；
+5. 只有 Judge calibration 达到 `qualified` 才允许进入九次 Agent attempt。
+
+任何 preflight、dry-run 或 calibration gate 失败都只生成 preflight-blocked/invalid-plan 诊断摘要，不创建 attempt、不调用九次 Agent、不写 `results/records/`。每个 attempt 都使用全新 workspace 和独立 artifact directory；artifact root 与 Agent workspace 必须 realpath 分离。attempt 结束后才在 host side 读取 private transcript、运行 #202 evaluator 和构造 #200 evidence projection；任何失败都 fail closed 并保留状态。
 
 ### 3. Nine attempt execution
 
@@ -51,7 +60,7 @@ hard evaluator 只按 #202 v1 CLI 读取 Agent app root，返回其冻结的 ove
 
 ## Risks and mitigations
 
-- **模型或 Judge 端点不可达** → preflight 只允许显式 opt-in；失败写入不可比/indeterminate，停止该 attempt，不伪造结果。
+- **模型或 Judge 端点不可达** → 先做 Pi/model short probe 与完整 Judge calibration；任一 gate 失败即阻断九次 pilot，不消耗长时间 Agent 预算，不伪造结果。
 - **运行身份漂移** → 所有 identity 与 hash 绑定到 master plan；运行中 drift 立即 fail closed。
 - **私有材料泄露** → workspace、prompt、public trace、Judge evidence 分层审计；运行前和运行后都执行 leakage audit。
 - **模型超时导致 timing 混淆** → 固定 per-attempt budget；不以等待或 turn 数制造时机；不重跑替换失败槽位。

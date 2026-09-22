@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "async-report-timing-pilot-v1.schema.json",
+  "title": "Async report timing pilot plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "version", "lifecycle_stage", "candidate", "treatment", "prompts", "execution", "judge", "schedule", "claim_boundary", "plan_hash"],
+  "properties": {
+    "schema_version": { "const": "async-report-timing-pilot/v1" },
+    "id": { "const": "async-report-timing-pilot" },
+    "version": { "const": "v1" },
+    "lifecycle_stage": { "enum": ["pilot", "retired"] },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "source_commit", "snapshot_id"],
+      "properties": {
+        "path": { "const": "incubator/practice-injection/async-report-lifecycle-v1" },
+        "source_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "snapshot_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "treatment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["root", "id", "version", "pack", "practice"],
+      "properties": {
+        "root": { "const": "treatments/agentic-coding-replan-on-material-drift/v1" },
+        "id": { "const": "agentic-coding-replan-on-material-drift" },
+        "version": { "const": "v1" },
+        "pack": {
+          "type": "object", "additionalProperties": false,
+          "required": ["repository", "ref", "version", "commit"],
+          "properties": {
+            "repository": { "type": "string", "pattern": "^https?://" }, "ref": { "type": "string", "minLength": 1 }, "version": { "type": "string", "minLength": 1 }, "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
+          }
+        },
+        "practice": {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "content_digest", "source_sha256", "card_sha256"],
+          "properties": {
+            "id": { "const": "agentic-coding.implementation.replan-on-material-drift" }, "content_digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "source_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "card_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    },
+    "prompts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["task_path", "followup_path", "task_sha256", "followup_sha256", "system_prompt_path", "system_prompt_sha256", "checkpoint_marker", "checkpoint_resume_message"],
+      "properties": {
+        "task_path": { "const": "public/task.md" }, "followup_path": { "const": "public/stage-2/task.md" }, "task_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "followup_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "system_prompt_path": { "const": "prompts/async-report-timing-pilot/v1/system.md" }, "system_prompt_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "checkpoint_marker": { "const": "CHECKPOINT: compatibility-slice-ready" }, "checkpoint_resume_message": { "const": "Continue the task after the compatibility checkpoint." }
+      }
+    },
+    "execution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["agent", "model", "environment", "tools", "tool_policy_hash", "budget"],
+      "properties": {
+        "agent": { "type": "object", "additionalProperties": false, "required": ["id", "version", "command"], "properties": { "id": { "const": "pi" }, "version": { "const": "0.85.1" }, "command": { "const": "pi" } } },
+        "model": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "const": "deepseek/deepseek-v4-flash" }, "version": { "const": "operator-local-experiment" } } },
+        "environment": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "const": "local-pi" }, "version": { "const": "v4" } } },
+        "tools": { "type": "array", "const": ["read", "bash", "edit", "write", "grep", "find", "ls"] },
+        "tool_policy_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "budget": { "type": "object", "additionalProperties": false, "required": ["max_turns", "max_duration_ms"], "properties": { "max_turns": { "const": 128 }, "max_duration_ms": { "const": 1500000 } } }
+      }
+    },
+    "judge": {
+      "type": "object", "additionalProperties": false,
+      "required": ["provider_id", "provider_version", "model", "real_opt_in_env", "calibration", "scoring"],
+      "properties": {
+        "provider_id": { "const": "judge-agent/async-report-replan/v1" }, "provider_version": { "const": "v1" }, "model": { "const": "deepseek-v4-flash" }, "real_opt_in_env": { "const": "LORELUM_JUDGE_REAL=1" }, "calibration": { "type": "object", "additionalProperties": false, "required": ["max_calls", "repetitions"], "properties": { "max_calls": { "const": 9 }, "repetitions": { "const": 3 } } }, "scoring": { "type": "object", "additionalProperties": false, "required": ["calls_per_attempt", "retries"], "properties": { "calls_per_attempt": { "const": 1 }, "retries": { "const": 0 } } }
+      }
+    },
+    "schedule": {
+      "type": "object", "additionalProperties": false, "required": ["algorithm", "repetitions", "slots"],
+      "properties": {
+        "algorithm": { "const": "cyclic-latin-square/v1" }, "repetitions": { "const": 3 }, "slots": { "type": "array", "minItems": 9, "maxItems": 9, "items": { "type": "object", "additionalProperties": false, "required": ["attempt_id", "block", "position", "repetition", "condition_id", "delivery_node"], "properties": { "attempt_id": { "type": "string", "pattern": "^block-[1-3]-position-[1-3]-[a-z0-9-]+$" }, "block": { "type": "integer", "minimum": 1, "maximum": 3 }, "position": { "type": "integer", "minimum": 1, "maximum": 3 }, "repetition": { "type": "integer", "minimum": 1, "maximum": 3 }, "condition_id": { "enum": ["task_start", "constraint_followup", "first_implementation_checkpoint"] }, "delivery_node": { "enum": ["task_start", "constraint_followup", "first_implementation_checkpoint"] } } } }
+      }
+    },
+    "claim_boundary": { "const": "diagnostic-only; no formal record, suite revision, or general/product conclusion" },
+    "plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

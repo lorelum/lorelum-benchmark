@@ -82,6 +82,7 @@ export async function executeStagedPracticeDeliveryFromFile(options: {
           tools: "read,bash,edit,write,grep,find,ls",
           stage_budget_ms: plan.execution.budget.max_duration_ms,
           log_directory: artifacts,
+          base_system_prompt_path: resolve(root, plan.prompts.system_prompt_path),
         });
     return await runStagedPracticeDeliveryAttempt({
       root,

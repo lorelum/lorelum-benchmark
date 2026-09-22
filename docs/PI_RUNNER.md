@@ -73,3 +73,16 @@ Chat API 不支持 seed，因此 smoke 只能用于链路验收，正式比较�
 runner 必须创建内部网络 `lorelum-formal-egress`。Pi 只连接此网络；allowlist proxy 同时连接该内部网络和上游网络，并仅允许 `api.deepseek.com:443` 的 CONNECT 请求。Pi `0.85.1` 读取 `HTTP_PROXY`/`HTTPS_PROXY`，adapter 只向容器传递该 proxy 和 `DEEPSEEK_API_KEY`。`bun run test:sandbox` 会验证 image digest、版本、挂载、凭据不可见、非允许出口不可达及 DeepSeek 端点经 proxy 可达；未通过时 workflow 不会运行 Pi 或写 record。
 
 `pi/v1` 保留为历史兼容入口：`bun run pi:v1 -- <request> [--dry-run]`。新运行不得使用它。
+
+## Async-report timing pilot preflight
+
+Issue #201 的长时间 timing pilot 必须先通过 scratch-only preflight，不得直接启动九个 Agent attempt：
+
+```bash
+bun run pi:timing-pilot -- --dry-run --root .
+bun run pi:timing-pilot -- --root . --artifacts scratch/async-report-timing-pilot-v1/preflight
+```
+
+`--dry-run` 只校验固定 plan、candidate snapshot、environment、prompt hash、九个循环拉丁方 slot 和 workspace isolation；普通 preflight 还会执行目标 model short probe、Judge provider 配置检查和 #200 真实 calibration。只有 Pi/model probe、dry-run 与 Judge calibration 全部通过，输出中的 `allowed_to_start` 才会为 `true`。任何 gate 失败都不会启动长时间 Agent pilot，也不会写入 `results/records/`。
+
+Preflight summary 只记录 model/Pi/environment/budget、plan hash、Judge calibration 状态、成本预估和脱敏失败原因；credential、Practice body、Pack private path、evaluator oracle 和 Judge calibration label 不会进入 summary。

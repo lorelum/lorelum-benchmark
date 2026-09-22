@@ -28,6 +28,7 @@ assertEqual(packageJson.devDependencies?.["@earendil-works/pi-coding-agent"], ex
 for (const relativePath of [
   "environments/formal-pi-deepseek-v4-pro/v2/environment.yaml",
   "environments/local-pi/v3/environment.yaml",
+  "environments/local-pi/v4/environment.yaml",
   "environments/local-wsl-pi/v3/environment.yaml"
 ]) {
   const environment = Bun.YAML.parse(await Bun.file(join(root, relativePath)).text()) as Record<string, unknown>;
