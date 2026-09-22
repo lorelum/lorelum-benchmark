@@ -26,7 +26,7 @@ prompts:
   task_sha256: 3c6680a7b494c61034b547cb8846ff715e7c9c9f4e513726ecabed852e02d570
   followup_sha256: cfedffac9345e1bc9b951737f1e817c07714265cd41584bb6f506fc81714ba66
   system_prompt_path: prompts/async-report-timing-pilot/v1/system.md
-  system_prompt_sha256: abb6f18b08d54d7949369f75555149bdc50c04f24d38a81dec9286696d6b0613
+  system_prompt_sha256: 911fb76b383b3be34fe53f073b42b10fe19305c115ffa3c21d10fcde3166c897
   checkpoint_marker: "CHECKPOINT: compatibility-slice-ready"
   checkpoint_resume_message: Continue the task after the compatibility checkpoint.
 execution:
@@ -70,4 +70,4 @@ schedule:
     - { attempt_id: block-3-position-2-task-start, block: 3, position: 2, repetition: 3, condition_id: task_start, delivery_node: task_start }
     - { attempt_id: block-3-position-3-constraint-followup, block: 3, position: 3, repetition: 3, condition_id: constraint_followup, delivery_node: constraint_followup }
 claim_boundary: "diagnostic-only; no formal record, suite revision, or general/product conclusion"
-plan_hash: ca2ceb9cfff87032447024627555ac0fe32e4b25c22629dbb9aa0dc801fc98ba
+plan_hash: 13b54231c1eccdbd61e31650183f9a202a4e2dee36efa0a1136e02bcaf1f1d51

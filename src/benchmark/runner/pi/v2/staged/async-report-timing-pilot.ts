@@ -331,11 +331,24 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
   let calibrationStatus: TimingPilotPreflightSummary["judge"]["calibration_status"] = "not-run";
   let calibrationCalls = 0;
   let judgeRealOptIn = false;
-  const environmentGate = await (async () => { try { await readEnvironment(root, plan); return gate("environment", "passed"); } catch (error) { return gate("environment", "failed", error instanceof Error ? error.message : String(error)); } })();
+  const environmentGate = await (async () => {
+    try {
+      await readEnvironment(root, plan);
+      return gate("environment", "passed");
+    } catch (error) {
+      return gate("environment", "failed", error instanceof Error ? error.message : String(error));
+    }
+  })();
   gates.push(environmentGate);
-  const dryRunGate = await (async () => { try { await dryRunTimingPilot({ root, plan }); return gate("plan-dry-run", "passed"); } catch (error) { return gate("plan-dry-run", "failed", error instanceof Error ? error.message : String(error)); } })();
-  gates.push(dryRunGate);
-  if (options.run_model_probe !== false && environmentGate.status === "passed" && dryRunGate.status === "passed") {
+
+  // The short Pi/model probe is deliberately before the scratch dry-run. It is
+  // the cheap reachability check that prevents a later long attempt from being
+  // started against a drifted or unavailable Agent route.
+  if (options.run_model_probe === false) {
+    gates.push(gate("pi-model-probe", "not-run", "model probe disabled by caller"));
+  } else if (environmentGate.status !== "passed") {
+    gates.push(gate("pi-model-probe", "blocked", "environment manifest validation failed"));
+  } else {
     try {
       const probe = options.model_probe ?? (async ({ root: probeRoot, model }) => {
         const command = await piCommand(probeRoot);
@@ -350,13 +363,27 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
       const result = await probe({ root, model: plan.execution.model.id });
       if (result.version !== plan.execution.agent.version) throw new Error(`Pi probe version ${result.version} does not match plan ${plan.execution.agent.version}`);
       gates.push(gate("pi-model-probe", "passed"));
-    } catch (error) { gates.push(gate("pi-model-probe", "failed", error instanceof Error ? error.message : String(error))); }
-  } else if (options.run_model_probe === false) gates.push(gate("pi-model-probe", "not-run", "model probe disabled by caller"));
-  else gates.push(gate("pi-model-probe", "blocked", "environment or plan dry-run failed"));
+    } catch (error) {
+      gates.push(gate("pi-model-probe", "failed", error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  // This remains scratch-only: it validates identity, hashes and isolation and
+  // never invokes an Agent adapter or writes a formal run record.
+  const dryRunGate = await (async () => {
+    try {
+      await dryRunTimingPilot({ root, plan });
+      return gate("plan-dry-run", "passed");
+    } catch (error) {
+      return gate("plan-dry-run", "failed", error instanceof Error ? error.message : String(error));
+    }
+  })();
+  gates.push(dryRunGate);
+
   const judgeEnv = asyncReportJudgeEnv(envText(options.env ?? {}));
   judgeRealOptIn = judgeEnv.real && Boolean(judgeEnv.baseUrl && judgeEnv.apiKey && judgeEnv.model === plan.judge.model);
   if (!judgeRealOptIn) gates.push(gate("judge-provider", "failed", "Judge real opt-in, endpoint, key, or model is unavailable")); else gates.push(gate("judge-provider", "passed"));
-  if (options.run_judge_calibration !== false && judgeRealOptIn && gates.every((entry) => entry.status === "passed" || entry.id === "judge-provider")) {
+  if (options.run_judge_calibration !== false && judgeRealOptIn && gates.every((entry) => entry.status === "passed")) {
     try {
       const report = await (options.judge_calibration ?? runRealCalibration)(envText(options.env ?? {}));
       calibrationStatus = report.status;
@@ -364,9 +391,17 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
       gates.push(gate("judge-calibration", report.status === "qualified" ? "passed" : "failed", report.reason));
     } catch (error) { calibrationStatus = "unavailable"; gates.push(gate("judge-calibration", "failed", error instanceof Error ? error.message : String(error))); }
   } else gates.push(gate("judge-calibration", "blocked", "Judge provider preflight or earlier gate failed"));
-  const failedGate = gates.find((entry) => entry.status === "failed" || entry.status === "blocked");
+  const failedGate = gates.find((entry) => entry.status !== "passed");
+  const invalidPlan = environmentGate.status === "passed" && dryRunGate.status === "failed";
   const base = summaryBase(plan, calibrationStatus, calibrationCalls);
-  return { ...base, judge: { ...base.judge, real_opt_in: judgeRealOptIn }, status: failedGate ? "preflight-blocked" : "ready", allowed_to_start: !failedGate, gates, ...(failedGate?.reason ? { failure_reason: `${failedGate.id}: ${failedGate.reason}` } : {}) };
+  return {
+    ...base,
+    judge: { ...base.judge, real_opt_in: judgeRealOptIn },
+    status: failedGate ? (invalidPlan ? "invalid-plan" : "preflight-blocked") : "ready",
+    allowed_to_start: !failedGate,
+    gates,
+    ...(failedGate?.reason ? { failure_reason: `${failedGate.id}: ${failedGate.reason}` } : {}),
+  };
 }
 
 export async function writeTimingPilotDryRunSummary(result: TimingPilotDryRun, directory: string): Promise<{ json_path: string; markdown_path: string }> {
@@ -376,6 +411,16 @@ export async function writeTimingPilotDryRunSummary(result: TimingPilotDryRun, d
   await writeFile(jsonPath, `${JSON.stringify(result, null, 2)}\n`);
   const lines = ["# Async-report timing pilot dry-run", "", `- plan_hash: ${result.plan_hash}`, `- slot_count: ${result.slot_count}`, `- candidate_ready: ${result.candidate_ready}`, `- environment_ready: ${result.environment_ready}`, `- prompt_ready: ${result.prompt_ready}`, `- isolation_ready: ${result.isolation_ready}`, "", "## Slots", ...result.slots.map((slot) => `- ${slot.attempt_id}: ${slot.condition_id} (block ${slot.block}, position ${slot.position})`)];
   await writeFile(markdownPath, `${lines.join("\n")}\n`);
+  return { json_path: jsonPath, markdown_path: markdownPath };
+}
+
+async function writeTimingPilotDryRunFailureSummary(reason: string, directory: string): Promise<{ json_path: string; markdown_path: string }> {
+  await mkdir(directory, { recursive: true });
+  const jsonPath = join(directory, "dry-run-failure.json");
+  const markdownPath = join(directory, "dry-run-failure.md");
+  const failure = { status: "invalid-plan" as const, allowed_to_start: false, reason };
+  await writeFile(jsonPath, `${JSON.stringify(failure, null, 2)}\n`);
+  await writeFile(markdownPath, `# Async-report timing pilot dry-run\n\n- status: ${failure.status}\n- allowed_to_start: ${failure.allowed_to_start}\n- reason: ${reason}\n`);
   return { json_path: jsonPath, markdown_path: markdownPath };
 }
 
@@ -396,15 +441,22 @@ if (import.meta.main) {
   const root = resolve(argValue(args, "--root") ?? workspaceRoot);
   const mode = args.includes("--dry-run") ? "dry-run" : "preflight";
   const planPath = argValue(args, "--plan") ?? timingPilotPlanPath;
-  const artifactDirectory = resolve(argValue(args, "--artifacts") ?? join("scratch", "async-report-timing-pilot-v1", "preflight"));
+  const artifactDirectory = resolve(root, argValue(args, "--artifacts") ?? join("scratch", "async-report-timing-pilot-v1", "preflight"));
   try {
-    const plan = await readTimingPilotPlan(resolve(root, planPath));
     if (mode === "dry-run") {
-      const result = await dryRunTimingPilot({ root, plan });
-      const paths = await writeTimingPilotDryRunSummary(result, artifactDirectory);
-      console.log(JSON.stringify({ ...result, artifacts: paths }, null, 2));
+      try {
+        const plan = await readTimingPilotPlan(resolve(root, planPath));
+        const result = await dryRunTimingPilot({ root, plan });
+        const paths = await writeTimingPilotDryRunSummary(result, artifactDirectory);
+        console.log(JSON.stringify({ ...result, artifacts: paths }, null, 2));
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        const paths = await writeTimingPilotDryRunFailureSummary(reason, artifactDirectory);
+        console.error(JSON.stringify({ status: "invalid-plan", allowed_to_start: false, reason, artifacts: paths }, null, 2));
+        process.exitCode = 1;
+      }
     } else {
-      const summary = await runTimingPilotPreflight({ root, plan });
+      const summary = await runTimingPilotPreflight({ root, plan_path: planPath });
       const paths = await writeTimingPilotPreflightSummary(summary, artifactDirectory);
       console.log(JSON.stringify({ ...summary, artifacts: paths }, null, 2));
       if (!summary.allowed_to_start) process.exitCode = 1;

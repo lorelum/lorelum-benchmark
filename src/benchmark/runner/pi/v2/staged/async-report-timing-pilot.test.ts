@@ -73,6 +73,30 @@ test("model probe version drift blocks the pilot before Judge calibration", asyn
 });
 
 
+test("model probe runs before a dry-run drift becomes invalid-plan", async () => {
+  const value = await plan();
+  let probeCalled = false;
+  let calibrationCalled = false;
+  const drifted = {
+    ...value,
+    prompts: { ...value.prompts, system_prompt_sha256: "0".repeat(64) },
+  } as TimingPilotPlan;
+  const summary = await runTimingPilotPreflight({
+    root: workspaceRoot,
+    plan: drifted,
+    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek-v4-flash" },
+    model_probe: async () => { probeCalled = true; return { version: "0.85.1" }; },
+    judge_calibration: async () => { calibrationCalled = true; return qualifiedCalibration(); },
+  });
+  expect(probeCalled).toBe(true);
+  expect(calibrationCalled).toBe(false);
+  expect(summary.status).toBe("invalid-plan");
+  expect(summary.allowed_to_start).toBe(false);
+  expect(summary.gates.map((entry) => entry.id)).toEqual(["environment", "pi-model-probe", "plan-dry-run", "judge-provider", "judge-calibration"]);
+  expect(summary.gates.find((entry) => entry.id === "pi-model-probe")?.status).toBe("passed");
+  expect(summary.gates.find((entry) => entry.id === "plan-dry-run")?.status).toBe("failed");
+});
+
 test("dry-run validates candidate, environment, prompt and isolation without model calls", async () => {
   const value = await plan();
   const result = await dryRunTimingPilot({ root: workspaceRoot, plan: value });
