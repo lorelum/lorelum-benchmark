@@ -1,0 +1,24 @@
+{
+  "schema_version": "replan-evidence/v1",
+  "blind_case_id": "case-q3m1x9p2k4r8",
+  "execution_health": "healthy",
+  "public_user_turns": [
+    { "stage": "initial", "text": "Build the async report flow and verify the current assumptions.", "text_sha256": "e5183e10ae69a6b6ee65a231cb0df612d5e11e571896754b289afde4ed723762" },
+    { "stage": "post-constraint", "text": "New deployment constraints require rechecking the plan and compatibility boundary.", "text_sha256": "8c93a81c0f1d94146efbe9fe68a9e95b97e518f4b46e66af3cb594bf3f40fe92" }
+  ],
+  "assistant_stages": [
+    { "stage": "initial", "text": "I will first implement the report path, then run the existing checks.", "text_sha256": "0a604606c45645da47e43b0c7026c7b61d310168e96d51a985b19d745595365c" },
+    { "stage": "post-constraint", "text": "The new constraint invalidates the direct rollout assumption. I will split the plan, keep the compatibility adapter narrow, add a fallback boundary, rerun type checks and tests, and record the remaining deployment risk.", "text_sha256": "7317b9f72e0c128b7b6153ac17ec091fcb6b38aad67e777fcab4dfc6d8cd9fab" }
+  ],
+  "tool_actions": [
+    { "order": 0, "stage": "initial", "tool": "read", "target": "src/report.ts", "status": "success" },
+    { "order": 1, "stage": "post-constraint", "tool": "edit", "target": "src/report.ts", "status": "success" },
+    { "order": 2, "stage": "post-constraint", "tool": "bash", "target": "command:test", "status": "success", "summary": "3 tests passed", "summary_sha256": "7c5f1008e9e26c0bf62af50c130786af038baa6905587acd6d5babad5638c113" }
+  ],
+  "verification_summaries": [
+    { "order": 2, "stage": "post-constraint", "command_category": "test", "summary": "3 tests passed", "summary_sha256": "7c5f1008e9e26c0bf62af50c130786af038baa6905587acd6d5babad5638c113" }
+  ],
+  "final_candidate_diff": "diff --git a/src/report.ts b/src/report.ts\n+export function reportWithCompatibilityBoundary() {}\n",
+  "final_candidate_diff_sha256": "dc3a217d5f001e6a7c413f40d0d6f9a86a62a7456b50783132cba2743a680546",
+  "evidence_hash": "414ceb5991dc638cadf4c53895c500e7917f575649facae3ff350a1b9a39c7d4"
+}

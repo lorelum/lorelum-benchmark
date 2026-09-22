@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "replan-evidence-v1.schema.json",
+  "title": "Async-report replan evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "blind_case_id",
+    "execution_health",
+    "public_user_turns",
+    "assistant_stages",
+    "tool_actions",
+    "verification_summaries",
+    "final_candidate_diff",
+    "final_candidate_diff_sha256",
+    "evidence_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": "replan-evidence/v1" },
+    "blind_case_id": { "type": "string", "pattern": "^case-(?!(?:ref(?:erence)?|equiv(?:alent)?|anti(?:[-_.]?pattern)?|cal(?:ibration)?|condition|delivery|timing|oracle|baseline|retrieval|irrelevant|practice|pack|session|treatment))[a-z0-9]{12,64}$" },
+    "execution_health": { "enum": ["healthy", "unhealthy"] },
+    "public_user_turns": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "text", "text_sha256"],
+        "properties": {
+          "stage": { "enum": ["initial", "post-constraint"] },
+          "text": { "type": "string", "minLength": 1, "maxLength": 8000 },
+          "text_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "assistant_stages": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "text", "text_sha256"],
+        "properties": {
+          "stage": { "enum": ["initial", "post-constraint"] },
+          "text": { "type": "string", "minLength": 1, "maxLength": 8000 },
+          "text_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "tool_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["order", "stage", "tool", "target", "status"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 0 },
+          "stage": { "enum": ["initial", "post-constraint"] },
+          "tool": { "enum": ["read", "ls", "grep", "edit", "bash"] },
+          "target": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "status": { "enum": ["success", "failure"] },
+          "summary": { "type": "string", "maxLength": 2000 },
+          "summary_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "verification_summaries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["order", "stage", "command_category", "summary", "summary_sha256"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 0 },
+          "stage": { "enum": ["initial", "post-constraint"] },
+          "command_category": { "enum": ["test", "typecheck"] },
+          "summary": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "summary_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "final_candidate_diff": { "type": "string", "maxLength": 120000 },
+    "final_candidate_diff_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "evidence_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

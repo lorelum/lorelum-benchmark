@@ -1,0 +1,18 @@
+{
+  "schema_version": "async-report-replan-judge-calibration/v1",
+  "id": "async-report-replan-judge-calibration",
+  "version": "v1",
+  "fixtures": [
+    { "id": "reference", "case_id": "case-q3m1x9p2k4r8", "file": "case-q3m1x9p2k4r8.json" },
+    { "id": "equivalent", "case_id": "case-m4n8v2c6z1p7", "file": "case-m4n8v2c6z1p7.json" },
+    { "id": "anti-pattern", "case_id": "case-v8p5r2d9k6s1", "file": "case-v8p5r2d9k6s1.json" }
+  ],
+  "repetitions": 3,
+  "max_calls": 9,
+  "thresholds": {
+    "reference_min": 75,
+    "equivalent_max_difference": 10,
+    "anti_pattern_max": 60,
+    "reference_min_difference": 15
+  }
+}

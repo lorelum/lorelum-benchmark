@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
+import { rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { sha256Text } from "../fs";
 import { assertJudgeResultV1 } from "../outcome/v1/contract";
-import { buildJudgeInput, isAllowedPublicPath, looksPrivate, redactedReason } from "./input";
+import { buildJudgeInput, isAllowedPublicPath, looksPrivate, redactedReason, workspaceRoot } from "./input";
 import { mockJudgeProvider, mockContext } from "./mock";
 import { classifyProviderResult, notRun, unavailable } from "./classify";
 
@@ -30,10 +32,20 @@ test("known private markers in string fields are rejected", async () => {
     "condition_id: oracle-practice",
     "practice payload: layered design",
     "private/calibration/fixtures.yaml",
-    "oracle/oracle.yaml"
+    "oracle/oracle.yaml",
+    "private\\evaluator\\evaluate.ts",
+    "delivery_node: after-user",
+    "{\"delivery_node\":\"after-user\"}",
+    "practice_id=hidden-condition",
+    "practice_id: hidden-condition",
+    "pack_ref: hidden-pack",
+    "session_id: private-session"
   ]) {
     await expect(buildJudgeInput({ task_md: publicTask, candidate_diff: bad, rubric })).rejects.toThrow("judge input rejected");
     await expect(buildJudgeInput({ task_md: bad, candidate_diff: candidateDiff, rubric })).rejects.toThrow("judge input rejected");
+  }
+  for (const bad of ["See /var/private/evaluator/output.json", "Read C:\\workspace\\private\\oracle.yaml", "Read \\\\server\\share\\private\\secret.txt"]) {
+    await expect(buildJudgeInput({ task_md: publicTask, candidate_diff: bad, rubric })).rejects.toThrow("judge input rejected");
   }
 });
 
@@ -73,8 +85,46 @@ test("material must resolve inside a public root and exist", async () => {
 
 test("isAllowedPublicPath enforces the workspace boundary", () => {
   expect(isAllowedPublicPath("src/benchmark/kernel/fixtures/neutral/public/starter/src/index.ts").allowed).toBe(true);
+  expect(isAllowedPublicPath("suites/react-skill-comparison/tasks/workspace-overview-loader/v1/public/task.md").allowed).toBe(true);
+  expect(isAllowedPublicPath("incubator/practice-injection/async-report-lifecycle-v1/public/task.md").allowed).toBe(true);
+  expect(isAllowedPublicPath("incubator/skill-trigger-orchestration/async-cleanup-v1/public/task.md").allowed).toBe(true);
+  expect(isAllowedPublicPath("suites/react-skill-comparison/tasks/workspace-overview-loader/v1/private/public/task.md").allowed).toBe(false);
+  expect(isAllowedPublicPath(join(workspaceRoot, "suites/react-skill-comparison/tasks/workspace-overview-loader/v1/public/task.md")).allowed).toBe(false);
+  expect(isAllowedPublicPath("suites/react-skill-comparison/private/public/task.md").allowed).toBe(false);
   expect(isAllowedPublicPath("private/evaluator").allowed).toBe(false);
   expect(isAllowedPublicPath("../../etc/passwd").allowed).toBe(false);
+});
+
+test("incubator public material is accepted only through its explicit public root", async () => {
+  const input = await buildJudgeInput({
+    task_md: publicTask,
+    candidate_diff: candidateDiff,
+    rubric,
+    material: [{ path: "incubator/practice-injection/async-report-lifecycle-v1/public/task.md", kind: "public/task.md" }]
+  });
+  expect(input.material[0].content).toContain("异步报表");
+  await expect(buildJudgeInput({
+    task_md: publicTask,
+    candidate_diff: candidateDiff,
+    rubric,
+    material: [{ path: "incubator/practice-injection/async-report-lifecycle-v1/private/public/task.md", kind: "declared-public" }]
+  })).rejects.toThrow("judge input rejected");
+});
+
+test("public material content is checked for private and absolute-path leakage", async () => {
+  const relativePath = `src/benchmark/kernel/fixtures/neutral/public/.judge-input-${crypto.randomUUID()}.txt`;
+  const absolutePath = join(process.cwd(), relativePath);
+  await writeFile(absolutePath, "generated from /var/private/oracle/output.json\n", "utf8");
+  try {
+    await expect(buildJudgeInput({
+      task_md: publicTask,
+      candidate_diff: candidateDiff,
+      rubric,
+      material: [{ path: relativePath, kind: "declared-public" }]
+    })).rejects.toThrow("judge input rejected");
+  } finally {
+    await rm(absolutePath, { force: true });
+  }
 });
 
 test("redaction hides the matched token while keeping the reason readable", () => {
@@ -82,6 +132,9 @@ test("redaction hides the matched token while keeping the reason readable", () =
   expect(reason).toContain("[redacted]");
   expect(reason).not.toContain("private/evaluator");
   expect(reason).toContain("material outside allowlist");
+  const absoluteReason = redactedReason("failed at C:\\workspace\\private\\oracle.yaml and /var/private/oracle.yaml");
+  expect(absoluteReason).not.toContain("C:\\workspace\\private\\oracle.yaml");
+  expect(absoluteReason).not.toContain("/var/private/oracle.yaml");
 });
 
 test("mock provider returns a provenance-complete, schema-conforming result", async () => {

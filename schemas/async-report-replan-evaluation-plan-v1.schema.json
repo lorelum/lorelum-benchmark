@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "async-report-replan-evaluation-plan-v1.schema.json",
+  "title": "Async-report replan Judge evaluation plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "version", "method", "target", "evidence_schema", "rubric", "calibration", "blind_case_policy", "budget", "claim_boundary"],
+  "properties": {
+    "schema_version": { "const": "async-report-replan-evaluation-plan/v1" },
+    "id": { "const": "async-report-replan-judge" },
+    "version": { "const": "v1" },
+    "method": { "const": "llm-subjective" },
+    "target": { "const": "post-constraint replan quality" },
+    "evidence_schema": { "const": "replan-evidence/v1" },
+    "rubric": { "const": "async-report-replan-rubric/v1" },
+    "calibration": { "const": "async-report-replan-judge-calibration/v1" },
+    "blind_case_policy": { "const": "opaque blind_case_id; condition and timing remain outside #200" },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scoring_calls_per_attempt", "scoring_retries", "calibration_max_calls", "calibration_repetitions"],
+      "properties": {
+        "scoring_calls_per_attempt": { "const": 1 },
+        "scoring_retries": { "const": 0 },
+        "calibration_max_calls": { "const": 9 },
+        "calibration_repetitions": { "const": 3 }
+      }
+    },
+    "claim_boundary": { "const": "diagnostic until calibration qualifies; no semantic, hard-gate, or timing conclusion" }
+  }
+}

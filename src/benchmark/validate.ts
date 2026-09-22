@@ -16,6 +16,15 @@ ajv.addFormat("date-time", {
 });
 const schemaValidators = new Map<string, ValidateFunction>();
 
+// Task-specific Judge contracts are not workspace manifests, but they still
+// need to compile under the same schema gate so a malformed v1 contract cannot
+// be merged unnoticed.
+const requiredJudgeSchemas = [
+  "replan-evidence-v1.schema.json",
+  "async-report-replan-evaluation-plan-v1.schema.json",
+  "async-report-replan-judge-accounting-v1.schema.json",
+];
+
 type DiscoveredTask = {
   document: Record<string, unknown>;
   manifestPath: string;
@@ -421,6 +430,8 @@ for (const file of await listFiles(experimentsPath)) {
 }
 
 await validateRunRecords();
+
+for (const schema of requiredJudgeSchemas) await schemaValidator(schema);
 
 await validateVersionedManifests(joinPath(workspaceRoot, "treatments"), "treatment.yaml", "treatment.schema.json", "Treatment");
 await validateVersionedManifests(joinPath(workspaceRoot, "environments"), "environment.yaml", "environment.schema.json", "Environment");

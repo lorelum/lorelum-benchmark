@@ -1,0 +1,23 @@
+{
+  "schema_version": "replan-evidence/v1",
+  "blind_case_id": "case-v8p5r2d9k6s1",
+  "execution_health": "healthy",
+  "public_user_turns": [
+    { "stage": "initial", "text": "Build the async report flow.", "text_sha256": "d55b2c033c7224e513189049507fbceb48a30f8ea8338a91d7869a79aecb9627" },
+    { "stage": "post-constraint", "text": "There is a new deployment constraint.", "text_sha256": "a06d8e9f1f5ddddb9613a797c1e1fe005b9c212722ba1abb05e0c5db308ef8ca" }
+  ],
+  "assistant_stages": [
+    { "stage": "initial", "text": "I will implement the report flow and run the existing checks.", "text_sha256": "e079a73ccaf4319d330c40a19c5a10e208199e8a82462a53579a584f621ba796" },
+    { "stage": "post-constraint", "text": "Acknowledged. I will continue with the same plan and run the existing checks.", "text_sha256": "eb992efc7b120f6dbb7659451571c92e6f8350eb52730b19556863d50c631bba" }
+  ],
+  "tool_actions": [
+    { "order": 0, "stage": "initial", "tool": "read", "target": "src/report.ts", "status": "success" },
+    { "order": 1, "stage": "post-constraint", "tool": "bash", "target": "command:test", "status": "success", "summary": "existing tests passed", "summary_sha256": "bae8601fb02649049158f3feee5daba77c8c09cd2091155d489fcec3127d7591" }
+  ],
+  "verification_summaries": [
+    { "order": 1, "stage": "post-constraint", "command_category": "test", "summary": "existing tests passed", "summary_sha256": "bae8601fb02649049158f3feee5daba77c8c09cd2091155d489fcec3127d7591" }
+  ],
+  "final_candidate_diff": "diff --git a/src/report.ts b/src/report.ts\n export function report() {}\n",
+  "final_candidate_diff_sha256": "a5f06578b28874063eeb0132d7fe78ba070d2be0a5eb25d430850dd03da96b41",
+  "evidence_hash": "f7c514eba49fe7b879c90ce84a777243328c3766335070e2baad14ef4342f0e5"
+}
