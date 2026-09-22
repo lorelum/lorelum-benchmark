@@ -24,7 +24,7 @@
 
 ### 1. Immutable pre-registration
 
-新增 `async-report-timing-pilot/v1` plan contract（计划文件放在 `incubator/practice-injection-plans/`），内容包括 experiment id/version、candidate identity、task hashes、treatment/provenance hashes、node schedule、repetitions=3、agent/Judge/evaluator identities、environment/budget、workspace policy、failure taxonomy 和 claim boundary。计划 hash 作为所有 attempt、trace、hard result、Judge accounting 和 cost ledger 的 join key。
+新增 `async-report-timing-pilot/v1` plan contract（计划文件放在 `incubator/practice-injection-plans/`），内容包括 experiment id/version、candidate identity、task hashes、treatment/provenance hashes、node schedule、repetitions=3、agent/Judge/evaluator identities、environment/budget、workspace policy、failure taxonomy 和 claim boundary。计划 hash 作为所有 attempt、trace、hard result、Judge accounting 和 cost ledger 的 join key。计划同时固定 #202 evaluator snapshot、#200 evaluation-plan/rubric/evidence/accounting identity；preflight 会在任何长时间 Agent attempt 前重新读取这些 host-side identity 并比较 hash。
 
 计划采用预先声明的 cyclic Latin-square schedule：每个 block 含三个 node，每个 node 在三个 block 中各出现一次，避免把 delivery node 与固定运行位置完全重合。计划生成后不按中途结果重排；失败不补跑替换，不修改分母。
 

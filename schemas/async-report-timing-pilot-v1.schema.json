@@ -4,12 +4,17 @@
   "title": "Async report timing pilot plan v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "id", "version", "lifecycle_stage", "candidate", "treatment", "prompts", "execution", "judge", "schedule", "claim_boundary", "plan_hash"],
+  "required": ["schema_version", "id", "version", "lifecycle_stage", "candidate", "evaluator", "treatment", "prompts", "execution", "judge", "schedule", "claim_boundary", "plan_hash"],
   "properties": {
     "schema_version": { "const": "async-report-timing-pilot/v1" },
     "id": { "const": "async-report-timing-pilot" },
     "version": { "const": "v1" },
     "lifecycle_stage": { "enum": ["pilot", "retired"] },
+    "evaluator": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "version", "snapshot_id"],
+      "properties": { "id": { "const": "async-report-deterministic-evaluator" }, "version": { "const": "v1" }, "snapshot_id": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+    },
     "candidate": {
       "type": "object", "additionalProperties": false,
       "required": ["path", "source_commit", "snapshot_id"],
@@ -63,9 +68,9 @@
     },
     "judge": {
       "type": "object", "additionalProperties": false,
-      "required": ["provider_id", "provider_version", "model", "real_opt_in_env", "calibration", "scoring"],
+      "required": ["provider_id", "provider_version", "model", "evaluation_plan_hash", "rubric_hash", "evidence_schema", "accounting_schema", "real_opt_in_env", "calibration", "scoring"],
       "properties": {
-        "provider_id": { "const": "judge-agent/async-report-replan/v1" }, "provider_version": { "const": "v1" }, "model": { "const": "deepseek-v4-flash" }, "real_opt_in_env": { "const": "LORELUM_JUDGE_REAL=1" }, "calibration": { "type": "object", "additionalProperties": false, "required": ["max_calls", "repetitions"], "properties": { "max_calls": { "const": 9 }, "repetitions": { "const": 3 } } }, "scoring": { "type": "object", "additionalProperties": false, "required": ["calls_per_attempt", "retries"], "properties": { "calls_per_attempt": { "const": 1 }, "retries": { "const": 0 } } }
+        "provider_id": { "const": "judge-agent/async-report-replan/v1" }, "provider_version": { "const": "v1" }, "model": { "const": "deepseek-v4-flash" }, "evaluation_plan_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "rubric_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "evidence_schema": { "const": "replan-evidence/v1" }, "accounting_schema": { "const": "async-report-replan-judge-accounting/v1" }, "real_opt_in_env": { "const": "LORELUM_JUDGE_REAL=1" }, "calibration": { "type": "object", "additionalProperties": false, "required": ["max_calls", "repetitions"], "properties": { "max_calls": { "const": 9 }, "repetitions": { "const": 3 } } }, "scoring": { "type": "object", "additionalProperties": false, "required": ["calls_per_attempt", "retries"], "properties": { "calls_per_attempt": { "const": 1 }, "retries": { "const": 0 } } }
       }
     },
     "schedule": {

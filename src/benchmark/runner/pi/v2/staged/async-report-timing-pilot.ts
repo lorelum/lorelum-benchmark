@@ -2,6 +2,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { sha256File, sha256Text, workspaceRoot } from "../../../../fs";
 import { asyncReportJudgeEnv } from "../../../../judge/async-report-replan/v1/llm";
+import { evaluationPlanHash } from "../../../../judge/async-report-replan/v1/plan";
+import { redactSensitiveText } from "../../../../judge/async-report-replan/v1/canonical";
+import { rubricHash } from "../../../../judge/async-report-replan/v1/rubric";
+import { accountingSchemaVersion, replanEvidenceSchemaVersion } from "../../../../judge/async-report-replan/v1/types";
 import { runRealCalibration } from "../../../../judge/async-report-replan/v1/calibrate";
 import type { CalibrationReport } from "../../../../judge/async-report-replan/v1/types";
 import { configureLocalPiModelCatalog, localPiApiKey, localPiModelArgument, localPiShellPath } from "../local-pi-model-catalog";
@@ -12,6 +16,11 @@ export const timingPilotSchemaVersion = "async-report-timing-pilot/v1" as const;
 export const timingPilotPreflightSchemaVersion = "async-report-timing-pilot-preflight/v1" as const;
 export const timingPilotPlanPath = "incubator/practice-injection-plans/async-report-timing-pilot-v1.yaml" as const;
 export const timingPilotEnvironmentPath = "environments/local-pi/v4/environment.yaml" as const;
+export const timingPilotEvaluatorManifestPath = "incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/evaluator.yaml" as const;
+export const timingPilotEvaluatorSnapshotPath = "incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/snapshot.json" as const;
+export const timingPilotEvaluatorId = "async-report-deterministic-evaluator" as const;
+export const timingPilotEvaluatorVersion = "v1" as const;
+export const timingPilotEvaluatorSnapshotId = "7d68a9e9fc32a2fc96407ad1b4f6d416f6138cddc73587614be6b6d5e8db8be1" as const;
 export const timingPilotSystemPromptPath = "prompts/async-report-timing-pilot/v1/system.md" as const;
 export const timingPilotModel = "deepseek/deepseek-v4-flash" as const;
 export const timingPilotModelVersion = "operator-local-experiment" as const;
@@ -20,6 +29,8 @@ export const timingPilotMaxTurns = 128 as const;
 export const timingPilotMaxDurationMs = 1_500_000 as const;
 export const timingPilotJudgeProvider = "judge-agent/async-report-replan/v1" as const;
 export const timingPilotJudgeModel = "deepseek-v4-flash" as const;
+export const timingPilotJudgeEvaluationPlanHash = "3b6ffa1acec2e2d42551032cd6629509260cc026c5a2211798bc3229508da388" as const;
+export const timingPilotJudgeRubricHash = "2ff71b4208479e5bd3f246c9450264f52ec01f59de2944916d8e540bd03afe98" as const;
 
 export const timingPilotNodes = ["task_start", "constraint_followup", "first_implementation_checkpoint"] as const;
 export type TimingPilotNode = (typeof timingPilotNodes)[number];
@@ -41,6 +52,7 @@ export type TimingPilotPlan = Readonly<{
   version: "v1";
   lifecycle_stage: "pilot" | "retired";
   candidate: Readonly<{ path: string; source_commit: string; snapshot_id: string }>;
+  evaluator: Readonly<{ id: typeof timingPilotEvaluatorId; version: typeof timingPilotEvaluatorVersion; snapshot_id: typeof timingPilotEvaluatorSnapshotId }>;
   treatment: Readonly<{
     root: string;
     id: "agentic-coding-replan-on-material-drift";
@@ -61,6 +73,10 @@ export type TimingPilotPlan = Readonly<{
     provider_id: typeof timingPilotJudgeProvider;
     provider_version: "v1";
     model: typeof timingPilotJudgeModel;
+    evaluation_plan_hash: typeof timingPilotJudgeEvaluationPlanHash;
+    rubric_hash: typeof timingPilotJudgeRubricHash;
+    evidence_schema: typeof replanEvidenceSchemaVersion;
+    accounting_schema: typeof accountingSchemaVersion;
     real_opt_in_env: "LORELUM_JUDGE_REAL=1";
     calibration: Readonly<{ max_calls: 9; repetitions: 3 }>;
     scoring: Readonly<{ calls_per_attempt: 1; retries: 0 }>;
@@ -86,6 +102,7 @@ export type TimingPilotPreflightSummary = Readonly<{
   allowed_to_start: boolean;
   plan_hash: string;
   model: Readonly<{ id: string; version: string }>;
+  evaluator: Readonly<{ id: string; version: string; snapshot_id: string }>;
   agent: Readonly<{ id: string; version: string }>;
   environment: Readonly<{ id: string; version: string }>;
   budget: Readonly<{ max_turns: number; max_duration_ms: number }>;
@@ -123,7 +140,7 @@ const scheduleOrder: readonly TimingPilotNode[][] = [
   ["constraint_followup", "first_implementation_checkpoint", "task_start"],
   ["first_implementation_checkpoint", "task_start", "constraint_followup"],
 ];
-const expectedPlanKeys = ["schema_version", "id", "version", "lifecycle_stage", "candidate", "treatment", "prompts", "execution", "judge", "schedule", "claim_boundary", "plan_hash"] as const;
+const expectedPlanKeys = ["schema_version", "id", "version", "lifecycle_stage", "candidate", "evaluator", "treatment", "prompts", "execution", "judge", "schedule", "claim_boundary", "plan_hash"] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -212,6 +229,10 @@ export async function parseTimingPilotPlan(value: unknown): Promise<TimingPilotP
   exactKeys(candidate, ["path", "source_commit", "snapshot_id"], "candidate");
   if (candidate.path !== "incubator/practice-injection/async-report-lifecycle-v1") fail("candidate path is not the frozen #196 candidate");
   const parsedCandidate = { path: stringField(candidate, "path"), source_commit: commitField(candidate, "source_commit"), snapshot_id: hashField(candidate, "snapshot_id") };
+  const evaluator = value.evaluator;
+  exactKeys(evaluator, ["id", "version", "snapshot_id"], "evaluator");
+  if (evaluator.id !== timingPilotEvaluatorId || evaluator.version !== timingPilotEvaluatorVersion || evaluator.snapshot_id !== timingPilotEvaluatorSnapshotId) fail("evaluator identity is not the frozen #202 evaluator");
+  const parsedEvaluator = { id: timingPilotEvaluatorId, version: timingPilotEvaluatorVersion, snapshot_id: timingPilotEvaluatorSnapshotId };
   const treatment = value.treatment;
   exactKeys(treatment, ["root", "id", "version", "pack", "practice"], "treatment");
   if (!isRecord(treatment.pack) || !isRecord(treatment.practice)) fail("treatment pack/practice is invalid");
@@ -235,11 +256,11 @@ export async function parseTimingPilotPlan(value: unknown): Promise<TimingPilotP
   if (execution.agent.id !== "pi" || execution.agent.version !== "0.85.1" || execution.agent.command !== "pi" || execution.model.id !== timingPilotModel || execution.model.version !== timingPilotModelVersion || execution.environment.id !== "local-pi" || execution.environment.version !== "v4" || JSON.stringify(execution.tools) !== JSON.stringify(["read", "bash", "edit", "write", "grep", "find", "ls"]) || execution.tool_policy_hash !== timingPilotToolPolicyHash || execution.budget.max_turns !== timingPilotMaxTurns || execution.budget.max_duration_ms !== timingPilotMaxDurationMs) fail("execution identity or budget is not frozen");
   const parsedExecution = { agent: { id: "pi" as const, version: "0.85.1" as const, command: "pi" as const }, model: { id: timingPilotModel, version: timingPilotModelVersion }, environment: { id: "local-pi" as const, version: "v4" as const }, tools: ["read", "bash", "edit", "write", "grep", "find", "ls"] as const, tool_policy_hash: timingPilotToolPolicyHash, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } };
   const judge = value.judge;
-  exactKeys(judge, ["provider_id", "provider_version", "model", "real_opt_in_env", "calibration", "scoring"], "judge");
+  exactKeys(judge, ["provider_id", "provider_version", "model", "evaluation_plan_hash", "rubric_hash", "evidence_schema", "accounting_schema", "real_opt_in_env", "calibration", "scoring"], "judge");
   if (!isRecord(judge.calibration) || !isRecord(judge.scoring)) fail("judge budget sections are invalid");
   exactKeys(judge.calibration, ["max_calls", "repetitions"], "judge.calibration"); exactKeys(judge.scoring, ["calls_per_attempt", "retries"], "judge.scoring");
-  if (judge.provider_id !== timingPilotJudgeProvider || judge.provider_version !== "v1" || judge.model !== timingPilotJudgeModel || judge.real_opt_in_env !== "LORELUM_JUDGE_REAL=1" || judge.calibration.max_calls !== 9 || judge.calibration.repetitions !== 3 || judge.scoring.calls_per_attempt !== 1 || judge.scoring.retries !== 0) fail("judge identity or budget is not frozen");
-  const parsedJudge = { provider_id: timingPilotJudgeProvider, provider_version: "v1" as const, model: timingPilotJudgeModel, real_opt_in_env: "LORELUM_JUDGE_REAL=1" as const, calibration: { max_calls: 9 as const, repetitions: 3 as const }, scoring: { calls_per_attempt: 1 as const, retries: 0 as const } };
+  if (judge.provider_id !== timingPilotJudgeProvider || judge.provider_version !== "v1" || judge.model !== timingPilotJudgeModel || judge.evaluation_plan_hash !== timingPilotJudgeEvaluationPlanHash || judge.rubric_hash !== timingPilotJudgeRubricHash || judge.evidence_schema !== replanEvidenceSchemaVersion || judge.accounting_schema !== accountingSchemaVersion || judge.real_opt_in_env !== "LORELUM_JUDGE_REAL=1" || judge.calibration.max_calls !== 9 || judge.calibration.repetitions !== 3 || judge.scoring.calls_per_attempt !== 1 || judge.scoring.retries !== 0) fail("judge identity or budget is not frozen");
+  const parsedJudge = { provider_id: timingPilotJudgeProvider, provider_version: "v1" as const, model: timingPilotJudgeModel, evaluation_plan_hash: timingPilotJudgeEvaluationPlanHash, rubric_hash: timingPilotJudgeRubricHash, evidence_schema: replanEvidenceSchemaVersion, accounting_schema: accountingSchemaVersion, real_opt_in_env: "LORELUM_JUDGE_REAL=1" as const, calibration: { max_calls: 9 as const, repetitions: 3 as const }, scoring: { calls_per_attempt: 1 as const, retries: 0 as const } };
   const schedule = value.schedule;
   exactKeys(schedule, ["algorithm", "repetitions", "slots"], "schedule");
   if (schedule.algorithm !== "cyclic-latin-square/v1" || schedule.repetitions !== 3 || !Array.isArray(schedule.slots) || schedule.slots.length !== 9) fail("schedule identity or size is invalid");
@@ -247,7 +268,7 @@ export async function parseTimingPilotPlan(value: unknown): Promise<TimingPilotP
   const expectedSlots = buildTimingPilotSchedule();
   if (JSON.stringify(parsedSlots) !== JSON.stringify(expectedSlots)) fail("schedule does not match the frozen cyclic Latin square");
   if (value.claim_boundary !== "diagnostic-only; no formal record, suite revision, or general/product conclusion") fail("claim boundary is invalid");
-  const plan: TimingPilotPlan = { schema_version: timingPilotSchemaVersion, id: "async-report-timing-pilot", version: "v1", lifecycle_stage: value.lifecycle_stage, candidate: parsedCandidate, treatment: parsedTreatment, prompts: parsedPrompts, execution: parsedExecution, judge: parsedJudge, schedule: { algorithm: "cyclic-latin-square/v1", repetitions: 3, slots: parsedSlots }, claim_boundary: "diagnostic-only; no formal record, suite revision, or general/product conclusion", plan_hash: hashField(value, "plan_hash") };
+  const plan: TimingPilotPlan = { schema_version: timingPilotSchemaVersion, id: "async-report-timing-pilot", version: "v1", lifecycle_stage: value.lifecycle_stage, candidate: parsedCandidate, evaluator: parsedEvaluator, treatment: parsedTreatment, prompts: parsedPrompts, execution: parsedExecution, judge: parsedJudge, schedule: { algorithm: "cyclic-latin-square/v1", repetitions: 3, slots: parsedSlots }, claim_boundary: "diagnostic-only; no formal record, suite revision, or general/product conclusion", plan_hash: hashField(value, "plan_hash") };
   if (await hashTimingPilotPlan(plan) !== plan.plan_hash) fail("plan_hash does not match canonical plan content");
   return Object.freeze(plan);
 }
@@ -268,7 +289,7 @@ async function readEnvironment(root: string, plan: TimingPilotPlan): Promise<Rec
   const model = environment.model as Record<string, unknown> | undefined;
   if (!model || model.id !== plan.execution.model.id || model.version !== plan.execution.model.version) throw new Error("environment model does not match timing pilot plan");
   const runtime = environment.agent_runtime as Record<string, unknown> | undefined;
-  if (!runtime || runtime.id !== plan.execution.agent.id || runtime.version !== plan.execution.agent.version) throw new Error("environment Agent runtime does not match timing pilot plan");
+  if (!runtime || runtime.id !== plan.execution.agent.id || runtime.version !== plan.execution.agent.version || runtime.command !== plan.execution.agent.command) throw new Error("environment Agent runtime does not match timing pilot plan");
   const sandbox = environment.sandbox as Record<string, unknown> | undefined;
   if (!sandbox || sandbox.policy_hash !== plan.execution.tool_policy_hash) throw new Error("environment policy hash does not match timing pilot plan");
   const dependencies = environment.dependencies as Record<string, unknown> | undefined;
@@ -282,6 +303,29 @@ async function readEnvironment(root: string, plan: TimingPilotPlan): Promise<Rec
   const lockfilePath = resolve(root, dependencies.lockfile);
   if (await sha256File(lockfilePath) !== dependencies.lockfile_sha256) throw new Error("environment lockfile hash does not match");
   return environment;
+}
+
+function redactedReason(error: unknown): string {
+  return redactSensitiveText(error instanceof Error ? error.message : String(error)).slice(0, 240);
+}
+
+function assertActiveTimingPilot(plan: TimingPilotPlan): void {
+  if (plan.lifecycle_stage !== "pilot") throw new Error("timing pilot plan is retired and cannot run as the active pilot");
+}
+
+function commandIdentity(command: string): string {
+  return command.split(/[\\/]/).pop()?.replace(/\.(?:cmd|exe)$/i, "") ?? command;
+}
+
+async function validateEvaluatorAndJudge(root: string, plan: TimingPilotPlan): Promise<void> {
+  const evaluatorManifest = Bun.YAML.parse(await Bun.file(resolve(root, timingPilotEvaluatorManifestPath)).text()) as Record<string, unknown>;
+  const evaluatorCandidate = evaluatorManifest.candidate as Record<string, unknown> | undefined;
+  if (evaluatorManifest.schema_version !== "async-report-deterministic-evaluator/v1" || evaluatorManifest.evaluator_version !== plan.evaluator.version || evaluatorCandidate?.id !== plan.candidate.path.split("/").pop() || evaluatorCandidate.source_commit !== plan.candidate.source_commit || evaluatorCandidate.snapshot_id !== plan.candidate.snapshot_id) throw new Error("evaluator identity does not match timing pilot plan");
+  const evaluatorSnapshot = JSON.parse(await Bun.file(resolve(root, timingPilotEvaluatorSnapshotPath)).text()) as Record<string, unknown>;
+  if (evaluatorSnapshot.snapshot_id !== plan.evaluator.snapshot_id) throw new Error("evaluator snapshot does not match timing pilot plan");
+  if (plan.judge.evidence_schema !== replanEvidenceSchemaVersion || plan.judge.accounting_schema !== accountingSchemaVersion) throw new Error("Judge evidence contract does not match timing pilot plan");
+  if (await evaluationPlanHash() !== plan.judge.evaluation_plan_hash) throw new Error("Judge evaluation plan hash does not match timing pilot plan");
+  if (await rubricHash() !== plan.judge.rubric_hash) throw new Error("Judge rubric hash does not match timing pilot plan");
 }
 
 async function validatePromptAndCandidate(root: string, plan: TimingPilotPlan): Promise<void> {
@@ -298,7 +342,11 @@ async function validatePromptAndCandidate(root: string, plan: TimingPilotPlan): 
     execution: { model: plan.execution.model.id, model_version: plan.execution.model.version, system_prompt_hash: plan.prompts.system_prompt_sha256, tool_policy_hash: plan.execution.tool_policy_hash, environment: plan.execution.environment, budget: plan.execution.budget },
   };
   const deliveryPlan = { ...deliveryPlanWithoutHash, plan_hash: await sha256Text(JSON.stringify(sortKeys(deliveryPlanWithoutHash))) } as StagedPracticeDeliveryPlan;
-  await prepareStagedPracticeDelivery(deliveryPlan, root);
+  const prepared = await prepareStagedPracticeDelivery(deliveryPlan, root);
+  const provenance = prepared.prepared.provenance;
+  if (provenance.repository !== plan.treatment.pack.repository || provenance.ref !== plan.treatment.pack.ref || provenance.version !== plan.treatment.pack.version || provenance.commit !== plan.treatment.pack.commit || provenance.practice_id !== plan.treatment.practice.id || provenance.content_digest !== plan.treatment.practice.content_digest || provenance.source_sha256 !== plan.treatment.practice.source_sha256 || provenance.card_sha256 !== plan.treatment.practice.card_sha256) {
+    throw new Error("treatment provenance does not match timing pilot plan");
+  }
 }
 
 async function validateIsolation(root: string): Promise<void> {
@@ -312,12 +360,27 @@ function gate(id: string, status: TimingPilotGateStatus, reason?: string): Timin
 }
 
 function summaryBase(plan: TimingPilotPlan, calibrationStatus: TimingPilotPreflightSummary["judge"]["calibration_status"] = "not-run", calibrationCalls = 0): Omit<TimingPilotPreflightSummary, "status" | "allowed_to_start" | "gates"> {
-  return { schema_version: timingPilotPreflightSchemaVersion, plan_hash: plan.plan_hash, model: plan.execution.model, agent: { id: plan.execution.agent.id, version: plan.execution.agent.version }, environment: plan.execution.environment, budget: plan.execution.budget, cost_estimate: { agent_attempts: 9, judge_calibration_calls: 9, judge_scoring_calls: 9, agent_max_duration_ms: plan.execution.budget.max_duration_ms * 9, total_judge_calls: 18, cost_usd: "unavailable" }, judge: { provider_id: plan.judge.provider_id, model: plan.judge.model, real_opt_in: false, calibration_status: calibrationStatus, calibration_calls: calibrationCalls } };
+  return { schema_version: timingPilotPreflightSchemaVersion, plan_hash: plan.plan_hash, model: plan.execution.model, evaluator: plan.evaluator, agent: { id: plan.execution.agent.id, version: plan.execution.agent.version }, environment: plan.execution.environment, budget: plan.execution.budget, cost_estimate: { agent_attempts: 9, judge_calibration_calls: 9, judge_scoring_calls: 9, agent_max_duration_ms: plan.execution.budget.max_duration_ms * 9, total_judge_calls: 18, cost_usd: "unavailable" }, judge: { provider_id: plan.judge.provider_id, model: plan.judge.model, real_opt_in: false, calibration_status: calibrationStatus, calibration_calls: calibrationCalls } };
+}
+
+function invalidPlanSummary(plan: TimingPilotPlan, reason: unknown): TimingPilotPreflightSummary {
+  const safeReason = redactedReason(reason);
+  const gates = [
+    gate("plan", "failed", safeReason),
+    gate("environment", "blocked", "plan validation failed"),
+    gate("pi-model-probe", "blocked", "plan validation failed"),
+    gate("plan-dry-run", "blocked", "plan validation failed"),
+    gate("judge-provider", "blocked", "plan validation failed"),
+    gate("judge-calibration", "blocked", "plan validation failed"),
+  ];
+  return { ...summaryBase(plan), status: "invalid-plan", allowed_to_start: false, gates, failure_reason: `plan: ${safeReason}` };
 }
 
 export async function dryRunTimingPilot(options: { root?: string; plan: TimingPilotPlan }): Promise<TimingPilotDryRun> {
   const root = resolve(options.root ?? workspaceRoot);
+  assertActiveTimingPilot(options.plan);
   await readEnvironment(root, options.plan);
+  await validateEvaluatorAndJudge(root, options.plan);
   await validatePromptAndCandidate(root, options.plan);
   await validateIsolation(root);
   return { plan_hash: options.plan.plan_hash, slot_count: options.plan.schedule.slots.length, slots: options.plan.schedule.slots, candidate_ready: true, environment_ready: true, prompt_ready: true, isolation_ready: true };
@@ -329,10 +392,15 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
   try {
     plan = options.plan ?? await readTimingPilotPlan(resolve(root, options.plan_path ?? timingPilotPlanPath));
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    const fallback = options.plan ?? { plan_hash: "0".repeat(64), execution: { model: { id: timingPilotModel, version: timingPilotModelVersion }, agent: { id: "pi", version: "0.85.1" }, environment: { id: "local-pi", version: "v4" }, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } }, judge: { provider_id: timingPilotJudgeProvider, model: timingPilotJudgeModel } } as TimingPilotPlan;
-    return { ...summaryBase(fallback), status: "invalid-plan", allowed_to_start: false, gates: [gate("plan", "failed", reason)], failure_reason: reason };
+    const fallback = options.plan ?? {
+      plan_hash: "0".repeat(64),
+      evaluator: { id: timingPilotEvaluatorId, version: timingPilotEvaluatorVersion, snapshot_id: timingPilotEvaluatorSnapshotId },
+      execution: { model: { id: timingPilotModel, version: timingPilotModelVersion }, agent: { id: "pi", version: "0.85.1" }, environment: { id: "local-pi", version: "v4" }, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } },
+      judge: { provider_id: timingPilotJudgeProvider, model: timingPilotJudgeModel, evaluation_plan_hash: timingPilotJudgeEvaluationPlanHash, rubric_hash: timingPilotJudgeRubricHash },
+    } as TimingPilotPlan;
+    return invalidPlanSummary(fallback, error);
   }
+  if (plan.lifecycle_stage !== "pilot") return invalidPlanSummary(plan, "timing pilot plan is retired and cannot run as the active pilot");
   const gates: TimingPilotGate[] = [];
   let calibrationStatus: TimingPilotPreflightSummary["judge"]["calibration_status"] = "not-run";
   let calibrationCalls = 0;
@@ -342,7 +410,7 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
       await readEnvironment(root, plan);
       return gate("environment", "passed");
     } catch (error) {
-      return gate("environment", "failed", error instanceof Error ? error.message : String(error));
+      return gate("environment", "failed", redactedReason(error));
     }
   })();
   gates.push(environmentGate);
@@ -358,6 +426,7 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
     try {
       const probe = options.model_probe ?? (async ({ root: probeRoot, model }) => {
         const command = await piCommand(probeRoot);
+        if (commandIdentity(command) !== plan.execution.agent.command) throw new Error("Pi command does not match the timing pilot environment");
         const env = envText(options.env ?? {});
         const shellPath = await localPiShellPath(env);
         const catalog = await configureLocalPiModelCatalog(env, model, shellPath);
@@ -370,7 +439,7 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
       if (result.version !== plan.execution.agent.version) throw new Error(`Pi probe version ${result.version} does not match plan ${plan.execution.agent.version}`);
       gates.push(gate("pi-model-probe", "passed"));
     } catch (error) {
-      gates.push(gate("pi-model-probe", "failed", error instanceof Error ? error.message : String(error)));
+      gates.push(gate("pi-model-probe", "failed", redactedReason(error)));
     }
   }
 
@@ -381,7 +450,7 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
       await dryRunTimingPilot({ root, plan });
       return gate("plan-dry-run", "passed");
     } catch (error) {
-      return gate("plan-dry-run", "failed", error instanceof Error ? error.message : String(error));
+      return gate("plan-dry-run", "failed", redactedReason(error));
     }
   })();
   gates.push(dryRunGate);
@@ -394,8 +463,8 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
       const report = await (options.judge_calibration ?? runRealCalibration)(envText(options.env ?? {}));
       calibrationStatus = report.status;
       calibrationCalls = report.calls;
-      gates.push(gate("judge-calibration", report.status === "qualified" ? "passed" : "failed", report.reason));
-    } catch (error) { calibrationStatus = "unavailable"; gates.push(gate("judge-calibration", "failed", error instanceof Error ? error.message : String(error))); }
+      gates.push(gate("judge-calibration", report.status === "qualified" ? "passed" : "failed", report.status === "qualified" ? undefined : redactedReason(report.reason ?? "Judge calibration did not qualify")));
+    } catch (error) { calibrationStatus = "unavailable"; gates.push(gate("judge-calibration", "failed", redactedReason(error))); }
   } else gates.push(gate("judge-calibration", "blocked", "Judge provider preflight or earlier gate failed"));
   const failedGate = gates.find((entry) => entry.status !== "passed");
   const invalidPlan = environmentGate.status === "passed" && dryRunGate.status === "failed";
@@ -424,9 +493,9 @@ async function writeTimingPilotDryRunFailureSummary(reason: string, directory: s
   await mkdir(directory, { recursive: true });
   const jsonPath = join(directory, "dry-run-failure.json");
   const markdownPath = join(directory, "dry-run-failure.md");
-  const failure = { status: "invalid-plan" as const, allowed_to_start: false, reason };
+  const failure = { status: "invalid-plan" as const, allowed_to_start: false, reason: redactedReason(reason) };
   await writeFile(jsonPath, `${JSON.stringify(failure, null, 2)}\n`);
-  await writeFile(markdownPath, `# Async-report timing pilot dry-run\n\n- status: ${failure.status}\n- allowed_to_start: ${failure.allowed_to_start}\n- reason: ${reason}\n`);
+  await writeFile(markdownPath, `# Async-report timing pilot dry-run\n\n- status: ${failure.status}\n- allowed_to_start: ${failure.allowed_to_start}\n- reason: ${failure.reason}\n`);
   return { json_path: jsonPath, markdown_path: markdownPath };
 }
 
@@ -435,7 +504,7 @@ export async function writeTimingPilotPreflightSummary(summary: TimingPilotPrefl
   const jsonPath = join(directory, "preflight-summary.json");
   const markdownPath = join(directory, "preflight-summary.md");
   await writeFile(jsonPath, `${JSON.stringify(summary, null, 2)}\n`);
-  const lines = ["# Async-report timing pilot preflight", "", `- status: ${summary.status}`, `- allowed_to_start: ${summary.allowed_to_start}`, `- plan_hash: ${summary.plan_hash}`, `- model: ${summary.model.id} (${summary.model.version})`, `- Pi: ${summary.agent.id} ${summary.agent.version}`, `- environment: ${summary.environment.id}/${summary.environment.version}`, `- budget: ${summary.budget.max_turns} turns / ${summary.budget.max_duration_ms} ms`, `- estimated agent duration: ${summary.cost_estimate.agent_max_duration_ms} ms`, `- estimated Judge calls: ${summary.cost_estimate.total_judge_calls}`, `- estimated cost USD: ${summary.cost_estimate.cost_usd}`, `- Judge: ${summary.judge.provider_id} / ${summary.judge.model}`, `- Judge real opt-in: ${summary.judge.real_opt_in}`, `- Judge calibration: ${summary.judge.calibration_status} (${summary.judge.calibration_calls} calls)`, "", "## Gates", ...summary.gates.map((entry) => `- ${entry.id}: ${entry.status}${entry.reason ? ` — ${entry.reason}` : ""}`)];
+  const lines = ["# Async-report timing pilot preflight", "", `- status: ${summary.status}`, `- allowed_to_start: ${summary.allowed_to_start}`, `- plan_hash: ${summary.plan_hash}`, `- model: ${summary.model.id} (${summary.model.version})`, `- evaluator: ${summary.evaluator.id} ${summary.evaluator.version} (${summary.evaluator.snapshot_id})`, `- Pi: ${summary.agent.id} ${summary.agent.version}`, `- environment: ${summary.environment.id}/${summary.environment.version}`, `- budget: ${summary.budget.max_turns} turns / ${summary.budget.max_duration_ms} ms`, `- estimated agent duration: ${summary.cost_estimate.agent_max_duration_ms} ms`, `- estimated Judge calls: ${summary.cost_estimate.total_judge_calls}`, `- estimated cost USD: ${summary.cost_estimate.cost_usd}`, `- Judge: ${summary.judge.provider_id} / ${summary.judge.model}`, `- Judge real opt-in: ${summary.judge.real_opt_in}`, `- Judge calibration: ${summary.judge.calibration_status} (${summary.judge.calibration_calls} calls)`, "", "## Gates", ...summary.gates.map((entry) => `- ${entry.id}: ${entry.status}${entry.reason ? ` — ${entry.reason}` : ""}`)];
   await writeFile(markdownPath, `${lines.join("\n")}\n`);
   return { json_path: jsonPath, markdown_path: markdownPath };
 }

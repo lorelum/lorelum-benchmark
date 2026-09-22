@@ -57,6 +57,14 @@ test("plan parser rejects extra fields and any schedule mutation", async () => {
   await expect(parseTimingPilotPlan({ ...value, schedule: { ...value.schedule, slots } })).rejects.toThrow("schedule does not match");
 });
 
+test("invalid plan preflight emits a complete blocked gate summary", async () => {
+  const summary = await runTimingPilotPreflight({ root: workspaceRoot, plan_path: "missing/async-report-timing-pilot.yaml" });
+  expect(summary.status).toBe("invalid-plan");
+  expect(summary.allowed_to_start).toBe(false);
+  expect(summary.gates.length).toBeGreaterThanOrEqual(4);
+  expect(summary.gates[0]?.id).toBe("plan");
+});
+
 test("model probe version drift blocks the pilot before Judge calibration", async () => {
   const value = await plan();
   let calibrationCalled = false;
@@ -95,6 +103,28 @@ test("model probe runs before a dry-run drift becomes invalid-plan", async () =>
   expect(summary.gates.map((entry) => entry.id)).toEqual(["environment", "pi-model-probe", "plan-dry-run", "judge-provider", "judge-calibration"]);
   expect(summary.gates.find((entry) => entry.id === "pi-model-probe")?.status).toBe("passed");
   expect(summary.gates.find((entry) => entry.id === "plan-dry-run")?.status).toBe("failed");
+});
+
+test("dry-run rejects treatment provenance drift", async () => {
+  const value = await plan();
+  const drifted = {
+    ...value,
+    treatment: { ...value.treatment, practice: { ...value.treatment.practice, card_sha256: "0".repeat(64) } },
+  } as TimingPilotPlan;
+  await expect(dryRunTimingPilot({ root: workspaceRoot, plan: drifted })).rejects.toThrow("treatment provenance");
+});
+
+test("retired timing pilot plans are blocked before the model probe", async () => {
+  const value = await plan();
+  let probeCalled = false;
+  const summary = await runTimingPilotPreflight({
+    root: workspaceRoot,
+    plan: { ...value, lifecycle_stage: "retired" } as TimingPilotPlan,
+    model_probe: async () => { probeCalled = true; return { version: "0.85.1" }; },
+  });
+  expect(summary.status).toBe("invalid-plan");
+  expect(summary.allowed_to_start).toBe(false);
+  expect(probeCalled).toBe(false);
 });
 
 test("dry-run validates candidate, environment, prompt and isolation without model calls", async () => {
