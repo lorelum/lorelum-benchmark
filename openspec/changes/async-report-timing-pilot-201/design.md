@@ -14,7 +14,7 @@
 
 1. **九次矩阵**：严格执行三个 timing node 各三次，共九次；baseline/未声明 condition 只做无模型 no-payload/isolation 校验，不进入九次分母；不加入等长无关 Practice。
 2. **Agent runtime**：新增并固定 `local-pi/v4`，Pi `0.85.1`，model `deepseek/deepseek-v4-flash`，model version `operator-local-experiment`；每 attempt 固定 `max_turns=128` 和 `max_duration_ms=1_500_000`，并以环境声明的 tool policy hash 绑定。
-3. **Judge runtime**：#200 的真实 calibration/scoring 使用同一 `deepseek-v4-flash` 档位；calibration 最多 9 calls、3 repetitions，scoring 每 attempt 1 call、0 retry；必须配置新的 provider/key 并显式设置 `LORELUM_JUDGE_REAL=1`。不复用历史 Judge key、model、calibration 或结果。
+3. **Judge runtime**：#200 的真实 calibration/scoring 使用同一 `deepseek/deepseek-v4-flash` 完整 model ID；calibration 最多 9 calls、3 repetitions，scoring 每 attempt 1 call、0 retry；必须配置新的 provider/key 并显式设置 `LORELUM_JUDGE_REAL=1`。不复用历史 Judge key、model、calibration 或结果。
 4. **运行顺序**：先执行 Pi/model short probe，再执行 plan dry-run，再执行完整 Judge calibration；三者全部通过后才允许启动九次 Agent pilot。任一前置 gate 失败都不启动长时间 pilot。
 5. **运行授权**：九次探索仍是 scratch-only diagnostic；不写 `results/records/`，不升级 suite/candidate revision，不把 pilot 结果用于发布或普遍效果结论。
 
@@ -54,7 +54,17 @@ hard evaluator 只按 #202 v1 CLI 读取 Agent app root，返回其冻结的 ove
 
 结果聚合分开报告：execution health；hard semantic status；Judge quality state/score；delivery status；Agent/Judge calibration/scoring/failure/indeterminate usage 与 cost。禁止把这些维度压成隐藏总分或用 Judge 改写 hard gate。
 
-### 5. Diagnostic retrospective
+### 5. Judge diagnostic usability
+
+本次已观察到 #200 calibration report 只保留各 fixture median，`evaluateCalibrationMedians` 只返回首个失败原因；真实 Judge scoring 的部分异常路径也会被折叠成通用 `Judge unavailable`。#201 只在 pilot orchestration boundary 补诊断适配层，不改动被冻结的 #200 v1 源码、快照、identity、prompt、rubric、fixture、threshold、资格语义、call budget 或 retry 行为。
+
+- 通过 #200 现有 `runCalibration` / `scoreForCalibration` API 包装真实 calibration completion，捕获最多 9 次既定调用的逐次结构化得分：opaque case id、host-side fixture category、repetition、总分、各 criterion points/rationale、confidence、prompt/input hashes、duration、usage 和状态。不得为诊断增加调用或重试。
+- 私有 `scratch/<pilot>/preflight/private/` 下同时写 machine-readable JSON 和人类可读 Markdown；列出所有 calibration gate predicate 的 observed value、固定 threshold、pass/fail 与失败原因。主 preflight summary 仍不包含 calibration labels 或 criterion rationales，仅指向 private diagnostics artifact。
+- 对 pilot scoring completion 错误记录有限的安全分类（transport/timeout、HTTP status、response parse、structured output rejected、input/provenance），不保存完整 exception、endpoint、key、prompt 或整段模型输出。成功评分仍复用现有 #200 result 和 criterion detail。
+- 如果使用外部提供的 cached calibration report 而无逐次详情，明确标注“详情未随导入报告提供”，不得从 median 伪造逐次分数或理由。
+- 当次已完成的 9 calls 没有 per-call details，不能回填；不为实现本 change 自动重跑真实模型或启动 Agent pilot。
+
+## 6. Diagnostic retrospective
 
 复盘仅回答该固定 candidate、固定 Practice、固定 runtime 和九个 attempt 的限定性问题：哪些 node 的 trace/evaluator/Judge 信号可解释、成本和失败来自哪里、是否存在条件漂移或不可比 attempt、下一步是否值得另立更大实验。样本不足、模型不可达、Judge unavailable、delivery/evaluator failure 或 indeterminate 超预算都保留 diagnostic/indeterminate，不补造成功结果，不上升为 Pack coverage、query quality 或自动触发结论。
 

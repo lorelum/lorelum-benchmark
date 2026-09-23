@@ -196,6 +196,26 @@ test("workspace setup never deletes a caller-provided non-empty workspace", asyn
   expect(await Bun.file(sentinel).text()).toBe("caller-owned");
 });
 
+test("staged delivery can resolve frozen repository inputs while isolating artifacts under a scratch execution root", async () => {
+  const executionRoot = join(workspaceRoot, "scratch", `timing-pilot-execution-root-${crypto.randomUUID()}`);
+  roots.push(executionRoot);
+  const workspace = join(executionRoot, ".run-workspaces", "workspace");
+  const artifacts = join(executionRoot, ".run-workspaces", "artifacts");
+  const report = await runStagedPracticeDeliveryAttempt({
+    root: workspaceRoot,
+    execution_root: executionRoot,
+    plan: await planFor("task_start"),
+    attempt_id: "scratch-execution-root",
+    artifacts,
+    workspace,
+    dry_run: true,
+  });
+  expect(report.status).toBe("dry-run");
+  expect(report.summary_path.startsWith(executionRoot)).toBe(true);
+  expect(report.public_trace_path.startsWith(executionRoot)).toBe(true);
+  expect(report.comparable).toBe(false);
+});
+
 test("artifact ownership rejects frozen input paths before any write", async () => {
   const root = await temp("artifact-ownership");
   const workspace = join(root, "workspace");

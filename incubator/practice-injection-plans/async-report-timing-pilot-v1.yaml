@@ -10,6 +10,12 @@ evaluator:
   id: async-report-deterministic-evaluator
   version: v1
   snapshot_id: 7d68a9e9fc32a2fc96407ad1b4f6d416f6138cddc73587614be6b6d5e8db8be1
+runner:
+  id: async-report-timing-pilot-runner
+  version: v1
+  manifest_path: incubator/practice-injection-plans/async-report-timing-pilot-runner-v1.json
+  manifest_sha256: 57d2c2e3d072f6d7fb5c0d4bdbed8c4846cc7d1f53ba1f6d50e060616b32dc8e
+
 treatment:
   root: treatments/agentic-coding-replan-on-material-drift/v1
   id: agentic-coding-replan-on-material-drift
@@ -55,7 +61,7 @@ execution:
 judge:
   provider_id: judge-agent/async-report-replan/v1
   provider_version: v1
-  model: deepseek-v4-flash
+  model: deepseek/deepseek-v4-flash
   evaluation_plan_hash: 3b6ffa1acec2e2d42551032cd6629509260cc026c5a2211798bc3229508da388
   rubric_hash: 2ff71b4208479e5bd3f246c9450264f52ec01f59de2944916d8e540bd03afe98
   evidence_schema: replan-evidence/v1
@@ -81,4 +87,4 @@ schedule:
     - { attempt_id: block-3-position-2-task-start, block: 3, position: 2, repetition: 3, condition_id: task_start, delivery_node: task_start }
     - { attempt_id: block-3-position-3-constraint-followup, block: 3, position: 3, repetition: 3, condition_id: constraint_followup, delivery_node: constraint_followup }
 claim_boundary: "diagnostic-only; no formal record, suite revision, or general/product conclusion"
-plan_hash: c6326775d8d51547e46e9c36555693f064c1b421d323a3ae5db89ed3f456cd3d
+plan_hash: 97479b91bad4db1b690cc9b316fd66124aece4634e377dd5df236fc7cca1dae7

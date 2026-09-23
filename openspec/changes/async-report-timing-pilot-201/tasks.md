@@ -7,8 +7,8 @@
 
 - [x] 1.1 在 Issue #201 与 `design.md` 回写需求方对九次矩阵、baseline/irrelevant scope、Agent model/environment/budget、Judge real opt-in/provider 和 diagnostic-only boundary 的明确确认。 [写入范围：Issue #201、`design.md`、`tasks.md`]
 - [x] 1.2 仅在 strict validation、initial PR 和规划确认完成后，进入等效 Plan 阶段；若任一决定改变题面、oracle、对照、评测、treatment、environment 或结论解释，先重新规划。 [写入范围：`design.md`、`tasks.md`]
-- [x] 1.3 在任何长时间 Agent attempt 前，执行目标 `deepseek-v4-flash` 的 Pi/model short probe；校验 Pi `0.85.1`、gateway route、credential 和目标 model identity，失败时阻断 pilot。实现了环境可注入的 bounded probe；2026-09-22 实际 route probe 已通过。 [写入范围：`src/benchmark/runner/pi/v2/`、验证证据]
-- [x] 1.4 在 Agent attempt 前执行 plan dry-run 与 #200 完整 Judge calibration gate；实现已通过 mock calibration 验证，真实 calibration 保留为启动九次 pilot 前的运行门禁。 [写入范围：`src/benchmark/runner/pi/v2/`、`src/benchmark/judge/`、验证证据]
+- [x] 1.3 在任何长时间 Agent attempt 前，执行目标 `deepseek/deepseek-v4-flash` 的 Pi/model short probe；校验 Pi `0.85.1`、gateway route、credential 和目标 model identity，失败时阻断 pilot。实现了环境可注入的 bounded probe；2026-09-22 实际 route probe 已通过。2026-09-23 使用隔离 Node `24.21.0` 与本地 `.env` 的最终 preflight 通过：Pi `0.85.1`、目标模型和 gateway route 均通过；短探活为 7,425ms、165 input / 2 output tokens，cost unavailable。 [写入范围：`src/benchmark/runner/pi/v2/`、验证证据]
+- [x] 1.4 在 Agent attempt 前执行 plan dry-run 与 #200 完整 Judge calibration gate；实现已通过 mock calibration 验证。2026-09-23 使用 `.env` 中已配置的 Judge provider/model/real opt-in，并为本地签名生成独立 256-bit calibration attestation key；完整执行 9 calls / 3 repetitions，但 calibration 为 `diagnostic`，原因是 `reference median is below the minimum`。用量 10,596 input / 13,816 output tokens，cost unavailable，因此硬门禁未通过且未启动九次 Agent pilot；私有 report 仅留在 ignored scratch。 [写入范围：`src/benchmark/runner/pi/v2/`、`src/benchmark/judge/`、验证证据]
 
 ## 2. Pre-registration contract
 
@@ -18,16 +18,19 @@
 
 ## 3. Nine-attempt orchestration
 
-- [ ] 3.1 在现有 #197 staged delivery API 之上实现 master-plan preflight、cyclic Latin-square schedule 和 9 个 attempt 的 scratch-only 编排；每个 attempt 使用独立 workspace/artifact root，并持有同一 plan hash。 [写入范围：`src/benchmark/runner/pi/v2/staged/`、`src/benchmark/`]
-- [ ] 3.2 接入 #202 hard evaluator host-side adapter；只把 evaluator version/overall status/stable check ids 加入 join，完整 oracle/reason/private check detail 留在 evaluator private boundary。 [写入范围：`src/benchmark/`、`incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/`（如只需调用则不改）]
-- [ ] 3.3 接入 #200 evidence projection/Judge adapter；固定 opaque blind case id、calibration/scoring budget、provider/model/prompt/rubric/input hash 与 unavailable/indeterminate accounting；Judge 不读取 condition/timing/Practice/private material。 [写入范围：`src/benchmark/`、`scratch/`（运行时）]
-- [ ] 3.4 实现成本/失败/indeterminate ledger 与 per-attempt result join；禁止重跑替换失败槽位，确保九个计划槽位都可审计。 [写入范围：`src/benchmark/`、`schemas/`]
+- [x] 3.1 在现有 #197 staged delivery API 之上实现 master-plan preflight、cyclic Latin-square schedule 和 9 个 attempt 的 scratch-only 编排；每个 attempt 使用独立 workspace/artifact root，并持有同一 plan hash。 [写入范围：`src/benchmark/runner/pi/v2/staged/`、`src/benchmark/`]
+- [x] 3.2 接入 #202 hard evaluator host-side adapter；只把 evaluator version/overall status/stable check ids 加入 join，完整 oracle/reason/private check detail 留在 evaluator private boundary。 [写入范围：`src/benchmark/`、`incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/`（如只需调用则不改）]
+- [x] 3.3 接入 #200 evidence projection/Judge adapter；固定 opaque blind case id、calibration/scoring budget、provider/model/prompt/rubric/input hash 与 unavailable/indeterminate accounting；Judge 不读取 condition/timing/Practice/private material。 [写入范围：`src/benchmark/`、`scratch/`（运行时）]
+- [x] 3.4 实现成本/失败/indeterminate ledger 与 per-attempt result join；禁止重跑替换失败槽位，确保九个计划槽位都可审计。 [写入范围：`src/benchmark/`、`schemas/`]
 
 ## 4. Deterministic verification before any model call
 
-- [ ] 4.1 用 mock Pi/Judge/evaluator 验证 3×3 schedule、plan hash、identity、same-session delivery、baseline/undeclared no-payload、workspace isolation 和 condition-blind evidence。 [写入范围：`src/benchmark/`]
-- [ ] 4.2 增加失败矩阵：preflight drift、missing opt-in、unsupported node、delivery failure、session mismatch、evaluator failure、Judge unavailable/indeterminate、budget exhaustion；每项 fail closed 且不产生 formal record。 [写入范围：`src/benchmark/`、`schemas/`]
-- [x] 4.3 在 mock-only 条件下运行 `bun run validate`、相关 contract tests、`bun run check:openspec-purpose`、`git diff --check` 和 public/private leakage audit。2026-09-22 已完成；未执行真实 Judge calibration 或九次 Agent attempt。 [写入范围：验证证据]
+- [x] 4.1 用 mock Pi/Judge/evaluator 验证 3×3 schedule、plan hash、identity、same-session delivery、baseline/undeclared no-payload、workspace isolation 和 condition-blind evidence。 [写入范围：`src/benchmark/`]
+- [x] 4.2 增加失败矩阵：preflight drift、missing opt-in、unsupported node、delivery failure、session mismatch、evaluator failure、Judge unavailable/indeterminate、budget exhaustion；每项 fail closed 且不产生 formal record。 [写入范围：`src/benchmark/`、`schemas/`]
+- [x] 4.3 在 mock-only 条件下运行 `bun run validate`、相关 contract tests、`bun run check:openspec-purpose -- origin/main`、`git diff --check` 和 public/private leakage audit。2026-09-23 验证：OpenSpec strict、purpose guard、`bun run validate`、9-slot dry-run 均通过；`test:contracts:core --timeout=30000` 169/169、`test:contracts:runner` 169/169、preflight+Judge diagnostics 定向测试 22/22 通过。默认 5 秒 core suite 曾因 Windows snapshot 子测试运行 10.3 秒超时；将单测 timeout 提至 30 秒后整组通过。未在诊断补丁后新增真实 Judge 调用，未启动 Agent attempt。 [写入范围：验证证据]
+
+- [x] 4.4 在 #201 runner 边界增加 calibration/scoring 诊断适配层：捕获既有 Judge API 返回的逐次 criterion 分数/理由、confidence、hash、usage、duration 和安全 failure code；不更改 #200 v1 源码、身份、评分语义、阈值、9-call budget 或重试策略。以注入式 completion 验证 9 次诊断调用上限、case 标签不进入 Judge prompt、门禁明细与 frozen qualification 判断一致、HTTP/结构化输出失败脱敏。 [写入范围：`src/benchmark/runner/pi/v2/staged/`、`schemas/`]
+- [x] 4.5 生成 scratch-only private JSON/Markdown 诊断 artifact，显示所有 calibration 门禁判断及逐次结果；preflight summary 只给出私有 artifact 的相对路径，不泄露标签、理由或凭证；cached report 缺详情时明确标记不可回溯。私有写入拒绝 symlink 路径；schema、leakage 与缓存报告缺详情测试通过。 [写入范围：`src/benchmark/runner/pi/v2/staged/`、`schemas/`]
 
 ## 5. Authorized scratch-only execution and retrospective
 

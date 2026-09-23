@@ -7,6 +7,7 @@ import {
   hashTimingPilotPlan,
   parseTimingPilotPlan,
   readTimingPilotPlan,
+  resolveTimingPilotScratchOutput,
   runTimingPilotPreflight,
   timingPilotPlanPath,
   writeTimingPilotPreflightSummary,
@@ -30,7 +31,7 @@ function qualifiedCalibration() {
     status: "qualified" as const,
     calls: 9,
     medians: { reference: 90, equivalent: 88, "anti-pattern": 60 },
-    scope: { provider_id: "judge-agent/async-report-replan/v1" as const, provider_version: "v1" as const, model: "deepseek-v4-flash" },
+    scope: { provider_id: "judge-agent/async-report-replan/v1" as const, provider_version: "v1" as const, model: "deepseek/deepseek-v4-flash" },
     duration_ms: 100,
     usage: { input_tokens: 10, output_tokens: 10, total_tokens: 20, cost_usd: 0 },
     attestation: "test-attestation",
@@ -58,6 +59,9 @@ test("plan parser rejects extra fields and any schedule mutation", async () => {
   const slots = [...value.schedule.slots];
   [slots[0], slots[1]] = [slots[1], slots[0]];
   await expect(parseTimingPilotPlan({ ...value, schedule: { ...value.schedule, slots } })).rejects.toThrow("schedule does not match");
+  const unsupported = [...value.schedule.slots];
+  unsupported[0] = { ...unsupported[0], condition_id: "unsupported", delivery_node: "unsupported" } as unknown as typeof unsupported[number];
+  await expect(parseTimingPilotPlan({ ...value, schedule: { ...value.schedule, slots: unsupported } })).rejects.toThrow("condition/node is invalid");
 });
 
 test("invalid plan preflight emits a complete blocked gate summary", async () => {
@@ -75,7 +79,7 @@ test("host runtime drift blocks the pilot before the model probe", async () => {
     root: workspaceRoot,
     plan: value,
     runtime_probe: async () => ({ bun: "1.4.2", node: "22.21.0" }),
-    model_probe: async () => { probeCalled = true; return { version: "0.85.1" }; },
+    model_probe: async () => { probeCalled = true; return { version: "0.85.1", command_sha256: "f".repeat(64) }; },
   });
   expect(summary.allowed_to_start).toBe(false);
   expect(probeCalled).toBe(false);
@@ -90,8 +94,8 @@ test("model probe version drift blocks the pilot before Judge calibration", asyn
     root: workspaceRoot,
     runtime_probe: testRuntimeProbe,
     plan: value,
-    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek-v4-flash" },
-    model_probe: async () => ({ version: "0.80.10" }),
+    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash" },
+    model_probe: async () => ({ version: "0.80.10", command_sha256: "f".repeat(64) }),
     judge_calibration: async () => { calibrationCalled = true; return qualifiedCalibration(); },
   });
   expect(summary.allowed_to_start).toBe(false);
@@ -113,8 +117,8 @@ test("model probe runs before a dry-run drift becomes invalid-plan", async () =>
     root: workspaceRoot,
     runtime_probe: testRuntimeProbe,
     plan: driftedWithHash,
-    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek-v4-flash" },
-    model_probe: async () => { probeCalled = true; return { version: "0.85.1" }; },
+    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash" },
+    model_probe: async () => { probeCalled = true; return { version: "0.85.1", command_sha256: "f".repeat(64) }; },
     judge_calibration: async () => { calibrationCalled = true; return qualifiedCalibration(); },
   });
   expect(probeCalled).toBe(true);
@@ -143,7 +147,7 @@ test("retired timing pilot plans are blocked before the model probe", async () =
     root: workspaceRoot,
     runtime_probe: testRuntimeProbe,
     plan: { ...value, lifecycle_stage: "retired" } as TimingPilotPlan,
-    model_probe: async () => { probeCalled = true; return { version: "0.85.1" }; },
+    model_probe: async () => { probeCalled = true; return { version: "0.85.1", command_sha256: "f".repeat(64) }; },
   });
   expect(summary.status).toBe("invalid-plan");
   expect(summary.allowed_to_start).toBe(false);
@@ -162,14 +166,31 @@ test("preflight requires a qualified Judge calibration before allowing the pilot
     root: workspaceRoot,
     runtime_probe: testRuntimeProbe,
     plan: value,
-    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek-v4-flash" },
-    model_probe: async () => ({ version: "0.85.1" }),
+    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash" },
+    model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }),
     judge_calibration: async () => qualifiedCalibration(),
   });
   expect(summary.allowed_to_start).toBe(true);
   expect(summary.status).toBe("ready");
   expect(summary.judge.calibration_status).toBe("qualified");
   expect(summary.gates.every((entry) => entry.status === "passed")).toBe(true);
+});
+
+test("cached calibration reports are attestation-checked and explicitly marked aggregate-only", async () => {
+  const value = await plan();
+  let diagnostics: unknown;
+  const summary = await runTimingPilotPreflight({
+    root: workspaceRoot,
+    plan: value,
+    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash", LORELUM_JUDGE_CALIBRATION_KEY: "test-calibration-key" },
+    runtime_probe: testRuntimeProbe,
+    model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }),
+    calibration_report: qualifiedCalibration(),
+    on_judge_calibration_diagnostics: (value) => { diagnostics = value; },
+  });
+  expect(summary.allowed_to_start).toBe(false);
+  expect(summary.judge.calibration_status).toBe("diagnostic");
+  expect(diagnostics).toMatchObject({ status: "details_unavailable", reason: "cached_report_without_sidecar", observations: [] });
 });
 
 test("missing Judge opt-in blocks the pilot without starting calibration", async () => {
@@ -180,7 +201,7 @@ test("missing Judge opt-in blocks the pilot without starting calibration", async
     runtime_probe: testRuntimeProbe,
     plan: value,
     env: {},
-    model_probe: async () => ({ version: "0.85.1" }),
+    model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }),
     judge_calibration: async () => { calibrationCalled = true; return qualifiedCalibration(); },
   });
   expect(summary.allowed_to_start).toBe(false);
@@ -200,9 +221,9 @@ test("preflight summary is human-readable and does not contain credentials", asy
     run_model_probe: false,
     run_judge_calibration: false,
   });
-  const directory = join(workspaceRoot, ".run-workspaces", `timing-pilot-summary-${crypto.randomUUID()}`);
+  const directory = join(workspaceRoot, "scratch", `timing-pilot-summary-${crypto.randomUUID()}`);
   try {
-    const paths = await writeTimingPilotPreflightSummary(summary, directory);
+    const paths = await writeTimingPilotPreflightSummary(summary, directory, workspaceRoot);
     const json = await readFile(paths.json_path, "utf8");
     const markdown = await readFile(paths.markdown_path, "utf8");
     expect(json).not.toContain("test-key");
@@ -212,4 +233,13 @@ test("preflight summary is human-readable and does not contain credentials", asy
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+
+test("timing pilot artifact output is confined to workspace scratch", async () => {
+  const outside = join(workspaceRoot, "results", "records", "timing-pilot-escape");
+  await expect(resolveTimingPilotScratchOutput(workspaceRoot, outside)).rejects.toThrow("below the workspace scratch/");
+  const scratch = await resolveTimingPilotScratchOutput(workspaceRoot, join(workspaceRoot, "scratch", "timing-pilot-boundary-test"));
+  expect(scratch.startsWith(join(workspaceRoot, "scratch"))).toBe(true);
+  await rm(scratch, { recursive: true, force: true });
 });

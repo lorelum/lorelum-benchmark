@@ -105,3 +105,36 @@ The pilot MUST retain one auditable record per planned slot, including failed an
 - **WHEN** model access, delivery, evaluator, Judge, budget, or provenance failure prevents a complete comparable matrix
 - **THEN** the retrospective MUST label the pilot diagnostic/indeterminate
 - **AND** it MUST NOT fill missing slots or promote the result to a timing effect conclusion.
+
+### Requirement: Judge failures MUST be diagnosable without changing the frozen Judge contract
+
+The #201 runner MUST preserve per-call structured Judge calibration evidence and all calibration gate comparisons in a host-side private scratch artifact. It MUST NOT change #200 v1 scoring behavior, prompt, rubric, fixture identity, thresholds, call budget, or qualification result.
+
+#### Scenario: Calibration completes or fails
+
+- **WHEN** a calibration scoring call returns a structured result or a safe classified failure
+- **THEN** the private diagnostic artifact MUST retain the opaque case identity, local repetition, total and criterion-level points/rationales, confidence, prompt/input hashes, duration, usage, and status for that call
+- **AND** it MUST show every threshold predicate with its observed value, frozen threshold, and pass/fail result rather than only the first failed predicate
+- **AND** it MUST NOT store credentials, full endpoint, raw prompt, full model response, or unsanitized exception text
+- **AND** it MUST NOT add retries or calls beyond the frozen calibration budget.
+
+#### Scenario: Preflight summary references private detail
+
+- **WHEN** real calibration produces diagnostics
+- **THEN** the human-readable preflight summary MUST point to the local private diagnostic artifact
+- **AND** the summary MUST remain free of private calibration labels and criterion rationales.
+
+#### Scenario: Imported report lacks per-call details
+
+- **WHEN** preflight receives a cached calibration report without its sidecar
+- **THEN** the runner MUST mark per-call detail unavailable and MUST NOT infer or fabricate it from aggregate medians.
+
+### Requirement: Judge scoring failures MUST preserve a safe actionable category
+
+The #201 runner MUST retain a non-secret failure category for a Judge scoring request that fails at transport, HTTP, response parsing, structured-output validation, or evidence/provenance validation. It MUST preserve the frozen Judge result and retry semantics.
+
+#### Scenario: A scoring call fails
+
+- **WHEN** an attempt's Judge call fails or its structured output is rejected
+- **THEN** the private attempt artifact MUST include the safe stage/category and HTTP status when available
+- **AND** it MUST NOT include credentials, endpoint query data, full prompt, full response, or unsanitized exception text.

@@ -1,15 +1,17 @@
-import { mkdir, realpath, writeFile } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { lstat, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { delimiter, isAbsolute, join, relative, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { sha256File, sha256Text, workspaceRoot } from "../../../../fs";
 import { asyncReportJudgeEnv } from "../../../../judge/async-report-replan/v1/llm";
 import { evaluationPlanHash } from "../../../../judge/async-report-replan/v1/plan";
 import { redactSensitiveText } from "../../../../judge/async-report-replan/v1/canonical";
 import { rubricHash } from "../../../../judge/async-report-replan/v1/rubric";
 import { accountingSchemaVersion, replanEvidenceSchemaVersion } from "../../../../judge/async-report-replan/v1/types";
-import { runRealCalibration } from "../../../../judge/async-report-replan/v1/calibrate";
+import { calibrationDiagnosticsForPreflightError, createCachedReportDiagnostics, renderJudgeCalibrationDiagnosticsMarkdown, runRealCalibrationWithDiagnostics, type JudgeCalibrationDiagnostics } from "./timing-pilot-judge-diagnostics";
+import { calibrationAttestationKey, calibrationScope, resolveCalibrationStatus } from "../../../../judge/async-report-replan/v1/calibration";
 import type { CalibrationReport } from "../../../../judge/async-report-replan/v1/types";
-import { configureLocalPiModelCatalog, localPiApiKey, localPiModelArgument, localPiShellPath } from "../local-pi-model-catalog";
-import { piCommand, preflightPiAndModel } from "../preflight";
+import { configureLocalPiModelCatalog, localPiApiKey, localPiModelArgument, localPiModelBaseUrl, localPiShellPath } from "../local-pi-model-catalog";
+import { piCommand, preflightTimeoutMs, run as runPiCommand } from "../preflight";
 import { assertSeparateRoots, prepareStagedPracticeDelivery, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
 import { loadEvaluatorIdentity } from "../../../../../../incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/identity";
 
@@ -17,6 +19,9 @@ export const timingPilotSchemaVersion = "async-report-timing-pilot/v1" as const;
 export const timingPilotPreflightSchemaVersion = "async-report-timing-pilot-preflight/v1" as const;
 export const timingPilotPlanPath = "incubator/practice-injection-plans/async-report-timing-pilot-v1.yaml" as const;
 export const timingPilotEnvironmentPath = "environments/local-pi/v4/environment.yaml" as const;
+export const timingPilotRunnerId = "async-report-timing-pilot-runner" as const;
+export const timingPilotRunnerVersion = "v1" as const;
+export const timingPilotRunnerManifestPath = "incubator/practice-injection-plans/async-report-timing-pilot-runner-v1.json" as const;
 export const timingPilotEnvironmentManifestSha256 = "555acce5f7cc79e203113b0f5025f715fe5a6de88dd4e2b54f308b71a3f20247" as const;
 export const timingPilotBunVersion = "1.4.2" as const;
 export const timingPilotNodeVersion = "24.21.0" as const;
@@ -32,7 +37,7 @@ export const timingPilotToolPolicyHash = "095f0cb4693f8753ecad07d0b86a0cb3e83c15
 export const timingPilotMaxTurns = 128 as const;
 export const timingPilotMaxDurationMs = 1_500_000 as const;
 export const timingPilotJudgeProvider = "judge-agent/async-report-replan/v1" as const;
-export const timingPilotJudgeModel = "deepseek-v4-flash" as const;
+export const timingPilotJudgeModel = "deepseek/deepseek-v4-flash" as const;
 export const timingPilotJudgeEvaluationPlanHash = "3b6ffa1acec2e2d42551032cd6629509260cc026c5a2211798bc3229508da388" as const;
 export const timingPilotJudgeRubricHash = "2ff71b4208479e5bd3f246c9450264f52ec01f59de2944916d8e540bd03afe98" as const;
 
@@ -57,6 +62,7 @@ export type TimingPilotPlan = Readonly<{
   lifecycle_stage: "pilot" | "retired";
   candidate: Readonly<{ path: string; source_commit: string; snapshot_id: string }>;
   evaluator: Readonly<{ id: typeof timingPilotEvaluatorId; version: typeof timingPilotEvaluatorVersion; snapshot_id: typeof timingPilotEvaluatorSnapshotId }>;
+  runner: Readonly<{ id: typeof timingPilotRunnerId; version: typeof timingPilotRunnerVersion; manifest_path: typeof timingPilotRunnerManifestPath; manifest_sha256: string }>;
   treatment: Readonly<{
     root: string;
     id: "agentic-coding-replan-on-material-drift";
@@ -91,7 +97,10 @@ export type TimingPilotPlan = Readonly<{
 }>;
 
 export type TimingPilotGate = Readonly<{ id: string; status: TimingPilotGateStatus; reason?: string }>;
+export type TimingPilotPreflightUsage = Readonly<{ input_tokens: number | null; output_tokens: number | null; total_tokens: number | null; cost_usd: number | null }>;
+
 export type TimingPilotCostEstimate = Readonly<{
+  preflight_cost_usd: number | null;
   agent_attempts: 9;
   judge_calibration_calls: 9;
   judge_scoring_calls: 9;
@@ -102,16 +111,21 @@ export type TimingPilotCostEstimate = Readonly<{
 
 export type TimingPilotPreflightSummary = Readonly<{
   schema_version: typeof timingPilotPreflightSchemaVersion;
+  created_at: string;
+  preflight_duration_ms: number;
+  pi_probe: Readonly<{ calls: number; duration_ms: number; usage: TimingPilotPreflightUsage }>;
   status: TimingPilotStatus;
   allowed_to_start: boolean;
   plan_hash: string;
   model: Readonly<{ id: string; version: string }>;
   evaluator: Readonly<{ id: string; version: string; snapshot_id: string }>;
-  agent: Readonly<{ id: string; version: string }>;
-  environment: Readonly<{ id: string; version: string }>;
+  runner: Readonly<{ id: string; version: string; manifest_sha256: string }>;
+  agent: Readonly<{ id: string; version: string; command: string; observed_version: string | null; command_sha256: string | null }>;
+  environment: Readonly<{ id: string; version: string; bun: string; node: string; manifest_sha256: string }>;
+  runtime: Readonly<{ observed_bun: string | null; observed_node: string | null }>;
   budget: Readonly<{ max_turns: number; max_duration_ms: number }>;
   cost_estimate: TimingPilotCostEstimate;
-  judge: Readonly<{ provider_id: string; model: string; real_opt_in: boolean; calibration_status: "qualified" | "diagnostic" | "not-run" | "unavailable"; calibration_calls: number }>;
+  judge: Readonly<{ provider_id: string; model: string; real_opt_in: boolean; calibration_status: "qualified" | "diagnostic" | "not-run" | "unavailable"; calibration_calls: number; calibration_duration_ms: number; calibration_usage: TimingPilotPreflightUsage }>;
   gates: readonly TimingPilotGate[];
   failure_reason?: string;
 }>;
@@ -124,8 +138,11 @@ export type TimingPilotPreflightOptions = Readonly<{
   run_model_probe?: boolean;
   run_judge_calibration?: boolean;
   runtime_probe?: () => Promise<{ bun: string; node: string }>;
-  model_probe?: (input: { root: string; model: string }) => Promise<{ version: string }>;
+  model_probe?: (input: { root: string; model: string }) => Promise<{ version: string; command_sha256: string; duration_ms?: number; usage?: unknown }>;
   judge_calibration?: (env: Record<string, string | undefined>) => Promise<CalibrationReport>;
+  calibration_report?: CalibrationReport;
+  on_judge_calibration_report?: (report: CalibrationReport) => void;
+  on_judge_calibration_diagnostics?: (diagnostics: JudgeCalibrationDiagnostics) => void;
 }>;
 
 export type TimingPilotDryRun = Readonly<{
@@ -145,7 +162,28 @@ const scheduleOrder: readonly TimingPilotNode[][] = [
   ["constraint_followup", "first_implementation_checkpoint", "task_start"],
   ["first_implementation_checkpoint", "task_start", "constraint_followup"],
 ];
-const expectedPlanKeys = ["schema_version", "id", "version", "lifecycle_stage", "candidate", "evaluator", "treatment", "prompts", "execution", "judge", "schedule", "claim_boundary", "plan_hash"] as const;
+const expectedPlanKeys = ["schema_version", "id", "version", "lifecycle_stage", "candidate", "evaluator", "runner", "treatment", "prompts", "execution", "judge", "schedule", "claim_boundary", "plan_hash"] as const;
+const timingPilotRunnerSourcePaths = [
+  "src/benchmark/runner/pi/v2/staged/async-report-timing-pilot.ts",
+  "src/benchmark/runner/pi/v2/staged/async-report-timing-pilot-runner.ts",
+  "src/benchmark/runner/pi/v2/staged/timing-pilot-judge-diagnostics.ts",
+  "src/benchmark/runner/pi/v2/staged/staged-practice-delivery.ts",
+  "src/benchmark/runner/pi/v2/staged/staged-practice-delivery-pi-adapter.ts",
+  "src/benchmark/runner/pi/v2/staged/timing-pilot-runtime-extension.ts",
+  "src/benchmark/runner/pi/v2/staged/checkpoint-stop-extension.ts",
+  "src/benchmark/runner/pi/v2/staged/checkpoint-marker.ts",
+  "src/benchmark/runner/pi/v2/local-pi-model-catalog.ts",
+  "src/benchmark/runner/pi/v2/preflight.ts",
+  "src/benchmark/judge/async-report-replan/v1/accounting.ts",
+  "src/benchmark/judge/async-report-replan/v1/calibration.ts",
+  "src/benchmark/judge/async-report-replan/v1/evidence.ts",
+  "src/benchmark/judge/async-report-replan/v1/llm.ts",
+  "src/benchmark/judge/async-report-replan/v1/plan.ts",
+  "src/benchmark/judge/async-report-replan/v1/provider.ts",
+  "src/benchmark/judge/async-report-replan/v1/rubric.ts",
+  "src/benchmark/judge/async-report-replan/v1/run.ts",
+  "src/benchmark/judge/async-report-replan/v1/score.ts",
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -229,7 +267,7 @@ export async function parseTimingPilotPlan(value: unknown): Promise<TimingPilotP
   exactKeys(value, expectedPlanKeys, "plan");
   if (value.schema_version !== timingPilotSchemaVersion || value.id !== "async-report-timing-pilot" || value.version !== "v1") fail("plan identity is invalid");
   if (value.lifecycle_stage !== "pilot" && value.lifecycle_stage !== "retired") fail("lifecycle_stage is invalid");
-  if (!isRecord(value.candidate) || !isRecord(value.treatment) || !isRecord(value.prompts) || !isRecord(value.execution) || !isRecord(value.judge) || !isRecord(value.schedule)) fail("plan sections are invalid");
+  if (!isRecord(value.candidate) || !isRecord(value.runner) || !isRecord(value.treatment) || !isRecord(value.prompts) || !isRecord(value.execution) || !isRecord(value.judge) || !isRecord(value.schedule)) fail("plan sections are invalid");
   const candidate = value.candidate;
   exactKeys(candidate, ["path", "source_commit", "snapshot_id"], "candidate");
   if (candidate.path !== "incubator/practice-injection/async-report-lifecycle-v1") fail("candidate path is not the frozen #196 candidate");
@@ -238,6 +276,10 @@ export async function parseTimingPilotPlan(value: unknown): Promise<TimingPilotP
   exactKeys(evaluator, ["id", "version", "snapshot_id"], "evaluator");
   if (evaluator.id !== timingPilotEvaluatorId || evaluator.version !== timingPilotEvaluatorVersion || evaluator.snapshot_id !== timingPilotEvaluatorSnapshotId) fail("evaluator identity is not the frozen #202 evaluator");
   const parsedEvaluator = { id: timingPilotEvaluatorId, version: timingPilotEvaluatorVersion, snapshot_id: timingPilotEvaluatorSnapshotId };
+  const runner = value.runner;
+  exactKeys(runner, ["id", "version", "manifest_path", "manifest_sha256"], "runner");
+  if (runner.id !== timingPilotRunnerId || runner.version !== timingPilotRunnerVersion || runner.manifest_path !== timingPilotRunnerManifestPath) fail("runner implementation identity is not the frozen timing pilot runner");
+  const parsedRunner = { id: timingPilotRunnerId, version: timingPilotRunnerVersion, manifest_path: timingPilotRunnerManifestPath, manifest_sha256: hashField(runner, "manifest_sha256") };
   const treatment = value.treatment;
   exactKeys(treatment, ["root", "id", "version", "pack", "practice"], "treatment");
   if (!isRecord(treatment.pack) || !isRecord(treatment.practice)) fail("treatment pack/practice is invalid");
@@ -273,7 +315,7 @@ export async function parseTimingPilotPlan(value: unknown): Promise<TimingPilotP
   const expectedSlots = buildTimingPilotSchedule();
   if (JSON.stringify(parsedSlots) !== JSON.stringify(expectedSlots)) fail("schedule does not match the frozen cyclic Latin square");
   if (value.claim_boundary !== "diagnostic-only; no formal record, suite revision, or general/product conclusion") fail("claim boundary is invalid");
-  const plan: TimingPilotPlan = { schema_version: timingPilotSchemaVersion, id: "async-report-timing-pilot", version: "v1", lifecycle_stage: value.lifecycle_stage, candidate: parsedCandidate, evaluator: parsedEvaluator, treatment: parsedTreatment, prompts: parsedPrompts, execution: parsedExecution, judge: parsedJudge, schedule: { algorithm: "cyclic-latin-square/v1", repetitions: 3, slots: parsedSlots }, claim_boundary: "diagnostic-only; no formal record, suite revision, or general/product conclusion", plan_hash: hashField(value, "plan_hash") };
+  const plan: TimingPilotPlan = { schema_version: timingPilotSchemaVersion, id: "async-report-timing-pilot", version: "v1", lifecycle_stage: value.lifecycle_stage, candidate: parsedCandidate, evaluator: parsedEvaluator, runner: parsedRunner, treatment: parsedTreatment, prompts: parsedPrompts, execution: parsedExecution, judge: parsedJudge, schedule: { algorithm: "cyclic-latin-square/v1", repetitions: 3, slots: parsedSlots }, claim_boundary: "diagnostic-only; no formal record, suite revision, or general/product conclusion", plan_hash: hashField(value, "plan_hash") };
   if (await hashTimingPilotPlan(plan) !== plan.plan_hash) fail("plan_hash does not match canonical plan content");
   return Object.freeze(plan);
 }
@@ -344,6 +386,98 @@ function commandIdentity(command: string): string {
   return command.split(/[\\/]/).pop()?.replace(/\.(?:cmd|exe)$/i, "") ?? command;
 }
 
+async function resolvePiCommandFile(root: string, env: Record<string, string | undefined>): Promise<{ command: string; sha256: string }> {
+  const configured = env.LORELUM_PI_COMMAND?.trim();
+  const command = configured || await piCommand(root);
+  const hasPath = isAbsolute(command) || command.includes("/") || command.includes("\\");
+  const found = hasPath ? resolve(root, command) : Bun.which(command);
+  if (!found) throw new Error("pinned Pi command could not be resolved");
+  const path = await realpath(found);
+  const info = await lstat(path);
+  if (!info.isFile()) throw new Error("pinned Pi command is not a file");
+  return { command: path, sha256: await sha256File(path) };
+}
+
+export async function inspectTimingPilotPiCommand(root: string, env: Record<string, string | undefined> = Bun.env): Promise<{ command: string; sha256: string; version: string }> {
+  const resolvedCommand = await resolvePiCommandFile(root, env);
+  const result = await runPiCommand([resolvedCommand.command, "--version"], root, preflightTimeoutMs, envText(env), true);
+  if (result.timedOut || result.code !== 0) throw new Error("pinned Pi command version check failed");
+  return { ...resolvedCommand, version: result.stdout.trim() };
+}
+
+async function probeTimingPilotPiAndModel(root: string, model: string, plan: TimingPilotPlan, suppliedEnv: Record<string, string | undefined>): Promise<{ version: string; command_sha256: string; duration_ms: number; usage: unknown }> {
+  const probeStarted = performance.now();
+  const env = envText(suppliedEnv);
+  if (!localPiModelBaseUrl(env) || !localPiApiKey(env)) throw new Error("Pi gateway endpoint or credential is unavailable");
+  const resolvedCommand = await resolvePiCommandFile(root, env);
+  if (commandIdentity(resolvedCommand.command) !== plan.execution.agent.command) throw new Error("resolved Pi command does not match the timing pilot environment");
+  const shellPath = await localPiShellPath(env);
+  const catalog = await configureLocalPiModelCatalog(env, model, shellPath);
+  const probeDirectory = await mkdtemp(join(tmpdir(), "lorelum-timing-pilot-probe-"));
+  const statePath = join(probeDirectory, "turn-budget.json");
+  await Bun.write(statePath, JSON.stringify({ turns: 0 }) + "\n");
+  const probeEnv: Record<string, string> = {};
+  for (const name of ["PATH", "Path", "PATHEXT", "SystemRoot", "HOME", "USERPROFILE", "TEMP", "TMP"]) {
+    const value = env[name];
+    if (value) probeEnv[name] = value;
+  }
+  if (catalog) { probeEnv.PI_CODING_AGENT_DIR = catalog.directory; probeEnv.PI_OFFLINE = "1"; }
+  const key = localPiApiKey(env);
+  if (key) probeEnv.DEEPSEEK_API_KEY = key;
+  probeEnv.LORELUM_TIMING_PILOT_TURN_STATE = statePath;
+  probeEnv.LORELUM_TIMING_PILOT_MAX_TURNS = "2";
+  const modelArgs = [
+    resolvedCommand.command, "--print", "--mode", "json", "--no-session", "--no-tools", "--no-context-files", "--no-extensions", "--no-skills", "--no-prompt-templates",
+    "--model", localPiModelArgument(model), "--extension", join(import.meta.dir, "timing-pilot-runtime-extension.ts"),
+    "--append-system-prompt", resolve(root, plan.prompts.system_prompt_path), "Reply with exactly: ok",
+  ];
+  try {
+    const version = await runPiCommand([resolvedCommand.command, "--version"], probeDirectory, preflightTimeoutMs, probeEnv, false);
+    if (version.timedOut || version.code !== 0 || version.stdout.trim() !== plan.execution.agent.version) throw new Error("Pi version does not match the timing pilot environment");
+    const probe = await runPiCommand(modelArgs, probeDirectory, preflightTimeoutMs, probeEnv, false);
+    if (probe.timedOut || probe.code !== 0 || !/\bok\b/i.test(probe.stdout)) throw new Error("target-model short probe did not complete successfully");
+    const state = await Bun.file(statePath).json().catch(() => undefined) as { ready?: unknown; turns?: unknown; exhausted?: unknown } | undefined;
+    if (state?.ready !== true || !Number.isInteger(state.turns) || (state.turns as number) < 1 || (state.turns as number) > 2 || state.exhausted === true) throw new Error("Pi did not apply the pinned timing pilot turn-budget extension");
+    let usage: unknown;
+    for (const line of probe.stdout.split(/\r?\n/)) {
+      try {
+        const event = JSON.parse(line) as unknown;
+        if (!isRecord(event) || event.type !== "message_end" || !isRecord(event.message) || event.message.role !== "assistant") continue;
+        if (isRecord(event.message.usage)) usage = event.message.usage;
+      } catch { /* ignore non-JSON stdout */ }
+    }
+    return { version: version.stdout.trim(), command_sha256: resolvedCommand.sha256, duration_ms: Math.round(performance.now() - probeStarted), usage };
+  } finally {
+    catalog?.cleanup();
+    await rm(probeDirectory, { recursive: true, force: true });
+  }
+}
+
+
+export async function validateTimingPilotRunnerIdentity(root: string, plan: TimingPilotPlan): Promise<void> {
+  const manifestPath = await resolveContainedPath(root, plan.runner.manifest_path, "runner source manifest");
+  if (await canonicalFileHash(manifestPath) !== plan.runner.manifest_sha256) throw new Error("runner source manifest hash does not match timing pilot plan");
+  const manifest = JSON.parse(await Bun.file(manifestPath).text()) as unknown;
+  if (!isRecord(manifest)) throw new Error("runner source manifest is invalid");
+  exactKeys(manifest, ["schema_version", "id", "version", "files"], "runner source manifest");
+  if (manifest.schema_version !== "async-report-timing-pilot-runner/v1" || manifest.id !== plan.runner.id || manifest.version !== plan.runner.version || !Array.isArray(manifest.files)) throw new Error("runner source manifest identity is invalid");
+  const files: Array<{ path: string; sha256: string }> = [];
+  for (const [index, raw] of manifest.files.entries()) {
+    if (!isRecord(raw)) throw new Error(`runner source manifest files[${index}] is invalid`);
+    exactKeys(raw, ["path", "sha256"], `runner source manifest files[${index}]`);
+    const path = stringField(raw, "path");
+    const digest = hashField(raw, "sha256");
+    files.push({ path, sha256: digest });
+  }
+  const expectedPaths = [...timingPilotRunnerSourcePaths].sort();
+  const actualPaths = files.map((file) => file.path).sort();
+  if (JSON.stringify(actualPaths) !== JSON.stringify(expectedPaths)) throw new Error("runner source manifest file set is incomplete or unexpected");
+  for (const file of files) {
+    const sourcePath = await resolveContainedPath(root, file.path, "runner source file");
+    if (await canonicalFileHash(sourcePath) !== file.sha256) throw new Error(`runner source hash does not match: ${file.path}`);
+  }
+}
+
 async function validateEvaluatorAndJudge(root: string, plan: TimingPilotPlan): Promise<void> {
   const evaluatorRoot = await resolveContainedPath(root, "incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1", "evaluator root");
   await loadEvaluatorIdentity(evaluatorRoot);
@@ -390,8 +524,37 @@ function gate(id: string, status: TimingPilotGateStatus, reason?: string): Timin
   return Object.freeze({ id, status, ...(reason ? { reason } : {}) });
 }
 
+function preflightUsage(value: unknown): TimingPilotPreflightUsage {
+  const source = isRecord(value) ? value : {};
+  const number = (field: string, alternate?: string): number | null => {
+    const candidate = source[field] ?? (alternate ? source[alternate] : undefined);
+    return typeof candidate === "number" && Number.isFinite(candidate) && candidate >= 0 ? candidate : null;
+  };
+  return {
+    input_tokens: number("input_tokens", "input"),
+    output_tokens: number("output_tokens", "output"),
+    total_tokens: number("total_tokens", "total"),
+    cost_usd: number("cost_usd", "cost"),
+  };
+}
+
 function summaryBase(plan: TimingPilotPlan, calibrationStatus: TimingPilotPreflightSummary["judge"]["calibration_status"] = "not-run", calibrationCalls = 0): Omit<TimingPilotPreflightSummary, "status" | "allowed_to_start" | "gates"> {
-  return { schema_version: timingPilotPreflightSchemaVersion, plan_hash: plan.plan_hash, model: plan.execution.model, evaluator: plan.evaluator, agent: { id: plan.execution.agent.id, version: plan.execution.agent.version }, environment: plan.execution.environment, budget: plan.execution.budget, cost_estimate: { agent_attempts: 9, judge_calibration_calls: 9, judge_scoring_calls: 9, agent_max_duration_ms: plan.execution.budget.max_duration_ms * 9, total_judge_calls: 18, cost_usd: "unavailable" }, judge: { provider_id: plan.judge.provider_id, model: plan.judge.model, real_opt_in: false, calibration_status: calibrationStatus, calibration_calls: calibrationCalls } };
+  return {
+    schema_version: timingPilotPreflightSchemaVersion,
+    created_at: new Date().toISOString(),
+    preflight_duration_ms: 0,
+    pi_probe: { calls: 0, duration_ms: 0, usage: preflightUsage(undefined) },
+    plan_hash: plan.plan_hash,
+    model: plan.execution.model,
+    evaluator: plan.evaluator,
+    runner: { id: plan.runner.id, version: plan.runner.version, manifest_sha256: plan.runner.manifest_sha256 },
+    agent: { id: plan.execution.agent.id, version: plan.execution.agent.version, command: plan.execution.agent.command, observed_version: null, command_sha256: null },
+    environment: plan.execution.environment,
+    runtime: { observed_bun: null, observed_node: null },
+    budget: plan.execution.budget,
+    cost_estimate: { preflight_cost_usd: null, agent_attempts: 9, judge_calibration_calls: 9, judge_scoring_calls: 9, agent_max_duration_ms: plan.execution.budget.max_duration_ms * 9, total_judge_calls: 18, cost_usd: "unavailable" },
+    judge: { provider_id: plan.judge.provider_id, model: plan.judge.model, real_opt_in: false, calibration_status: calibrationStatus, calibration_calls: calibrationCalls, calibration_duration_ms: 0, calibration_usage: preflightUsage(undefined) },
+  };
 }
 
 function invalidPlanSummary(plan: TimingPilotPlan, reason: unknown): TimingPilotPreflightSummary {
@@ -412,6 +575,7 @@ export async function dryRunTimingPilot(options: { root?: string; plan: TimingPi
   const root = resolve(options.root ?? workspaceRoot);
   const plan = await parseTimingPilotPlan(options.plan);
   assertActiveTimingPilot(plan);
+  await validateTimingPilotRunnerIdentity(root, plan);
   await readEnvironment(root, plan);
   await validateEvaluatorAndJudge(root, plan);
   await validatePromptAndCandidate(root, plan);
@@ -420,6 +584,7 @@ export async function dryRunTimingPilot(options: { root?: string; plan: TimingPi
 }
 
 export async function runTimingPilotPreflight(options: TimingPilotPreflightOptions = {}): Promise<TimingPilotPreflightSummary> {
+  const preflightStarted = performance.now();
   const root = resolve(options.root ?? workspaceRoot);
   let plan: TimingPilotPlan;
   try {
@@ -428,6 +593,7 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
     const fallback = {
       plan_hash: "0".repeat(64),
       evaluator: { id: timingPilotEvaluatorId, version: timingPilotEvaluatorVersion, snapshot_id: timingPilotEvaluatorSnapshotId },
+      runner: { id: timingPilotRunnerId, version: timingPilotRunnerVersion, manifest_path: timingPilotRunnerManifestPath, manifest_sha256: "0".repeat(64) },
       execution: { model: { id: timingPilotModel, version: timingPilotModelVersion }, agent: { id: "pi", version: "0.85.1" }, environment: { id: "local-pi", version: "v4", bun: timingPilotBunVersion, node: timingPilotNodeVersion, manifest_sha256: timingPilotEnvironmentManifestSha256 }, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } },
       judge: { provider_id: timingPilotJudgeProvider, model: timingPilotJudgeModel, evaluation_plan_hash: timingPilotJudgeEvaluationPlanHash, rubric_hash: timingPilotJudgeRubricHash },
     } as TimingPilotPlan;
@@ -438,6 +604,13 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
   let calibrationStatus: TimingPilotPreflightSummary["judge"]["calibration_status"] = "not-run";
   let calibrationCalls = 0;
   let judgeRealOptIn = false;
+  let observedRuntime: { bun: string; node: string } | undefined;
+  let observedPi: { version: string; command_sha256: string } | undefined;
+  let piProbeCalls = 0;
+  let piProbeDurationMs = 0;
+  let piProbeUsage = preflightUsage(undefined);
+  let calibrationDurationMs = 0;
+  let calibrationUsage = preflightUsage(undefined);
   const environmentGate = await (async () => {
     try {
       await readEnvironment(root, plan);
@@ -451,6 +624,7 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
     if (environmentGate.status !== "passed") return gate("runtime", "blocked", "environment manifest validation failed");
     try {
       const runtime = await (options.runtime_probe ?? readHostRuntime)();
+      observedRuntime = runtime;
       if (runtime.bun !== plan.execution.environment.bun || runtime.node !== plan.execution.environment.node) throw new Error(`host runtime ${runtime.bun}/${runtime.node} does not match plan ${plan.execution.environment.bun}/${plan.execution.environment.node}`);
       return gate("runtime", "passed");
     } catch (error) {
@@ -466,27 +640,19 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
     gates.push(gate("pi-model-probe", "not-run", "model probe disabled by caller"));
   } else if (environmentGate.status !== "passed" || runtimeGate.status !== "passed") {
     gates.push(gate("pi-model-probe", "blocked", "environment or host runtime validation failed"));
+  } else if (!localPiModelBaseUrl(envText(options.env ?? {})) || !localPiApiKey(envText(options.env ?? {}))) {
+    gates.push(gate("pi-model-probe", "failed", "Pi gateway endpoint or credential is unavailable"));
   } else {
     try {
-      const probe = options.model_probe ?? (async ({ root: probeRoot, model }) => {
-        const command = await piCommand(probeRoot);
-        if (commandIdentity(command) !== plan.execution.agent.command) throw new Error("Pi command does not match the timing pilot environment");
-        const env = envText(options.env ?? {});
-        const shellPath = await localPiShellPath(env);
-        const catalog = await configureLocalPiModelCatalog(env, model, shellPath);
-        if (catalog) { env.PI_CODING_AGENT_DIR = catalog.directory; env.PI_OFFLINE = "1"; }
-        const key = localPiApiKey(env);
-        const probeEnv: Record<string, string> = {};
-        for (const name of ["PATH", "Path", "PATHEXT", "SystemRoot", "HOME", "USERPROFILE", "TEMP", "TMP"]) {
-          const value = env[name];
-          if (value) probeEnv[name] = value;
-        }
-        if (catalog) { probeEnv.PI_CODING_AGENT_DIR = catalog.directory; probeEnv.PI_OFFLINE = "1"; }
-        if (key) probeEnv.DEEPSEEK_API_KEY = key;
-        try { return await preflightPiAndModel(command, localPiModelArgument(model), undefined, probeEnv, false); } finally { catalog?.cleanup(); }
-      });
+      piProbeCalls = 1;
+      const probe = options.model_probe ?? (async ({ root: probeRoot, model }) => probeTimingPilotPiAndModel(probeRoot, model, plan, envText(options.env ?? {})));
+      const probeStarted = performance.now();
       const result = await probe({ root, model: plan.execution.model.id });
+      piProbeDurationMs = result.duration_ms ?? Math.round(performance.now() - probeStarted);
+      piProbeUsage = preflightUsage(result.usage);
       if (result.version !== plan.execution.agent.version) throw new Error(`Pi probe version ${result.version} does not match plan ${plan.execution.agent.version}`);
+      if (!hashPattern.test(result.command_sha256)) throw new Error("Pi executable identity is unavailable");
+      observedPi = { version: result.version, command_sha256: result.command_sha256 };
       gates.push(gate("pi-model-probe", "passed"));
     } catch (error) {
       gates.push(gate("pi-model-probe", "failed", redactedReason(error)));
@@ -510,18 +676,49 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
   if (!judgeRealOptIn) gates.push(gate("judge-provider", "failed", "Judge real opt-in, endpoint, key, or model is unavailable")); else gates.push(gate("judge-provider", "passed"));
   if (options.run_judge_calibration !== false && judgeRealOptIn && gates.every((entry) => entry.status === "passed")) {
     try {
-      const report = await (options.judge_calibration ?? runRealCalibration)(envText(options.env ?? {}));
-      calibrationStatus = report.status;
-      calibrationCalls = report.calls;
-      gates.push(gate("judge-calibration", report.status === "qualified" ? "passed" : "failed", report.status === "qualified" ? undefined : redactedReason(report.reason ?? "Judge calibration did not qualify")));
-    } catch (error) { calibrationStatus = "unavailable"; gates.push(gate("judge-calibration", "failed", redactedReason(error))); }
+      const env = envText(options.env ?? {});
+      let report: CalibrationReport;
+      let diagnostics: JudgeCalibrationDiagnostics;
+      if (options.calibration_report) {
+        report = options.calibration_report;
+        diagnostics = createCachedReportDiagnostics(report);
+      } else if (options.judge_calibration) {
+        report = await options.judge_calibration(env);
+        diagnostics = createCachedReportDiagnostics(report);
+      } else {
+        const run = await runRealCalibrationWithDiagnostics({ env });
+        report = run.report;
+        diagnostics = run.diagnostics;
+      }
+      calibrationDurationMs = report.duration_ms;
+      calibrationUsage = preflightUsage(report.usage);
+      const resolved = options.judge_calibration
+        ? { status: report.status, calls: report.calls, reason: report.reason }
+        : await resolveCalibrationStatus(report, calibrationScope(plan.judge.model), calibrationAttestationKey("real", env));
+      calibrationStatus = resolved.status === "qualified" ? "qualified" : "diagnostic";
+      calibrationCalls = resolved.calls;
+      options.on_judge_calibration_report?.(report);
+      options.on_judge_calibration_diagnostics?.(diagnostics);
+      const qualified = calibrationStatus === "qualified";
+      const reason = qualified ? undefined : resolved.reason ?? report.reason ?? "Judge calibration did not qualify";
+      gates.push(gate("judge-calibration", qualified ? "passed" : "failed", reason ? redactedReason(reason) : undefined));
+    } catch (error) {
+      calibrationStatus = "unavailable";
+      options.on_judge_calibration_diagnostics?.(calibrationDiagnosticsForPreflightError(error));
+      gates.push(gate("judge-calibration", "failed", redactedReason(error)));
+    }
   } else gates.push(gate("judge-calibration", "blocked", "Judge provider preflight or earlier gate failed"));
   const failedGate = gates.find((entry) => entry.status !== "passed");
   const invalidPlan = environmentGate.status === "passed" && runtimeGate.status === "passed" && dryRunGate.status === "failed";
   const base = summaryBase(plan, calibrationStatus, calibrationCalls);
   return {
     ...base,
-    judge: { ...base.judge, real_opt_in: judgeRealOptIn },
+    agent: { ...base.agent, observed_version: observedPi?.version ?? null, command_sha256: observedPi?.command_sha256 ?? null },
+    runtime: { observed_bun: observedRuntime?.bun ?? null, observed_node: observedRuntime?.node ?? null },
+    preflight_duration_ms: Math.max(0, Math.round(performance.now() - preflightStarted)),
+    pi_probe: { calls: piProbeCalls, duration_ms: piProbeDurationMs, usage: piProbeUsage },
+    judge: { ...base.judge, real_opt_in: judgeRealOptIn, calibration_duration_ms: calibrationDurationMs, calibration_usage: calibrationUsage },
+    cost_estimate: { ...base.cost_estimate, preflight_cost_usd: (piProbeCalls === 0 || piProbeUsage.cost_usd !== null) && (calibrationCalls === 0 || calibrationUsage.cost_usd !== null) ? (piProbeCalls ? piProbeUsage.cost_usd! : 0) + (calibrationCalls ? calibrationUsage.cost_usd! : 0) : null },
     status: failedGate ? (invalidPlan ? "invalid-plan" : "preflight-blocked") : "ready",
     allowed_to_start: !failedGate,
     gates,
@@ -529,8 +726,47 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
   };
 }
 
-export async function writeTimingPilotDryRunSummary(result: TimingPilotDryRun, directory: string): Promise<{ json_path: string; markdown_path: string }> {
-  await mkdir(directory, { recursive: true });
+function isWithin(parent: string, child: string): boolean {
+  const relativePath = relative(parent, child);
+  return relativePath === "" || (relativePath !== ".." && !relativePath.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) && !isAbsolute(relativePath));
+}
+
+async function rejectSymlinkComponents(parent: string, target: string): Promise<void> {
+  const tail = relative(parent, target);
+  let current = parent;
+  for (const part of tail.split(/[\\/]/).filter(Boolean)) {
+    current = join(current, part);
+    try {
+      if ((await lstat(current)).isSymbolicLink()) throw new Error("scratch artifact path must not traverse a symlink or junction");
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") return;
+      throw error;
+    }
+  }
+}
+
+export async function resolveTimingPilotScratchOutput(root: string, requestedPath: string): Promise<string> {
+  const rootReal = await realpath(resolve(root));
+  const scratchRoot = join(rootReal, "scratch");
+  try {
+    if ((await lstat(scratchRoot)).isSymbolicLink()) throw new Error("scratch root must not be a symlink or junction");
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+    await mkdir(scratchRoot, { recursive: true });
+  }
+  const scratchReal = await realpath(scratchRoot);
+  if (!isWithin(rootReal, scratchReal) || scratchReal !== scratchRoot) throw new Error("scratch root resolves outside the selected workspace");
+  const target = isAbsolute(requestedPath) ? resolve(requestedPath) : resolve(rootReal, requestedPath);
+  if (target === scratchReal || !isWithin(scratchReal, target)) throw new Error("timing pilot artifacts must be written below the workspace scratch/ directory");
+  await rejectSymlinkComponents(scratchReal, target);
+  await mkdir(target, { recursive: true });
+  const targetReal = await realpath(target);
+  if (!isWithin(scratchReal, targetReal) || targetReal === scratchReal) throw new Error("timing pilot artifact directory escapes workspace scratch/");
+  return targetReal;
+}
+
+export async function writeTimingPilotDryRunSummary(result: TimingPilotDryRun, directory: string, root = workspaceRoot): Promise<{ json_path: string; markdown_path: string }> {
+  directory = await resolveTimingPilotScratchOutput(root, directory);
   const jsonPath = join(directory, "dry-run-summary.json");
   const markdownPath = join(directory, "dry-run-summary.md");
   await writeFile(jsonPath, `${JSON.stringify(result, null, 2)}\n`);
@@ -539,8 +775,8 @@ export async function writeTimingPilotDryRunSummary(result: TimingPilotDryRun, d
   return { json_path: jsonPath, markdown_path: markdownPath };
 }
 
-async function writeTimingPilotDryRunFailureSummary(reason: string, directory: string): Promise<{ json_path: string; markdown_path: string }> {
-  await mkdir(directory, { recursive: true });
+async function writeTimingPilotDryRunFailureSummary(reason: string, directory: string, root = workspaceRoot): Promise<{ json_path: string; markdown_path: string }> {
+  directory = await resolveTimingPilotScratchOutput(root, directory);
   const jsonPath = join(directory, "dry-run-failure.json");
   const markdownPath = join(directory, "dry-run-failure.md");
   const failure = { status: "invalid-plan" as const, allowed_to_start: false, reason: redactedReason(reason) };
@@ -549,45 +785,116 @@ async function writeTimingPilotDryRunFailureSummary(reason: string, directory: s
   return { json_path: jsonPath, markdown_path: markdownPath };
 }
 
-export async function writeTimingPilotPreflightSummary(summary: TimingPilotPreflightSummary, directory: string): Promise<{ json_path: string; markdown_path: string }> {
-  await mkdir(directory, { recursive: true });
+export async function writeTimingPilotPreflightSummary(summary: TimingPilotPreflightSummary, directory: string, root = workspaceRoot, diagnostics?: JudgeCalibrationDiagnostics): Promise<{ json_path: string; markdown_path: string; judge_calibration_diagnostics_json_path?: string; judge_calibration_diagnostics_markdown_path?: string }> {
+  directory = await resolveTimingPilotScratchOutput(root, directory);
   const jsonPath = join(directory, "preflight-summary.json");
   const markdownPath = join(directory, "preflight-summary.md");
-  await writeFile(jsonPath, `${JSON.stringify(summary, null, 2)}\n`);
-  const lines = ["# Async-report timing pilot preflight", "", `- status: ${summary.status}`, `- allowed_to_start: ${summary.allowed_to_start}`, `- plan_hash: ${summary.plan_hash}`, `- model: ${summary.model.id} (${summary.model.version})`, `- evaluator: ${summary.evaluator.id} ${summary.evaluator.version} (${summary.evaluator.snapshot_id})`, `- Pi: ${summary.agent.id} ${summary.agent.version}`, `- environment: ${summary.environment.id}/${summary.environment.version}`, `- budget: ${summary.budget.max_turns} turns / ${summary.budget.max_duration_ms} ms`, `- estimated agent duration: ${summary.cost_estimate.agent_max_duration_ms} ms`, `- estimated Judge calls: ${summary.cost_estimate.total_judge_calls}`, `- estimated cost USD: ${summary.cost_estimate.cost_usd}`, `- Judge: ${summary.judge.provider_id} / ${summary.judge.model}`, `- Judge real opt-in: ${summary.judge.real_opt_in}`, `- Judge calibration: ${summary.judge.calibration_status} (${summary.judge.calibration_calls} calls)`, "", "## Gates", ...summary.gates.map((entry) => `- ${entry.id}: ${entry.status}${entry.reason ? ` — ${entry.reason}` : ""}`)];
-  await writeFile(markdownPath, `${lines.join("\n")}\n`);
-  return { json_path: jsonPath, markdown_path: markdownPath };
+  let diagnosticPaths: { judge_calibration_diagnostics_json_path: string; judge_calibration_diagnostics_markdown_path: string } | undefined;
+  if (diagnostics) {
+    const privateDirectory = await resolveTimingPilotScratchOutput(root, join(directory, "private"));
+    const diagnosticJson = join(privateDirectory, "judge-calibration-diagnostics.json");
+    const diagnosticMarkdown = join(privateDirectory, "judge-calibration-diagnostics.md");
+    await writeFile(diagnosticJson, `${JSON.stringify(diagnostics, null, 2)}\n`, "utf8");
+    await writeFile(diagnosticMarkdown, renderJudgeCalibrationDiagnosticsMarkdown(diagnostics), "utf8");
+    diagnosticPaths = { judge_calibration_diagnostics_json_path: diagnosticJson, judge_calibration_diagnostics_markdown_path: diagnosticMarkdown };
+  }
+  await writeFile(jsonPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
+  const lines = ["# Async-report timing pilot preflight", "", `- status: ${summary.status}`, `- allowed_to_start: ${summary.allowed_to_start}`, `- plan_hash: ${summary.plan_hash}`, `- model: ${summary.model.id} (${summary.model.version})`, `- evaluator: ${summary.evaluator.id} ${summary.evaluator.version} (${summary.evaluator.snapshot_id})`, `- runner: ${summary.runner.id} ${summary.runner.version} (${summary.runner.manifest_sha256})`, `- Pi: ${summary.agent.id} ${summary.agent.version} (${summary.agent.command})`, `- environment: ${summary.environment.id}/${summary.environment.version} (${summary.environment.manifest_sha256})`, `- runtime observed: Bun ${summary.runtime.observed_bun ?? "not observed"} / Node ${summary.runtime.observed_node ?? "not observed"}`, `- budget: ${summary.budget.max_turns} turns / ${summary.budget.max_duration_ms} ms`, `- preflight elapsed: ${summary.preflight_duration_ms} ms`, `- Pi probe calls/elapsed/tokens/cost: ${summary.pi_probe.calls} / ${summary.pi_probe.duration_ms} ms / ${summary.pi_probe.usage.total_tokens ?? "unavailable"} / ${summary.pi_probe.usage.cost_usd ?? "unavailable"} USD`, `- Judge calibration elapsed/tokens/cost: ${summary.judge.calibration_duration_ms} ms / ${summary.judge.calibration_usage.total_tokens ?? "unavailable"} / ${summary.judge.calibration_usage.cost_usd ?? "unavailable"} USD`, `- estimated agent duration: ${summary.cost_estimate.agent_max_duration_ms} ms`, `- estimated Judge calls: ${summary.cost_estimate.total_judge_calls}`, `- observed preflight cost USD: ${summary.cost_estimate.preflight_cost_usd ?? "unavailable"}`, `- estimated cost USD: ${summary.cost_estimate.cost_usd}`, `- Judge: ${summary.judge.provider_id} / ${summary.judge.model}`, `- Judge real opt-in: ${summary.judge.real_opt_in}`, `- Judge calibration: ${summary.judge.calibration_status} (${summary.judge.calibration_calls} calls)`];
+  if (diagnosticPaths) lines.push("- Judge calibration details: `private/judge-calibration-diagnostics.md` (host-local private artifact; not sent to the Judge or Agent)");
+  lines.push("", "## Gates", ...summary.gates.map((entry) => `- ${entry.id}: ${entry.status}${entry.reason ? ` — ${entry.reason}` : ""}`));
+  await writeFile(markdownPath, `${lines.join("\n")}\n`, "utf8");
+  return { json_path: jsonPath, markdown_path: markdownPath, ...diagnosticPaths };
 }
-
 function argValue(args: string[], name: string): string | undefined { const index = args.indexOf(name); return index === -1 ? undefined : args[index + 1]; }
 
 if (import.meta.main) {
-  const args = Bun.argv.slice(2);
-  const root = resolve(argValue(args, "--root") ?? workspaceRoot);
-  const mode = args.includes("--dry-run") ? "dry-run" : "preflight";
-  const planPath = argValue(args, "--plan") ?? timingPilotPlanPath;
-  const artifactDirectory = resolve(root, argValue(args, "--artifacts") ?? join("scratch", "async-report-timing-pilot-v1", "preflight"));
-  try {
-    if (mode === "dry-run") {
-      try {
-        const plan = await readTimingPilotPlan(resolve(root, planPath));
-        const result = await dryRunTimingPilot({ root, plan });
-        const paths = await writeTimingPilotDryRunSummary(result, artifactDirectory);
-        console.log(JSON.stringify({ ...result, artifacts: paths }, null, 2));
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const paths = await writeTimingPilotDryRunFailureSummary(reason, artifactDirectory);
-        console.error(JSON.stringify({ status: "invalid-plan", allowed_to_start: false, reason, artifacts: paths }, null, 2));
-        process.exitCode = 1;
+  await (async () => {
+    const args = Bun.argv.slice(2);
+    const root = resolve(argValue(args, "--root") ?? workspaceRoot);
+    const mode = args.includes("--dry-run") ? "dry-run" : args.includes("--run") ? "run" : "preflight";
+    const planPath = argValue(args, "--plan") ?? timingPilotPlanPath;
+    const requestedArtifacts = argValue(args, "--artifacts") ?? join("scratch", "async-report-timing-pilot-v1", "preflight");
+    try {
+      const artifactDirectory = await resolveTimingPilotScratchOutput(root, requestedArtifacts);
+      if (mode === "dry-run") {
+        try {
+          const plan = await readTimingPilotPlan(resolve(root, planPath));
+          const result = await dryRunTimingPilot({ root, plan });
+          const paths = await writeTimingPilotDryRunSummary(result, artifactDirectory, root);
+          console.log(JSON.stringify({ ...result, artifacts: paths }, null, 2));
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          const paths = await writeTimingPilotDryRunFailureSummary(reason, artifactDirectory, root);
+          console.error(JSON.stringify({ status: "invalid-plan", allowed_to_start: false, reason: redactedReason(reason), artifacts: paths }, null, 2));
+          process.exitCode = 1;
+        }
+        return;
       }
-    } else {
-      const summary = await runTimingPilotPreflight({ root, plan_path: planPath });
-      const paths = await writeTimingPilotPreflightSummary(summary, artifactDirectory);
-      console.log(JSON.stringify({ ...summary, artifacts: paths }, null, 2));
+
+      if (mode === "run") {
+        if (Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") throw new Error("Agent run requires explicit LORELUM_LOCAL_EXPERIMENT=1 opt-in");
+        if (Bun.env.LORELUM_JUDGE_REAL !== "1") throw new Error("Judge run requires explicit LORELUM_JUDGE_REAL=1 opt-in");
+        const reportPath = resolve(argValue(args, "--calibration-report") ?? join(artifactDirectory, "private", "judge-calibration-report.json"));
+        await resolveTimingPilotScratchOutput(root, dirname(reportPath));
+        const scratchRoot = await realpath(join(await realpath(root), "scratch"));
+        const reportInfo = await lstat(reportPath);
+        const reportReal = await realpath(reportPath);
+        if (reportInfo.isSymbolicLink() || !isWithin(scratchRoot, reportReal)) throw new Error("Judge calibration report must be a non-symlink file under workspace scratch/");
+        if (!await Bun.file(reportPath).exists()) throw new Error("qualified Judge calibration report is required; run preflight first");
+        const cachedCalibration = await Bun.file(reportReal).json() as CalibrationReport;
+        if (args.includes("--confirm-start")) {
+          const summaryPath = join(artifactDirectory, "preflight-summary.json");
+          if (!await Bun.file(summaryPath).exists()) throw new Error("a fresh successful preflight summary is required before --confirm-start");
+          const summary = await Bun.file(summaryPath).json() as TimingPilotPreflightSummary;
+          const plan = await readTimingPilotPlan(resolve(root, planPath));
+          const result = await (await import("./async-report-timing-pilot-runner")).runTimingPilotAttempts({
+            root, plan,
+            run_id: argValue(args, "--run-id") ?? `pilot-${new Date().toISOString().replaceAll(/[:.]/g, "-")}`,
+            output_root: join(artifactDirectory, "attempts"),
+            preflight: summary,
+            calibration: cachedCalibration,
+          });
+          await writeFile(join(artifactDirectory, "pilot-result-index.json"), `${JSON.stringify(result, null, 2)}\n`, "utf8");
+          console.log(JSON.stringify(result, null, 2));
+          return;
+        }
+        let calibrationReport: CalibrationReport | undefined;
+        let calibrationDiagnostics: JudgeCalibrationDiagnostics | undefined;
+        const summary = await runTimingPilotPreflight({
+          root,
+          plan_path: planPath,
+          calibration_report: cachedCalibration,
+          on_judge_calibration_report: (report) => { calibrationReport = report; },
+          on_judge_calibration_diagnostics: (diagnostics) => { calibrationDiagnostics = diagnostics; },
+        });
+        const summaryPaths = await writeTimingPilotPreflightSummary(summary, artifactDirectory, root, calibrationDiagnostics);
+        if (calibrationReport) await privateWriteTimingPilotCalibrationReport(artifactDirectory, calibrationReport, root);
+        console.log(JSON.stringify({ ...summary, artifacts: summaryPaths, pilot_started: false }, null, 2));
+        if (!summary.allowed_to_start) process.exitCode = 1;
+        else console.log("Nine Agent attempts were not started. Review this summary, then rerun with --run --confirm-start.");
+        return;
+      }
+
+      let calibrationReport: CalibrationReport | undefined;
+      let calibrationDiagnostics: JudgeCalibrationDiagnostics | undefined;
+      const summary = await runTimingPilotPreflight({
+        root,
+        plan_path: planPath,
+        on_judge_calibration_report: (report) => { calibrationReport = report; },
+        on_judge_calibration_diagnostics: (diagnostics) => { calibrationDiagnostics = diagnostics; },
+      });
+      const summaryPaths = await writeTimingPilotPreflightSummary(summary, artifactDirectory, root, calibrationDiagnostics);
+      if (calibrationReport) await privateWriteTimingPilotCalibrationReport(artifactDirectory, calibrationReport, root);
+      console.log(JSON.stringify({ ...summary, artifacts: summaryPaths }, null, 2));
       if (!summary.allowed_to_start) process.exitCode = 1;
+    } catch (error) {
+      console.error(redactedReason(error));
+      process.exitCode = 1;
     }
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
-  }
+  })();
+}
+
+async function privateWriteTimingPilotCalibrationReport(directory: string, report: CalibrationReport, root = workspaceRoot): Promise<void> {
+  const privateDirectory = await resolveTimingPilotScratchOutput(root, join(directory, "private"));
+  await writeFile(join(privateDirectory, "judge-calibration-report.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
