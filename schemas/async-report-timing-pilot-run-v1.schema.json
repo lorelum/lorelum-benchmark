@@ -574,7 +574,8 @@
               "enum": [
                 "qualified",
                 "diagnostic",
-                "not-run"
+                "not-run",
+                "unavailable"
               ]
             },
             "calls": {

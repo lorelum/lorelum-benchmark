@@ -179,7 +179,10 @@
           "const": 9
         },
         "judge_calibration_calls": {
-          "const": 9
+          "anyOf": [
+            { "const": 0 },
+            { "const": 9 }
+          ]
         },
         "judge_scoring_calls": {
           "anyOf": [
@@ -197,12 +200,9 @@
         },
         "total_judge_calls": {
           "anyOf": [
-            {
-              "const": 9
-            },
-            {
-              "const": 18
-            }
+            { "const": 0 },
+            { "const": 9 },
+            { "const": 18 }
           ]
         },
         "cost_usd": {
@@ -479,12 +479,16 @@
           },
           "cost_estimate": {
             "properties": {
+              "judge_calibration_calls": {
+                "const": 0,
+                "type": "integer"
+              },
               "judge_scoring_calls": {
                 "const": 0,
                 "type": "integer"
               },
               "total_judge_calls": {
-                "const": 9,
+                "const": 0,
                 "type": "integer"
               }
             },

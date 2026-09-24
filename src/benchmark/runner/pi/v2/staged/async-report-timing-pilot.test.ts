@@ -210,21 +210,32 @@ test("diagnostic-only preflight accepts a complete attested diagnostic package w
     calibration_report: fixture.report, calibration_diagnostics: fixture.diagnostics,
   });
   expect(summary).toMatchObject({ status: "ready", allowed_to_start: true, execution_mode: "diagnostic-only", judge_score_usable: false });
-  expect(summary.cost_estimate).toMatchObject({ judge_calibration_calls: 9, judge_scoring_calls: 0, total_judge_calls: 9 });
+  expect(summary.cost_estimate).toMatchObject({ judge_calibration_calls: 0, judge_scoring_calls: 0, total_judge_calls: 0 });
   expect(summary.gates.find((entry) => entry.id === "judge-provider")?.status).toBe("not-run");
   expect(summary.gates.find((entry) => entry.id === "judge-calibration")?.status).toBe("accepted-diagnostic");
 });
 
-test("diagnostic-only requires full calibration details and never auto-downgrades scored mode", async () => {
+test("diagnostic-only treats absent or invalid calibration diagnostics as annotations and never auto-downgrades scored mode", async () => {
   const value = await plan();
   const fixture = await diagnosticCalibrationFixture();
-  const env = { ...testAgentEnv, ...fixture.env, LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key" };
-  const missingDetails = await runTimingPilotPreflight({ root: workspaceRoot, plan: value, execution_mode: "diagnostic-only", env, runtime_probe: testRuntimeProbe, model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }), calibration_report: fixture.report });
-  expect(missingDetails.allowed_to_start).toBe(false);
+  const agentOnlyEnv = { ...testAgentEnv, LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key" };
+  const preflightOptions = {
+    root: workspaceRoot, plan: value, execution_mode: "diagnostic-only" as const, env: agentOnlyEnv,
+    runtime_probe: testRuntimeProbe,
+    model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }),
+  };
+  const noPackage = await runTimingPilotPreflight(preflightOptions);
+  expect(noPackage).toMatchObject({ status: "ready", allowed_to_start: true, judge_score_usable: false, judge: { real_opt_in: false, calibration_status: "unavailable", calibration_hash: null } });
+  expect(noPackage.gates.find((entry) => entry.id === "judge-calibration")).toMatchObject({ status: "not-run" });
+  expect(noPackage.cost_estimate).toMatchObject({ judge_calibration_calls: 0, judge_scoring_calls: 0, total_judge_calls: 0 });
+
+  const missingSidecar = await runTimingPilotPreflight({ ...preflightOptions, calibration_report: fixture.report });
+  expect(missingSidecar).toMatchObject({ status: "ready", allowed_to_start: true, judge: { calibration_status: "unavailable" } });
   const tampered = { ...fixture.diagnostics, observations: fixture.diagnostics.observations.slice(1) };
-  const incomplete = await runTimingPilotPreflight({ root: workspaceRoot, plan: value, execution_mode: "diagnostic-only", env, runtime_probe: testRuntimeProbe, model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }), calibration_report: fixture.report, calibration_diagnostics: tampered });
-  expect(incomplete.allowed_to_start).toBe(false);
-  const scored = await runTimingPilotPreflight({ root: workspaceRoot, plan: value, env, runtime_probe: testRuntimeProbe, model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }), calibration_report: fixture.report, calibration_diagnostics: fixture.diagnostics });
+  const unverifiable = await runTimingPilotPreflight({ ...preflightOptions, calibration_report: fixture.report, calibration_diagnostics: tampered });
+  expect(unverifiable).toMatchObject({ status: "ready", allowed_to_start: true, judge: { calibration_status: "unavailable" } });
+
+  const scored = await runTimingPilotPreflight({ root: workspaceRoot, plan: value, env: { ...testAgentEnv, ...fixture.env, LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key" }, runtime_probe: testRuntimeProbe, model_probe: preflightOptions.model_probe, calibration_report: fixture.report, calibration_diagnostics: fixture.diagnostics });
   expect(scored.execution_mode).toBe("judge-scored");
   expect(scored.allowed_to_start).toBe(false);
   expect(scored.judge_score_usable).toBe(false);

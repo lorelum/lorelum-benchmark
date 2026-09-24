@@ -5,11 +5,11 @@
   "files": [
     {
       "path": "src/benchmark/runner/pi/v2/staged/async-report-timing-pilot.ts",
-      "sha256": "ca16b97e69ca959c60f551be198f35ea3520b4ef903501c5edd114f4b34d38d8"
+      "sha256": "8c8a3328d36a1449f2cd70c4fc9bc894e99a25ee2592bfc9ae52883803d22892"
     },
     {
       "path": "src/benchmark/runner/pi/v2/staged/async-report-timing-pilot-runner.ts",
-      "sha256": "9065268d787e38d38ea809c2282ae1bb8129b9b4b1a8bb88bebeee7f2960bb92"
+      "sha256": "7d7a888fcb534288fc172c0263c243769e6a11958e44118fec055493d0807965"
     },
     {
       "path": "src/benchmark/runner/pi/v2/staged/timing-pilot-judge-diagnostics.ts",

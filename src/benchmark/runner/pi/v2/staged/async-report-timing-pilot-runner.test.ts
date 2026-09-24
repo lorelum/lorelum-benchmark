@@ -141,7 +141,7 @@ test("diagnostic-only run executes all hard-evaluator slots with zero Judge scor
     ...scoredPreflight,
     execution_mode: "diagnostic-only",
     judge_score_usable: false,
-    cost_estimate: { ...scoredPreflight.cost_estimate, judge_scoring_calls: 0, total_judge_calls: 9 },
+    cost_estimate: { ...scoredPreflight.cost_estimate, judge_calibration_calls: 0, judge_scoring_calls: 0, total_judge_calls: 0 },
     judge: { ...scoredPreflight.judge, real_opt_in: false, calibration_status: "diagnostic", calibration_hash: fixture.report.hash, calibration_reused: true },
     gates: scoredPreflight.gates.map((entry) => entry.id === "judge-provider" ? { ...entry, status: "not-run" as const } : entry.id === "judge-calibration" ? { ...entry, status: "accepted-diagnostic" as const } : entry),
   };
@@ -170,8 +170,25 @@ test("diagnostic-only run executes all hard-evaluator slots with zero Judge scor
   temporaryRoots.push(rejectedOutput);
   let rejectedAttempts = 0;
   const incompleteDiagnostics = { ...fixture.diagnostics, observations: fixture.diagnostics.observations.slice(1) };
-  await expect(runTimingPilotAttempts({ root: workspaceRoot, plan: value, run_id: "diagnostic-rejected-test", output_root: rejectedOutput, preflight: diagnosticPreflight, calibration: fixture.report, calibration_diagnostics: incompleteDiagnostics, env, dependencies: { run_attempt: async (options) => { rejectedAttempts += 1; return fakeAttempt(options); } } })).rejects.toThrow("matching private sidecar");
-  expect(rejectedAttempts).toBe(0);
+  const unavailableResult = await runTimingPilotAttempts({ root: workspaceRoot, plan: value, run_id: "diagnostic-unverified-test", output_root: rejectedOutput, preflight: diagnosticPreflight, calibration: fixture.report, calibration_diagnostics: incompleteDiagnostics, env, dependencies: { configure_catalog: async () => undefined, verify_identity: async () => "mock-pi", run_attempt: async (options) => { rejectedAttempts += 1; return fakeAttempt(options); }, evaluate: async () => buildEvaluatorResult(CHECK_IDS.map((id) => ({ id, status: "pass" as const }))) } });
+  expect(unavailableResult.status).toBe("completed");
+  expect(unavailableResult.attempted_slots).toBe(9);
+  expect(unavailableResult.cost_ledger.calibration).toMatchObject({ status: "unavailable", calls: 0 });
+  expect(rejectedAttempts).toBe(9);
+
+  const noPackageOutput = join(workspaceRoot, "scratch", "timing-pilot-diagnostic-no-package-" + crypto.randomUUID());
+  temporaryRoots.push(noPackageOutput);
+  const noPackagePreflight: TimingPilotPreflightSummary = {
+    ...diagnosticPreflight,
+    judge: { ...diagnosticPreflight.judge, calibration_status: "unavailable", calibration_hash: null, calibration_reused: false, calibration_calls: 0 },
+    gates: diagnosticPreflight.gates.map((entry) => entry.id === "judge-calibration" ? { ...entry, status: "not-run" as const } : entry),
+  };
+  let noPackageAttempts = 0;
+  const noPackageResult = await runTimingPilotAttempts({ root: workspaceRoot, plan: value, run_id: "diagnostic-no-package-test", output_root: noPackageOutput, preflight: noPackagePreflight, env, dependencies: { configure_catalog: async () => undefined, verify_identity: async () => "mock-pi", run_attempt: async (options) => { noPackageAttempts += 1; return fakeAttempt(options); }, evaluate: async () => buildEvaluatorResult(CHECK_IDS.map((id) => ({ id, status: "pass" as const }))) } });
+  expect(noPackageResult.status).toBe("completed");
+  expect(noPackageResult.cost_ledger.calibration).toMatchObject({ status: "unavailable", calls: 0 });
+  expect(noPackageResult.attempts.every((attempt) => attempt.judge.failure_reason === "judge-scoring-disabled-diagnostic-only")).toBe(true);
+  expect(noPackageAttempts).toBe(9);
 });
 
 test("preflight failure blocks the entire attempt matrix", async () => {

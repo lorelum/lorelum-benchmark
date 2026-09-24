@@ -18,7 +18,7 @@ The pilot MUST define one versioned plan that fixes the candidate source/snapsho
 
 ### Requirement: Preflight MUST prove lifecycle and isolation before execution
 
-Preflight MUST verify the frozen candidate snapshot/lifecycle, treatment/card provenance, prompt/evaluator/Judge identity, environment/model/budget, clean workspace, plan hash, and public/private separation. Judge provider/model/credential and explicit real-provider opt-in are required in `judge-scored` mode; `diagnostic-only` mode MUST instead verify a complete attested #200 v1 calibration report with status `diagnostic` and matching Judge identity/model. Private evaluator, oracle, rubric, Pack body, and private runtime material MUST NOT enter the Agent workspace or Judge evidence input.
+Preflight MUST verify the frozen candidate snapshot/lifecycle, treatment/card provenance, prompt/evaluator/Judge identity, environment/model/budget, clean workspace, plan hash, and public/private separation. Judge provider/model/credential and explicit real-provider opt-in are required in `judge-scored` mode. In `diagnostic-only` mode, calibration reports, diagnostics sidecars, and attestation credentials are optional annotations: when supplied they MAY be verified, but absence, invalidity, attestation failure, or identity mismatch MUST be recorded as unavailable and MUST NOT block execution. Private evaluator, oracle, rubric, Pack body, and private runtime material MUST NOT enter the Agent workspace or Judge evidence input.
 
 #### Scenario: Preflight passes
 
@@ -50,19 +50,19 @@ The `judge-scored` mode MUST run a target-model Pi probe, a complete plan dry-ru
 
 ### Requirement: Diagnostic-only fallback MUST be explicit and non-scoring
 
-A `diagnostic-only` execution MUST be a deliberate operator-selected path, not an automatic fallback from failed Judge calibration. It MUST require a complete, attested #200 v1 calibration report with status `diagnostic`, a complete private diagnostic sidecar whose identity, per-group medians, repetitions, and gate checks match that report, the #200 attestation key to verify the report, a matching Judge identity/model, all non-Judge execution gates passing, and explicit `--run --diagnostic-only --confirm-start`. It does not require a Judge inference endpoint/API key or `LORELUM_JUDGE_REAL=1`; it MUST NOT issue attempt-level Judge requests or use Judge scores in conclusions. The default `judge-scored` mode remains blocked unless calibration is `qualified`.
+A `diagnostic-only` execution MUST be a deliberate operator-selected path, not an automatic fallback from failed Judge calibration. It MUST require all non-Judge execution gates passing and explicit `--run --diagnostic-only --confirm-start`. A complete, attested #200 v1 diagnostic report and matching private sidecar MAY be attached as optional diagnostic context; if absent, invalid, unattested, or mismatched, the run MUST record diagnostics as unavailable without blocking execution. This mode does not require Judge provider credentials, calibration attestation credentials, or `LORELUM_JUDGE_REAL=1`, and MUST issue no calibration or attempt-level Judge requests or use Judge scores in conclusions. The default `judge-scored` mode remains blocked unless calibration is currently `qualified`.
 
 #### Scenario: Operator explicitly starts diagnostic-only pilot
 
-- **WHEN** the operator supplies `--run --diagnostic-only --confirm-start`, the cached calibration report is complete/attested/diagnostic, a matching private sidecar is present, and all non-Judge gates pass
+- **WHEN** the operator supplies `--run --diagnostic-only --confirm-start` and all non-Judge gates pass, regardless of whether an optional calibration report/sidecar exists
 - **THEN** the pilot MAY start the same nine pre-registered Agent slots and MUST run the deterministic hard evaluator per slot
-- **AND** each slot MUST record Judge state `not-run`, reason `calibration-unqualified-diagnostic-only`, and `judge_score_usable=false`
+- **AND** each slot MUST record Judge state `not-run`, reason `judge-scoring-disabled-diagnostic-only`, and `judge_score_usable=false`
 - **AND** the run MUST record zero attempt-level Judge calls and MUST make no Judge quality or condition-comparison claim.
 
-#### Scenario: No implicit downgrade or stale diagnostic report
+#### Scenario: No implicit downgrade or non-Judge preflight failure
 
-- **WHEN** the operator omits any explicit start/mode flag, the report or sidecar is missing/invalid/unattested/mismatched, the attestation key is unavailable, or a non-Judge execution gate fails
-- **THEN** the pilot MUST remain blocked without starting Agent attempts
+- **WHEN** the operator omits any explicit start/mode flag or a non-Judge execution gate fails
+- **THEN** the pilot MUST remain blocked without starting Agent attempts; optional Judge diagnostics that are missing or invalid MUST instead be marked unavailable and MUST NOT block
 - **AND** it MUST NOT silently switch from Judge-scored to diagnostic-only mode.
 ### Requirement: The pilot MUST expose a redacted preflight summary before long execution
 

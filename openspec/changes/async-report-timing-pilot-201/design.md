@@ -26,14 +26,24 @@
 
 一次不调用模型的离线审计显示，九条真实 calibration observation 的 `input_hash` 均与当前确定性重建的 Judge input 一致；没有发现 runner input builder 丢弃已投影 evidence 的迹象。现有诊断更支持正向校准证据本身不足以满足冻结门槛。逐次 fixture 内容与理由继续留在 private scratch，不复制到公开 OpenSpec。
 
-本修订仅拆分“Judge score 是否可采信”与“是否可执行 Agent timing pilot”，不改变 #200 v1：
+本修订仅拆分“Judge score 是否可采信”与“是否可执行 Agent timing pilot”，不改变 #200 v1。原 diagnostic-only 方案曾要求完整 calibration report 和 sidecar；该门槛已由下方 2026-09-24 后续 amendment 明确降为可选诊断证据：
 
 - **Judge-scored（默认）**：保持原门禁，完整 calibration 必须 `qualified` 才可运行九次 attempt 并调用 Judge scoring。
-- **diagnostic-only（显式选择）**：只有用户明确传入 `--run --diagnostic-only --confirm-start`，且存在身份/attestation 有效的完整 #200 v1 `diagnostic` calibration report，并且 candidate/snapshot、plan/dry-run、environment/runtime、Pi/model probe、hard evaluator、workspace/private isolation 等全部非 Judge 执行门禁通过，才可运行预注册九个 Agent slots。此路径不要求 Judge inference endpoint/API key/`LORELUM_JUDGE_REAL=1`，但必须用 `LORELUM_JUDGE_CALIBRATION_KEY` 验证既有报告 attestation；不重跑 calibration，也不发起 attempt-level Judge 调用。
+- **diagnostic-only（显式选择）**：用户明确传入 `--run --diagnostic-only --confirm-start` 且 candidate/snapshot、plan/dry-run、environment/runtime、Pi/model probe、hard evaluator、workspace/private isolation 等全部非 Judge 执行门禁通过，即可运行预注册九个 Agent slots。此路径不要求 Judge inference endpoint/API key、`LORELUM_JUDGE_REAL=1`、calibration report/sidecar 或 `LORELUM_JUDGE_CALIBRATION_KEY`；不重跑 calibration，也不发起 attempt-level Judge 调用。有效且 attested 的 report/sidecar 只作为可选私有诊断注释。
 - diagnostic-only 每个 slot 仍运行 #202 hard evaluator；Judge 明确记录为 `not-run`，原因为 `calibration-unqualified-diagnostic-only`，Judge score eligibility 为 false。不得从 Judge 侧得出质量或条件比较结论；执行健康、delivery 与 hard evaluator 结果仍独立记录。
-- 不自动降级。未明确选择 diagnostic-only、缺少/无效 diagnostic report、或任何非 Judge gate 失败时仍 fail closed。两种模式都维持九个 slot、失败不替换、scratch-only、不写 formal record、不升级 suite/candidate。
+- 不自动降级。未明确选择 diagnostic-only 或任何非 Judge gate 失败时仍 fail closed；Judge-scored 对 calibration `qualified` 的要求不变。diagnostic-only 缺少、损坏、未 attested 或身份不匹配的可选诊断包仅记为 `unavailable`，不阻断 Agent timing pilot。两种模式都维持九个 slot、失败不替换、scratch-only、不写 formal record、不升级 suite/candidate。
 
 当前真实 calibration 已符合“完整但 diagnostic”的报告条件；本修订只授权实现该模式，不等于启动九次长时间 Agent pilot。真实运行仍需之后显式选择 diagnostic-only 并确认启动。
+## Planning amendment (2026-09-24, optional Judge diagnostics)
+
+需求方明确要求解除 Judge 诊断文件对 Agent timing pilot 的依赖。此 amendment supersedes 同日较早 amendment 中“diagnostic-only 必须提供完整 attested report 和 sidecar”的要求：
+
+- diagnostic-only 的启动资格只由显式 `--run --diagnostic-only --confirm-start` 与全部非 Judge 执行门禁决定。
+- calibration report、private diagnostics sidecar 和 attestation key 均为可选证据。文件缺失、格式无效、sidecar 不完整、attestation/key 不可用或身份不匹配时，preflight/run 记录 `unavailable` 与固定脱敏原因；Judge-calibration gate 记 `not-run` 并不阻断。禁止把这些缺失伪装成 Judge `qualified` 或 `diagnostic`。
+- 若可选 package 完整且验证成功，只将其作为 private 诊断注释；其验证结果不改变 timing/hard-evaluator 的执行资格。
+- diagnostic-only 不调用 Judge calibration 或 scoring API。本次九次 Agent pilot 的 Judge calls 为零；先前已发生的 calibration 使用量仍单独记账，缺失 artifact 不得解释为历史零成本。
+- `judge-scored` 模式保持原门禁：必须有当前完整 attested `qualified` calibration、Judge provider/credential 与 `LORELUM_JUDGE_REAL=1`。所有模式继续 fail closed 于非 Judge identity、hash、runtime、probe、hard-evaluator 和 isolation 门禁。
+
 ## Execution design
 
 ### 1. Immutable pre-registration
@@ -54,9 +64,9 @@ preflight 必须在第一条 Agent attempt 前完成：candidate path 只能从�
 4. 校验 Judge provider/model/credential/`LORELUM_JUDGE_REAL=1`，执行 #200 完整 calibration；
 5. 仅 calibration 为 `qualified` 时，才可运行 Agent slots 并对 attempts 调用 Judge scoring。
 
-diagnostic-only 模式保留第 1–3 项及所有 candidate/snapshot/evaluator/plan/isolation/Agent opt-in 检查，并校验已缓存完整 calibration report 的 #200 identity、model scope 与 attestation；报告必须为 `diagnostic`。该模式不执行新 Judge calibration、不要求 attempt scoring 的 Judge provider/credential/real opt-in，且禁止 attempt-level Judge 请求。运行摘要与每个 slot 必须记录 `execution_mode=diagnostic-only`、`judge_score_usable=false` 和 Judge `not-run` 原因。
+diagnostic-only 模式保留所有 candidate/snapshot/evaluator/plan/isolation/Agent opt-in 检查，不执行新 Judge calibration、不要求 Judge provider/credential/attestation key，且禁止 attempt-level Judge 请求。若可选缓存诊断包完整、身份匹配且 attestation 有效，则附加到 private preflight evidence；否则只记录 `unavailable` 与脱敏原因，绝不阻断 timing 执行。运行摘要与每个 slot 必须记录 `execution_mode=diagnostic-only`、`judge_score_usable=false`、Judge `not-run` 与零本次 Judge calls。
 
-模式默认始终是 `judge-scored`；只有命令同时显式选择 `--run`、`--diagnostic-only` 和 `--confirm-start` 才允许有限恢复，绝不因 Judge gate 失败自动降级。任何其他 preflight、dry-run、attestation、身份、隔离或 Agent gate 失败仍阻止九次 Agent attempts，不创建 attempt、不调用 Judge、不写 `results/records/`。attempt 使用全新 workspace 与独立 artifact directory；artifact root 与 Agent workspace 必须 realpath 分离。attempt 结束后才在 host side 读取 private transcript、运行 #202 evaluator 和（仅 Judge-scored 模式）构造 #200 evidence projection；失败均保留状态。
+模式默认始终是 `judge-scored`；只有命令同时显式选择 `--run`、`--diagnostic-only` 和 `--confirm-start` 才允许有限恢复，绝不因 Judge gate 失败自动降级。任何其他 preflight、dry-run、plan identity、隔离或 Agent gate 失败仍阻止九次 Agent attempts；仅可选 Judge diagnostics 的缺失/验证失败不阻断。运行不创建 formal record；attempt 使用全新 workspace 与独立 artifact directory，artifact root 与 Agent workspace 必须 realpath 分离。attempt 结束后才在 host side 读取 private transcript、运行 #202 evaluator 和（仅 Judge-scored 模式）构造 #200 evidence projection；失败均保留状态。
 ### 3. Nine attempt execution
 
 编排器复用现有 #197 one-attempt API，不重新实现 delivery semantics。每个 attempt 按计划节点只投放一次固定 card；`constraint_followup` 与 `first_implementation_checkpoint` 继续使用 #197 冻结的同 session continuation/marker。baseline 和 undeclared path 只通过 mock/preflight 证明无 payload，不能成为隐含第四条件。
@@ -85,7 +95,7 @@ hard evaluator 只按 #202 v1 CLI 读取 Agent app root，返回其冻结的 ove
 
 ## Risks and mitigations
 
-- **模型或 Judge 端点不可达/校准不合格** → 任何模式先做 Pi/model short probe；Judge-scored 模式要求完整 calibration qualified。若已有完整 attested diagnostic report，操作方可显式选 diagnostic-only，仅跳过 Judge scoring；不自动降级、不伪造 Judge 分数或结论。
+- **模型或 Judge 端点不可达/校准不合格** → 任何模式先做 Pi/model short probe；Judge-scored 模式要求完整 calibration qualified。diagnostic-only 可显式运行；若可选诊断包可验证则附注，缺失或无效则记录 unavailable，不阻断 timing/hard-evaluator 证据，也不自动降级或伪造 Judge 分数/结论。
 - **运行身份漂移** → 所有 identity 与 hash 绑定到 master plan；运行中 drift 立即 fail closed。
 - **私有材料泄露** → workspace、prompt、public trace、Judge evidence 分层审计；运行前和运行后都执行 leakage audit。
 - **模型超时导致 timing 混淆** → 固定 per-attempt budget；不以等待或 turn 数制造时机；不重跑替换失败槽位。

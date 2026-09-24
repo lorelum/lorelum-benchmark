@@ -84,7 +84,7 @@ export type TimingPilotRunResult = Readonly<{
   planned_slots: number;
   attempted_slots: number;
   attempts: readonly TimingPilotAttemptResult[];
-  cost_ledger: Readonly<{ agent: PilotUsage; judge: PilotUsage; calibration: Readonly<{ status: CalibrationReport["status"]; calls: number; duration_ms: number; usage: PilotUsage }>; agent_cost_usd: number | null; judge_cost_usd: number | null; total_cost_usd: number | null }>;
+  cost_ledger: Readonly<{ agent: PilotUsage; judge: PilotUsage; calibration: Readonly<{ status: CalibrationReport["status"] | "unavailable"; calls: number; duration_ms: number; usage: PilotUsage }>; agent_cost_usd: number | null; judge_cost_usd: number | null; total_cost_usd: number | null }>;
   output_root: string;
   formal_record_created: false;
 }>;
@@ -309,7 +309,7 @@ export async function runTimingPilotAttempts(options: {
   run_id: string;
   output_root: string;
   preflight: TimingPilotPreflightSummary;
-  calibration: CalibrationReport;
+  calibration?: CalibrationReport;
   calibration_diagnostics?: JudgeCalibrationDiagnostics;
   env?: Record<string, string | undefined>;
   dependencies?: TimingPilotRunnerDependencies;
@@ -321,23 +321,32 @@ export async function runTimingPilotAttempts(options: {
   const executionMode = options.preflight.execution_mode;
   if (executionMode !== "judge-scored" && executionMode !== "diagnostic-only") fail("preflight execution mode is invalid");
   if (options.preflight.allowed_to_start !== true || options.preflight.plan_hash !== plan.plan_hash || options.preflight.status !== "ready") fail("successful matching preflight is required before any Agent attempt");
-  if (options.preflight.judge.calibration_hash !== options.calibration.hash) fail("preflight calibration identity does not match the supplied report");
   const preflightTime = Date.parse(options.preflight.created_at);
   if (!Number.isFinite(preflightTime) || Date.now() - preflightTime < 0 || Date.now() - preflightTime > 15 * 60_000) fail("preflight summary is older than 15 minutes or has an invalid timestamp");
   if (env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("Agent pilot requires explicit LORELUM_LOCAL_EXPERIMENT=1 opt-in");
   let calibrationIsQualified = false;
+  let calibrationLedger: TimingPilotRunResult["cost_ledger"]["calibration"] = { status: "unavailable", calls: 0, duration_ms: 0, usage: emptyUsage() };
   if (executionMode === "judge-scored") {
+    const calibration = options.calibration;
+    if (!calibration) fail("Judge-scored pilot requires a calibration report");
+    if (options.preflight.judge.calibration_hash !== calibration.hash) fail("preflight calibration identity does not match the supplied report");
     if (env.LORELUM_JUDGE_REAL !== "1") fail("Judge-scored pilot requires explicit LORELUM_JUDGE_REAL=1 opt-in");
     if (options.preflight.judge_score_usable !== true) fail("judge-scored preflight must declare Judge scores usable");
     calibrationIsQualified = options.dependencies?.validate_calibration
-      ? await options.dependencies.validate_calibration(options.calibration, plan, env)
-      : (await resolveCalibrationStatus(options.calibration, calibrationScope(plan.judge.model), calibrationAttestationKey("real", env))).status === "qualified";
+      ? await options.dependencies.validate_calibration(calibration, plan, env)
+      : (await resolveCalibrationStatus(calibration, calibrationScope(plan.judge.model), calibrationAttestationKey("real", env))).status === "qualified";
     if (!calibrationIsQualified) fail("a currently attested qualified Judge calibration is required before any Agent attempt");
+    calibrationLedger = { status: calibration.status, calls: calibration.calls, duration_ms: calibration.duration_ms, usage: normalizeUsage(calibration.usage) };
   } else {
     if (options.preflight.judge_score_usable !== false) fail("diagnostic-only preflight must mark Judge scores unusable");
-    if (!options.calibration_diagnostics) fail("diagnostic-only mode requires the complete private calibration sidecar");
-    try { await verifyDiagnosticCalibration(options.calibration, options.calibration_diagnostics, plan.judge.model, env, root); }
-    catch { fail("diagnostic-only mode requires a complete attested diagnostic report and matching private sidecar"); }
+    const calibration = options.calibration;
+    const diagnostics = options.calibration_diagnostics;
+    if (calibration && diagnostics && options.preflight.judge.calibration_status === "diagnostic" && options.preflight.judge.calibration_hash === calibration.hash) {
+      try {
+        const verified = await verifyDiagnosticCalibration(calibration, diagnostics, plan.judge.model, env, root);
+        if (verified.status === "diagnostic") calibrationLedger = { status: "diagnostic", calls: verified.calls, duration_ms: calibration.duration_ms, usage: normalizeUsage(calibration.usage) };
+      } catch { /* Optional Judge diagnostics never block timing execution. */ }
+    }
   }
   await dryRunTimingPilot({ root, plan });
   const runRoot = await resolveTimingPilotScratchOutput(root, options.output_root);
@@ -423,16 +432,16 @@ export async function runTimingPilotAttempts(options: {
           plan_hash: plan.judge.evaluation_plan_hash, rubric_hash: plan.judge.rubric_hash,
           prompt_hash: "0".repeat(64), input_hash: "0".repeat(64), evidence_hash: null,
           duration_ms: 0, usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0 },
-          calls: { calibration: 0, scoring: 0 }, failure_reason: "calibration-unqualified-diagnostic-only",
+          calls: { calibration: 0, scoring: 0 }, failure_reason: "judge-scoring-disabled-diagnostic-only",
         };
-        await privateWrite(artifacts, "judge-private-result.json", { state: "not-run", reason: "calibration-unqualified-diagnostic-only", score_usable: false, calls: { calibration: 0, scoring: 0 } });
+        await privateWrite(artifacts, "judge-private-result.json", { state: "not-run", reason: "judge-scoring-disabled-diagnostic-only", score_usable: false, calibration_diagnostics: calibrationLedger.status, calls: { calibration: 0, scoring: 0 } });
       } else {
         if (report) {
           const judgeStarted = Date.now();
           try {
             const raw = await buildTimingPilotRawJudgeInput({ root, plan, slot, report, artifacts, workspace: runWorkspace, blind_case_id: `case-${randomBytes(6).toString("hex")}` });
             judgeCallStarted = true;
-            const scored = await scorer(raw, options.calibration, env);
+            const scored = await scorer(raw, options.calibration!, env);
             judgeResult = scored.result;
             judgeAccounting = scored.accounting;
             judgeDiagnostics = scored.diagnostics;
@@ -516,8 +525,7 @@ export async function runTimingPilotAttempts(options: {
   const attempted = attempts.filter((attempt) => attempt.status !== "not-run" && attempt.status !== "blocked").length;
   const agentUsage = usageTotal(attempts.map((attempt) => attempt.execution.usage));
   const judgeUsage = usageTotal(attempts.map((attempt) => attempt.judge.usage));
-  const calibrationUsage = normalizeUsage(options.calibration.usage);
-  const calibrationLedger = { status: options.calibration.status, calls: options.calibration.calls, duration_ms: options.calibration.duration_ms, usage: calibrationUsage };
+  const calibrationUsage = calibrationLedger.usage;
   const agentCost = agentUsage.cost_usd;
   const judgeCost = judgeUsage.cost_usd !== null && calibrationUsage.cost_usd !== null ? judgeUsage.cost_usd + calibrationUsage.cost_usd : null;
   const totalCost = agentCost !== null && judgeCost !== null ? agentCost + judgeCost : null;

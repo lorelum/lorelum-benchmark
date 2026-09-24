@@ -31,15 +31,24 @@
 
 - [x] 4.4 在 #201 runner 边界增加 calibration/scoring 诊断适配层：捕获既有 Judge API 返回的逐次 criterion 分数/理由、confidence、hash、usage、duration 和安全 failure code；不更改 #200 v1 源码、身份、评分语义、阈值、9-call budget 或重试策略。以注入式 completion 验证 9 次诊断调用上限、case 标签不进入 Judge prompt、门禁明细与 frozen qualification 判断一致、HTTP/结构化输出失败脱敏。 [写入范围：`src/benchmark/runner/pi/v2/staged/`、`schemas/`]
 - [x] 4.5 生成 scratch-only private JSON/Markdown 诊断 artifact，显示所有 calibration 门禁判断及逐次结果；preflight summary 只给出私有 artifact 的相对路径，不泄露标签、理由或凭证；cached report 缺详情时明确标记不可回溯。私有写入拒绝 symlink 路径；schema、leakage 与缓存报告缺详情测试通过。 [写入范围：`src/benchmark/runner/pi/v2/staged/`、`schemas/`]
-- [x] 4.6 增加显式 diagnostic-only execution mode：仅接受身份与 attestation 有效的完整 `diagnostic` calibration report 和匹配的 private sidecar；保留全部非 Judge 执行门禁；真实启动必须显式 `--run --diagnostic-only --confirm-start`；不生成 attempt-level Judge input/请求，逐 slot 记 `not-run`、零 scoring calls 与不可采信状态；默认 scored 模式仍 fail closed。mock/contract tests 覆盖无自动降级、零 Judge scoring calls、hard evaluator 独立通过、sidecar/report 缺失或篡改时阻断。前置工作定向 tests 与 Judge diagnostics tests 合计 32/32 通过，无外部模型调用、无 Agent attempt。 [写入范围：`src/benchmark/runner/pi/v2/staged/`、`schemas/`、plan manifest]
+- [x] 4.6 初版 diagnostic-only mode 将完整 attested `diagnostic` calibration report/sidecar 作为门槛；初版验证覆盖缺失或篡改时阻断。该行为已由 2026-09-24 后续 amendment 明确 supersede，历史验证不代表当前契约。 [写入范围：历史实现]
+
+## 4.7 Optional diagnostic evidence
+
+- [x] 4.7 将 diagnostic-only 的 calibration report、private sidecar 与 attestation 降为可选诊断上下文；缺失、无效、未 attested 或身份不匹配时只记录脱敏 `unavailable` 原因，不阻断 preflight/run；保证 diagnostic-only 的新 Judge API 调用数恒为零，Judge-scored 仍要求当前 qualified calibration。验证：preflight+runner 定向测试 25/25、runner contracts 173/173、core contracts 169/169；覆盖 report/sidecar/key 缺失、sidecar 篡改、hard evaluator 独立、默认模式 fail-closed。 [写入范围：`src/benchmark/runner/pi/v2/staged/`、schemas、OpenSpec]
+
+## 4.8 Restore the pinned host runtime
+
+- [x] 4.8 在当前用户运行环境启用 Node `24.21.0`（官方 zip SHA256 校验通过，原 Node 22 保留为 side-by-side）及 Pi `0.85.1`，Bun `1.4.2`；`local-pi/v4` manifest/runtime 校验通过。初次未加载工作区外 `.env` 时 Pi probe 在发请求前阻断；显式由 Bun 加载既有 `.env` 后，最终 diagnostic-only preflight 的 1 次短 Pi/model probe 成功，未显示或复制 credential，也未启动 Agent attempts。 [写入范围：本地运行环境与验证证据，不提交安装产物]
+
 
 ## 5. Authorized scratch-only execution and retrospective
 
-- [ ] 5.1 仅在所有非 Judge 执行门禁（环境/runtime、Pi/model probe、plan dry-run、identity/hash/isolation、hard evaluator 与 deterministic tests）通过后运行九个预注册 slots。Judge-scored 模式还要求 calibration `qualified`；diagnostic-only 模式必须有完整 attested `diagnostic` report 并由操作者显式传入 `--diagnostic-only --confirm-start`。运行结果只写 ignored `scratch/`，不写 `results/records/`，不升级 suite/candidate revision。 [写入范围：`scratch/`，不得提交]
-- [ ] 5.2 对每个 attempt 运行 hard evaluator；仅 Judge-scored 模式运行 blinded Judge。diagnostic-only 模式不发 Judge 请求，每个 slot 将 Judge 写为 `not-run`，记录 calibration 未 qualified 的原因，并分别记 Agent、Judge calibration、Judge scoring（零调用）、失败和 indeterminate 的 duration/usage/cost/state；不补跑替换失败槽位。 [写入范围：`scratch/`，不得提交]
+- [ ] 5.1 仅在所有非 Judge 执行门禁（环境/runtime、Pi/model probe、plan dry-run、identity/hash/isolation、hard evaluator 与 deterministic tests）通过后运行九个预注册 slots。Judge-scored 模式还要求 calibration `qualified`；diagnostic-only 不要求任何 Judge calibration artifact，仅由操作者显式传入 `--run --diagnostic-only --confirm-start`。运行结果只写 ignored `scratch/`，不写 `results/records/`，不升级 suite/candidate revision。 [写入范围：`scratch/`，不得提交]
+- [ ] 5.2 对每个 attempt 运行 hard evaluator；仅 Judge-scored 模式运行 blinded Judge。diagnostic-only 模式不发 Judge calibration/scoring 请求，每个 slot 将 Judge 写为 `not-run`，记录可选 calibration diagnostics 的 `verified`/`unavailable` 状态与原因，并分别记 Agent、本次 Judge calls（零调用）、失败和 indeterminate 的 duration/usage/cost/state；已发生的历史 calibration 成本单独记账；不补跑替换失败槽位。 [写入范围：`scratch/`，不得提交]
 - [ ] 5.3 运行后验证九个槽位、condition/node 一致性、trace/provenance/plan hash、hard/Judge independence、执行模式标记、diagnostic-only 下零 Judge scoring calls、cost ledger、failure/indeterminate 状态和 no-leakage；执行 `bun run validate`、相关测试和 `git diff --check`。 [写入范围：验证证据]
 - [ ] 5.4 生成脱敏 diagnostic retrospective，区分观察到的信号、失败/不确定、成本、限制和下一步；diagnostic-only 结果明确声明 Judge score 不可用，不写正式 record 或普遍效果结论。 [写入范围：`scratch/`，必要时更新 Issue/PR]
 
 ## 验证证据
 
-OpenSpec planning amendment 与实现前执行 strict validation、purpose guard 和范围检查。2026-09-24 最终实现验证：前置工作三文件合计 32/32；`bun run validate` 通过；`bun run test:contracts:core --timeout=30000` 169/169、`bun run test:contracts:runner` 173/173；OpenSpec strict、purpose guard、9-slot CLI dry-run、`git diff --check` 通过。首次并行运行 contracts 时 core 中 4 项因默认 5 秒 timeout 失败；串行使用 30 秒 timeout 后全部通过。最终验证未发起真实 Judge/Pi 请求或 Agent attempt。完成 5.1 前必须由操作者显式选择 `--run --diagnostic-only --confirm-start`；否则不运行九次 pilot。
+OpenSpec planning amendment 与实现前执行 strict validation、purpose guard 和范围检查。此前 2026-09-24 初版验证：前置工作定向测试 32/32；`bun run validate` 通过；core contracts 169/169、runner contracts 173/173；OpenSpec strict、purpose guard、9-slot dry-run、`git diff --check` 通过。2026-09-24 后续按需求方纠正将 Judge report/sidecar/attestation 改为 optional evidence：最终前置工作定向测试 25/25，core contracts 169/169、runner contracts 173/173；`bun run validate`、OpenSpec strict、purpose guard、9-slot CLI dry-run 和 `git diff --check` 均通过。一次最终真实 `diagnostic-only` preflight 使用 Node 24.21.0 / Pi 0.85.1 / Bun 1.4.2：Pi/model probe 1 次（167 input、2 output tokens，费用 unavailable），plan dry-run、identity 与 isolation 均通过，Judge diagnostics 为 `unavailable`/`not-run` 且不阻断，Judge calls 为 0，`allowed_to_start=true`。未启动九次 Agent attempts，未创建 formal record。完成 5.1 仍需操作者显式执行 `--run --diagnostic-only --confirm-start`；未收到该确认前不启动九次 pilot。
