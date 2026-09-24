@@ -1,0 +1,10 @@
+id: retrieval-ranking
+version: 1.0.0
+track: retrieval-ranking
+lifecycle_stage: candidate
+revision: v1
+corpus: v1/corpus/inventory.json
+cases: v1/cases/queries.json
+labels: v1/private/labels.json
+scorer: v1/private/scorer.json
+protocol: ../../docs/RETRIEVAL_RANKING_PROTOCOL.md

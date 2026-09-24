@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum retrieval-ranking suite",
+  "type": "object",
+  "required": [
+    "id",
+    "version",
+    "track",
+    "lifecycle_stage",
+    "revision",
+    "corpus",
+    "cases",
+    "labels",
+    "scorer",
+    "protocol"
+  ],
+  "properties": {
+    "id": { "const": "retrieval-ranking" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "track": { "const": "retrieval-ranking" },
+    "lifecycle_stage": {
+      "enum": ["candidate", "pilot", "frozen", "official", "published", "retired"]
+    },
+    "revision": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
+    "corpus": {
+      "type": "string",
+      "pattern": "^v[1-9][0-9]*/corpus/inventory\\.json$"
+    },
+    "cases": {
+      "type": "string",
+      "pattern": "^v[1-9][0-9]*/cases/queries\\.json$"
+    },
+    "labels": {
+      "type": "string",
+      "pattern": "^v[1-9][0-9]*/private/labels\\.json$"
+    },
+    "scorer": {
+      "type": "string",
+      "pattern": "^v[1-9][0-9]*/private/scorer\\.json$"
+    },
+    "protocol": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

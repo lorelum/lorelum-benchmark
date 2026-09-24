@@ -89,6 +89,8 @@ Scorer 报告每个 core 的 Recall@N、final top-K/rank、candidate miss 与 ra
 
 现在可用模拟 harness 完成 runner/protocol contract tests，并针对给定协议 v1 开发 corpus setup、scorer 与批次 schema。主仓库本地 commit `6bf1e1b390df3bffad13d4131939b84126b0242c` 和已报告的模型 smoke 是接入基线；正式完整 baseline 还要固定可重建 Lorelum checkout、完整 Pack Store/index、Profile `72c7404af9d533dce3dd5f5e62987fcb225ffdfd180ae2951879d3a54044c2a5`、native runtime 和完整 labels/query revision。合成 smoke IDs 不能被复用。完整 baseline 不设效果门槛；排序改动必须之后进行，并在同一 benchmark revision/config 下对比。
 
+当前实现验证暴露了一个上游前提缺口：固定 harness 直接以 Store root 读取 semantic index，而固定 Lorelum CLI 的 Store-only semantic artifact 发布在 derived cache。结果可以是 CLI `index status` ready，但 harness 仍返回 `index_unavailable`。这属于环境/运行契约问题，不是 candidate recall 或 final ranking 结果。主仓库修正 harness 的索引路由或明确等价输入之前，不生成 baseline，也不改排序算法。
+
 首版预计 30–50 queries、约 8–10 场景组是规划估计，不是硬性数量门槛；以 scenario coverage、完整语料和标签可验证为准。
 
 ## Stable Capability Applicability

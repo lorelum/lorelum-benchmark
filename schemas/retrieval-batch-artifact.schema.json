@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lorelum retrieval-ranking result artifact",
+  "type": "object",
+  "required": ["schemaVersion", "runId", "revision", "status", "cases", "failures", "score"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runId": { "type": "string", "minLength": 1 },
+    "revision": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
+    "status": { "enum": ["complete", "failed"] },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "candidateIds", "finalIds"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": { "const": "ok" },
+          "candidateIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "finalIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["case_id", "kind", "error_code"],
+        "properties": {
+          "case_id": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["harness-error", "process-error", "protocol-error"] },
+          "error_code": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "score": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["schemaVersion", "revision", "candidateWidth", "resultLimit", "summary", "cases", "interpretation"],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "revision": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
+            "candidateWidth": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "resultLimit": { "type": "integer", "minimum": 1, "maximum": 50 },
+            "summary": { "type": "object" },
+            "cases": { "type": "array" },
+            "interpretation": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}
