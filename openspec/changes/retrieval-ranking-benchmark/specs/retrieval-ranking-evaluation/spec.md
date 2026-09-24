@@ -2,7 +2,7 @@
 
 ## Purpose
 
-为 Lorelum semantic retrieval 建立独立、可复现的排名评测契约，使候选召回、最终 top-k 排名和运行有效性可以分别观察，而不借用 Agent 编码任务的结果字段或结论。
+为 Lorelum semantic retrieval 建立独立、可复现的排名评测契约，使候选召回、最终 top-k 排名、明确范围错误和运行有效性可以分别观察，而不借用 Agent 编码任务的结果字段或结论。
 
 ## ADDED Requirements
 
@@ -20,15 +20,15 @@
 
 ### Requirement: Corpus and cases are fixed and versioned
 
-每个 retrieval benchmark revision MUST 固定完整语料来源、Pack/source revision、Practice ID 清单及其 digest，并版本化 query、gold labels 与 scorer。语料正文 MUST 从锁定来源重建，不得复制或改写到 benchmark fixtures。每个案例 MUST 声明一个或多个必需 core Practice IDs；若答案互相替代 MUST 表达为不同案例。案例 MAY 声明明确不适用于当前任务/阶段的 scope-confuser Practice IDs。
+每个 retrieval benchmark revision MUST 固定完整语料来源、Pack/source revision、Practice ID 清单及其 digest，并版本化 query、gold labels 与 scorer。语料正文 MUST 从锁定来源重建，不得复制或改写到 benchmark fixtures。每个案例 MUST 声明一个或多个共同必需的 core Practice IDs；若答案互相替代 MUST 表达为不同案例。只有高置信、明确不适用于当前 query/阶段的 Practice 才能标为 forbidden。未标注的其他 Practice 不代表已判定为相关或不相关。
 
 #### Scenario: The full corpus is reconstructed
 - **WHEN** a benchmark revision is prepared from its pinned corpus source
 - **THEN** the validator confirms the complete Practice ID inventory and content digests without requiring copied Pack bodies
 
-#### Scenario: A case has required Practices and a scope confuser
-- **WHEN** a query has multiple jointly useful core Practices and a domain-similar but task/phase-mismatched Practice
-- **THEN** each required core ID and the scope-confuser ID are explicit labels, while an alternative valid answer is represented by a separate case
+#### Scenario: A case distinguishes required and forbidden Practices
+- **WHEN** a query has jointly required core Practices and a clearly out-of-scope Practice
+- **THEN** the required and forbidden IDs are explicit, and an alternative valid answer is represented by a separate case rather than an ambiguous interchangeable set
 
 ### Requirement: Gold labels are isolated from the system under test
 
@@ -40,11 +40,11 @@ Runner MUST construct harness input from an allowlist containing only the query 
 
 #### Scenario: Harness reports a failed or partial attempt
 - **WHEN** retrieval fails, retries, or cannot provide both lists from the same retrieval snapshot
-- **THEN** runner records the case as failed and does not score or retain a partial candidate/final list as success
+- **THEN** runner records the case as a runtime/protocol failure and does not score or retain a partial candidate/final list as a retrieval result
 
 ### Requirement: Candidate recall and final ranking are scored separately
 
-Scorer MUST evaluate candidate inclusion using the declared candidate width N and final inclusion/rank using K. It MUST report core Practice candidate recall and final top-K hit/rank separately, including whether a core Practice was absent from candidates or present but outside final K. When both a core and an explicitly labeled scope-confuser appear in final results, scorer MUST report their relative ordering. A scope-confuser's presence in top K alone MUST NOT count as failure. Results MUST preserve raw per-case evidence and MUST NOT collapse retrieval outcomes into a weighted total or an Agent-effectiveness claim.
+Scorer MUST evaluate candidate inclusion using the declared candidate width N and final inclusion/rank using K. It MUST report each core Practice's candidate recall and final top-K rank separately, including whether a core Practice was absent from candidates or present but outside final K. A forbidden Practice in final K MUST be reported as a scope error; if it also appears with a core Practice, their pairwise order MUST be retained. Presence of an unlabelled neighbor MUST NOT by itself count as failure. Results MUST preserve raw per-case evidence and MUST NOT collapse retrieval outcomes into a weighted total or an Agent-effectiveness claim.
 
 #### Scenario: Core Practice was not retrieved as a candidate
 - **WHEN** none of a case's required core IDs appears in candidateIds
@@ -54,17 +54,33 @@ Scorer MUST evaluate candidate inclusion using the declared candidate width N an
 - **WHEN** a required core ID appears in candidateIds but not in finalIds
 - **THEN** the case reports candidate recall separately from the final top-K miss
 
-#### Scenario: Scope-confuser is visible but not ahead of core
-- **WHEN** a scope-confuser appears in finalIds and every co-present core is ranked ahead of it
-- **THEN** its presence is recorded for diagnosis but is not by itself a case failure
+#### Scenario: A forbidden Practice appears in final top-K
+- **WHEN** any explicitly labeled forbidden ID appears in finalIds
+- **THEN** the case reports a scope error even if a core Practice also appears in finalIds
 
-#### Scenario: Scope-confuser outranks core
-- **WHEN** a scope-confuser and a core Practice both appear in finalIds but the scope-confuser ranks first
-- **THEN** scorer reports the pairwise ordering inversion even if the core remains within top K
+#### Scenario: An unlabelled neighbor appears in final top-K
+- **WHEN** an unlabelled Practice appears in finalIds without a forbidden label
+- **THEN** its presence is diagnostic only and does not create a scope failure
+
+### Requirement: Harness process status and response shape are validated
+
+For harness protocol version 1, a successful retrieval MUST produce exit code 0 with one JSON response whose status is `ok`; a structured retrieval failure MUST produce a non-zero exit code and status `error` with an error code and no partial lists. Runner MUST reject mismatched exit/status, malformed or extra output, duplicate IDs, IDs outside the pinned corpus, candidate lists longer than N, final lists longer than K, or final IDs not contained in candidate IDs as protocol/runtime failures, never as relevance misses.
+
+#### Scenario: A valid successful response is scored
+- **WHEN** process exit code is 0 and a valid status `ok` response satisfies all ID and N/K constraints
+- **THEN** runner passes candidateIds and finalIds to the scorer for that case
+
+#### Scenario: A structured runtime error is not scored
+- **WHEN** process exits non-zero with status `error` and a stable error code
+- **THEN** runner records the case as a runtime failure with no candidate or final ranking result
+
+#### Scenario: Exit status and response do not agree
+- **WHEN** exit code and response status disagree, or response validation fails
+- **THEN** runner records a protocol failure and does not label the case a retrieval failure
 
 ### Requirement: Batch status and retrieval outcomes are independently recorded
 
-A complete run MUST represent one full query-set batch and MUST record the benchmark/case/label/scorer revision, corpus source and digest, Lorelum checkout commit, embedding Profile, N/K, runtime environment, and hashes for result artifacts. Batch execution status MUST be distinct from retrieval metrics. Incomplete or failed batches MUST retain failure status and MUST NOT be combined with another run to create a complete result. Re-running MUST create a new batch identity.
+A complete run MUST represent one full query-set batch and MUST record the benchmark/case/label/scorer revision, corpus source and digest, Lorelum checkout commit, harness protocol version, embedding Profile ID/model runtime, N/K, operating environment, and hashes for result artifacts. Batch execution status MUST be distinct from retrieval metrics. Incomplete or failed batches MUST retain failure status and MUST NOT be combined with another run to create a complete result. Re-running MUST create a new batch identity.
 
 #### Scenario: Every case completes
 - **WHEN** the runner successfully evaluates every case in the frozen revision
