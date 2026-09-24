@@ -71,7 +71,7 @@ Runner 只有在一个 revision 的全部 case 都返回合法 `0 + status=ok` �
 
 固定 Lorelum commit `6bf1e1b390df3bffad13d4131939b84126b0242c` 的 CLI `index build/status` 为 Store-only query 发布 derived-cache semantic artifact，但同一 commit 的本地 harness 直接用请求中的 `storeRoot` 作为 semantic index root。两者路径不一致时，CLI 可以报告 `index: ready`，harness 仍返回 `index_unavailable`。
 
-该失败是环境/harness 契约问题，不能记成 candidate miss、ranking miss 或 scope error。主仓库必须先让 harness 读取与 Store-only CLI 相同的 semantic artifact（同时保持现有五字段输入和不返回正文/分数），或者明确一个等价且可复现的索引准备合同；在此之前不生成 baseline。
+该失败是环境/harness 契约问题，不能记成 candidate miss、ranking miss 或 scope error。主仓库必须先让 harness 在收到 `LORELUM_BENCHMARK_CACHE_ROOT` 时读取与 Store-only CLI 相同的 derived semantic artifact，未设置该变量时回退到 `defaultQueryArtifactCacheRoot()`；同时保持现有五字段 stdin 和不返回正文/分数。若选择其他等价且可复现的索引准备合同，必须先同步修改本协议和 benchmark commit。在此之前不生成 baseline。
 
 ## 逐例判定
 
