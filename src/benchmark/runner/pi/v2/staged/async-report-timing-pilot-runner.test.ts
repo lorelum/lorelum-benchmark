@@ -8,6 +8,7 @@ import { workspaceRoot } from "../../../../fs";
 import type { StagedPracticeAttemptReport, StagedPracticeRunOptions } from "./staged-practice-delivery";
 import type { JudgeResultV1 } from "../../../../outcome/v1/contract";
 import type { AsyncReportAccounting, CalibrationReport, RawReplanAttempt } from "../../../../judge/async-report-replan/v1/types";
+import { diagnosticCalibrationFixture } from "./timing-pilot-diagnostic-test-fixture";
 
 const temporaryRoots: string[] = [];
 afterEach(async () => Promise.all(temporaryRoots.splice(0).map((path) => rm(path, { recursive: true, force: true }))));
@@ -25,7 +26,7 @@ function calibration(): CalibrationReport {
 
 function preflight(planHash: string): TimingPilotPreflightSummary {
   return {
-    schema_version: "async-report-timing-pilot-preflight/v1", created_at: new Date().toISOString(), preflight_duration_ms: 100, pi_probe: { calls: 1, duration_ms: 50, usage: { input_tokens: null, output_tokens: null, total_tokens: null, cost_usd: null } }, status: "ready", allowed_to_start: true, plan_hash: planHash,
+    schema_version: "async-report-timing-pilot-preflight/v1", created_at: new Date().toISOString(), preflight_duration_ms: 100, execution_mode: "judge-scored", judge_score_usable: true, pi_probe: { calls: 1, duration_ms: 50, usage: { input_tokens: null, output_tokens: null, total_tokens: null, cost_usd: null } }, status: "ready", allowed_to_start: true, plan_hash: planHash,
     model: { id: "deepseek/deepseek-v4-flash", version: "operator-local-experiment" },
     evaluator: { id: "async-report-deterministic-evaluator", version: "v1", snapshot_id: "7d68a9e9fc32a2fc96407ad1b4f6d416f6138cddc73587614be6b6d5e8db8be1" },
     runner: { id: "async-report-timing-pilot-runner", version: "v1", manifest_sha256: "f".repeat(64) },
@@ -34,7 +35,7 @@ function preflight(planHash: string): TimingPilotPreflightSummary {
     runtime: { observed_bun: "1.4.2", observed_node: "24.21.0" },
     budget: { max_turns: 128, max_duration_ms: 1_500_000 },
     cost_estimate: { preflight_cost_usd: null, agent_attempts: 9, judge_calibration_calls: 9, judge_scoring_calls: 9, agent_max_duration_ms: 13_500_000, total_judge_calls: 18, cost_usd: "unavailable" },
-    judge: { provider_id: "judge-agent/async-report-replan/v1", model: "deepseek/deepseek-v4-flash", real_opt_in: true, calibration_status: "qualified", calibration_calls: 9, calibration_duration_ms: 20, calibration_usage: { input_tokens: 10, output_tokens: 10, total_tokens: 20, cost_usd: null } },
+    judge: { provider_id: "judge-agent/async-report-replan/v1", model: "deepseek/deepseek-v4-flash", real_opt_in: true, calibration_status: "qualified", calibration_hash: calibration().hash, calibration_reused: false, calibration_calls: 9, calibration_duration_ms: 20, calibration_usage: { input_tokens: 10, output_tokens: 10, total_tokens: 20, cost_usd: null } },
     gates: ["environment", "runtime", "pi-model-probe", "plan-dry-run", "judge-provider", "judge-calibration"].map((id) => ({ id, status: "passed" })),
   };
 }
@@ -128,6 +129,50 @@ test("runner preserves one master hash across the fixed 3x3 schedule and keeps J
   }
   expect(result.formal_record_created).toBe(false);
 }, 30_000);
+
+
+test("diagnostic-only run executes all hard-evaluator slots with zero Judge scoring calls", async () => {
+  const value = await plan();
+  const fixture = await diagnosticCalibrationFixture();
+  const output = join(workspaceRoot, "scratch", "timing-pilot-diagnostic-" + crypto.randomUUID());
+  temporaryRoots.push(output);
+  const scoredPreflight = preflight(value.plan_hash);
+  const diagnosticPreflight: TimingPilotPreflightSummary = {
+    ...scoredPreflight,
+    execution_mode: "diagnostic-only",
+    judge_score_usable: false,
+    cost_estimate: { ...scoredPreflight.cost_estimate, judge_scoring_calls: 0, total_judge_calls: 9 },
+    judge: { ...scoredPreflight.judge, real_opt_in: false, calibration_status: "diagnostic", calibration_hash: fixture.report.hash, calibration_reused: true },
+    gates: scoredPreflight.gates.map((entry) => entry.id === "judge-provider" ? { ...entry, status: "not-run" as const } : entry.id === "judge-calibration" ? { ...entry, status: "accepted-diagnostic" as const } : entry),
+  };
+  const { LORELUM_JUDGE_REAL: _notNeeded, ...calibrationEnv } = fixture.env;
+  const env = { ...calibrationEnv, LORELUM_LOCAL_EXPERIMENT: "1", LORELUM_PI_BASE_URL: "https://gateway.example/v1", LORELUM_PI_API_KEY: "redacted-test-key" };
+  let scoringCalls = 0;
+  let attemptCalls = 0;
+  const result = await runTimingPilotAttempts({
+    root: workspaceRoot, plan: value, run_id: "diagnostic-only-test", output_root: output,
+    preflight: diagnosticPreflight, calibration: fixture.report, calibration_diagnostics: fixture.diagnostics, env,
+    dependencies: {
+      configure_catalog: async () => undefined,
+      verify_identity: async () => "mock-pi",
+      run_attempt: async (options) => { attemptCalls += 1; return fakeAttempt(options); },
+      evaluate: async () => buildEvaluatorResult(CHECK_IDS.map((id) => ({ id, status: "pass" as const }))),
+      score: async () => { scoringCalls += 1; throw new Error("diagnostic-only must not score"); },
+    },
+  });
+  expect(result).toMatchObject({ status: "completed", execution_mode: "diagnostic-only", judge_score_usable: false, planned_slots: 9, attempted_slots: 9 });
+  expect(attemptCalls).toBe(9);
+  expect(scoringCalls).toBe(0);
+  expect(result.attempts.every((attempt) => attempt.status === "completed" && attempt.evaluator.status === "pass")).toBe(true);
+  expect(result.attempts.every((attempt) => attempt.execution_mode === "diagnostic-only" && attempt.judge.state === "not-run" && attempt.judge.score_usable === false && attempt.judge.calls.scoring === 0)).toBe(true);
+  expect(result.cost_ledger.judge).toEqual({ input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0 });
+  const rejectedOutput = join(workspaceRoot, "scratch", "timing-pilot-diagnostic-rejected-" + crypto.randomUUID());
+  temporaryRoots.push(rejectedOutput);
+  let rejectedAttempts = 0;
+  const incompleteDiagnostics = { ...fixture.diagnostics, observations: fixture.diagnostics.observations.slice(1) };
+  await expect(runTimingPilotAttempts({ root: workspaceRoot, plan: value, run_id: "diagnostic-rejected-test", output_root: rejectedOutput, preflight: diagnosticPreflight, calibration: fixture.report, calibration_diagnostics: incompleteDiagnostics, env, dependencies: { run_attempt: async (options) => { rejectedAttempts += 1; return fakeAttempt(options); } } })).rejects.toThrow("matching private sidecar");
+  expect(rejectedAttempts).toBe(0);
+});
 
 test("preflight failure blocks the entire attempt matrix", async () => {
   const value = await plan();

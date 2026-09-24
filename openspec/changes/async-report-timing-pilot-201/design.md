@@ -20,6 +20,20 @@
 
 当前已有非破坏性 Pi/model probe 已通过：Pi `0.85.1`、目标模型 `deepseek/deepseek-v4-flash`、本地 gateway route 和 credential 可完成 `Reply with exactly: ok`。该结果只证明当前 route 可达；实现后的 preflight 仍必须校验 `local-pi/v4` manifest 与同一目标 model identity。
 
+## Planning amendment (2026-09-24)
+
+需求方同意继续按“校准不合格时不无限重跑、为 timing pilot 留有限恢复路径”的方向推进。本节 supersede 2026-09-22 planning confirmation 第 4 项关于“任一 calibration gate 失败即阻止所有 Agent attempt”的解释；并按模式细化第 3 项：Judge-scored 仍需 inference endpoint/API key/`LORELUM_JUDGE_REAL=1`，diagnostic-only 仅需 `LORELUM_JUDGE_CALIBRATION_KEY` 验证 attestation，不要求 Judge inference endpoint/API key/real opt-in。当前报告来自同一 #201 的已完成九次 calibration，只能作为完整、attested 的 diagnostic package 复用，不能当作 qualified calibration、不能用于评分，也不属于跨实验/历史 calibration 复用。其他已确认范围不变。
+
+一次不调用模型的离线审计显示，九条真实 calibration observation 的 `input_hash` 均与当前确定性重建的 Judge input 一致；没有发现 runner input builder 丢弃已投影 evidence 的迹象。现有诊断更支持正向校准证据本身不足以满足冻结门槛。逐次 fixture 内容与理由继续留在 private scratch，不复制到公开 OpenSpec。
+
+本修订仅拆分“Judge score 是否可采信”与“是否可执行 Agent timing pilot”，不改变 #200 v1：
+
+- **Judge-scored（默认）**：保持原门禁，完整 calibration 必须 `qualified` 才可运行九次 attempt 并调用 Judge scoring。
+- **diagnostic-only（显式选择）**：只有用户明确传入 `--run --diagnostic-only --confirm-start`，且存在身份/attestation 有效的完整 #200 v1 `diagnostic` calibration report，并且 candidate/snapshot、plan/dry-run、environment/runtime、Pi/model probe、hard evaluator、workspace/private isolation 等全部非 Judge 执行门禁通过，才可运行预注册九个 Agent slots。此路径不要求 Judge inference endpoint/API key/`LORELUM_JUDGE_REAL=1`，但必须用 `LORELUM_JUDGE_CALIBRATION_KEY` 验证既有报告 attestation；不重跑 calibration，也不发起 attempt-level Judge 调用。
+- diagnostic-only 每个 slot 仍运行 #202 hard evaluator；Judge 明确记录为 `not-run`，原因为 `calibration-unqualified-diagnostic-only`，Judge score eligibility 为 false。不得从 Judge 侧得出质量或条件比较结论；执行健康、delivery 与 hard evaluator 结果仍独立记录。
+- 不自动降级。未明确选择 diagnostic-only、缺少/无效 diagnostic report、或任何非 Judge gate 失败时仍 fail closed。两种模式都维持九个 slot、失败不替换、scratch-only、不写 formal record、不升级 suite/candidate。
+
+当前真实 calibration 已符合“完整但 diagnostic”的报告条件；本修订只授权实现该模式，不等于启动九次长时间 Agent pilot。真实运行仍需之后显式选择 diagnostic-only 并确认启动。
 ## Execution design
 
 ### 1. Immutable pre-registration
@@ -30,29 +44,30 @@
 
 ### 2. Preflight and isolation
 
-preflight 必须在第一条 Agent 请求前完成：candidate path 只能从冻结 source/snapshot materialize；public workspace 只能包含 task/starter 与声明的 condition-scoped runtime；private evaluator/oracle/rubric/Pack body 不得复制到 Agent workspace 或 prompt。校验 candidate/snapshot、task/stage-2 hash、treatment manifest/card identity、runner/evaluator/Judge/rubric hash、environment/model/budget、plan hash 和 clean workspace。
+preflight 必须在第一条 Agent attempt 前完成：candidate path 只能从冻结 source/snapshot materialize；public workspace 只能包含 task/starter 与声明的 condition-scoped runtime；private evaluator/oracle/rubric/Pack body 不得复制到 Agent workspace 或 Judge prompt。校验 candidate/snapshot、task/stage-2 hash、treatment manifest/card identity、runner/evaluator/Judge/rubric hash、environment/model/budget、plan hash 和 clean workspace。
 
-长时间 pilot 采用 fail-closed gate，顺序固定为：
+`judge-scored`（默认）模式的 fail-closed 顺序固定为：
 
 1. 读取并校验 `local-pi/v4` environment、Pi 版本、model ID/version、tool policy、runtime/package/lockfile；
 2. 使用目标 model 执行一次不写 workspace 的短 probe，确认 Pi route、gateway 和 credential 可完成最小请求；
 3. 解析 master plan，执行 scratch dry-run，生成 9 个 slot、循环拉丁方顺序并验证 snapshot/hash/isolation；
 4. 校验 Judge provider/model/credential/`LORELUM_JUDGE_REAL=1`，执行 #200 完整 calibration；
-5. 只有 Judge calibration 达到 `qualified` 才允许进入九次 Agent attempt。
+5. 仅 calibration 为 `qualified` 时，才可运行 Agent slots 并对 attempts 调用 Judge scoring。
 
-任何 preflight、dry-run 或 calibration gate 失败都只生成 preflight-blocked/invalid-plan 诊断摘要，不创建 attempt、不调用九次 Agent、不写 `results/records/`。每个 attempt 都使用全新 workspace 和独立 artifact directory；artifact root 与 Agent workspace 必须 realpath 分离。attempt 结束后才在 host side 读取 private transcript、运行 #202 evaluator 和构造 #200 evidence projection；任何失败都 fail closed 并保留状态。
+diagnostic-only 模式保留第 1–3 项及所有 candidate/snapshot/evaluator/plan/isolation/Agent opt-in 检查，并校验已缓存完整 calibration report 的 #200 identity、model scope 与 attestation；报告必须为 `diagnostic`。该模式不执行新 Judge calibration、不要求 attempt scoring 的 Judge provider/credential/real opt-in，且禁止 attempt-level Judge 请求。运行摘要与每个 slot 必须记录 `execution_mode=diagnostic-only`、`judge_score_usable=false` 和 Judge `not-run` 原因。
 
+模式默认始终是 `judge-scored`；只有命令同时显式选择 `--run`、`--diagnostic-only` 和 `--confirm-start` 才允许有限恢复，绝不因 Judge gate 失败自动降级。任何其他 preflight、dry-run、attestation、身份、隔离或 Agent gate 失败仍阻止九次 Agent attempts，不创建 attempt、不调用 Judge、不写 `results/records/`。attempt 使用全新 workspace 与独立 artifact directory；artifact root 与 Agent workspace 必须 realpath 分离。attempt 结束后才在 host side 读取 private transcript、运行 #202 evaluator 和（仅 Judge-scored 模式）构造 #200 evidence projection；失败均保留状态。
 ### 3. Nine attempt execution
 
 编排器复用现有 #197 one-attempt API，不重新实现 delivery semantics。每个 attempt 按计划节点只投放一次固定 card；`constraint_followup` 与 `first_implementation_checkpoint` 继续使用 #197 冻结的同 session continuation/marker。baseline 和 undeclared path 只通过 mock/preflight 证明无 payload，不能成为隐含第四条件。
 
-每次 attempt 至少产生：private delivery audit/summary、redacted public trace、Pi stdout/stderr/transcript artifact、execution health、final candidate diff、hard evaluator result、Judge evidence/accounting、usage/duration/cost ledger 和 terminal status。原始 private transcript、Practice body、Pack provenance、evaluator oracle/source、Judge calibration labels 仅留在 host-side private/scratch boundary。
+每次 attempt 至少产生：private delivery audit/summary、redacted public trace、Pi stdout/stderr/transcript artifact、execution health、final candidate diff、hard evaluator result、usage/duration/cost ledger 和 terminal status。Judge-scored 模式另产 Judge evidence/accounting；diagnostic-only 模式写明 Judge `not-run`、资格状态和未调用成本，不构造 Judge input。原始 private transcript、Practice body、Pack provenance、evaluator oracle/source、Judge calibration labels 仅留在 host-side private/scratch boundary。
 
 ### 4. Independent outcome join
 
 hard evaluator 只按 #202 v1 CLI 读取 Agent app root，返回其冻结的 overall status/stable check id projection；完整 check reason 与 oracle 不进入 Judge 输入。Judge 只接收 #200 的 public-safe `replan-evidence/v1`，使用 opaque blind case id；真实 condition、node、attempt/repetition 和 hard result 在评分后通过 plan-hash/attempt-id 私有 join。
 
-结果聚合分开报告：execution health；hard semantic status；Judge quality state/score；delivery status；Agent/Judge calibration/scoring/failure/indeterminate usage 与 cost。禁止把这些维度压成隐藏总分或用 Judge 改写 hard gate。
+结果聚合分开报告：execution mode；execution health；hard semantic status；Judge quality state/score 或 `not-run`；delivery status；Agent/Judge calibration/scoring/failure/indeterminate usage 与 cost。diagnostic-only 结果不得产生 Judge 条件比较或 Judge 质量结论；禁止把这些维度压成隐藏总分或用 Judge 改写 hard gate。
 
 ### 5. Judge diagnostic usability
 
@@ -70,7 +85,7 @@ hard evaluator 只按 #202 v1 CLI 读取 Agent app root，返回其冻结的 ove
 
 ## Risks and mitigations
 
-- **模型或 Judge 端点不可达** → 先做 Pi/model short probe 与完整 Judge calibration；任一 gate 失败即阻断九次 pilot，不消耗长时间 Agent 预算，不伪造结果。
+- **模型或 Judge 端点不可达/校准不合格** → 任何模式先做 Pi/model short probe；Judge-scored 模式要求完整 calibration qualified。若已有完整 attested diagnostic report，操作方可显式选 diagnostic-only，仅跳过 Judge scoring；不自动降级、不伪造 Judge 分数或结论。
 - **运行身份漂移** → 所有 identity 与 hash 绑定到 master plan；运行中 drift 立即 fail closed。
 - **私有材料泄露** → workspace、prompt、public trace、Judge evidence 分层审计；运行前和运行后都执行 leakage audit。
 - **模型超时导致 timing 混淆** → 固定 per-attempt budget；不以等待或 turn 数制造时机；不重跑替换失败槽位。

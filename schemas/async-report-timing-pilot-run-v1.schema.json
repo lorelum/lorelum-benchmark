@@ -99,6 +99,7 @@
         "master_plan_hash",
         "delivery_plan_hash",
         "slot",
+        "execution_mode",
         "status",
         "execution",
         "delivery",
@@ -249,6 +250,7 @@
           "additionalProperties": false,
           "required": [
             "state",
+            "score_usable",
             "score",
             "confidence",
             "provider_id",
@@ -353,6 +355,9 @@
             "failure_reason": {
               "type": "string",
               "maxLength": 240
+            },
+            "score_usable": {
+              "type": "boolean"
             }
           },
           "allOf": [
@@ -431,8 +436,57 @@
               "pattern": "^(?:|scratch/)"
             }
           }
+        },
+        "execution_mode": {
+          "enum": [
+            "judge-scored",
+            "diagnostic-only"
+          ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "execution_mode": {
+                "const": "diagnostic-only"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "judge": {
+                "properties": {
+                  "score_usable": {
+                    "const": false
+                  },
+                  "state": {
+                    "const": "not-run"
+                  },
+                  "score": {
+                    "type": "null"
+                  },
+                  "confidence": {
+                    "type": "null"
+                  },
+                  "calls": {
+                    "properties": {
+                      "calibration": {
+                        "const": 0
+                      },
+                      "scoring": {
+                        "const": 0
+                      }
+                    },
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        }
+      ]
     }
   },
   "type": "object",
@@ -442,6 +496,8 @@
     "run_id",
     "status",
     "master_plan_hash",
+    "execution_mode",
+    "judge_score_usable",
     "planned_slots",
     "attempted_slots",
     "attempts",
@@ -507,12 +563,32 @@
         "calibration": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["status", "calls", "duration_ms", "usage"],
+          "required": [
+            "status",
+            "calls",
+            "duration_ms",
+            "usage"
+          ],
           "properties": {
-            "status": { "enum": ["qualified", "diagnostic", "not-run"] },
-            "calls": { "type": "integer", "minimum": 0, "maximum": 9 },
-            "duration_ms": { "type": "integer", "minimum": 0 },
-            "usage": { "$ref": "#/$defs/usage" }
+            "status": {
+              "enum": [
+                "qualified",
+                "diagnostic",
+                "not-run"
+              ]
+            },
+            "calls": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "usage": {
+              "$ref": "#/$defs/usage"
+            }
           }
         },
         "agent_cost_usd": {
@@ -544,6 +620,44 @@
     },
     "formal_record_created": {
       "const": false
+    },
+    "execution_mode": {
+      "enum": [
+        "judge-scored",
+        "diagnostic-only"
+      ]
+    },
+    "judge_score_usable": {
+      "type": "boolean"
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "execution_mode": {
+            "const": "diagnostic-only"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "judge_score_usable": {
+            "const": false
+          },
+          "attempts": {
+            "items": {
+              "type": "object",
+              "properties": {
+                "execution_mode": {
+                  "const": "diagnostic-only"
+                }
+              }
+            },
+            "type": "array"
+          }
+        }
+      }
+    }
+  ]
 }

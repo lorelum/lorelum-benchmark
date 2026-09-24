@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { readFile, rm } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   buildTimingPilotSchedule,
@@ -9,11 +9,14 @@ import {
   readTimingPilotPlan,
   resolveTimingPilotScratchOutput,
   runTimingPilotPreflight,
+  readTimingPilotScratchJson,
   timingPilotPlanPath,
   writeTimingPilotPreflightSummary,
+  verifyDiagnosticCalibration,
   type TimingPilotPlan,
 } from "./async-report-timing-pilot";
 import { workspaceRoot } from "../../../../fs";
+import { diagnosticCalibrationFixture, testJudgeModel } from "./timing-pilot-diagnostic-test-fixture";
 
 const planPath = join(workspaceRoot, timingPilotPlanPath);
 
@@ -22,6 +25,7 @@ async function plan(): Promise<TimingPilotPlan> {
 }
 
 const testRuntimeProbe = async () => ({ bun: "1.4.2", node: "24.21.0" });
+const testAgentEnv = { LORELUM_PI_BASE_URL: "https://pi.example/v1", LORELUM_PI_API_KEY: "test-pi-key" };
 
 function qualifiedCalibration() {
   return {
@@ -94,7 +98,7 @@ test("model probe version drift blocks the pilot before Judge calibration", asyn
     root: workspaceRoot,
     runtime_probe: testRuntimeProbe,
     plan: value,
-    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash" },
+    env: { ...testAgentEnv, LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash" },
     model_probe: async () => ({ version: "0.80.10", command_sha256: "f".repeat(64) }),
     judge_calibration: async () => { calibrationCalled = true; return qualifiedCalibration(); },
   });
@@ -117,7 +121,7 @@ test("model probe runs before a dry-run drift becomes invalid-plan", async () =>
     root: workspaceRoot,
     runtime_probe: testRuntimeProbe,
     plan: driftedWithHash,
-    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash" },
+    env: { ...testAgentEnv, LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash" },
     model_probe: async () => { probeCalled = true; return { version: "0.85.1", command_sha256: "f".repeat(64) }; },
     judge_calibration: async () => { calibrationCalled = true; return qualifiedCalibration(); },
   });
@@ -182,7 +186,7 @@ test("cached calibration reports are attestation-checked and explicitly marked a
   const summary = await runTimingPilotPreflight({
     root: workspaceRoot,
     plan: value,
-    env: { LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash", LORELUM_JUDGE_CALIBRATION_KEY: "test-calibration-key" },
+    env: { ...testAgentEnv, LORELUM_JUDGE_REAL: "1", LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key", LORELUM_JUDGE_MODEL: "deepseek/deepseek-v4-flash", LORELUM_JUDGE_CALIBRATION_KEY: "test-calibration-key" },
     runtime_probe: testRuntimeProbe,
     model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }),
     calibration_report: qualifiedCalibration(),
@@ -193,6 +197,39 @@ test("cached calibration reports are attestation-checked and explicitly marked a
   expect(diagnostics).toMatchObject({ status: "details_unavailable", reason: "cached_report_without_sidecar", observations: [] });
 });
 
+
+test("diagnostic-only preflight accepts a complete attested diagnostic package without Judge provider credentials", async () => {
+  const value = await plan();
+  const fixture = await diagnosticCalibrationFixture();
+  const env = { ...testAgentEnv, ...fixture.env };
+  await expect(verifyDiagnosticCalibration(fixture.report, fixture.diagnostics, testJudgeModel, env)).resolves.toMatchObject({ status: "diagnostic", calls: 9 });
+  const summary = await runTimingPilotPreflight({
+    root: workspaceRoot, plan: value, execution_mode: "diagnostic-only", env,
+    runtime_probe: testRuntimeProbe,
+    model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }),
+    calibration_report: fixture.report, calibration_diagnostics: fixture.diagnostics,
+  });
+  expect(summary).toMatchObject({ status: "ready", allowed_to_start: true, execution_mode: "diagnostic-only", judge_score_usable: false });
+  expect(summary.cost_estimate).toMatchObject({ judge_calibration_calls: 9, judge_scoring_calls: 0, total_judge_calls: 9 });
+  expect(summary.gates.find((entry) => entry.id === "judge-provider")?.status).toBe("not-run");
+  expect(summary.gates.find((entry) => entry.id === "judge-calibration")?.status).toBe("accepted-diagnostic");
+});
+
+test("diagnostic-only requires full calibration details and never auto-downgrades scored mode", async () => {
+  const value = await plan();
+  const fixture = await diagnosticCalibrationFixture();
+  const env = { ...testAgentEnv, ...fixture.env, LORELUM_JUDGE_BASE_URL: "https://judge.example/v1", LORELUM_JUDGE_API_KEY: "test-key" };
+  const missingDetails = await runTimingPilotPreflight({ root: workspaceRoot, plan: value, execution_mode: "diagnostic-only", env, runtime_probe: testRuntimeProbe, model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }), calibration_report: fixture.report });
+  expect(missingDetails.allowed_to_start).toBe(false);
+  const tampered = { ...fixture.diagnostics, observations: fixture.diagnostics.observations.slice(1) };
+  const incomplete = await runTimingPilotPreflight({ root: workspaceRoot, plan: value, execution_mode: "diagnostic-only", env, runtime_probe: testRuntimeProbe, model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }), calibration_report: fixture.report, calibration_diagnostics: tampered });
+  expect(incomplete.allowed_to_start).toBe(false);
+  const scored = await runTimingPilotPreflight({ root: workspaceRoot, plan: value, env, runtime_probe: testRuntimeProbe, model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }), calibration_report: fixture.report, calibration_diagnostics: fixture.diagnostics });
+  expect(scored.execution_mode).toBe("judge-scored");
+  expect(scored.allowed_to_start).toBe(false);
+  expect(scored.judge_score_usable).toBe(false);
+});
+
 test("missing Judge opt-in blocks the pilot without starting calibration", async () => {
   const value = await plan();
   let calibrationCalled = false;
@@ -200,7 +237,7 @@ test("missing Judge opt-in blocks the pilot without starting calibration", async
     root: workspaceRoot,
     runtime_probe: testRuntimeProbe,
     plan: value,
-    env: {},
+    env: testAgentEnv,
     model_probe: async () => ({ version: "0.85.1", command_sha256: "f".repeat(64) }),
     judge_calibration: async () => { calibrationCalled = true; return qualifiedCalibration(); },
   });
@@ -235,6 +272,19 @@ test("preflight summary is human-readable and does not contain credentials", asy
   }
 });
 
+
+
+test("calibration inputs can only be loaded as regular JSON artifacts under scratch", async () => {
+  const directory = await resolveTimingPilotScratchOutput(workspaceRoot, join(workspaceRoot, "scratch", "timing-pilot-input-loader-test-" + crypto.randomUUID()));
+  const file = join(directory, "report.json");
+  try {
+    await writeFile(file, JSON.stringify({ safe: true }), "utf8");
+    await expect(readTimingPilotScratchJson(workspaceRoot, file)).resolves.toEqual({ safe: true });
+    await expect(readTimingPilotScratchJson(workspaceRoot, join(workspaceRoot, "results", "records", "report.json"))).rejects.toThrow("below the workspace scratch/");
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("timing pilot artifact output is confined to workspace scratch", async () => {
   const outside = join(workspaceRoot, "results", "records", "timing-pilot-escape");

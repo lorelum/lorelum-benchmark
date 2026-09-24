@@ -113,7 +113,7 @@ function safeUsage(value?: Partial<JudgeUsage>): Record<keyof JudgeUsage, UsageV
   return result;
 }
 
-async function readCalibrationThresholds(): Promise<CalibrationThresholds | null> {
+export async function readCalibrationThresholds(): Promise<CalibrationThresholds | null> {
   try {
     const value = await Bun.file(calibrationManifestPath).json() as { thresholds?: unknown };
     const thresholds = value.thresholds;

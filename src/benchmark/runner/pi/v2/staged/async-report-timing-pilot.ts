@@ -1,5 +1,6 @@
 import { lstat, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
-import { delimiter, isAbsolute, join, relative, resolve } from "node:path";
+import Ajv2020 from "ajv/dist/2020";
+import { delimiter, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { sha256File, sha256Text, workspaceRoot } from "../../../../fs";
 import { asyncReportJudgeEnv } from "../../../../judge/async-report-replan/v1/llm";
@@ -7,7 +8,7 @@ import { evaluationPlanHash } from "../../../../judge/async-report-replan/v1/pla
 import { redactSensitiveText } from "../../../../judge/async-report-replan/v1/canonical";
 import { rubricHash } from "../../../../judge/async-report-replan/v1/rubric";
 import { accountingSchemaVersion, replanEvidenceSchemaVersion } from "../../../../judge/async-report-replan/v1/types";
-import { calibrationDiagnosticsForPreflightError, createCachedReportDiagnostics, renderJudgeCalibrationDiagnosticsMarkdown, runRealCalibrationWithDiagnostics, type JudgeCalibrationDiagnostics } from "./timing-pilot-judge-diagnostics";
+import { calibrationDiagnosticsForPreflightError, createCachedReportDiagnostics, evaluateCalibrationGateChecks, readCalibrationThresholds, renderJudgeCalibrationDiagnosticsMarkdown, runRealCalibrationWithDiagnostics, type JudgeCalibrationDiagnostics } from "./timing-pilot-judge-diagnostics";
 import { calibrationAttestationKey, calibrationScope, resolveCalibrationStatus } from "../../../../judge/async-report-replan/v1/calibration";
 import type { CalibrationReport } from "../../../../judge/async-report-replan/v1/types";
 import { configureLocalPiModelCatalog, localPiApiKey, localPiModelArgument, localPiModelBaseUrl, localPiShellPath } from "../local-pi-model-catalog";
@@ -43,8 +44,9 @@ export const timingPilotJudgeRubricHash = "2ff71b4208479e5bd3f246c9450264f52ec01
 
 export const timingPilotNodes = ["task_start", "constraint_followup", "first_implementation_checkpoint"] as const;
 export type TimingPilotNode = (typeof timingPilotNodes)[number];
-export type TimingPilotGateStatus = "passed" | "failed" | "blocked" | "not-run";
+export type TimingPilotGateStatus = "passed" | "failed" | "blocked" | "not-run" | "accepted-diagnostic";
 export type TimingPilotStatus = "ready" | "preflight-blocked" | "invalid-plan";
+export type TimingPilotExecutionMode = "judge-scored" | "diagnostic-only";
 
 export type TimingPilotSlot = Readonly<{
   attempt_id: string;
@@ -102,10 +104,10 @@ export type TimingPilotPreflightUsage = Readonly<{ input_tokens: number | null; 
 export type TimingPilotCostEstimate = Readonly<{
   preflight_cost_usd: number | null;
   agent_attempts: 9;
-  judge_calibration_calls: 9;
-  judge_scoring_calls: 9;
+  judge_calibration_calls: number;
+  judge_scoring_calls: number;
   agent_max_duration_ms: number;
-  total_judge_calls: 18;
+  total_judge_calls: number;
   cost_usd: "unavailable";
 }>;
 
@@ -115,7 +117,9 @@ export type TimingPilotPreflightSummary = Readonly<{
   preflight_duration_ms: number;
   pi_probe: Readonly<{ calls: number; duration_ms: number; usage: TimingPilotPreflightUsage }>;
   status: TimingPilotStatus;
+  execution_mode: TimingPilotExecutionMode;
   allowed_to_start: boolean;
+  judge_score_usable: boolean;
   plan_hash: string;
   model: Readonly<{ id: string; version: string }>;
   evaluator: Readonly<{ id: string; version: string; snapshot_id: string }>;
@@ -125,7 +129,18 @@ export type TimingPilotPreflightSummary = Readonly<{
   runtime: Readonly<{ observed_bun: string | null; observed_node: string | null }>;
   budget: Readonly<{ max_turns: number; max_duration_ms: number }>;
   cost_estimate: TimingPilotCostEstimate;
-  judge: Readonly<{ provider_id: string; model: string; real_opt_in: boolean; calibration_status: "qualified" | "diagnostic" | "not-run" | "unavailable"; calibration_calls: number; calibration_duration_ms: number; calibration_usage: TimingPilotPreflightUsage }>;
+  judge: Readonly<{
+    provider_id: string;
+    model: string;
+    real_opt_in: boolean;
+    calibration_status: "qualified" | "diagnostic" | "unavailable" | "not-run";
+    calibration_hash: string | null;
+    calibration_reused: boolean;
+    calibration_calls: number;
+    calibration_duration_ms: number;
+    calibration_usage: TimingPilotPreflightUsage;
+  }>;
+
   gates: readonly TimingPilotGate[];
   failure_reason?: string;
 }>;
@@ -137,6 +152,8 @@ export type TimingPilotPreflightOptions = Readonly<{
   env?: Record<string, string | undefined>;
   run_model_probe?: boolean;
   run_judge_calibration?: boolean;
+  execution_mode?: TimingPilotExecutionMode;
+  calibration_diagnostics?: JudgeCalibrationDiagnostics;
   runtime_probe?: () => Promise<{ bun: string; node: string }>;
   model_probe?: (input: { root: string; model: string }) => Promise<{ version: string; command_sha256: string; duration_ms?: number; usage?: unknown }>;
   judge_calibration?: (env: Record<string, string | undefined>) => Promise<CalibrationReport>;
@@ -538,12 +555,15 @@ function preflightUsage(value: unknown): TimingPilotPreflightUsage {
   };
 }
 
-function summaryBase(plan: TimingPilotPlan, calibrationStatus: TimingPilotPreflightSummary["judge"]["calibration_status"] = "not-run", calibrationCalls = 0): Omit<TimingPilotPreflightSummary, "status" | "allowed_to_start" | "gates"> {
+function summaryBase(plan: TimingPilotPlan, calibrationStatus: TimingPilotPreflightSummary["judge"]["calibration_status"] = "not-run", calibrationCalls = 0, executionMode: TimingPilotExecutionMode = "judge-scored"): Omit<TimingPilotPreflightSummary, "status" | "allowed_to_start" | "gates" | "failure_reason"> {
+  const judgeScoringCalls = executionMode === "diagnostic-only" ? 0 : 9;
   return {
     schema_version: timingPilotPreflightSchemaVersion,
     created_at: new Date().toISOString(),
     preflight_duration_ms: 0,
     pi_probe: { calls: 0, duration_ms: 0, usage: preflightUsage(undefined) },
+    execution_mode: executionMode,
+    judge_score_usable: executionMode === "judge-scored" && calibrationStatus === "qualified",
     plan_hash: plan.plan_hash,
     model: plan.execution.model,
     evaluator: plan.evaluator,
@@ -552,12 +572,12 @@ function summaryBase(plan: TimingPilotPlan, calibrationStatus: TimingPilotPrefli
     environment: plan.execution.environment,
     runtime: { observed_bun: null, observed_node: null },
     budget: plan.execution.budget,
-    cost_estimate: { preflight_cost_usd: null, agent_attempts: 9, judge_calibration_calls: 9, judge_scoring_calls: 9, agent_max_duration_ms: plan.execution.budget.max_duration_ms * 9, total_judge_calls: 18, cost_usd: "unavailable" },
-    judge: { provider_id: plan.judge.provider_id, model: plan.judge.model, real_opt_in: false, calibration_status: calibrationStatus, calibration_calls: calibrationCalls, calibration_duration_ms: 0, calibration_usage: preflightUsage(undefined) },
+    cost_estimate: { preflight_cost_usd: null, agent_attempts: 9, judge_calibration_calls: 9, judge_scoring_calls: judgeScoringCalls, agent_max_duration_ms: plan.execution.budget.max_duration_ms * 9, total_judge_calls: 9 + judgeScoringCalls, cost_usd: "unavailable" },
+    judge: { provider_id: plan.judge.provider_id, model: plan.judge.model, real_opt_in: false, calibration_status: calibrationStatus, calibration_hash: null, calibration_reused: false, calibration_calls: calibrationCalls, calibration_duration_ms: 0, calibration_usage: preflightUsage(undefined) },
   };
 }
 
-function invalidPlanSummary(plan: TimingPilotPlan, reason: unknown): TimingPilotPreflightSummary {
+function invalidPlanSummary(plan: TimingPilotPlan, reason: unknown, executionMode: TimingPilotExecutionMode = "judge-scored"): TimingPilotPreflightSummary {
   const safeReason = redactedReason(reason);
   const gates = [
     gate("plan", "failed", safeReason),
@@ -565,12 +585,11 @@ function invalidPlanSummary(plan: TimingPilotPlan, reason: unknown): TimingPilot
     gate("runtime", "blocked", "plan validation failed"),
     gate("pi-model-probe", "blocked", "plan validation failed"),
     gate("plan-dry-run", "blocked", "plan validation failed"),
-    gate("judge-provider", "blocked", "plan validation failed"),
+    gate("judge-provider", executionMode === "diagnostic-only" ? "not-run" : "blocked", "plan validation failed"),
     gate("judge-calibration", "blocked", "plan validation failed"),
   ];
-  return { ...summaryBase(plan), status: "invalid-plan", allowed_to_start: false, gates, failure_reason: `plan: ${safeReason}` };
+  return { ...summaryBase(plan, "not-run", 0, executionMode), status: "invalid-plan", allowed_to_start: false, gates, failure_reason: `plan: ${safeReason}` };
 }
-
 export async function dryRunTimingPilot(options: { root?: string; plan: TimingPilotPlan }): Promise<TimingPilotDryRun> {
   const root = resolve(options.root ?? workspaceRoot);
   const plan = await parseTimingPilotPlan(options.plan);
@@ -583,8 +602,73 @@ export async function dryRunTimingPilot(options: { root?: string; plan: TimingPi
   return { plan_hash: plan.plan_hash, slot_count: plan.schedule.slots.length, slots: plan.schedule.slots, candidate_ready: true, environment_ready: true, prompt_ready: true, isolation_ready: true };
 }
 
+export async function verifyDiagnosticCalibration(
+  report: CalibrationReport,
+  diagnostics: JudgeCalibrationDiagnostics,
+  expectedModel: string,
+  env: Record<string, string | undefined> = Bun.env,
+  root = workspaceRoot,
+): Promise<Awaited<ReturnType<typeof resolveCalibrationStatus>>> {
+  const diagnosticsSchema = await Bun.file(join(root, "schemas/async-report-timing-pilot-judge-calibration-diagnostics-v1.schema.json")).json();
+  const validateDiagnostics = new Ajv2020({ allErrors: true, strict: true, validateFormats: false }).compile(diagnosticsSchema);
+  if (!validateDiagnostics(diagnostics)) throw new Error("private calibration diagnostics do not match the frozen schema");
+  const resolved = await resolveCalibrationStatus(report, calibrationScope(expectedModel), calibrationAttestationKey("real", env));
+  if (report.status !== "diagnostic" || report.calls !== 9 || resolved.status !== "diagnostic" || resolved.calls !== 9 || resolved.reason !== "calibration gate is not qualified") {
+    throw new Error("a complete, attested diagnostic calibration report matching the frozen Judge identity is required");
+  }
+  if (diagnostics.schema_version !== "async-report-timing-pilot-judge-calibration-diagnostics/v1"
+    || diagnostics.status !== "captured"
+    || diagnostics.calibration.id !== report.id
+    || diagnostics.calibration.version !== report.version
+    || diagnostics.calibration.hash !== report.hash
+    || diagnostics.calibration.status !== "diagnostic"
+    || diagnostics.calibration.model !== expectedModel
+    || diagnostics.calibration.calls !== 9
+    || diagnostics.calibration.duration_ms !== report.duration_ms
+    || diagnostics.contract_snapshot_verified !== true
+    || !diagnostics.thresholds
+    || diagnostics.observations.length !== 9) {
+    throw new Error("complete private calibration diagnostics matching the attested report are required");
+  }
+  const groups = ["reference", "equivalent", "anti-pattern"] as const;
+  const seen = new Set<string>();
+  for (let index = 0; index < diagnostics.observations.length; index += 1) {
+    const observation = diagnostics.observations[index]!;
+    if (observation.call_index !== index + 1 || !groups.includes(observation.fixture_group as typeof groups[number])
+      || observation.status !== "observed" || !Number.isInteger(observation.score) || observation.score === null
+      || observation.score < 0 || observation.score > 100 || observation.repetition < 1 || observation.repetition > 3
+      || !hashPattern.test(observation.prompt_hash ?? "") || !hashPattern.test(observation.input_hash ?? "")) {
+      throw new Error("private calibration diagnostics do not contain nine complete observed calls");
+    }
+    const identity = observation.fixture_group + ":" + observation.repetition;
+    if (seen.has(identity)) throw new Error("private calibration diagnostics contain duplicate fixture repetitions");
+    seen.add(identity);
+  }
+  if (seen.size !== 9 || groups.some((group) => [1, 2, 3].some((repeat) => !seen.has(group + ":" + repeat)))) {
+    throw new Error("private calibration diagnostics do not cover three fixture groups with three repetitions each");
+  }
+  for (const group of groups) {
+    const scores = diagnostics.observations.filter((entry) => entry.fixture_group === group).map((entry) => entry.score as number).sort((a, b) => a - b);
+    const median = scores[1];
+    if (median === undefined || report.medians[group] !== median || diagnostics.calibration.medians[group] !== median) {
+      throw new Error("private calibration diagnostics do not match the attested report medians");
+    }
+  }
+  const usageKeys = ["input_tokens", "output_tokens", "total_tokens", "cost_usd"] as const;
+  if (usageKeys.some((key) => diagnostics.calibration.usage[key] !== report.usage[key])) throw new Error("private calibration diagnostics usage does not match the attested report");
+  const frozenThresholds = await readCalibrationThresholds();
+  if (!frozenThresholds || JSON.stringify(frozenThresholds) !== JSON.stringify(diagnostics.thresholds)) throw new Error("private calibration diagnostics use different thresholds from frozen #200 v1");
+  const expectedChecks = evaluateCalibrationGateChecks(report.medians, diagnostics.thresholds);
+  if (expectedChecks.length !== 4 || JSON.stringify(expectedChecks) !== JSON.stringify(diagnostics.gate_checks)
+    || !expectedChecks.some((entry) => entry.status === "failed")) {
+    throw new Error("private calibration gate details do not match the attested diagnostic report");
+  }
+  return resolved;
+}
+
 export async function runTimingPilotPreflight(options: TimingPilotPreflightOptions = {}): Promise<TimingPilotPreflightSummary> {
   const preflightStarted = performance.now();
+  const executionMode = options.execution_mode ?? "judge-scored";
   const root = resolve(options.root ?? workspaceRoot);
   let plan: TimingPilotPlan;
   try {
@@ -594,15 +678,18 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
       plan_hash: "0".repeat(64),
       evaluator: { id: timingPilotEvaluatorId, version: timingPilotEvaluatorVersion, snapshot_id: timingPilotEvaluatorSnapshotId },
       runner: { id: timingPilotRunnerId, version: timingPilotRunnerVersion, manifest_path: timingPilotRunnerManifestPath, manifest_sha256: "0".repeat(64) },
-      execution: { model: { id: timingPilotModel, version: timingPilotModelVersion }, agent: { id: "pi", version: "0.85.1" }, environment: { id: "local-pi", version: "v4", bun: timingPilotBunVersion, node: timingPilotNodeVersion, manifest_sha256: timingPilotEnvironmentManifestSha256 }, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } },
+      execution: { model: { id: timingPilotModel, version: timingPilotModelVersion }, agent: { id: "pi", version: "0.85.1", command: "pi" }, environment: { id: "local-pi", version: "v4", bun: timingPilotBunVersion, node: timingPilotNodeVersion, manifest_sha256: timingPilotEnvironmentManifestSha256 }, budget: { max_turns: timingPilotMaxTurns, max_duration_ms: timingPilotMaxDurationMs } },
       judge: { provider_id: timingPilotJudgeProvider, model: timingPilotJudgeModel, evaluation_plan_hash: timingPilotJudgeEvaluationPlanHash, rubric_hash: timingPilotJudgeRubricHash },
     } as TimingPilotPlan;
-    return invalidPlanSummary(fallback, error);
+    return invalidPlanSummary(fallback, error, executionMode);
   }
   if (plan.lifecycle_stage !== "pilot") return invalidPlanSummary(plan, "timing pilot plan is retired and cannot run as the active pilot");
   const gates: TimingPilotGate[] = [];
   let calibrationStatus: TimingPilotPreflightSummary["judge"]["calibration_status"] = "not-run";
   let calibrationCalls = 0;
+  let calibrationHash: string | null = null;
+  let calibrationReused = false;
+  let diagnosticCalibrationVerified = false;
   let judgeRealOptIn = false;
   let observedRuntime: { bun: string; node: string } | undefined;
   let observedPi: { version: string; command_sha256: string } | undefined;
@@ -673,57 +760,110 @@ export async function runTimingPilotPreflight(options: TimingPilotPreflightOptio
 
   const judgeEnv = asyncReportJudgeEnv(envText(options.env ?? {}));
   judgeRealOptIn = judgeEnv.real && Boolean(judgeEnv.baseUrl && judgeEnv.apiKey && judgeEnv.model === plan.judge.model);
-  if (!judgeRealOptIn) gates.push(gate("judge-provider", "failed", "Judge real opt-in, endpoint, key, or model is unavailable")); else gates.push(gate("judge-provider", "passed"));
-  if (options.run_judge_calibration !== false && judgeRealOptIn && gates.every((entry) => entry.status === "passed")) {
-    try {
-      const env = envText(options.env ?? {});
-      let report: CalibrationReport;
-      let diagnostics: JudgeCalibrationDiagnostics;
-      if (options.calibration_report) {
-        report = options.calibration_report;
-        diagnostics = createCachedReportDiagnostics(report);
-      } else if (options.judge_calibration) {
-        report = await options.judge_calibration(env);
-        diagnostics = createCachedReportDiagnostics(report);
-      } else {
-        const run = await runRealCalibrationWithDiagnostics({ env });
-        report = run.report;
-        diagnostics = run.diagnostics;
+  if (executionMode === "judge-scored") {
+    if (!judgeRealOptIn) gates.push(gate("judge-provider", "failed", "Judge real opt-in, endpoint, key, or model is unavailable")); else gates.push(gate("judge-provider", "passed"));
+    if (options.run_judge_calibration !== false && judgeRealOptIn && gates.every((entry) => entry.status === "passed")) {
+      try {
+        const env = envText(options.env ?? {});
+        let report: CalibrationReport;
+        let diagnostics: JudgeCalibrationDiagnostics;
+        if (options.calibration_report) {
+          report = options.calibration_report;
+          diagnostics = options.calibration_diagnostics ?? createCachedReportDiagnostics(report);
+          calibrationReused = true;
+        } else if (options.judge_calibration) {
+          report = await options.judge_calibration(env);
+          diagnostics = createCachedReportDiagnostics(report);
+        } else {
+          const run = await runRealCalibrationWithDiagnostics({ env });
+          report = run.report;
+          diagnostics = run.diagnostics;
+        }
+        calibrationHash = report.hash;
+        calibrationDurationMs = report.duration_ms;
+        calibrationUsage = preflightUsage(report.usage);
+        const resolved = options.judge_calibration
+          ? { status: report.status, calls: report.calls, reason: report.reason }
+          : await resolveCalibrationStatus(report, calibrationScope(plan.judge.model), calibrationAttestationKey("real", env));
+        calibrationStatus = resolved.status === "qualified" ? "qualified" : "diagnostic";
+        calibrationCalls = resolved.calls;
+        options.on_judge_calibration_report?.(report);
+        options.on_judge_calibration_diagnostics?.(diagnostics);
+        const qualified = calibrationStatus === "qualified";
+        const reason = qualified ? undefined : resolved.reason ?? report.reason ?? "Judge calibration did not qualify";
+        gates.push(gate("judge-calibration", qualified ? "passed" : "failed", reason ? redactedReason(reason) : undefined));
+      } catch (error) {
+        calibrationStatus = "unavailable";
+        options.on_judge_calibration_diagnostics?.(calibrationDiagnosticsForPreflightError(error));
+        gates.push(gate("judge-calibration", "failed", redactedReason(error)));
       }
-      calibrationDurationMs = report.duration_ms;
-      calibrationUsage = preflightUsage(report.usage);
-      const resolved = options.judge_calibration
-        ? { status: report.status, calls: report.calls, reason: report.reason }
-        : await resolveCalibrationStatus(report, calibrationScope(plan.judge.model), calibrationAttestationKey("real", env));
-      calibrationStatus = resolved.status === "qualified" ? "qualified" : "diagnostic";
-      calibrationCalls = resolved.calls;
-      options.on_judge_calibration_report?.(report);
-      options.on_judge_calibration_diagnostics?.(diagnostics);
-      const qualified = calibrationStatus === "qualified";
-      const reason = qualified ? undefined : resolved.reason ?? report.reason ?? "Judge calibration did not qualify";
-      gates.push(gate("judge-calibration", qualified ? "passed" : "failed", reason ? redactedReason(reason) : undefined));
-    } catch (error) {
-      calibrationStatus = "unavailable";
-      options.on_judge_calibration_diagnostics?.(calibrationDiagnosticsForPreflightError(error));
-      gates.push(gate("judge-calibration", "failed", redactedReason(error)));
+    } else gates.push(gate("judge-calibration", "blocked", "Judge provider preflight or earlier gate failed"));
+  } else {
+    gates.push(gate("judge-provider", "not-run", "attempt-level Judge scoring is disabled in diagnostic-only mode"));
+    const report = options.calibration_report;
+    const diagnostics = options.calibration_diagnostics;
+    if (report && diagnostics) {
+      try {
+        const env = envText(options.env ?? {});
+        const resolved = await verifyDiagnosticCalibration(report, diagnostics, plan.judge.model, env, root);
+        calibrationHash = report.hash;
+        calibrationReused = true;
+        calibrationDurationMs = report.duration_ms;
+        calibrationUsage = preflightUsage(report.usage);
+        calibrationCalls = resolved.calls;
+        calibrationStatus = "diagnostic";
+        diagnosticCalibrationVerified = true;
+        options.on_judge_calibration_report?.(report);
+        options.on_judge_calibration_diagnostics?.(diagnostics);
+        gates.push(gate("judge-calibration", "accepted-diagnostic", "attested diagnostic report verified; Judge score is unusable and scoring is disabled"));
+      } catch (error) {
+        calibrationStatus = "unavailable";
+        gates.push(gate("judge-calibration", "failed", redactedReason(error)));
+      }
+    } else {
+      gates.push(gate("judge-calibration", "blocked", "complete attested diagnostic report and private sidecar are required"));
     }
-  } else gates.push(gate("judge-calibration", "blocked", "Judge provider preflight or earlier gate failed"));
-  const failedGate = gates.find((entry) => entry.status !== "passed");
+  }
+  const blockingGate = gates.find((entry) => {
+    if (executionMode === "diagnostic-only" && entry.id === "judge-provider") return false;
+    if (executionMode === "diagnostic-only" && entry.id === "judge-calibration" && diagnosticCalibrationVerified) return false;
+    return entry.status !== "passed";
+  });
   const invalidPlan = environmentGate.status === "passed" && runtimeGate.status === "passed" && dryRunGate.status === "failed";
-  const base = summaryBase(plan, calibrationStatus, calibrationCalls);
+  const base = summaryBase(plan, calibrationStatus, calibrationCalls, executionMode);
   return {
     ...base,
     agent: { ...base.agent, observed_version: observedPi?.version ?? null, command_sha256: observedPi?.command_sha256 ?? null },
     runtime: { observed_bun: observedRuntime?.bun ?? null, observed_node: observedRuntime?.node ?? null },
     preflight_duration_ms: Math.max(0, Math.round(performance.now() - preflightStarted)),
     pi_probe: { calls: piProbeCalls, duration_ms: piProbeDurationMs, usage: piProbeUsage },
-    judge: { ...base.judge, real_opt_in: judgeRealOptIn, calibration_duration_ms: calibrationDurationMs, calibration_usage: calibrationUsage },
-    cost_estimate: { ...base.cost_estimate, preflight_cost_usd: (piProbeCalls === 0 || piProbeUsage.cost_usd !== null) && (calibrationCalls === 0 || calibrationUsage.cost_usd !== null) ? (piProbeCalls ? piProbeUsage.cost_usd! : 0) + (calibrationCalls ? calibrationUsage.cost_usd! : 0) : null },
-    status: failedGate ? (invalidPlan ? "invalid-plan" : "preflight-blocked") : "ready",
-    allowed_to_start: !failedGate,
+    judge: { ...base.judge, real_opt_in: judgeRealOptIn, calibration_hash: calibrationHash, calibration_reused: calibrationReused, calibration_duration_ms: calibrationDurationMs, calibration_usage: calibrationUsage },
+    cost_estimate: { ...base.cost_estimate, preflight_cost_usd: (piProbeCalls === 0 || piProbeUsage.cost_usd !== null) && (calibrationReused || calibrationCalls === 0 || calibrationUsage.cost_usd !== null) ? (piProbeCalls ? piProbeUsage.cost_usd! : 0) + (!calibrationReused && calibrationCalls ? calibrationUsage.cost_usd! : 0) : null },
+    status: blockingGate ? (invalidPlan ? "invalid-plan" : "preflight-blocked") : "ready",
+    execution_mode: executionMode,
+    allowed_to_start: !blockingGate,
+    judge_score_usable: !blockingGate && executionMode === "judge-scored" && calibrationStatus === "qualified",
     gates,
-    ...(failedGate?.reason ? { failure_reason: `${failedGate.id}: ${failedGate.reason}` } : {}),
+    ...(blockingGate?.reason ? { failure_reason: `${blockingGate.id}: ${blockingGate.reason}` } : {}),
   };
+}
+
+export async function readTimingPilotScratchJson<T>(root: string, filePath: string, required = true): Promise<T | undefined> {
+  const absoluteRoot = await realpath(resolve(root));
+  const scratchRoot = await realpath(join(absoluteRoot, "scratch"));
+  const target = resolve(filePath);
+  await resolveTimingPilotScratchOutput(absoluteRoot, dirname(target));
+  let info;
+  try { info = await lstat(target); }
+  catch (error) {
+    if (!required && error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+    throw new Error("required scratch artifact is missing or unreadable");
+  }
+  if (!info.isFile() || info.isSymbolicLink()) throw new Error("scratch artifact must be a regular non-symlink file");
+  const targetReal = await realpath(target);
+  if (!isWithin(scratchRoot, targetReal)) throw new Error("scratch artifact resolved outside workspace scratch/");
+  try { return JSON.parse(await Bun.file(targetReal).text()) as T; }
+  catch { throw new Error("scratch artifact is not valid JSON"); }
 }
 
 function isWithin(parent: string, child: string): boolean {
@@ -785,7 +925,15 @@ async function writeTimingPilotDryRunFailureSummary(reason: string, directory: s
   return { json_path: jsonPath, markdown_path: markdownPath };
 }
 
+export async function validateTimingPilotPreflightSummary(summary: TimingPilotPreflightSummary, root = workspaceRoot): Promise<void> {
+  const schemaPath = join(root, "schemas/async-report-timing-pilot-preflight-v1.schema.json");
+  const schema = await Bun.file(schemaPath).json();
+  const validate = new Ajv2020({ allErrors: true, strict: true, validateFormats: false }).compile(schema);
+  if (!validate(summary)) throw new Error("timing pilot preflight summary schema validation failed: " + (validate.errors ?? []).map((entry) => (entry.instancePath || "/") + " " + (entry.message ?? entry.keyword)).join("; "));
+}
+
 export async function writeTimingPilotPreflightSummary(summary: TimingPilotPreflightSummary, directory: string, root = workspaceRoot, diagnostics?: JudgeCalibrationDiagnostics): Promise<{ json_path: string; markdown_path: string; judge_calibration_diagnostics_json_path?: string; judge_calibration_diagnostics_markdown_path?: string }> {
+  await validateTimingPilotPreflightSummary(summary, root);
   directory = await resolveTimingPilotScratchOutput(root, directory);
   const jsonPath = join(directory, "preflight-summary.json");
   const markdownPath = join(directory, "preflight-summary.md");
@@ -799,7 +947,7 @@ export async function writeTimingPilotPreflightSummary(summary: TimingPilotPrefl
     diagnosticPaths = { judge_calibration_diagnostics_json_path: diagnosticJson, judge_calibration_diagnostics_markdown_path: diagnosticMarkdown };
   }
   await writeFile(jsonPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
-  const lines = ["# Async-report timing pilot preflight", "", `- status: ${summary.status}`, `- allowed_to_start: ${summary.allowed_to_start}`, `- plan_hash: ${summary.plan_hash}`, `- model: ${summary.model.id} (${summary.model.version})`, `- evaluator: ${summary.evaluator.id} ${summary.evaluator.version} (${summary.evaluator.snapshot_id})`, `- runner: ${summary.runner.id} ${summary.runner.version} (${summary.runner.manifest_sha256})`, `- Pi: ${summary.agent.id} ${summary.agent.version} (${summary.agent.command})`, `- environment: ${summary.environment.id}/${summary.environment.version} (${summary.environment.manifest_sha256})`, `- runtime observed: Bun ${summary.runtime.observed_bun ?? "not observed"} / Node ${summary.runtime.observed_node ?? "not observed"}`, `- budget: ${summary.budget.max_turns} turns / ${summary.budget.max_duration_ms} ms`, `- preflight elapsed: ${summary.preflight_duration_ms} ms`, `- Pi probe calls/elapsed/tokens/cost: ${summary.pi_probe.calls} / ${summary.pi_probe.duration_ms} ms / ${summary.pi_probe.usage.total_tokens ?? "unavailable"} / ${summary.pi_probe.usage.cost_usd ?? "unavailable"} USD`, `- Judge calibration elapsed/tokens/cost: ${summary.judge.calibration_duration_ms} ms / ${summary.judge.calibration_usage.total_tokens ?? "unavailable"} / ${summary.judge.calibration_usage.cost_usd ?? "unavailable"} USD`, `- estimated agent duration: ${summary.cost_estimate.agent_max_duration_ms} ms`, `- estimated Judge calls: ${summary.cost_estimate.total_judge_calls}`, `- observed preflight cost USD: ${summary.cost_estimate.preflight_cost_usd ?? "unavailable"}`, `- estimated cost USD: ${summary.cost_estimate.cost_usd}`, `- Judge: ${summary.judge.provider_id} / ${summary.judge.model}`, `- Judge real opt-in: ${summary.judge.real_opt_in}`, `- Judge calibration: ${summary.judge.calibration_status} (${summary.judge.calibration_calls} calls)`];
+  const lines = ["# Async-report timing pilot preflight", "", `- status: ${summary.status}`, `- execution mode: ${summary.execution_mode}`, `- allowed_to_start: ${summary.allowed_to_start}`, `- Judge score usable: ${summary.judge_score_usable}`, `- plan_hash: ${summary.plan_hash}`, `- model: ${summary.model.id} (${summary.model.version})`, `- evaluator: ${summary.evaluator.id} ${summary.evaluator.version} (${summary.evaluator.snapshot_id})`, `- runner: ${summary.runner.id} ${summary.runner.version} (${summary.runner.manifest_sha256})`, `- Pi: ${summary.agent.id} ${summary.agent.version} (${summary.agent.command})`, `- environment: ${summary.environment.id}/${summary.environment.version} (${summary.environment.manifest_sha256})`, `- runtime observed: Bun ${summary.runtime.observed_bun ?? "not observed"} / Node ${summary.runtime.observed_node ?? "not observed"}`, `- budget: ${summary.budget.max_turns} turns / ${summary.budget.max_duration_ms} ms`, `- preflight elapsed: ${summary.preflight_duration_ms} ms`, `- Pi probe calls/elapsed/tokens/cost: ${summary.pi_probe.calls} / ${summary.pi_probe.duration_ms} ms / ${summary.pi_probe.usage.total_tokens ?? "unavailable"} / ${summary.pi_probe.usage.cost_usd ?? "unavailable"} USD`, `- Judge calibration elapsed/tokens/cost: ${summary.judge.calibration_duration_ms} ms / ${summary.judge.calibration_usage.total_tokens ?? "unavailable"} / ${summary.judge.calibration_usage.cost_usd ?? "unavailable"} USD`, `- estimated agent duration: ${summary.cost_estimate.agent_max_duration_ms} ms`, `- estimated Judge calls: ${summary.cost_estimate.total_judge_calls}`, `- observed preflight cost USD: ${summary.cost_estimate.preflight_cost_usd ?? "unavailable"}`, `- estimated cost USD: ${summary.cost_estimate.cost_usd}`, `- Judge: ${summary.judge.provider_id} / ${summary.judge.model}`, `- Judge real opt-in: ${summary.judge.real_opt_in}`, `- Judge calibration: ${summary.judge.calibration_status} (${summary.judge.calibration_calls} calls)`, `- Judge scoring calls planned: ${summary.cost_estimate.judge_scoring_calls}`];
   if (diagnosticPaths) lines.push("- Judge calibration details: `private/judge-calibration-diagnostics.md` (host-local private artifact; not sent to the Judge or Agent)");
   lines.push("", "## Gates", ...summary.gates.map((entry) => `- ${entry.id}: ${entry.status}${entry.reason ? ` — ${entry.reason}` : ""}`));
   await writeFile(markdownPath, `${lines.join("\n")}\n`, "utf8");
@@ -812,9 +960,13 @@ if (import.meta.main) {
     const args = Bun.argv.slice(2);
     const root = resolve(argValue(args, "--root") ?? workspaceRoot);
     const mode = args.includes("--dry-run") ? "dry-run" : args.includes("--run") ? "run" : "preflight";
+    const executionMode: TimingPilotExecutionMode = args.includes("--diagnostic-only") ? "diagnostic-only" : "judge-scored";
+    const confirmStart = args.includes("--confirm-start");
     const planPath = argValue(args, "--plan") ?? timingPilotPlanPath;
     const requestedArtifacts = argValue(args, "--artifacts") ?? join("scratch", "async-report-timing-pilot-v1", "preflight");
     try {
+      if (confirmStart && mode !== "run") throw new Error("--confirm-start requires --run");
+      if (executionMode === "diagnostic-only" && mode === "dry-run") throw new Error("--diagnostic-only is only valid with preflight or --run");
       const artifactDirectory = await resolveTimingPilotScratchOutput(root, requestedArtifacts);
       if (mode === "dry-run") {
         try {
@@ -831,60 +983,68 @@ if (import.meta.main) {
         return;
       }
 
+      const reportPath = resolve(argValue(args, "--calibration-report") ?? join(artifactDirectory, "private", "judge-calibration-report.json"));
+      const diagnosticsPath = resolve(argValue(args, "--calibration-diagnostics") ?? join(dirname(reportPath), "judge-calibration-diagnostics.json"));
+      const cachedCalibration = await readTimingPilotScratchJson<CalibrationReport>(root, reportPath, confirmStart);
+      const calibrationDiagnostics = executionMode === "diagnostic-only"
+        ? await readTimingPilotScratchJson<JudgeCalibrationDiagnostics>(root, diagnosticsPath, confirmStart)
+        : undefined;
+
       if (mode === "run") {
         if (Bun.env.LORELUM_LOCAL_EXPERIMENT !== "1") throw new Error("Agent run requires explicit LORELUM_LOCAL_EXPERIMENT=1 opt-in");
-        if (Bun.env.LORELUM_JUDGE_REAL !== "1") throw new Error("Judge run requires explicit LORELUM_JUDGE_REAL=1 opt-in");
-        const reportPath = resolve(argValue(args, "--calibration-report") ?? join(artifactDirectory, "private", "judge-calibration-report.json"));
-        await resolveTimingPilotScratchOutput(root, dirname(reportPath));
-        const scratchRoot = await realpath(join(await realpath(root), "scratch"));
-        const reportInfo = await lstat(reportPath);
-        const reportReal = await realpath(reportPath);
-        if (reportInfo.isSymbolicLink() || !isWithin(scratchRoot, reportReal)) throw new Error("Judge calibration report must be a non-symlink file under workspace scratch/");
-        if (!await Bun.file(reportPath).exists()) throw new Error("qualified Judge calibration report is required; run preflight first");
-        const cachedCalibration = await Bun.file(reportReal).json() as CalibrationReport;
-        if (args.includes("--confirm-start")) {
+        if (confirmStart) {
+          if (!cachedCalibration) throw new Error("a calibration report is required before --confirm-start");
+          if (executionMode === "diagnostic-only" && !calibrationDiagnostics) throw new Error("the complete private calibration diagnostics sidecar is required before --confirm-start");
           const summaryPath = join(artifactDirectory, "preflight-summary.json");
-          if (!await Bun.file(summaryPath).exists()) throw new Error("a fresh successful preflight summary is required before --confirm-start");
-          const summary = await Bun.file(summaryPath).json() as TimingPilotPreflightSummary;
+          const summary = await readTimingPilotScratchJson<TimingPilotPreflightSummary>(root, summaryPath, true);
+          if (!summary || summary.execution_mode !== executionMode || summary.allowed_to_start !== true) throw new Error("a fresh successful preflight summary for the selected execution mode is required before --confirm-start");
+          await validateTimingPilotPreflightSummary(summary, root);
           const plan = await readTimingPilotPlan(resolve(root, planPath));
+          if (summary.plan_hash !== plan.plan_hash || summary.judge.calibration_hash !== cachedCalibration.hash) throw new Error("preflight summary does not match the selected plan and calibration report");
           const result = await (await import("./async-report-timing-pilot-runner")).runTimingPilotAttempts({
             root, plan,
-            run_id: argValue(args, "--run-id") ?? `pilot-${new Date().toISOString().replaceAll(/[:.]/g, "-")}`,
+            run_id: argValue(args, "--run-id") ?? "pilot-" + new Date().toISOString().replaceAll(/[:.]/g, "-"),
             output_root: join(artifactDirectory, "attempts"),
             preflight: summary,
             calibration: cachedCalibration,
+            calibration_diagnostics: calibrationDiagnostics,
           });
-          await writeFile(join(artifactDirectory, "pilot-result-index.json"), `${JSON.stringify(result, null, 2)}\n`, "utf8");
+          await writeFile(join(artifactDirectory, "pilot-result-index.json"), JSON.stringify(result, null, 2) + "\n", "utf8");
           console.log(JSON.stringify(result, null, 2));
           return;
         }
         let calibrationReport: CalibrationReport | undefined;
-        let calibrationDiagnostics: JudgeCalibrationDiagnostics | undefined;
+        let capturedDiagnostics: JudgeCalibrationDiagnostics | undefined;
         const summary = await runTimingPilotPreflight({
           root,
           plan_path: planPath,
+          execution_mode: executionMode,
+          run_judge_calibration: false,
           calibration_report: cachedCalibration,
+          calibration_diagnostics: calibrationDiagnostics,
           on_judge_calibration_report: (report) => { calibrationReport = report; },
-          on_judge_calibration_diagnostics: (diagnostics) => { calibrationDiagnostics = diagnostics; },
+          on_judge_calibration_diagnostics: (diagnostics) => { capturedDiagnostics = diagnostics; },
         });
-        const summaryPaths = await writeTimingPilotPreflightSummary(summary, artifactDirectory, root, calibrationDiagnostics);
-        if (calibrationReport) await privateWriteTimingPilotCalibrationReport(artifactDirectory, calibrationReport, root);
+        const summaryPaths = await writeTimingPilotPreflightSummary(summary, artifactDirectory, root, capturedDiagnostics ?? calibrationDiagnostics);
+        if (calibrationReport ?? cachedCalibration) await privateWriteTimingPilotCalibrationReport(artifactDirectory, calibrationReport ?? cachedCalibration!, root);
         console.log(JSON.stringify({ ...summary, artifacts: summaryPaths, pilot_started: false }, null, 2));
         if (!summary.allowed_to_start) process.exitCode = 1;
-        else console.log("Nine Agent attempts were not started. Review this summary, then rerun with --run --confirm-start.");
+        else console.log("No Agent attempts were started. Review the preflight summary, then explicitly rerun with --run --confirm-start" + (executionMode === "diagnostic-only" ? " --diagnostic-only" : "") + ".");
         return;
       }
 
       let calibrationReport: CalibrationReport | undefined;
-      let calibrationDiagnostics: JudgeCalibrationDiagnostics | undefined;
+      let capturedDiagnostics: JudgeCalibrationDiagnostics | undefined;
       const summary = await runTimingPilotPreflight({
         root,
         plan_path: planPath,
+        execution_mode: executionMode,
+        ...(executionMode === "diagnostic-only" ? { run_judge_calibration: false, calibration_report: cachedCalibration, calibration_diagnostics: calibrationDiagnostics } : {}),
         on_judge_calibration_report: (report) => { calibrationReport = report; },
-        on_judge_calibration_diagnostics: (diagnostics) => { calibrationDiagnostics = diagnostics; },
+        on_judge_calibration_diagnostics: (diagnostics) => { capturedDiagnostics = diagnostics; },
       });
-      const summaryPaths = await writeTimingPilotPreflightSummary(summary, artifactDirectory, root, calibrationDiagnostics);
-      if (calibrationReport) await privateWriteTimingPilotCalibrationReport(artifactDirectory, calibrationReport, root);
+      const summaryPaths = await writeTimingPilotPreflightSummary(summary, artifactDirectory, root, capturedDiagnostics ?? calibrationDiagnostics);
+      if (calibrationReport ?? cachedCalibration) await privateWriteTimingPilotCalibrationReport(artifactDirectory, calibrationReport ?? cachedCalibration!, root);
       console.log(JSON.stringify({ ...summary, artifacts: summaryPaths }, null, 2));
       if (!summary.allowed_to_start) process.exitCode = 1;
     } catch (error) {

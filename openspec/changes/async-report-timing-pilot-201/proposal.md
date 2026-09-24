@@ -9,9 +9,9 @@ Issue #201 要回答的不是“Practice 是否普遍有效”，而是一个更
 ## What Changes
 
 - 预注册一个版本化的九次 timing exploration plan，固定 candidate、task/stage-2 prompt、Practice/Pack provenance、三个 delivery node、重复数、schedule、模型/环境/预算、evaluator 与 Judge 版本，以及失败和 indeterminate 的停止规则。
-- 增加 preflight，验证 candidate snapshot/lifecycle、public/private 隔离、prompt/treatment/evaluator/Judge hash、运行环境、显式 opt-in 和干净 workspace；preflight 未通过不得调用模型或创建 record。
+- 增加 preflight，验证 candidate snapshot/lifecycle、public/private 隔离、prompt/treatment/evaluator/Judge hash、运行环境、显式 opt-in 和干净 workspace。Judge-scored 模式未通过即阻断；只有在完整 attested calibration 为 `diagnostic` 时，才提供显式选择的 diagnostic-only 路径，其余执行门禁仍 fail closed。
 - 增加 #201 runner-side Judge 可诊断性：将逐次 calibration 评分与全部门禁条件保存在 host-side private scratch，并为实际 scoring 失败保留安全错误类别；不修改 #200 Judge v1 的提示词、rubric、样例、阈值、预算或资格判定。
-- 在现有 #197 staged delivery runner 之上执行三种 node 各三次的同会话 attempt，不重 query、不换 Practice、不补跑替换失败槽位；每次保存 runner trace、Pi transcript、hard evaluator、Judge accounting、成本与状态。
+- 在现有 #197 staged delivery runner 之上执行三种 node 各三次的同会话 attempt，不重 query、不换 Practice、不补跑替换失败槽位；每次保存 runner trace、Pi transcript、hard evaluator、Judge accounting（仅 scored 模式）、成本与状态。若现有完整 #200 calibration 为 diagnostic，增加显式选择的 scratch-only diagnostic-only 路径：继续运行九个 Agent slots 与 hard evaluator，但不调用 Judge、不形成 Judge 评分结论；默认仍严格要求 qualified calibration。
 - 增加 #202 hard evaluator 与 #200 JudgeAgent 的受限 join：Judge 只接收脱敏 `replan-evidence/v1`，condition/timing 在评分后由编排层关联；hard gate、Judge soft signal、执行健康和成本状态分别表达。
 - 生成只用于诊断的私有结果索引和脱敏复盘摘要，明确成功、失败、indeterminate、成本、解释边界和下一阶段决策；不升级 suite revision、不写正式 record、不形成普遍或产品效果结论。
 

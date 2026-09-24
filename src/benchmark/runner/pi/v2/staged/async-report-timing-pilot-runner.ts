@@ -12,6 +12,7 @@ import {
   resolveTimingPilotScratchOutput,
   type TimingPilotPlan,
   type TimingPilotPreflightSummary,
+  verifyDiagnosticCalibration,
   type TimingPilotSlot,
 } from "./async-report-timing-pilot";
 import {
@@ -24,7 +25,7 @@ import { productionStagedPracticePiAdapter } from "./staged-practice-delivery-pi
 import { evaluateApp, type EvaluatorResult } from "../../../../../../incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/evaluate";
 import { CHECK_IDS, indeterminateResult } from "../../../../../../incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/result";
 import { runAsyncReportReplanAttempt } from "../../../../judge/async-report-replan/v1/run";
-import { classifyJudgeFailure, runAsyncReportReplanAttemptWithDiagnostics, type JudgeAttemptDiagnostics } from "./timing-pilot-judge-diagnostics";
+import { classifyJudgeFailure, runAsyncReportReplanAttemptWithDiagnostics, type JudgeAttemptDiagnostics, type JudgeCalibrationDiagnostics } from "./timing-pilot-judge-diagnostics";
 import { calibrationAttestationKey, calibrationScope, resolveCalibrationStatus } from "../../../../judge/async-report-replan/v1/calibration";
 import { redactSensitiveText } from "../../../../judge/async-report-replan/v1/canonical";
 import type { AsyncReportAccounting, CalibrationReport, RawReplanAttempt } from "../../../../judge/async-report-replan/v1/types";
@@ -46,11 +47,13 @@ export type TimingPilotAttemptResult = Readonly<{
   master_plan_hash: string;
   delivery_plan_hash: string;
   slot: TimingPilotSlot;
+  execution_mode: "judge-scored" | "diagnostic-only";
   status: "completed" | "failed" | "indeterminate" | "blocked" | "not-run";
   execution: Readonly<{ duration_ms: number; turns: number; usage: PilotUsage; termination_reason?: string }>;
   delivery: Readonly<{ status: string; session_binding: string; comparable: boolean }>;
   evaluator: Readonly<{ id: string; version: string; status: string; duration_ms: number; check_ids: readonly string[] }>;
   judge: Readonly<{
+    score_usable: boolean;
     state: string;
     score: number | null;
     confidence: number | null;
@@ -76,6 +79,8 @@ export type TimingPilotRunResult = Readonly<{
   run_id: string;
   status: "ready" | "preflight-blocked" | "invalid-plan" | "completed" | "incomplete";
   master_plan_hash: string;
+  execution_mode: "judge-scored" | "diagnostic-only";
+  judge_score_usable: boolean;
   planned_slots: number;
   attempted_slots: number;
   attempts: readonly TimingPilotAttemptResult[];
@@ -248,6 +253,7 @@ async function privateWrite(directory: string, name: string, value: unknown): Pr
 
 function judgeSummary(result: JudgeResultV1, accounting: AsyncReportAccounting, evidenceHash?: string | null): TimingPilotAttemptResult["judge"] {
   return {
+    score_usable: result.state === "observed",
     state: result.state,
     score: result.state === "observed" ? result.score : null,
     confidence: result.state === "observed" ? result.confidence : null,
@@ -272,6 +278,7 @@ async function emptyAttempt(options: {
   slot: TimingPilotSlot;
   runRoot: string;
   status: "blocked" | "not-run";
+  execution_mode: "judge-scored" | "diagnostic-only";
   reason: string;
 }): Promise<TimingPilotAttemptResult> {
   const deliveryPlan = await buildTimingPilotDeliveryPlan(options.plan, options.slot);
@@ -281,12 +288,13 @@ async function emptyAttempt(options: {
     master_plan_hash: options.plan.plan_hash,
     delivery_plan_hash: deliveryPlan.plan_hash,
     slot: options.slot,
+    execution_mode: options.execution_mode,
     status: options.status,
     execution: { duration_ms: 0, turns: 0, usage: emptyUsage(), termination_reason: redactedReason(options.reason) },
     delivery: { status: options.status, session_binding: "not-started", comparable: false },
     evaluator: { id: options.plan.evaluator.id, version: options.plan.evaluator.version, status: "indeterminate", duration_ms: 0, check_ids: CHECK_IDS },
     judge: {
-      state: "not-run", score: null, confidence: null, provider_id: options.plan.judge.provider_id, provider_version: options.plan.judge.provider_version,
+      score_usable: false, state: "not-run", score: null, confidence: null, provider_id: options.plan.judge.provider_id, provider_version: options.plan.judge.provider_version,
       model: options.plan.judge.model, plan_hash: options.plan.judge.evaluation_plan_hash, rubric_hash: options.plan.judge.rubric_hash,
       prompt_hash: "0".repeat(64), input_hash: "0".repeat(64), evidence_hash: null, duration_ms: 0, usage: emptyUsage(), calls: { calibration: 0, scoring: 0 }, failure_reason: redactedReason(options.reason),
     },
@@ -302,6 +310,7 @@ export async function runTimingPilotAttempts(options: {
   output_root: string;
   preflight: TimingPilotPreflightSummary;
   calibration: CalibrationReport;
+  calibration_diagnostics?: JudgeCalibrationDiagnostics;
   env?: Record<string, string | undefined>;
   dependencies?: TimingPilotRunnerDependencies;
 }): Promise<TimingPilotRunResult> {
@@ -309,15 +318,28 @@ export async function runTimingPilotAttempts(options: {
   const plan = options.plan;
   const env = options.env ?? Bun.env;
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(options.run_id)) fail("run id is invalid");
+  const executionMode = options.preflight.execution_mode;
+  if (executionMode !== "judge-scored" && executionMode !== "diagnostic-only") fail("preflight execution mode is invalid");
   if (options.preflight.allowed_to_start !== true || options.preflight.plan_hash !== plan.plan_hash || options.preflight.status !== "ready") fail("successful matching preflight is required before any Agent attempt");
+  if (options.preflight.judge.calibration_hash !== options.calibration.hash) fail("preflight calibration identity does not match the supplied report");
   const preflightTime = Date.parse(options.preflight.created_at);
   if (!Number.isFinite(preflightTime) || Date.now() - preflightTime < 0 || Date.now() - preflightTime > 15 * 60_000) fail("preflight summary is older than 15 minutes or has an invalid timestamp");
   if (env.LORELUM_LOCAL_EXPERIMENT !== "1") fail("Agent pilot requires explicit LORELUM_LOCAL_EXPERIMENT=1 opt-in");
-  if (env.LORELUM_JUDGE_REAL !== "1") fail("Judge pilot requires explicit LORELUM_JUDGE_REAL=1 opt-in");
-  const calibrationIsQualified = options.dependencies?.validate_calibration
-    ? await options.dependencies.validate_calibration(options.calibration, plan, env)
-    : (await resolveCalibrationStatus(options.calibration, calibrationScope(plan.judge.model), calibrationAttestationKey("real", env))).status === "qualified";
-  if (!calibrationIsQualified) fail("a currently attested qualified Judge calibration is required before any Agent attempt");
+  let calibrationIsQualified = false;
+  if (executionMode === "judge-scored") {
+    if (env.LORELUM_JUDGE_REAL !== "1") fail("Judge-scored pilot requires explicit LORELUM_JUDGE_REAL=1 opt-in");
+    if (options.preflight.judge_score_usable !== true) fail("judge-scored preflight must declare Judge scores usable");
+    calibrationIsQualified = options.dependencies?.validate_calibration
+      ? await options.dependencies.validate_calibration(options.calibration, plan, env)
+      : (await resolveCalibrationStatus(options.calibration, calibrationScope(plan.judge.model), calibrationAttestationKey("real", env))).status === "qualified";
+    if (!calibrationIsQualified) fail("a currently attested qualified Judge calibration is required before any Agent attempt");
+  } else {
+    if (options.preflight.judge_score_usable !== false) fail("diagnostic-only preflight must mark Judge scores unusable");
+    if (!options.calibration_diagnostics) fail("diagnostic-only mode requires the complete private calibration sidecar");
+    try { await verifyDiagnosticCalibration(options.calibration, options.calibration_diagnostics, plan.judge.model, env, root); }
+    catch { fail("diagnostic-only mode requires a complete attested diagnostic report and matching private sidecar"); }
+  }
+  await dryRunTimingPilot({ root, plan });
   const runRoot = await resolveTimingPilotScratchOutput(root, options.output_root);
   const attemptRunner = options.dependencies?.run_attempt ?? runStagedPracticeDeliveryAttempt;
   const evaluator = options.dependencies?.evaluate ?? ((appPath) => evaluateApp(appPath));
@@ -339,11 +361,11 @@ export async function runTimingPilotAttempts(options: {
     for (const [index, slot] of plan.schedule.slots.entries()) {
       const attemptRoot = join(runRoot, "attempts", slot.attempt_id);
       if (globalBlock) {
-        attempts.push(await emptyAttempt({ root, plan, slot, runRoot: attemptRoot, status: index === 0 ? "blocked" : "not-run", reason: globalBlock }));
+        attempts.push(await emptyAttempt({ root, plan, slot, runRoot: attemptRoot, status: index === 0 ? "blocked" : "not-run", execution_mode: executionMode, reason: globalBlock }));
         continue;
       }
       try { command = await verifyIdentity(root, plan, options.preflight.agent.command_sha256 ?? ""); }
-      catch (error) { globalBlock = redactedReason(error); attempts.push(await emptyAttempt({ root, plan, slot, runRoot: attemptRoot, status: "blocked", reason: globalBlock })); continue; }
+      catch (error) { globalBlock = redactedReason(error); attempts.push(await emptyAttempt({ root, plan, slot, runRoot: attemptRoot, status: "blocked", execution_mode: executionMode, reason: globalBlock })); continue; }
       const slotPlan = await buildTimingPilotDeliveryPlan(plan, slot);
       const executionRoot = attemptRoot;
       const runWorkspace = join(executionRoot, ".run-workspaces", "workspace");
@@ -391,53 +413,65 @@ export async function runTimingPilotAttempts(options: {
       catch { evaluatorResult = indeterminateResult("adapter-failed"); }
       evaluatorDurationMs = Math.max(0, (options.dependencies?.now ?? Date.now)() - evaluatorStarted);
       const execution = await readStageUsage(artifacts);
-      let judgeState: ReturnType<typeof judgeSummary> | undefined;
+      let judgeState: TimingPilotAttemptResult["judge"];
       let judgeDiagnostics: JudgeAttemptDiagnostics | undefined;
       let judgeEvidence: unknown;
-      if (report) {
-        const judgeStarted = Date.now();
-        try {
-          const raw = await buildTimingPilotRawJudgeInput({ root, plan, slot, report, artifacts, workspace: runWorkspace, blind_case_id: `case-${randomBytes(6).toString("hex")}` });
-          judgeCallStarted = true;
-          const scored = await scorer(raw, options.calibration, env);
-          judgeResult = scored.result;
-          judgeAccounting = scored.accounting;
-          judgeDiagnostics = scored.diagnostics;
-          judgeEvidence = scored.evidence;
-          evidenceHash = isRecord(scored.evidence) && typeof scored.evidence.evidence_hash === "string" ? scored.evidence.evidence_hash : scored.accounting.evidence.hash;
-        } catch (error) {
-          const failure = classifyJudgeFailure(error, "runner");
-          judgeDiagnostics = { call_attempted: judgeCallStarted, duration_ms: Math.max(0, Date.now() - judgeStarted), failure };
-          judgeFailure = failure.http_status === undefined ? `${failure.stage}/${failure.code}` : `${failure.stage}/${failure.code} (HTTP ${failure.http_status})`;
-        } finally {
-          judgeDurationMs = Math.max(0, Date.now() - judgeStarted);
-        }
-      }
-      if (!judgeResult || !judgeAccounting) {
-        const unavailable = await runAsyncReportReplanAttempt({
-          blind_case_id: `case-${randomBytes(6).toString("hex")}`,
-          execution_health: "unhealthy",
-          public_user_turns: [{ stage: "initial", text: "attempt evidence unavailable" }, { stage: "post-constraint", text: "attempt evidence unavailable" }],
-          events: [],
-          final_candidate_diff: "",
-        }, { env, mode: "mock", calibration: undefined });
-        const unavailableState = judgeCallStarted ? "judge-unavailable" : "indeterminate";
-        const unavailableReason = judgeFailure ?? "Judge evidence was unavailable";
-        judgeResult = { ...unavailable.result, state: unavailableState, reason: unavailableReason };
-        judgeAccounting = {
-          ...unavailable.accounting,
-          state: unavailableState,
-          calls: { calibration: 0, scoring: judgeCallStarted ? 1 : 0 },
-          duration_ms: judgeDurationMs,
-          ...(judgeFailure ? { failure_reason: judgeFailure } : { failure_reason: unavailableReason }),
+      if (executionMode === "diagnostic-only") {
+        judgeState = {
+          score_usable: false, state: "not-run", score: null, confidence: null,
+          provider_id: plan.judge.provider_id, provider_version: plan.judge.provider_version, model: plan.judge.model,
+          plan_hash: plan.judge.evaluation_plan_hash, rubric_hash: plan.judge.rubric_hash,
+          prompt_hash: "0".repeat(64), input_hash: "0".repeat(64), evidence_hash: null,
+          duration_ms: 0, usage: { input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0 },
+          calls: { calibration: 0, scoring: 0 }, failure_reason: "calibration-unqualified-diagnostic-only",
         };
-        evidenceHash = null;
+        await privateWrite(artifacts, "judge-private-result.json", { state: "not-run", reason: "calibration-unqualified-diagnostic-only", score_usable: false, calls: { calibration: 0, scoring: 0 } });
+      } else {
+        if (report) {
+          const judgeStarted = Date.now();
+          try {
+            const raw = await buildTimingPilotRawJudgeInput({ root, plan, slot, report, artifacts, workspace: runWorkspace, blind_case_id: `case-${randomBytes(6).toString("hex")}` });
+            judgeCallStarted = true;
+            const scored = await scorer(raw, options.calibration, env);
+            judgeResult = scored.result;
+            judgeAccounting = scored.accounting;
+            judgeDiagnostics = scored.diagnostics;
+            judgeEvidence = scored.evidence;
+            evidenceHash = isRecord(scored.evidence) && typeof scored.evidence.evidence_hash === "string" ? scored.evidence.evidence_hash : scored.accounting.evidence.hash;
+          } catch (error) {
+            const failure = classifyJudgeFailure(error, "runner");
+            judgeDiagnostics = { call_attempted: judgeCallStarted, duration_ms: Math.max(0, Date.now() - judgeStarted), failure };
+            judgeFailure = failure.http_status === undefined ? `${failure.stage}/${failure.code}` : `${failure.stage}/${failure.code} (HTTP ${failure.http_status})`;
+          } finally {
+            judgeDurationMs = Math.max(0, Date.now() - judgeStarted);
+          }
+        }
+        if (!judgeResult || !judgeAccounting) {
+          const unavailable = await runAsyncReportReplanAttempt({
+            blind_case_id: `case-${randomBytes(6).toString("hex")}`,
+            execution_health: "unhealthy",
+            public_user_turns: [{ stage: "initial", text: "attempt evidence unavailable" }, { stage: "post-constraint", text: "attempt evidence unavailable" }],
+            events: [],
+            final_candidate_diff: "",
+          }, { env, mode: "mock", calibration: undefined });
+          const unavailableState = judgeCallStarted ? "judge-unavailable" : "indeterminate";
+          const unavailableReason = judgeFailure ?? "Judge evidence was unavailable";
+          judgeResult = { ...unavailable.result, state: unavailableState, reason: unavailableReason };
+          judgeAccounting = {
+            ...unavailable.accounting,
+            state: unavailableState,
+            calls: { calibration: 0, scoring: judgeCallStarted ? 1 : 0 },
+            duration_ms: judgeDurationMs,
+            ...(judgeFailure ? { failure_reason: judgeFailure } : { failure_reason: unavailableReason }),
+          };
+          evidenceHash = null;
+        }
+        await privateWrite(artifacts, "judge-private-result.json", { result: judgeResult, accounting: judgeAccounting, evidence: judgeEvidence, diagnostics: judgeDiagnostics ?? { call_attempted: judgeCallStarted, duration_ms: judgeDurationMs } });
+        judgeState = judgeSummary(judgeResult, judgeAccounting, evidenceHash);
       }
-      await privateWrite(artifacts, "judge-private-result.json", { result: judgeResult, accounting: judgeAccounting, evidence: judgeEvidence, diagnostics: judgeDiagnostics ?? { call_attempted: judgeCallStarted, duration_ms: judgeDurationMs } });
-      judgeState = judgeSummary(judgeResult, judgeAccounting, evidenceHash);
       if (report) {
         await privateWrite(artifacts, "evaluator-private-result.json", evaluatorResult);
-        await privateWrite(artifacts, "attempt-result-private.json", { report, evaluator: evaluatorResult, judge: judgeAccounting });
+        await privateWrite(attemptRoot, "attempt-result-private.json", { report, evaluator: evaluatorResult, judge: judgeAccounting ?? judgeState });
       }
       const agentCost = execution.usage.cost_usd;
       const judgeCost = typeof judgeState.usage.cost_usd === "number" ? judgeState.usage.cost_usd : null;
@@ -445,7 +479,7 @@ export async function runTimingPilotAttempts(options: {
       const status = attemptFailure
         ? "indeterminate"
         : report?.status === "completed"
-          ? evaluatorResult.status === "indeterminate" || judgeState.state !== "observed" ? "indeterminate" : "completed"
+          ? evaluatorResult.status === "indeterminate" || (executionMode === "judge-scored" && judgeState.state !== "observed") ? "indeterminate" : "completed"
           : report?.status === "unsupported"
             ? "failed"
             : report?.status === "indeterminate" || report?.status === "invalid-plan" || !report
@@ -457,6 +491,7 @@ export async function runTimingPilotAttempts(options: {
         master_plan_hash: plan.plan_hash,
         delivery_plan_hash: slotPlan.plan_hash,
         slot,
+        execution_mode: executionMode,
         status,
         execution: { duration_ms: agentDurationMs, turns: execution.turns, usage: execution.usage, ...(attemptFailure ? { termination_reason: attemptFailure } : {}) },
         delivery: { status: report?.delivery_status ?? "not-started", session_binding: report?.session_binding ?? "not-started", comparable: report?.comparable ?? false },
@@ -475,7 +510,7 @@ export async function runTimingPilotAttempts(options: {
   }
   if (globalBlock) {
     const accounted = new Set(attempts.map((attempt) => attempt.attempt_id));
-    for (const slot of plan.schedule.slots) if (!accounted.has(slot.attempt_id)) attempts.push(await emptyAttempt({ plan, slot, runRoot: join(runRoot, "attempts", slot.attempt_id), status: "not-run", reason: globalBlock }));
+    for (const slot of plan.schedule.slots) if (!accounted.has(slot.attempt_id)) attempts.push(await emptyAttempt({ plan, slot, runRoot: join(runRoot, "attempts", slot.attempt_id), status: "not-run", execution_mode: executionMode, reason: globalBlock }));
     attempts.sort((a, b) => plan.schedule.slots.findIndex((slot) => slot.attempt_id === a.attempt_id) - plan.schedule.slots.findIndex((slot) => slot.attempt_id === b.attempt_id));
   }
   const attempted = attempts.filter((attempt) => attempt.status !== "not-run" && attempt.status !== "blocked").length;
@@ -492,6 +527,8 @@ export async function runTimingPilotAttempts(options: {
     run_id: options.run_id,
     status,
     master_plan_hash: plan.plan_hash,
+    execution_mode: executionMode,
+    judge_score_usable: executionMode === "judge-scored" && calibrationIsQualified && attempts.every((attempt) => attempt.judge.score_usable),
     planned_slots: plan.schedule.slots.length,
     attempted_slots: attempted,
     attempts,

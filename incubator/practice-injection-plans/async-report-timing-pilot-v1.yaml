@@ -14,7 +14,7 @@ runner:
   id: async-report-timing-pilot-runner
   version: v1
   manifest_path: incubator/practice-injection-plans/async-report-timing-pilot-runner-v1.json
-  manifest_sha256: 57d2c2e3d072f6d7fb5c0d4bdbed8c4846cc7d1f53ba1f6d50e060616b32dc8e
+  manifest_sha256: 16429f7211b6d92b721d3f82596d992e6fad57bf8a4f3024e377c722b7875185
 
 treatment:
   root: treatments/agentic-coding-replan-on-material-drift/v1
@@ -87,4 +87,4 @@ schedule:
     - { attempt_id: block-3-position-2-task-start, block: 3, position: 2, repetition: 3, condition_id: task_start, delivery_node: task_start }
     - { attempt_id: block-3-position-3-constraint-followup, block: 3, position: 3, repetition: 3, condition_id: constraint_followup, delivery_node: constraint_followup }
 claim_boundary: "diagnostic-only; no formal record, suite revision, or general/product conclusion"
-plan_hash: 97479b91bad4db1b690cc9b316fd66124aece4634e377dd5df236fc7cca1dae7
+plan_hash: 53293840d55afa15705c7995c6fac3cd9e82d75828c2842edcf461bae9209ac4

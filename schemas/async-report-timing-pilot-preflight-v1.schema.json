@@ -8,7 +8,9 @@
     "schema_version",
     "created_at",
     "status",
+    "execution_mode",
     "allowed_to_start",
+    "judge_score_usable",
     "plan_hash",
     "model",
     "evaluator",
@@ -180,14 +182,28 @@
           "const": 9
         },
         "judge_scoring_calls": {
-          "const": 9
+          "anyOf": [
+            {
+              "const": 0
+            },
+            {
+              "const": 9
+            }
+          ]
         },
         "agent_max_duration_ms": {
           "type": "integer",
           "minimum": 1
         },
         "total_judge_calls": {
-          "const": 18
+          "anyOf": [
+            {
+              "const": 9
+            },
+            {
+              "const": 18
+            }
+          ]
         },
         "cost_usd": {
           "const": "unavailable"
@@ -208,6 +224,8 @@
         "provider_id",
         "model",
         "real_opt_in",
+        "calibration_hash",
+        "calibration_reused",
         "calibration_status",
         "calibration_calls",
         "calibration_duration_ms",
@@ -279,6 +297,16 @@
               "minimum": 0
             }
           }
+        },
+        "calibration_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "calibration_reused": {
+          "type": "boolean"
         }
       }
     },
@@ -301,7 +329,8 @@
               "passed",
               "failed",
               "blocked",
-              "not-run"
+              "not-run",
+              "accepted-diagnostic"
             ]
           },
           "reason": {
@@ -423,6 +452,91 @@
           "maximum": 1
         }
       }
+    },
+    "execution_mode": {
+      "enum": [
+        "judge-scored",
+        "diagnostic-only"
+      ]
+    },
+    "judge_score_usable": {
+      "type": "boolean"
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "execution_mode": {
+            "const": "diagnostic-only"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "judge_score_usable": {
+            "const": false
+          },
+          "cost_estimate": {
+            "properties": {
+              "judge_scoring_calls": {
+                "const": 0,
+                "type": "integer"
+              },
+              "total_judge_calls": {
+                "const": 9,
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_mode": {
+            "const": "judge-scored"
+          },
+          "status": {
+            "const": "ready"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "judge_score_usable": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_mode": {
+            "const": "judge-scored"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "cost_estimate": {
+            "properties": {
+              "judge_scoring_calls": {
+                "const": 9,
+                "type": "integer"
+              },
+              "total_judge_calls": {
+                "const": 18,
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          }
+        }
+      }
+    }
+  ]
 }
