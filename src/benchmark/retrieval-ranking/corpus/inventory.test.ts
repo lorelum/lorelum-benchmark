@@ -45,8 +45,8 @@ describe("retrieval corpus inventory", () => {
         repository: "example/fixture-packs",
         snapshotCommit: commitId,
         packs: [
-          { name: "beta-pack", releaseVersion: "1.0.0", sourceCommit: commitId },
-          { name: "alpha-pack", releaseVersion: "1.0.0", sourceCommit: commitId },
+          { name: "beta-pack", releaseVersion: "1.0.0", sourceCommit: commitId, artifactDigest: "d".repeat(64) },
+          { name: "alpha-pack", releaseVersion: "1.0.0", sourceCommit: commitId, artifactDigest: "d".repeat(64) },
         ],
       });
 
@@ -87,7 +87,7 @@ describe("retrieval corpus inventory", () => {
         repoRoot,
         repository: "example/fixture-packs",
         snapshotCommit,
-        packs: [{ name: "alpha-pack", releaseVersion: "1.0.0", sourceCommit }],
+        packs: [{ name: "alpha-pack", releaseVersion: "1.0.0", sourceCommit, artifactDigest: "d".repeat(64) }],
       })).rejects.toThrow("Pinned Pack source differs from corpus snapshot");
     } finally {
       await rm(repoRoot, { recursive: true, force: true });
@@ -105,6 +105,7 @@ describe("retrieval corpus inventory", () => {
       ["react-web-craft", 24],
     ]);
     for (const pack of inventory.packs) {
+      expect(pack.artifactDigest).toMatch(/^[a-f0-9]{64}$/);
       for (const practice of pack.practices) {
         expect(Object.keys(practice).sort()).toEqual(["contentDigest", "id", "sourcePath"]);
       }

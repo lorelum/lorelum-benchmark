@@ -61,10 +61,12 @@ export interface ExecuteRetrievalBatchOptions {
   labels: RetrievalPracticeLabel[];
   artifactPath: string;
   recordPath: string;
+  harnessEnvironment?: Record<string, string>;
   prepareStore?: (options: PrepareCorpusStoreOptions) => Promise<PreparedCorpusStore>;
   createClient?: (options: {
     lorelumRoot: string;
     lorelumCommit: string;
+    environment?: Record<string, string>;
   }) => Promise<PinnedHarnessClient>;
   environment?: RetrievalBatchEnvironment;
 }
@@ -162,6 +164,7 @@ export async function executeRetrievalBatch(options: ExecuteRetrievalBatchOption
   const client = await (options.createClient ?? createHarnessV1Client)({
     lorelumRoot: options.lorelumRoot,
     lorelumCommit: options.lorelumCommit,
+    environment: options.harnessEnvironment,
   });
 
   const corpusIds = new Set(options.inventory.packs.flatMap((pack) => pack.practices.map((practice) => practice.id)));

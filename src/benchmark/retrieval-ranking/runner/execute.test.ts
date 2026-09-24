@@ -18,6 +18,7 @@ const corpusInventory: CorpusInventory = {
     name: "fixture-pack",
     releaseVersion: "1.0.0",
     sourceCommit: "a".repeat(40),
+    artifactDigest: "d".repeat(64),
     practices: [
       { id: "core.one", sourcePath: "practices/one.md", contentDigest: "1".repeat(64) },
       { id: "forbidden.one", sourcePath: "practices/two.md", contentDigest: "2".repeat(64) },

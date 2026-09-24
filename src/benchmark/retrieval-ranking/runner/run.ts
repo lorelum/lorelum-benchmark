@@ -3,6 +3,7 @@ import { isAbsolute, join, resolve } from "node:path";
 
 import { sha256File, workspaceRoot } from "../../fs";
 import { validateCorpusInventory, type CorpusInventory } from "../corpus/inventory";
+import { HARNESS_CACHE_ROOT_ENV } from "../protocol-v1";
 import type { RetrievalPracticeLabel } from "../scorer/v1";
 import { validateRetrievalRankingSuite } from "../validate";
 import { executeRetrievalBatch, type RetrievalCaseInput } from "./execute";
@@ -122,6 +123,7 @@ async function main(): Promise<void> {
     "record",
     option(args, "record") ?? join(workspaceRoot, "results", "records", `${runId}.json`),
   );
+  const cacheRoot = assertAbsolute("cache-root", requiredOption(args, "cache-root"));
 
   const record = await executeRetrievalBatch({
     runId,
@@ -130,7 +132,7 @@ async function main(): Promise<void> {
     lorelumRoot: assertAbsolute("lorelum-root", requiredOption(args, "lorelum-root")),
     lorelumCommit: requiredOption(args, "lorelum-commit"),
     storeRoot: assertAbsolute("store-root", requiredOption(args, "store-root")),
-    cacheRoot: assertAbsolute("cache-root", requiredOption(args, "cache-root")),
+    cacheRoot,
     embeddingProfileId: profileId,
     candidateWidth,
     resultLimit,
@@ -152,6 +154,9 @@ async function main(): Promise<void> {
     labels: (labelsDocument as unknown as LabelFile).cases,
     artifactPath,
     recordPath,
+    harnessEnvironment: {
+      [HARNESS_CACHE_ROOT_ENV]: cacheRoot,
+    },
   });
 
   console.log(JSON.stringify({

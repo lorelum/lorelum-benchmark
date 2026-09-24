@@ -10,7 +10,7 @@
 写入范围：`suites/retrieval-ranking/`、`schemas/`、`src/benchmark/validate.ts` 及相关验证测试；不修改现有 Agent track schema 语义。
 
 - [x] 2.1 核验 `lorelum/lorelum-packs` 快照和四个 Pack source commits，生成仅含 Practice IDs、来源路径和 digest 的完整 corpus inventory；测试证明 corpus 正文未复制到 benchmark 仓库
-- [x] 2.2 新增 retrieval-ranking suite revision 与 corpus builder：从固定四个 Pack release 构建 test-owned Store，检查安装回执 source commit/artifact digest，build/status semantic index 并验证 ready/Profile 匹配；不使用用户默认 Store 或未固定的 Installed Pack
+- [x] 2.2 新增 retrieval-ranking suite revision 与 corpus builder：从固定四个 Pack release 构建 test-owned Store，检查安装回执 source commit/artifact digest，build/status semantic index 并验证 ready/Profile 匹配，并通过 benchmark 专用环境变量把同一 derived cache 交给 harness；不使用用户默认 Store 或未固定的 Installed Pack
 - [x] 2.3 新增版本化 query cases，覆盖 Issue #222 约定的场景；预计约 30–50 条但以场景覆盖为准，每例标共同必需 core IDs，只为高置信明确不适用项标 forbidden IDs，验证替代答案拆为独立案例且 labels 引用属于完整 corpus
 - [x] 2.4 分离 query 输入与 private gold/scoring 文件；contract tests 证明可传给 harness 的请求没有标签字段或 gold ID 清单
 - [x] 2.5 新增 track-specific suite、batch manifest 与 batch record schemas 及 validator 分派；旧 Agent suite、manifest 和 record contract tests 继续通过

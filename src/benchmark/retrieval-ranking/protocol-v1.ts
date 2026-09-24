@@ -3,6 +3,7 @@ import { isAbsolute, resolve } from "node:path";
 export const HARNESS_PROTOCOL_VERSION = 1 as const;
 export const DEFAULT_HARNESS_TIMEOUT_MS = 120_000;
 export const HARNESS_ENTRYPOINT = "packages/backend/src/benchmark/semantic-retrieval-harness.ts";
+export const HARNESS_CACHE_ROOT_ENV = "LORELUM_BENCHMARK_CACHE_ROOT";
 
 const profileIdPattern = /^[a-f0-9]{64}$/;
 const commitPattern = /^[a-f0-9]{40}$/;
@@ -38,6 +39,7 @@ export type ProcessRunner = (
   cwd: string,
   stdin: string,
   timeoutMs: number,
+  environment?: Record<string, string>,
 ) => Promise<ProcessResult>;
 
 export interface HarnessClientOptions {
@@ -46,6 +48,7 @@ export interface HarnessClientOptions {
   bunExecutable?: string;
   timeoutMs?: number;
   processRunner?: ProcessRunner;
+  environment?: Record<string, string>;
 }
 
 export interface HarnessSuccess {
@@ -149,11 +152,18 @@ export async function defaultProcessRunner(
   cwd: string,
   stdin: string,
   timeoutMs: number,
+  environment?: Record<string, string>,
 ): Promise<ProcessResult> {
   const startedAt = performance.now();
   let child: ReturnType<typeof Bun.spawn>;
   try {
-    child = Bun.spawn(command, { cwd, stdin: "pipe", stdout: "pipe", stderr: "pipe" });
+    child = Bun.spawn(command, {
+      cwd,
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+      ...(environment === undefined ? {} : { env: { ...process.env, ...environment } }),
+    });
   } catch {
     return { exitCode: null, stdout: "", stderr: "", durationMs: performance.now() - startedAt };
   }
@@ -210,6 +220,7 @@ export async function createHarnessV1Client(
   const checkout = await verifyPinnedCleanCheckout(options.lorelumRoot, options.lorelumCommit, processRunner);
   const bunExecutable = options.bunExecutable ?? process.execPath;
   const timeoutMs = options.timeoutMs ?? DEFAULT_HARNESS_TIMEOUT_MS;
+  const environment = options.environment;
   if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) throw new TypeError("Harness timeout must be a positive integer");
 
   return {
@@ -228,6 +239,7 @@ export async function createHarnessV1Client(
         checkout.root,
         `${JSON.stringify(request)}\n`,
         timeoutMs,
+        environment,
       );
       if (result.timedOut) return { kind: "process-error", errorCode: "timed-out", exitCode: result.exitCode, durationMs: result.durationMs };
       if (result.exitCode === null) return { kind: "process-error", errorCode: "launch-failed", exitCode: null, durationMs: result.durationMs };

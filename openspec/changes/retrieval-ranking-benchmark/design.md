@@ -59,7 +59,7 @@ bun packages/backend/src/benchmark/semantic-retrieval-harness.ts
 
 ### 2. 固定来源而不复制 Pack 正文
 
-Corpus fixture 锁定 pack repo snapshot commit、各 Pack source commit、全部 Practice IDs 与内容 digest。Runner 建立 test-owned temp Store，通过 fixed Lorelum CLI 的 JSON Pack install 回执验证精确 source，使用 `index build/status/operation` 的 JSON 合同准备并验证 semantic index。查询 harness 使用同一 Store root；不使用用户默认 Store、未锁定 Registry release 或当前 Installed Pack Catalog。Profile/model/native runtime 未准备好时停止为 environment failure；不允许 runner 静默下载模型或把准备错误记成检索错。
+Corpus fixture 锁定 pack repo snapshot commit、各 Pack source commit、安装 artifact digest、全部 Practice IDs 与内容 digest。Runner 建立 test-owned temp Store，通过 fixed Lorelum CLI 的 JSON Pack install 回执验证精确 source/artifact，使用 `index build/status/operation` 的 JSON 合同准备并验证 semantic index。查询 harness 使用同一 Store root，并通过 benchmark 专用 `LORELUM_BENCHMARK_CACHE_ROOT` 环境变量读取同一 derived cache；该变量不进入普通 CLI/API，也不携带 gold。不使用用户默认 Store、未锁定 Registry release 或当前 Installed Pack Catalog。Profile/model/native runtime 未准备好时停止为 environment failure；不允许 runner 静默下载模型或把准备错误记成检索错。
 
 替代方案：复制 Pack 内容、依赖本机预装 Store，或直接调用 Engine/Store 私有源码。它们分别造成源数据重复、语料漂移或跨仓库私有实现耦合。
 

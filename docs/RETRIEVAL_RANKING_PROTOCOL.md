@@ -8,7 +8,7 @@
 
 首版 revision 是 `suites/retrieval-ranking/v1/`：
 
-- `corpus/inventory.json` 固定完整 Practice ID 清单、来源路径和内容 digest，不复制 Pack 正文。
+- `corpus/inventory.json` 固定完整 Practice ID 清单、来源路径、内容 digest 和每个 Pack 的安装 artifact digest，不复制 Pack 正文。
 - `cases/queries.json` 只保存 case ID 和自然语言 query。
 - `private/labels.json` 保存 `coreIds`、高置信 `forbiddenIds`、覆盖类别和标签理由。
 - `private/scorer.json` 固定 N=20、K=5 和报告指标。
@@ -37,12 +37,14 @@ bun packages/backend/src/benchmark/semantic-retrieval-harness.ts
 
 Gold labels、期望 ID、scorer 状态、仓库路径和 batch 身份都不进入 harness stdin、参数或环境。成功响应必须是退出码 `0` 加 `status: "ok"`，并且包含同一检索快照的 `candidateIds` 和有序 `finalIds`。失败响应不带部分名单。
 
+harness 子进程另外只接收一个 benchmark 专用配置变量 `LORELUM_BENCHMARK_CACHE_ROOT=<absolute test-owned cache root>`。它指向与 `index build --cache-root` 相同的 derived cache，让 harness 读取本次 Store-only semantic artifact；它不携带 gold、query、正文、期望 ID 或 scorer 状态。普通 CLI 和产品 API 不依赖这个变量。
+
 ## Test-owned Store
 
 runner 不读取用户默认 Store，也不使用当前机器上未固定的 Installed Pack。它从 `lorelum/lorelum-packs` 的固定快照重建语料：
 
 1. 按 `suite` 固定的 release 版本安装四个 Pack 到显式 Store。
-2. 校验安装回执的 source commit、artifact digest 和 Practice ID 清单。
+2. 校验安装回执的 source commit、artifact digest 和 Practice ID 清单；任一 digest 与固定 inventory 不一致时停止。
 3. 使用固定 Profile 构建 semantic index，等待并确认 status 为 `ready`。
 4. 任一安装、digest、Profile、模型、native runtime 或 index 前置条件失败时停止为环境/运行问题，不产生召回或排名失败。
 

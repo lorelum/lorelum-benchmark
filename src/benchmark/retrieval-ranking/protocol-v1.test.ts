@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   createHarnessV1Client,
+  HARNESS_CACHE_ROOT_ENV,
   isValidHarnessRequestV1,
   type ProcessResult,
   type ProcessRunner,
@@ -21,9 +22,12 @@ function result(stdout: string, exitCode = 0, extra: Partial<ProcessResult> = {}
   return { exitCode, stdout, stderr: "", durationMs: 5, ...extra };
 }
 
-function fakeProcessRunner(harnessResult: ProcessResult, captured: Array<{ command: string[]; cwd: string; stdin: string }> = []): ProcessRunner {
-  return async (command, cwd, stdin) => {
-    captured.push({ command, cwd, stdin });
+function fakeProcessRunner(
+  harnessResult: ProcessResult,
+  captured: Array<{ command: string[]; cwd: string; stdin: string; environment?: Record<string, string> }> = [],
+): ProcessRunner {
+  return async (command, cwd, stdin, _timeoutMs, environment) => {
+    captured.push({ command, cwd, stdin, environment });
     if (command[0] === "git" && command[1] === "rev-parse" && command[2] === "--show-toplevel") return result(cwd);
     if (command[0] === "git" && command[1] === "rev-parse" && command[2] === "HEAD") return result(commit);
     if (command[0] === "git" && command[1] === "status") return result("");
@@ -31,11 +35,15 @@ function fakeProcessRunner(harnessResult: ProcessResult, captured: Array<{ comma
   };
 }
 
-async function clientFor(harnessResult: ProcessResult, captured?: Array<{ command: string[]; cwd: string; stdin: string }>) {
+async function clientFor(
+  harnessResult: ProcessResult,
+  captured?: Array<{ command: string[]; cwd: string; stdin: string; environment?: Record<string, string> }>,
+) {
   return createHarnessV1Client({
     lorelumRoot: validRequest.storeRoot,
     lorelumCommit: commit,
     bunExecutable: "bun-test",
+    environment: { [HARNESS_CACHE_ROOT_ENV]: "/tmp/lorelum-cache" },
     processRunner: fakeProcessRunner(harnessResult, captured),
   });
 }
@@ -52,7 +60,7 @@ describe("semantic retrieval harness protocol v1", () => {
   });
 
   test("invokes one pinned checkout process with only the allowlisted request payload", async () => {
-    const captured: Array<{ command: string[]; cwd: string; stdin: string }> = [];
+    const captured: Array<{ command: string[]; cwd: string; stdin: string; environment?: Record<string, string> }> = [];
     const stdout = JSON.stringify({
       status: "ok",
       candidateIds: ["practice.core-sentinel", "practice.other"],
@@ -75,6 +83,7 @@ describe("semantic retrieval harness protocol v1", () => {
     expect(harnessCall).toBeDefined();
     expect(harnessCall?.command).toEqual(["bun-test", "packages/backend/src/benchmark/semantic-retrieval-harness.ts"]);
     expect(harnessCall?.cwd).toBe(validRequest.storeRoot);
+    expect(harnessCall?.environment).toEqual({ [HARNESS_CACHE_ROOT_ENV]: "/tmp/lorelum-cache" });
     const payload = JSON.parse(harnessCall?.stdin ?? "{}") as Record<string, unknown>;
     expect(Object.keys(payload).sort()).toEqual(["candidateWidth", "embeddingProfileId", "query", "resultLimit", "storeRoot"]);
     expect(payload).toEqual(validRequest);

@@ -147,6 +147,7 @@ async function installPack(
       CORPUS_REGISTRY,
     ],
     storeRoot,
+    cacheRoot,
   );
   const envelope = await runCliJson(processRunner, args, root, timeoutMs, "pack.install");
   const data = dataRecord(envelope, `pack.install ${pack.name}`);
@@ -162,8 +163,11 @@ async function installPack(
   }
   const artifactDigest = requireString(data, "artifactDigest", `pack.install ${pack.name}`);
   if (!/^[a-f0-9]{64}$/.test(artifactDigest)) throw new Error(`pack.install ${pack.name} returned an invalid artifactDigest`);
+  if (artifactDigest !== pack.artifactDigest) {
+    throw new Error(`pack.install artifact digest differs from the pinned corpus for ${pack.name}`);
+  }
 
-  const listArgs = cliArgs(bunExecutable, ["pack", "list", pack.name], storeRoot);
+  const listArgs = cliArgs(bunExecutable, ["pack", "list", pack.name], storeRoot, cacheRoot);
   const listEnvelope = await runCliJson(processRunner, listArgs, root, timeoutMs, "pack.list");
   const listData = dataRecord(listEnvelope, `pack.list ${pack.name}`);
   if (!Array.isArray(listData.practices)) throw new Error(`pack.list ${pack.name} returned no practices`);

@@ -21,6 +21,7 @@ const inventoryPayload = {
       name: "alpha-pack",
       releaseVersion: "1.0.0",
       sourceCommit: commit,
+      artifactDigest: "d".repeat(64),
       practices: [
         { id: "alpha.one", sourcePath: "practices/one.md", contentDigest: "1".repeat(64) },
         { id: "alpha.two", sourcePath: "practices/two.md", contentDigest: "2".repeat(64) },
@@ -30,6 +31,7 @@ const inventoryPayload = {
       name: "beta-pack",
       releaseVersion: "2.0.0",
       sourceCommit: commit,
+      artifactDigest: "d".repeat(64),
       practices: [
         { id: "beta.one", sourcePath: "practices/one.md", contentDigest: "3".repeat(64) },
       ],
@@ -108,6 +110,8 @@ describe("retrieval corpus store builder", () => {
       ]);
       expect(calls.some((call) => call.command.includes("alpha-pack@1.0.0"))).toBe(true);
       expect(calls.some((call) => call.command.includes("beta-pack@2.0.0"))).toBe(true);
+      expect(calls.filter((call) => call.command.includes("install")).every((call) => call.command.includes("--cache-root"))).toBe(true);
+      expect(calls.filter((call) => call.command.includes("pack") && call.command.includes("list")).every((call) => call.command.includes("--cache-root"))).toBe(true);
       expect(calls.every((call) => call.stdin === "")).toBe(true);
     } finally {
       await rm(workspace, { recursive: true, force: true });
@@ -186,6 +190,36 @@ describe("retrieval corpus store builder", () => {
         inventory,
         processRunner: runner,
       })).rejects.toThrow("source commit");
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects an install receipt whose Pack artifact digest drifted", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "retrieval-corpus-artifact-drift-"));
+    const runner = checkoutRunner(async (command) => {
+      if (command.includes("install")) {
+        const packName = command[command.indexOf("install") + 1]!.split("@")[0]!;
+        const pack = inventory.packs.find((entry) => entry.name === packName)!;
+        return result(envelope("pack.install", {
+          pack: { name: pack.name, version: pack.releaseVersion },
+          source: { type: "git", ref: "v", commit: pack.sourceCommit },
+          artifactDigest: "f".repeat(64),
+        }));
+      }
+      return result("{}", 2);
+    });
+
+    try {
+      await expect(prepareCorpusStore({
+        lorelumRoot: workspace,
+        lorelumCommit: commit,
+        storeRoot: join(workspace, "store"),
+        cacheRoot: join(workspace, "cache"),
+        embeddingProfileId: profileId,
+        inventory,
+        processRunner: runner,
+      })).rejects.toThrow("artifact digest");
     } finally {
       await rm(workspace, { recursive: true, force: true });
     }

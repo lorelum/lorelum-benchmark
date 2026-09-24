@@ -8,21 +8,25 @@ export const PINNED_PACKS = [
     name: "agentic-coding",
     releaseVersion: "0.5.1",
     sourceCommit: "954324cda7961ae899578649847aa32e1aa90a6f",
+    artifactDigest: "f2c1925846923c9b4bcab2e3d9a68102539f0a76f3289b1317f8f217cc63b62b",
   },
   {
     name: "issue-pr-etiquette",
     releaseVersion: "0.1.0",
     sourceCommit: "45484847e02ea11e8438c7f3c17d7b2eee5b4dfc",
+    artifactDigest: "7e10e53d173c5d3eb6ea5bbd43444558a72b0b2d4f8466d11c090f1d1e11a910",
   },
   {
     name: "pack-creator",
     releaseVersion: "0.2.0",
     sourceCommit: "f144a5a5e69636a5a6cd97a8b519018d2941bac6",
+    artifactDigest: "1c85be66acaddd458ca9a26bd4bc8b279bcb85c2475d15a58b71c416758fd604",
   },
   {
     name: "react-web-craft",
     releaseVersion: "0.1.0",
     sourceCommit: "293e6b1327b0d9b4c01a711748db14c610908655",
+    artifactDigest: "06b25f234334bb0398c12b431cac521d3b0eb768ee5161260c1b133898f9f347",
   },
 ] as const;
 
@@ -36,6 +40,7 @@ export interface PackInventoryEntry {
   name: string;
   releaseVersion: string;
   sourceCommit: string;
+  artifactDigest: string;
   practices: PracticeDigestEntry[];
 }
 
@@ -55,6 +60,7 @@ export interface PackPin {
   name: string;
   releaseVersion: string;
   sourceCommit: string;
+  artifactDigest: string;
 }
 
 function sha256(value: Uint8Array | string): string {
@@ -111,8 +117,9 @@ function validateInventoryShape(value: unknown): value is CorpusInventory {
   for (const rawPack of inventory.packs) {
     if (!rawPack || typeof rawPack !== "object" || Array.isArray(rawPack)) return false;
     const pack = rawPack as Record<string, unknown>;
-    if (Object.keys(pack).sort().join(",") !== "name,practices,releaseVersion,sourceCommit") return false;
+    if (Object.keys(pack).sort().join(",") !== "artifactDigest,name,practices,releaseVersion,sourceCommit") return false;
     if (typeof pack.name !== "string" || typeof pack.sourceCommit !== "string" || !/^[a-f0-9]{40}$/.test(pack.sourceCommit)) return false;
+    if (typeof pack.artifactDigest !== "string" || !/^[a-f0-9]{64}$/.test(pack.artifactDigest)) return false;
     if (typeof pack.releaseVersion !== "string" || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(pack.releaseVersion)) return false;
     if (!Array.isArray(pack.practices)) return false;
     for (const rawPractice of pack.practices) {
@@ -177,6 +184,7 @@ export async function buildCorpusInventoryFromGit(options: {
       name: pin.name,
       releaseVersion: pin.releaseVersion,
       sourceCommit: pin.sourceCommit,
+      artifactDigest: pin.artifactDigest,
       practices,
     });
   }
