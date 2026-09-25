@@ -110,8 +110,14 @@ describe("retrieval corpus store builder", () => {
       ]);
       expect(calls.some((call) => call.command.includes("alpha-pack@1.0.0"))).toBe(true);
       expect(calls.some((call) => call.command.includes("beta-pack@2.0.0"))).toBe(true);
-      expect(calls.filter((call) => call.command.includes("install")).every((call) => call.command.includes("--cache-root"))).toBe(true);
-      expect(calls.filter((call) => call.command.includes("pack") && call.command.includes("list")).every((call) => call.command.includes("--cache-root"))).toBe(true);
+      const packCalls = calls.filter((call) => call.command.includes("pack"));
+      expect(packCalls).not.toHaveLength(0);
+      expect(packCalls.every((call) => !call.command.includes("--cache-root"))).toBe(true);
+      expect(packCalls.every((call) => !call.command.includes("--no-project"))).toBe(true);
+      const indexCalls = calls.filter((call) => call.command.includes("index"));
+      expect(indexCalls).not.toHaveLength(0);
+      expect(indexCalls.every((call) => call.command.includes("--cache-root"))).toBe(true);
+      expect(indexCalls.every((call) => call.command.includes("--no-project"))).toBe(true);
       expect(calls.every((call) => call.stdin === "")).toBe(true);
     } finally {
       await rm(workspace, { recursive: true, force: true });

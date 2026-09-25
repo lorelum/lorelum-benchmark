@@ -114,7 +114,7 @@ function cliArgs(
   bunExecutable: string,
   command: string[],
   storeRoot: string,
-  cacheRoot?: string,
+  options: { cacheRoot?: string; projectContext?: boolean } = {},
 ): string[] {
   return [
     bunExecutable,
@@ -122,8 +122,8 @@ function cliArgs(
     ...command,
     "--store-root",
     storeRoot,
-    ...(cacheRoot ? ["--cache-root", cacheRoot] : []),
-    "--no-project",
+    ...(options.cacheRoot ? ["--cache-root", options.cacheRoot] : []),
+    ...(options.projectContext === true ? ["--no-project"] : []),
     "--json",
   ];
 }
@@ -147,7 +147,6 @@ async function installPack(
       CORPUS_REGISTRY,
     ],
     storeRoot,
-    cacheRoot,
   );
   const envelope = await runCliJson(processRunner, args, root, timeoutMs, "pack.install");
   const data = dataRecord(envelope, `pack.install ${pack.name}`);
@@ -167,7 +166,7 @@ async function installPack(
     throw new Error(`pack.install artifact digest differs from the pinned corpus for ${pack.name}`);
   }
 
-  const listArgs = cliArgs(bunExecutable, ["pack", "list", pack.name], storeRoot, cacheRoot);
+  const listArgs = cliArgs(bunExecutable, ["pack", "list", pack.name], storeRoot);
   const listEnvelope = await runCliJson(processRunner, listArgs, root, timeoutMs, "pack.list");
   const listData = dataRecord(listEnvelope, `pack.list ${pack.name}`);
   if (!Array.isArray(listData.practices)) throw new Error(`pack.list ${pack.name} returned no practices`);
@@ -200,7 +199,10 @@ async function waitForIndexReady(
   timeoutMs: number,
 ): Promise<number> {
   const deadline = Date.now() + timeoutMs;
-  const buildArgs = cliArgs(bunExecutable, ["index", "build"], storeRoot, cacheRoot);
+  const buildArgs = cliArgs(bunExecutable, ["index", "build"], storeRoot, {
+    cacheRoot,
+    projectContext: true,
+  });
   const buildEnvelope = await runCliJson(processRunner, buildArgs, root, timeoutMs, "index.build");
   let data = normalizeIndexData(dataRecord(buildEnvelope, "index.build"));
 
@@ -211,7 +213,10 @@ async function waitForIndexReady(
     const operationId = typeof data.operationId === "string" ? data.operationId : "unknown";
     if (Date.now() >= deadline) throw new Error(`semantic index did not become ready before timeout (operation ${operationId})`);
     await Bun.sleep(500);
-    const statusArgs = cliArgs(bunExecutable, ["index", "status"], storeRoot, cacheRoot);
+    const statusArgs = cliArgs(bunExecutable, ["index", "status"], storeRoot, {
+      cacheRoot,
+      projectContext: true,
+    });
     const statusEnvelope = await runCliJson(processRunner, statusArgs, root, timeoutMs, "index.status");
     const status = normalizeIndexData(dataRecord(statusEnvelope, "index.status"));
     if (status.state === "ready") {
@@ -229,7 +234,10 @@ async function waitForIndexReady(
   }
   const vectorCount = requireCount(data, "vectorCount", "semantic index");
 
-  const statusArgs = cliArgs(bunExecutable, ["index", "status"], storeRoot, cacheRoot);
+  const statusArgs = cliArgs(bunExecutable, ["index", "status"], storeRoot, {
+    cacheRoot,
+    projectContext: true,
+  });
   const statusEnvelope = await runCliJson(processRunner, statusArgs, root, timeoutMs, "index.status");
   const status = dataRecord(statusEnvelope, "index.status");
   if (status.state !== "ready" || status.profileId !== profileId) {
