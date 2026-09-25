@@ -158,6 +158,20 @@
       },
       "additionalProperties": false
     },
+    "setup_failure": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["phase", "error_code"],
+          "properties": {
+            "phase": { "enum": ["prepare-store", "create-client"] },
+            "error_code": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "outcome": {
       "type": "object",
       "required": ["retrieval_scored"],

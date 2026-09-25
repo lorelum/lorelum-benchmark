@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "revision": "v2",
+  "cases": [
+    {
+      "id": "agentic-scope-direct",
+      "coreIds": ["agentic-coding.planning.decide-scope-and-stop-conditions"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is which work is committed and what condition ends execution."
+    },
+    {
+      "id": "agentic-scope-paraphrase",
+      "coreIds": ["agentic-coding.planning.decide-scope-and-stop-conditions"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase", "mixed-constraints"],
+      "rationale": "The query asks for a bounded plan and an explicit finish line without using the Practice title."
+    },
+    {
+      "id": "agentic-acceptance-direct",
+      "coreIds": ["agentic-coding.requirements.define-acceptance-and-non-goals"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is how to define verifiable acceptance and non-goals from an underspecified request."
+    },
+    {
+      "id": "agentic-goal-paraphrase",
+      "coreIds": ["agentic-coding.requirements.ground-user-goal"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The query is about resolving two readings of the user's actual goal before planning."
+    },
+    {
+      "id": "agentic-evidence-plan",
+      "coreIds": ["agentic-coding.planning.plan-sufficient-evidence"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is what evidence must be planned before starting a risky change."
+    },
+    {
+      "id": "agentic-proportionate-validation",
+      "coreIds": ["agentic-coding.planning.scale-work-to-risk-and-cost"],
+      "forbiddenIds": [],
+      "coverage": ["adjacent-stage"],
+      "rationale": "The query chooses validation depth proportionate to a small change rather than planning all evidence."
+    },
+    {
+      "id": "agentic-smallest-design",
+      "coreIds": ["agentic-coding.implementation.choose-smallest-sufficient-design"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase", "near-miss"],
+      "rationale": "The decision is whether added cache and layer complexity is needed for this task."
+    },
+    {
+      "id": "agentic-reuse-before-build",
+      "coreIds": ["agentic-coding.implementation.inspect-and-reuse-existing-capability"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The query asks for existing capability discovery before adding a helper."
+    },
+    {
+      "id": "agentic-limit-investigation",
+      "coreIds": ["agentic-coding.implementation.limit-investigation-to-current-decision"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is whether further inspection changes a named current decision."
+    },
+    {
+      "id": "agentic-shared-rule-owner",
+      "coreIds": ["agentic-coding.implementation.preserve-responsibility-boundaries"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is which component owns a rule shared across entry points."
+    },
+    {
+      "id": "agentic-validation-boundary",
+      "coreIds": ["agentic-coding.implementation.validate-at-the-owning-boundary"],
+      "forbiddenIds": [],
+      "coverage": ["adjacent-stage"],
+      "rationale": "The decision is the owning boundary for an invariant, not merely where code can run it."
+    },
+    {
+      "id": "agentic-temporary-assumption",
+      "coreIds": ["agentic-coding.implementation.surface-unconfirmed-assumptions"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is how to proceed with a low-impact reversible uncertainty."
+    },
+    {
+      "id": "agentic-recovery-contract",
+      "coreIds": ["agentic-coding.implementation.make-recovery-behavior-explicit"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The decision is whether retry and fallback preserve the caller's promised outcome."
+    },
+    {
+      "id": "agentic-replan-drift",
+      "coreIds": ["agentic-coding.implementation.replan-on-material-drift"],
+      "forbiddenIds": [],
+      "coverage": ["mixed-constraints"],
+      "rationale": "New implementation facts materially change accepted scope and require replanning."
+    },
+    {
+      "id": "agentic-subtractive-review",
+      "coreIds": ["agentic-coding.review.run-subtractive-review-before-commit"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is what to remove from a diff before committing it."
+    },
+    {
+      "id": "agentic-review-finding",
+      "coreIds": ["agentic-coding.review.validate-findings-before-action"],
+      "forbiddenIds": [],
+      "coverage": ["adjacent-stage"],
+      "rationale": "The decision is whether a reviewer finding is evidenced before acting on it."
+    },
+    {
+      "id": "agentic-evidence-artifact-state",
+      "coreIds": ["agentic-coding.verification.bind-evidence-to-artifact-state"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The query requires evidence to identify the exact artifact revision it covers."
+    },
+    {
+      "id": "agentic-declare-gap",
+      "coreIds": ["agentic-coding.verification.close-or-declare-evidence-gaps"],
+      "forbiddenIds": [],
+      "coverage": ["mixed-constraints"],
+      "rationale": "The decision is whether to close or explicitly declare an acceptance-evidence gap."
+    },
+    {
+      "id": "agentic-map-evidence",
+      "coreIds": ["agentic-coding.verification.map-evidence-to-acceptance"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The query maps observed evidence back to acceptance criteria."
+    },
+    {
+      "id": "agentic-supported-claim",
+      "coreIds": ["agentic-coding.delivery.claim-only-supported-outcome"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is what completion or deployment claim the evidence actually supports."
+    },
+    {
+      "id": "agentic-report-residuals",
+      "coreIds": ["agentic-coding.delivery.report-material-residuals"],
+      "forbiddenIds": [],
+      "coverage": ["mixed-constraints"],
+      "rationale": "The decision is which remaining limitations matter to the recipient's next action."
+    },
+    {
+      "id": "agentic-reground-after-summary",
+      "coreIds": ["agentic-coding.recovery.reground-after-context-loss"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The query resumes after context loss and must recheck the request and current state."
+    },
+    {
+      "id": "agentic-validate-handoff",
+      "coreIds": ["agentic-coding.recovery.validate-handoff-before-continuation"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is whether another agent's completion claim is verified before reuse."
+    },
+    {
+      "id": "agentic-checkpoint",
+      "coreIds": ["agentic-coding.context.write-decision-dense-checkpoint"],
+      "forbiddenIds": [],
+      "coverage": ["mixed-constraints"],
+      "rationale": "The query asks for a durable decision-dense checkpoint across a pause."
+    },
+    {
+      "id": "agentic-confirmed-correction",
+      "coreIds": ["agentic-coding.correction.restore-authoritative-baseline"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The query follows an accepted correction and must abandon obsolete work."
+    },
+    {
+      "id": "agentic-tests-from-acceptance",
+      "coreIds": ["agentic-coding.testing.anchor-tests-to-requirements"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is to derive tests from acceptance criteria rather than incidental helpers."
+    },
+    {
+      "id": "agentic-observable-tests",
+      "coreIds": ["agentic-coding.testing.assert-observable-behavior"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The query requires rewriting an implementation-detail assertion around observable behavior."
+    },
+    {
+      "id": "agentic-classify-test-failure",
+      "coreIds": ["agentic-coding.testing.classify-failure-before-changing-test"],
+      "forbiddenIds": [],
+      "coverage": ["near-miss", "adjacent-stage"],
+      "rationale": "The decision is whether the test or production behavior is wrong before changing the expectation."
+    },
+    {
+      "id": "agentic-regression-justification",
+      "coreIds": ["agentic-coding.testing.justify-regression-protection"],
+      "forbiddenIds": [],
+      "coverage": ["near-miss", "adjacent-stage"],
+      "rationale": "The query concerns whether a permanent regression test is proportionate to the risk."
+    },
+    {
+      "id": "issue-pr-body-scope-conflict",
+      "coreIds": ["issue-pr-etiquette.pull-request.write-the-pr-body-for-a-cold-reviewer"],
+      "forbiddenIds": ["react.server.request-dedup-cache"],
+      "coverage": ["scope-conflict", "mixed-constraints"],
+      "rationale": "The current decision is PR context for a cold reviewer; the React cache fix is background, not the action to retrieve."
+    },
+    {
+      "id": "issue-pr-one-scope",
+      "coreIds": ["issue-pr-etiquette.pull-request.keep-one-pr-to-one-declared-scope"],
+      "forbiddenIds": [],
+      "coverage": ["adjacent-stage"],
+      "rationale": "The decision is how to keep the branch reviewable under one declared scope."
+    },
+    {
+      "id": "issue-pr-upstream-gate-scope-conflict",
+      "coreIds": ["issue-pr-etiquette.pull-request.match-the-change-to-the-required-upstream-gate"],
+      "forbiddenIds": ["pack-creator.release.verify-the-supported-install-path-before-claiming-release"],
+      "coverage": ["scope-conflict", "mixed-constraints"],
+      "rationale": "The current decision is which upstream gate applies before implementation, not how to verify a Pack release."
+    },
+    {
+      "id": "issue-pr-review-feedback-scope-conflict",
+      "coreIds": ["issue-pr-etiquette.review.address-feedback-with-new-commits-and-freeze-during-review"],
+      "forbiddenIds": ["react.state.functional-updater-scope"],
+      "coverage": ["scope-conflict", "mixed-constraints"],
+      "rationale": "The current decision is review-history handling; the React hook failure is code context, not the immediate retrieval decision."
+    },
+    {
+      "id": "issue-pr-ai-disclosure",
+      "coreIds": ["issue-pr-etiquette.review.disclose-ai-assistance-and-its-review-findings"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The query asks what AI assistance and review findings must be disclosed."
+    },
+    {
+      "id": "issue-pr-one-problem",
+      "coreIds": ["issue-pr-etiquette.issue.converge-on-one-problem-with-testable-acceptance-criteria"],
+      "forbiddenIds": [],
+      "coverage": ["mixed-constraints", "near-miss"],
+      "rationale": "The decision is how to split mixed issue scope into reviewable problems with acceptance criteria."
+    },
+    {
+      "id": "issue-pr-readback-pack-context",
+      "coreIds": ["issue-pr-etiquette.communication.read-back-your-post-before-requesting-review"],
+      "forbiddenIds": ["pack-creator.release.preserve-versioned-content-and-provenance"],
+      "coverage": ["scope-conflict", "mixed-constraints", "paraphrase"],
+      "rationale": "The current decision is verifying the saved GitHub post after editing, not preserving Pack release provenance."
+    },
+    {
+      "id": "pack-creator-discriminating-trigger",
+      "coreIds": ["pack-creator.authoring.write-discriminating-applies-when"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The query asks for an applicability condition that distinguishes the intended decision from topic noise."
+    },
+    {
+      "id": "pack-creator-split-decision",
+      "coreIds": ["pack-creator.design.decompose-one-decision-per-practice"],
+      "forbiddenIds": [],
+      "coverage": ["adjacent-stage"],
+      "rationale": "The decision is how to split one Practice that contains two different decisions."
+    },
+    {
+      "id": "pack-creator-neighbor-boundary",
+      "coreIds": ["pack-creator.design.separate-neighboring-triggers"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The query concerns competing neighboring Practices and their trigger boundary."
+    },
+    {
+      "id": "pack-creator-retrieval-contrasts",
+      "coreIds": ["pack-creator.evaluation.test-retrieval-with-contrasting-queries"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The query asks for the direct/paraphrase/neighbor/near-miss contrast set used to test retrieval selection."
+    },
+    {
+      "id": "pack-creator-evidence-separation-scope-conflict",
+      "coreIds": ["pack-creator.evaluation.separate-structural-and-semantic-evidence"],
+      "forbiddenIds": ["react.rendering.hydration-consistency"],
+      "coverage": ["scope-conflict", "adjacent-stage", "mixed-constraints"],
+      "rationale": "The decision is how much semantic confidence structural Pack checks support; the React example is background."
+    },
+    {
+      "id": "react-derive-not-mirror",
+      "coreIds": ["react.rendering.derive-dont-mirror"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The query concerns deriving render values from props rather than mirroring them into state."
+    },
+    {
+      "id": "react-boolean-guard",
+      "coreIds": ["react.rendering.boolean-render-guards"],
+      "forbiddenIds": [],
+      "coverage": ["direct", "near-miss"],
+      "rationale": "The query describes a non-boolean falsy value leaking into JSX through a render guard."
+    },
+    {
+      "id": "react-hydration-zh",
+      "coreIds": ["react.rendering.hydration-consistency"],
+      "forbiddenIds": ["issue-pr-etiquette.pull-request.keep-secrets-and-private-material-out-of-the-diff"],
+      "coverage": ["cross-language"],
+      "rationale": "The Chinese query asks how to handle a server/client first-render mismatch; PR secrecy is unrelated."
+    },
+    {
+      "id": "react-shared-state-zh",
+      "coreIds": ["react.state.share-one-owner"],
+      "forbiddenIds": [],
+      "coverage": ["cross-language", "paraphrase"],
+      "rationale": "The Chinese query asks how to organize coordinated UI state without duplicate owners."
+    },
+    {
+      "id": "react-exclusive-modes",
+      "coreIds": ["react.state.model-exclusive-modes"],
+      "forbiddenIds": [],
+      "coverage": ["adjacent-stage"],
+      "rationale": "The query asks to eliminate contradictory combinations from mutually exclusive UI modes."
+    },
+    {
+      "id": "react-reactive-default",
+      "coreIds": ["react.state.fallback-until-overridden"],
+      "forbiddenIds": [],
+      "coverage": ["direct"],
+      "rationale": "The decision is how an editable value follows a changing default until user override."
+    },
+    {
+      "id": "react-lazy-state",
+      "coreIds": ["react.state.lazy-initializer"],
+      "forbiddenIds": [],
+      "coverage": ["paraphrase"],
+      "rationale": "The query describes expensive mount-time initialization repeated through useState."
+    },
+    {
+      "id": "react-nonrendered-ref",
+      "coreIds": ["react.state.ref-for-nonrendered-values"],
+      "forbiddenIds": [],
+      "coverage": ["adjacent-stage", "paraphrase"],
+      "rationale": "The query concerns mutable per-instance bookkeeping that does not affect rendered output."
+    },
+    {
+      "id": "react-functional-updater-capture",
+      "coreIds": ["react.state.functional-updater-scope"],
+      "forbiddenIds": [],
+      "coverage": ["adjacent-stage", "near-miss", "mixed-constraints"],
+      "rationale": "The query describes a functional updater hiding a different stale capture in the callback."
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
 import { directoryExists, joinPath, listDirectories, listFiles, pathExists, relativePath, sha256File, workspaceRoot } from "./fs";
 import { loadPackPracticeTreatment } from "./treatments/pack-practice/v1/contract";
-import { validateRetrievalRankingSuite } from "./retrieval-ranking/validate";
+import { validateRetrievalRankingRecordBinding, validateRetrievalRankingSuite } from "./retrieval-ranking/validate";
 
 const failures: string[] = [];
 const lifecycleStages = new Set(["candidate", "pilot", "frozen", "official", "published", "retired"]);
@@ -251,6 +251,7 @@ async function validateRunRecords(): Promise<void> {
         addSchemaFailures(path, retrievalValidator.errors);
         continue;
       }
+      failures.push(...(await validateRetrievalRankingRecordBinding(record, joinPath(workspaceRoot, "suites", "retrieval-ranking"))));
       const runId = record.run_id;
       if (typeof runId === "string" && !runIds.add(runId)) failures.push(`Duplicate run record id: ${runId}`);
       const execution = record.execution;

@@ -8,6 +8,7 @@
     "track",
     "lifecycle_stage",
     "revision",
+    "revisions",
     "corpus",
     "cases",
     "labels",
@@ -22,6 +23,22 @@
       "enum": ["candidate", "pilot", "frozen", "official", "published", "retired"]
     },
     "revision": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
+    "revisions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["revision", "lifecycle_stage"],
+        "properties": {
+          "revision": { "type": "string", "pattern": "^v[1-9][0-9]*$" },
+          "lifecycle_stage": {
+            "enum": ["candidate", "pilot", "frozen", "official", "published", "retired"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "corpus": {
       "type": "string",
       "pattern": "^v[1-9][0-9]*/corpus/inventory\\.json$"

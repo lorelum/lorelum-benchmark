@@ -6,7 +6,7 @@
 
 ## 固定对象
 
-首版 revision 是 `suites/retrieval-ranking/v1/`：
+当前活动 revision 是 `suites/retrieval-ranking/v2/`；`v1/` 保留为首轮失败运行的历史 revision，不再改写：
 
 - `corpus/inventory.json` 固定完整 Practice ID 清单、来源路径、内容 digest 和每个 Pack 的安装 artifact digest，不复制 Pack 正文。
 - `cases/queries.json` 只保存 case ID 和自然语言 query。
@@ -65,17 +65,18 @@ bun run src/benchmark/retrieval-ranking/runner/run.ts \
 
 可选 `--profile-id`、`--artifact`、`--record` 和 `--run-id`。默认 Profile 是首版固定值；默认结果附件路径是 `artifacts/retrieval-ranking/<run-id>.json`，批次记录路径是 `results/records/<run-id>.json`。
 
-Runner 只有在一个 revision 的全部 case 都返回合法 `0 + status=ok` 时才评分。任何 process、protocol、Profile、runtime 或 index 失败都会让 batch 为 `failed`，结果附件保留逐例执行失败但不保留候选/最终名单，也不进入相关性分母。重跑使用新的 run ID，不拼接 partial results。
+Runner 只有在一个 revision 的全部 case 都返回合法 `0 + status=ok` 时才评分。任何 process、protocol、Profile、runtime 或 index 失败都会让 batch 为 `failed`；Store/index 或 harness client 在 case 执行前 setup 失败时，也会写出带 `setup_failure` 的 failed artifact/record。结果附件保留逐例执行失败或结构化 setup failure，但不保留候选/最终名单，也不进入相关性分母。重跑使用新的 run ID，不拼接 partial results。
 
 ## 冻结 baseline
 
 首版 baseline 使用 Lorelum commit `caecc53694d3162bd145e30f3bc5628ee6902b0c`。该 commit 已让 harness 从 `LORELUM_BENCHMARK_CACHE_ROOT` 读取与 Store-only CLI 相同的 derived content-addressed semantic artifact，未设置该变量时回退 `defaultQueryArtifactCacheRoot()`；五字段 stdin、N/K、普通 `lore query` 和公开 API 不变。
 
-- 正式 batch：`retrieval-ranking-v1-baseline-caecc53`，50/50 case 完成，失败为 0。
-- replay：`retrieval-ranking-v1-baseline-caecc53-replay`，50/50 case 完成，逐例 `candidateIds`、`finalIds` 和 score 与正式 batch 一致。
+- 正式 batch：`retrieval-ranking-v2-baseline-caecc53`，50/50 case 完成，失败为 0。
+- replay：`retrieval-ranking-v2-baseline-caecc53-replay`，50/50 case 完成，逐例 `candidateIds`、`finalIds` 和 score 与正式 batch 一致。
 - 结果：core candidate recall 49/50；core final top-5 hit 42/50；1 个 candidate miss；7 个 final-ranking miss；2 个 scope error case。
-- 记录：`results/records/retrieval-ranking-v1-baseline-caecc53.json` 和同名 `-replay.json`。
-- artifact：`artifacts/retrieval-ranking/<run-id>.json`。按仓库规则，大 artifact 保持忽略，Git 记录路径与 SHA-256；baseline artifact hash 为 `74636841baaf9ea0118ff863fc3ce6441d0d0d50df78ecc6afc58be5450f3790`，replay artifact hash 为 `891d5f157e6ead9cf645630403d16e95623f4c6c0836e718d31e18a45a583034`。
+- 记录：`results/records/retrieval-ranking-v2-baseline-caecc53.json` 和同名 `-replay.json`。
+- artifact：`artifacts/retrieval-ranking/<run-id>.json`。按仓库规则，大 artifact 保持忽略，Git 记录路径与 SHA-256；baseline artifact hash 为 `b0406f2951558664ad0c468ee08c254dd8e22ff264f5d213579fd677c590dc25`，replay artifact hash 为 `0320e00d5b24fdea957663ee00b6ba1c21cedc2367868037ae2f1a88c49c09da`。
+- 历史 v1 失败 record 仍保留并绑定原始 v1：corpus digest `89209b7d0d9b5c180648bcc7b235b438a4a3e2237b5006eb462d86d45ca03998`。
 
 逐例失败名单、native/model/index provenance 和复现证据见本 change 的 [`verification.md`](../openspec/changes/retrieval-ranking-benchmark/verification.md)。baseline 冻结后，后续对比只更换预先声明的 Lorelum build；benchmark revision、corpus、Profile、模型、native runtime 和 N/K 必须保持相同。
 

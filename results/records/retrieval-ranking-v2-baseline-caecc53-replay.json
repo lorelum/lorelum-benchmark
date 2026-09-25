@@ -1,17 +1,17 @@
 {
   "schema_version": "retrieval-batch-record/v1",
   "track": "retrieval-ranking",
-  "run_id": "retrieval-ranking-v1-baseline-caecc53-replay",
+  "run_id": "retrieval-ranking-v2-baseline-caecc53-replay",
   "batch_status": "complete",
-  "started_at": "2026-09-25T04:24:08.163Z",
-  "finished_at": "2026-09-25T04:29:33.654Z",
+  "started_at": "2026-09-25T05:05:45.384Z",
+  "finished_at": "2026-09-25T05:13:21.028Z",
   "benchmark": {
     "suiteId": "retrieval-ranking",
     "suiteVersion": "1.0.0",
-    "revision": "v1",
-    "casesSha256": "12dc90dab4f38c3c68d4b9f396783e21eafbb630d2995e5fb3314e79df5473d6",
-    "labelsSha256": "a60d55865dd53bef2d6af769b88023fd4a481d9d1755e695bf2b530ae2e66c0e",
-    "scorerSha256": "a0840e577feb57a858359eb9e9414aa4559fe5b98061e83b830fde0795f6304d"
+    "revision": "v2",
+    "casesSha256": "54b621402859e637ee1b92a24dc22e5830b289f3ddd2b9fbfc25f924e5e608f1",
+    "labelsSha256": "5be851190d696e7bb90d8dd2f810b7d3762ddb99807c1af0a466dc1e582ad776",
+    "scorerSha256": "f9ff1bba5af690b90ebb6b6d685fa778793295fedb5d485bbc30e4d0af5845e6"
   },
   "corpus": {
     "source_repository": "lorelum/lorelum-packs",
@@ -174,8 +174,8 @@
     "bunVersion": "1.4.2"
   },
   "result_artifact": {
-    "path": "C:\\Users\\HP\\.codex\\worktrees\\retrieval-ranking-benchmark\\lorelum-benchmark\\artifacts\\retrieval-ranking\\retrieval-ranking-v1-baseline-caecc53-replay.json",
-    "sha256": "891d5f157e6ead9cf645630403d16e95623f4c6c0836e718d31e18a45a583034"
+    "path": "C:\\Users\\HP\\.codex\\worktrees\\retrieval-ranking-benchmark\\lorelum-benchmark\\artifacts\\retrieval-ranking\\retrieval-ranking-v2-baseline-caecc53-replay.json",
+    "sha256": "0320e00d5b24fdea957663ee00b6ba1c21cedc2367868037ae2f1a88c49c09da"
   },
   "execution": {
     "case_count": 50,
@@ -183,6 +183,7 @@
     "failure_count": 0,
     "failures": []
   },
+  "setup_failure": null,
   "outcome": {
     "retrieval_scored": true
   }

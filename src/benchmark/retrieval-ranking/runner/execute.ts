@@ -77,6 +77,16 @@ export interface RetrievalBatchFailure {
   error_code: string;
 }
 
+export interface RetrievalSetupFailure {
+  phase: "prepare-store" | "create-client";
+  error_code: string;
+}
+
+export interface RetrievalArtifactSetupFailure {
+  phase: "prepare-store" | "create-client";
+  errorCode: string;
+}
+
 export interface RetrievalBatchArtifact {
   schemaVersion: 1;
   runId: string;
@@ -89,6 +99,7 @@ export interface RetrievalBatchArtifact {
     finalIds: string[];
   }>;
   failures: RetrievalBatchFailure[];
+  setupFailure: RetrievalArtifactSetupFailure | null;
   score: RetrievalBatchScore | null;
 }
 
@@ -132,6 +143,7 @@ export interface RetrievalBatchRecord {
     failure_count: number;
     failures: RetrievalBatchFailure[];
   };
+  setup_failure: RetrievalSetupFailure | null;
   outcome: {
     retrieval_scored: boolean;
     reason?: string;
@@ -151,47 +163,87 @@ function failureFromObservation(caseId: string, observation: HarnessObservation)
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function setupFailureFromError(phase: RetrievalSetupFailure["phase"], error: unknown): RetrievalSetupFailure {
+  const code = isRecord(error) && typeof error.code === "string" && /^[a-z0-9_-]+$/i.test(error.code)
+    ? error.code
+    : phase === "prepare-store"
+      ? "corpus_setup_failed"
+      : "harness_setup_failed";
+  return { phase, error_code: code };
+}
+
+function packArtifactsFromInventory(inventory: CorpusInventory): PreparedCorpusStore["packArtifacts"] {
+  return inventory.packs.map((pack) => ({
+    name: pack.name,
+    releaseVersion: pack.releaseVersion,
+    sourceCommit: pack.sourceCommit,
+    artifactDigest: pack.artifactDigest,
+    practiceIds: pack.practices.map((practice) => practice.id).sort(),
+  }));
+}
+
 export async function executeRetrievalBatch(options: ExecuteRetrievalBatchOptions): Promise<RetrievalBatchRecord> {
-  const prepared = await (options.prepareStore ?? prepareCorpusStore)({
-    lorelumRoot: options.lorelumRoot,
-    lorelumCommit: options.lorelumCommit,
-    storeRoot: options.storeRoot,
-    cacheRoot: options.cacheRoot,
-    embeddingProfileId: options.embeddingProfileId,
-    inventory: options.inventory,
-  });
-  if (prepared.corpusDigest !== options.inventory.corpusDigest) throw new Error("Prepared corpus digest differs from the frozen revision");
-  const client = await (options.createClient ?? createHarnessV1Client)({
-    lorelumRoot: options.lorelumRoot,
-    lorelumCommit: options.lorelumCommit,
-    environment: options.harnessEnvironment,
-  });
+  let prepared: PreparedCorpusStore | undefined;
+  let client: PinnedHarnessClient | undefined;
+  let setupFailure: RetrievalSetupFailure | null = null;
+
+  try {
+    prepared = await (options.prepareStore ?? prepareCorpusStore)({
+      lorelumRoot: options.lorelumRoot,
+      lorelumCommit: options.lorelumCommit,
+      storeRoot: options.storeRoot,
+      cacheRoot: options.cacheRoot,
+      embeddingProfileId: options.embeddingProfileId,
+      inventory: options.inventory,
+    });
+    if (prepared.corpusDigest !== options.inventory.corpusDigest) throw new Error("Prepared corpus digest differs from the frozen revision");
+  } catch (error) {
+    setupFailure = setupFailureFromError("prepare-store", error);
+  }
+
+  if (!setupFailure) {
+    try {
+      client = await (options.createClient ?? createHarnessV1Client)({
+        lorelumRoot: options.lorelumRoot,
+        lorelumCommit: options.lorelumCommit,
+        environment: options.harnessEnvironment,
+      });
+    } catch (error) {
+      setupFailure = setupFailureFromError("create-client", error);
+    }
+  }
 
   const corpusIds = new Set(options.inventory.packs.flatMap((pack) => pack.practices.map((practice) => practice.id)));
   const cases: RetrievalBatchArtifact["cases"] = [];
   const failures: RetrievalBatchFailure[] = [];
-  for (const testCase of options.cases) {
-    const observation = await client.run({
-      query: testCase.query,
-      storeRoot: prepared.storeRoot,
-      embeddingProfileId: options.embeddingProfileId,
-      candidateWidth: options.candidateWidth,
-      resultLimit: options.resultLimit,
-    }, corpusIds);
-    const failure = failureFromObservation(testCase.id, observation);
-    if (failure) {
-      failures.push(failure);
-      continue;
+  if (!setupFailure && prepared && client) {
+    for (const testCase of options.cases) {
+      const observation = await client.run({
+        query: testCase.query,
+        storeRoot: prepared.storeRoot,
+        embeddingProfileId: options.embeddingProfileId,
+        candidateWidth: options.candidateWidth,
+        resultLimit: options.resultLimit,
+      }, corpusIds);
+      const failure = failureFromObservation(testCase.id, observation);
+      if (failure) {
+        failures.push(failure);
+        continue;
+      }
+      cases.push({
+        id: testCase.id,
+        status: "ok",
+        candidateIds: observation.response.candidateIds,
+        finalIds: observation.response.finalIds,
+      });
     }
-    cases.push({
-      id: testCase.id,
-      status: "ok",
-      candidateIds: observation.response.candidateIds,
-      finalIds: observation.response.finalIds,
-    });
   }
 
-  const status = failures.length === 0 && cases.length === options.cases.length ? "complete" : "failed";
+  const status = !setupFailure && failures.length === 0 && cases.length === options.cases.length ? "complete" : "failed";
   const score = status === "complete"
     ? scoreRetrievalBatch({
       revision: options.benchmark.revision,
@@ -208,6 +260,7 @@ export async function executeRetrievalBatch(options: ExecuteRetrievalBatchOption
     status,
     cases,
     failures,
+    setupFailure: setupFailure === null ? null : { phase: setupFailure.phase, errorCode: setupFailure.error_code },
     score,
   };
   const artifactText = `${JSON.stringify(artifact, null, 2)}\n`;
@@ -229,7 +282,9 @@ export async function executeRetrievalBatch(options: ExecuteRetrievalBatchOption
       snapshot_commit: options.inventory.snapshotCommit,
       corpus_digest: options.inventory.corpusDigest,
       practice_count: options.inventory.practiceCount,
-      pack_artifacts: prepared.packArtifacts,
+      pack_artifacts: setupFailure === null && prepared !== undefined
+        ? prepared.packArtifacts
+        : packArtifactsFromInventory(options.inventory),
     },
     lorelum: {
       repository: options.lorelumRepository,
@@ -257,14 +312,17 @@ export async function executeRetrievalBatch(options: ExecuteRetrievalBatchOption
     execution: {
       case_count: options.cases.length,
       successful_case_count: cases.length,
-      failure_count: failures.length,
+      failure_count: setupFailure ? options.cases.length : failures.length,
       failures,
     },
+    setup_failure: setupFailure,
     outcome: status === "complete"
       ? { retrieval_scored: true }
       : {
         retrieval_scored: false,
-        reason: "At least one harness invocation failed or was missing; partial results were not scored.",
+        reason: setupFailure
+          ? `Batch setup failed during ${setupFailure.phase}; partial results were not scored.`
+          : "At least one harness invocation failed or was missing; partial results were not scored.",
       },
   };
   const recordPath = resolve(options.recordPath);

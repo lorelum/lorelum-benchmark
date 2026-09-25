@@ -2,14 +2,24 @@
 
 ## 冻结对象与证据位置
 
-- benchmark revision：`retrieval-ranking/v1`，N=20、K=5。
-- 正式 baseline record：`results/records/retrieval-ranking-v1-baseline-caecc53.json`。
-- 独立 replay record：`results/records/retrieval-ranking-v1-baseline-caecc53-replay.json`。
-- baseline result artifact：`artifacts/retrieval-ranking/retrieval-ranking-v1-baseline-caecc53.json`，SHA-256 `74636841baaf9ea0118ff863fc3ce6441d0d0d50df78ecc6afc58be5450f3790`。
-- replay result artifact：`artifacts/retrieval-ranking/retrieval-ranking-v1-baseline-caecc53-replay.json`，SHA-256 `891d5f157e6ead9cf645630403d16e95623f4c6c0836e718d31e18a45a583034`。
+- benchmark revision：`retrieval-ranking/v2`，N=20、K=5。
+- 正式 baseline record：`results/records/retrieval-ranking-v2-baseline-caecc53.json`。
+- 独立 replay record：`results/records/retrieval-ranking-v2-baseline-caecc53-replay.json`。
+- baseline result artifact：`artifacts/retrieval-ranking/retrieval-ranking-v2-baseline-caecc53.json`，SHA-256 `b0406f2951558664ad0c468ee08c254dd8e22ff264f5d213579fd677c590dc25`。
+- replay result artifact：`artifacts/retrieval-ranking/retrieval-ranking-v2-baseline-caecc53-replay.json`，SHA-256 `0320e00d5b24fdea957663ee00b6ba1c21cedc2367868037ae2f1a88c49c09da`。
 - `artifacts/` 按仓库规则忽略；Git 中的 record 保存 artifact 路径与 SHA-256。逐例 `candidateIds`、`finalIds` 和 scorer 原始证据在 result artifact 中；本文件保留失败案例的完整名单与全部 case 汇总。
 
 两次运行的 `case_count` 都是 50、`successful_case_count` 都是 50、`failure_count` 都是 0、`retrieval_scored` 都是 true。50 条 case 的 `candidateIds`、`finalIds` 与 score 完全一致；artifact hash 不同只因 `runId` 和运行时间等运行身份字段不同。
+
+### v1 生命周期修复
+
+最初加入的 `retrieval-ranking-v1-baseline-6bf1e1b` 是失败运行记录，但当时的 `v1/corpus/inventory.json` 在 record 之后被加上 `artifactDigest` 并重算 digest。第一轮 review 确认这违反了“已有运行记录的 revision 不可修改”。修复后：
+
+- `v1` 恢复到产生该失败 record 时的内容，README 与 inventory 均与 `ca1dbc8` 一致。
+- `v1` 的 legacy corpus digest 固定为 `89209b7d0d9b5c180648bcc7b235b438a4a3e2237b5006eb462d86d45ca03998`；专项测试从 payload 重算并验证该值。
+- `v1` 失败 record 未修改、未删除，仍由 record-binding validator 验证。
+- 当前 artifact pin、50 条 query/label/scorer 和成功 baseline 位于 `v2`，所有 v2 文件在新 record 生成前冻结。
+- 在 v1 被改写后生成的两次 v1 成功记录已从活动 `results/records/` 移除；它们不是合法历史结果，v2 baseline/replay 已用新 run ID 重新生成。
 
 ## 运行 provenance
 
@@ -147,9 +157,12 @@ baseline commit 已从主仓库 origin 分支 fetch 到独立 detached checkout�
 
 ## 验证命令
 
-- `bun test src/benchmark/retrieval-ranking`
-- `bun run validate`
-- `bunx openspec validate retrieval-ranking-benchmark --type change --strict --json`
-- `git diff --check`
+- `bun test src/benchmark/retrieval-ranking`：26 pass / 0 fail。
+- `bun run validate`：通过；同时验证历史 v1 failed record、v2 baseline/replay 与当前 revision 文件的绑定。
+- core contract group：169 pass / 0 fail。
+- `bun run test:contracts:runner`：138 pass / 0 fail。
+- `bunx openspec validate retrieval-ranking-benchmark --type change --strict --json`：通过。
+- `git diff --check`：通过。
+- setup failure 回归测试覆盖 `prepare-store` 与 `create-client` reject：都生成 `failed` artifact/record，`retrieval_scored=false`，且不含部分候选名单。
 
 执行结果见 PR #223 正文和 CI；baseline 记录只在上述完整 batch 成功、失败数为 0 且 replay 逐例一致后冻结。

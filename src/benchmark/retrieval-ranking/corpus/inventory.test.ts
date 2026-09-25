@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,7 +11,8 @@ import {
   type CorpusInventory,
 } from "./inventory";
 
-const inventoryPath = join(import.meta.dir, "../../../../suites/retrieval-ranking/v1/corpus/inventory.json");
+const inventoryPath = join(import.meta.dir, "../../../../suites/retrieval-ranking/v2/corpus/inventory.json");
+const historicalV1InventoryPath = join(import.meta.dir, "../../../../suites/retrieval-ranking/v1/corpus/inventory.json");
 
 function git(repoRoot: string, args: string[]): void {
   const result = Bun.spawnSync(["git", ...args], { cwd: repoRoot, stdout: "pipe", stderr: "pipe" });
@@ -110,5 +112,14 @@ describe("retrieval corpus inventory", () => {
         expect(Object.keys(practice).sort()).toEqual(["contentDigest", "id", "sourcePath"]);
       }
     }
+  });
+
+  test("keeps the historical v1 corpus immutable and recomputes its legacy digest", async () => {
+    const inventory = JSON.parse(await readFile(historicalV1InventoryPath, "utf8")) as Record<string, unknown>;
+    const { corpusDigest, ...payload } = inventory;
+    const recomputed = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+    expect(corpusDigest).toBe("89209b7d0d9b5c180648bcc7b235b438a4a3e2237b5006eb462d86d45ca03998");
+    expect(recomputed).toBe(corpusDigest);
+    expect(validateCorpusInventory(inventory)).toBe(false);
   });
 });

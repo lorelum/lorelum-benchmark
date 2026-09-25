@@ -43,6 +43,20 @@
         "additionalProperties": false
       }
     },
+    "setupFailure": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["phase", "errorCode"],
+          "properties": {
+            "phase": { "enum": ["prepare-store", "create-client"] },
+            "errorCode": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "score": {
       "oneOf": [
         { "type": "null" },

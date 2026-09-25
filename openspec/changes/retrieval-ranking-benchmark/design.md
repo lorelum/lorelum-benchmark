@@ -53,7 +53,7 @@ Lorelum commit 已从 `lorelum/lorelum` origin 分支 fetch，并在独立、干
 
 ### 1. 新增独立 retrieval-ranking capability 和 track-specific schemas
 
-使用 `suites/retrieval-ranking/v1/` 保存 suite revision、corpus/query 来源和完整 case inputs；`private/` 保存 labels/scorer config/snapshot。新增 track-specific suite、batch manifest、batch record schemas 和 validator 分派，不改现有 Agent schema 的必需字段。
+使用 `suites/retrieval-ranking/v2/` 保存当前 suite revision、corpus/query 来源和完整 case inputs；`private/` 保存 labels/scorer config/snapshot。`v1/` 原样保留为已有 failed record 的历史 revision。新增 track-specific suite、batch manifest、batch record schemas 和 validator 分派，不改现有 Agent schema 的必需字段。
 
 替代方案：把 query 放进现有 React / Practice-injection task。拒绝原因是那些轨道测试 Agent 行为，无法真实表示 Engine candidate/final IDs，且会诱发伪造 task/Agent 字段。
 
@@ -79,15 +79,17 @@ Scorer 报告每个 core 的 Recall@N、final top-K/rank、candidate miss 与 ra
 
 ### 5. 一个整批记录；运行健康与检索得分分开
 
-一条 batch manifest/record 覆盖同一 benchmark revision 的全套 queries，固定 benchmark/query/labels/scorer、corpus digest、Lorelum commit、harness protocol version 1、Profile ID、model/native runtime、OS/arch、N/K 和 artifacts hashes。逐例结果只含 case ID、执行状态、candidate/final IDs 与可解释判断，不输出 query 回显、正文、similarity 或 score。
+一条 batch manifest/record 覆盖同一 benchmark revision 的全套 queries，固定 benchmark/query/labels/scorer、corpus digest、Lorelum commit、harness protocol version 1、Profile ID、model/native runtime、OS/arch、N/K 和 artifacts hashes。逐例结果只含 case ID、执行状态、candidate/final IDs 与可解释判断，不输出 query 回显、正文、similarity 或 score。validator 必须按 record 的 `suiteVersion/revision` 解析对应 revision 文件，比较 cases/labels/scorer hash、corpus digest、Pack 身份和 N/K；任何对已有 record revision 的原地改写都必须让 `bun run validate` 失败。
 
-只有所有 query 都以合法 `status=ok` 完成才是完整 batch。结构错误、退出码/status 不匹配、Profile/runtime/index 准备失败、harness error 或缺失 case 让 batch 不完整且不进入相关性分母；重跑给新 run ID，不拼接 partial results。
+只有所有 query 都以合法 `status=ok` 完成才是完整 batch。结构错误、退出码/status 不匹配、Profile/runtime/index 准备失败、harness error 或缺失 case 让 batch 不完整且不进入相关性分母；重跑给新 run ID，不拼接 partial results。Store/index 或 harness client 在 case 执行前 setup 失败时，runner 仍必须写出 immutable `failed` batch artifact/record，记录 `setup_failure` 阶段和稳定 errorCode，不能只抛出进程错误。
+
+已有 record 的 revision 若为 `candidate` 或 `pilot`，validator 必须拒绝，因为它们与实际冻结生命周期矛盾。
 
 替代方案：一条 query 一条 Agent record，或将多轮结果拼成一个完整集。二者都破坏了真实运行单位与配置/故障的可追溯性。
 
 ### 6. 固定比较条件；实现与 baseline 分阶段
 
-runner/protocol contract tests 先在模拟 harness 上完成，再对固定协议 v1 开发 corpus setup、scorer 与批次 schema。正式完整 baseline 使用可重建的 Lorelum commit `caecc53694d3162bd145e30f3bc5628ee6902b0c`、固定 Pack Store/index、Profile `72c7404af9d533dce3dd5f5e62987fcb225ffdfd180ae2951879d3a54044c2a5`、native runtime 和完整 labels/query revision。合成 smoke IDs 未被复用。baseline 不设效果门槛；排序改动在 baseline 冻结后进行，并在同一 benchmark revision/config 下对比。
+runner/protocol contract tests 先在模拟 harness 上完成，再对固定协议 v1 开发 corpus setup、scorer 与批次 schema。v1 首轮失败后没有原地改题：`v1` 恢复为失败 record 产生时的内容，`v2` 承载 artifact pin、50 条 query/label/scorer 和正式 baseline。正式完整 baseline 使用可重建的 Lorelum commit `caecc53694d3162bd145e30f3bc5628ee6902b0c`、固定 Pack Store/index、Profile `72c7404af9d533dce3dd5f5e62987fcb225ffdfd180ae2951879d3a54044c2a5`、native runtime 和完整 labels/query revision。合成 smoke IDs 未被复用。baseline 不设效果门槛；排序改动在 baseline 冻结后进行，并在同一 benchmark revision/config 下对比。
 
 固定 Lorelum CLI 的 Store-only semantic artifact 发布在 derived cache，而最初 harness 直接以 Store root 读取 semantic index。主仓库已在 baseline commit 中让 harness 从 benchmark 专用 `LORELUM_BENCHMARK_CACHE_ROOT` 读取同一 content-addressed artifact，未设置时回退默认 cache；五字段 stdin、N/K 和输出字段保持不变。该修正后的完整 baseline 与 replay 逐例名单和 score 一致，详见 `verification.md`。
 
@@ -99,7 +101,7 @@ runner/protocol contract tests 先在模拟 harness 上完成，再对固定协�
 
 ## Risks / Trade-offs
 
-- [主仓库 commit 当前在本地 checkout 可用但 GitHub API 尚不能解析] → runner 支持显式本地 git checkout 和 SHA 校验；正式 baseline 前保证该 commit 能被独立重建，不能将 dirty/uncommitted 树当成基线。
+- [历史 v1 与当前 v2 同时存在] → suite manifest 声明全部 revision 及其 lifecycle；validator 按 record 的 revision 解析历史文件，v1 failed record 与 v2 baseline 都保留。
 - [Pack Registry descriptor/ref 漂移或无法访问] → 对每个安装回执核对 source commit 和 artifact digest；任意不符即停止，不使用当前机器已安装内容替代。
 - [Profile/native model/runtime/index 不可用] → preflight/CLI 状态归类为运行环境问题；不产生 candidate miss/排名分数，不自动下载模型。
 - [forbidden 标签主观] → 只为高置信明确不适用 Practice 标注；普通近邻保持 unlabelled，且不要求逐语料穷举负标。
@@ -107,4 +109,4 @@ runner/protocol contract tests 先在模拟 harness 上完成，再对固定协�
 
 ## Migration Plan
 
-本 change 添加独立 track、schema、validator、runner、scorer 和 batch record；不迁移或重写现有 Agent suite/schema/records。首个正式比较从完整改动前 baseline 开始；之后 query、labels、corpus inventory 或 scorer 语义变化时创建新 benchmark revision，历史 run/artifacts 保持不变。
+本 change 添加独立 track、schema、validator、runner、scorer 和 batch record；不迁移或重写现有 Agent suite/schema/records。`v1` 保留为已有 failed record 的历史 revision，`v2` 是当前活动 revision 和正式 baseline。之后 query、labels、corpus inventory 或 scorer 语义变化时创建新 benchmark revision，历史 run/artifacts 保持不变。

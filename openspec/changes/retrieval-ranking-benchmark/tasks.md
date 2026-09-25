@@ -33,4 +33,14 @@
 ## 5. 验证与完整改动前 baseline
 
 - [x] 5.1 运行 `openspec validate retrieval-ranking-benchmark --type change --strict --json`、`bun run validate` 和全部相关 contract tests；审计无 gold-to-harness 泄漏
-- [x] 5.2 仅在完整 Pack Store/index 可重建、Profile/native runtime ready 且 Lorelum commit 可从干净固定 checkout 重建时，运行全量案例并生成一条完整改动前 baseline 和校验过的结果附件；锁定 N=20/K=5，不设检索分数门槛，禁止使用主仓库合成 smoke IDs。主仓库 `caecc53694d3162bd145e30f3bc5628ee6902b0c` 修正 derived-cache 路由后，50/50 case 完成；baseline 与 replay 的 candidateIds、finalIds 和 score 一致，记录与证据见 `verification.md`
+- [x] 5.2 仅在完整 Pack Store/index 可重建、Profile/native runtime ready 且 Lorelum commit 可从干净固定 checkout 重建时，运行全量案例并生成一条完整改动前 baseline 和校验过的结果附件；锁定 N=20/K=5，不设检索分数门槛，禁止使用主仓库合成 smoke IDs。主仓库 `caecc53694d3162bd145e30f3bc5628ee6902b0c` 修正 derived-cache 路由后，v2 的 50/50 case 完成；baseline 与 replay 的 candidateIds、finalIds 和 score 一致，记录与证据见 `verification.md`
+
+## 6. 第一轮 review 修复
+
+写入范围：`suites/retrieval-ranking/`、`schemas/`、`src/benchmark/retrieval-ranking/` 和 `results/records/`；不改变 query/label/scorer 语义。
+
+- [x] 6.1 恢复 v1 为 failed record 产生时的原始内容并保留该 record；将 artifact pin、50 条 query/label/scorer 和正式 baseline 放入新 v2 revision
+- [x] 6.2 扩展 suite manifest 的 revision 声明，并让 validator 按 record 的 suiteVersion/revision 校验 cases/labels/scorer hash、corpus digest、Pack 身份和 N/K
+- [x] 6.3 捕获 Store/index 与 harness client setup 失败，写出带 `setup_failure` 的 failed artifact/record，且不保留部分候选/最终名单
+- [x] 6.4 让存在 record 的 revision 必须处于 frozen 或后续 lifecycle，并增加对应回归测试
+- [x] 6.5 用 v2 新 run ID 重跑 baseline/replay，更新冻结证据、revision 文档和 PR 说明

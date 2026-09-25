@@ -1,10 +1,15 @@
 id: retrieval-ranking
 version: 1.0.0
 track: retrieval-ranking
-lifecycle_stage: candidate
-revision: v1
-corpus: v1/corpus/inventory.json
-cases: v1/cases/queries.json
-labels: v1/private/labels.json
-scorer: v1/private/scorer.json
+lifecycle_stage: frozen
+revision: v2
+revisions:
+  - revision: v1
+    lifecycle_stage: frozen
+  - revision: v2
+    lifecycle_stage: frozen
+corpus: v2/corpus/inventory.json
+cases: v2/cases/queries.json
+labels: v2/private/labels.json
+scorer: v2/private/scorer.json
 protocol: ../../docs/RETRIEVAL_RANKING_PROTOCOL.md

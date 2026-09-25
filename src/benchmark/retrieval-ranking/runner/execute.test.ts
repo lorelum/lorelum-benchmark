@@ -150,6 +150,55 @@ describe("retrieval batch runner", () => {
     }
   });
 
+  test("records a failed batch when Store or index setup fails before harness invocation", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "retrieval-runner-setup-"));
+    try {
+      const record = await executeRetrievalBatch({
+        ...options(workspace),
+        prepareStore: async () => {
+          throw new Error("pack install failed");
+        },
+      });
+      expect(record.batch_status).toBe("failed");
+      expect(record.outcome.retrieval_scored).toBe(false);
+      expect(record.setup_failure).toEqual({ phase: "prepare-store", error_code: "corpus_setup_failed" });
+      expect(record.execution).toMatchObject({
+        case_count: 1,
+        successful_case_count: 0,
+        failure_count: 1,
+        failures: [],
+      });
+      const artifact = JSON.parse(await readFile(record.result_artifact.path, "utf8")) as Record<string, unknown>;
+      expect(artifact).toMatchObject({
+        status: "failed",
+        cases: [],
+        failures: [],
+        setupFailure: { phase: "prepare-store", errorCode: "corpus_setup_failed" },
+        score: null,
+      });
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  test("records a failed batch when the harness client cannot be created", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "retrieval-runner-client-"));
+    try {
+      const record = await executeRetrievalBatch({
+        ...options(workspace),
+        createClient: async () => {
+          throw new Error("checkout is dirty");
+        },
+      });
+      expect(record.batch_status).toBe("failed");
+      expect(record.outcome.retrieval_scored).toBe(false);
+      expect(record.setup_failure).toEqual({ phase: "create-client", error_code: "harness_setup_failed" });
+      expect(record.execution.failure_count).toBe(1);
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   test("never passes gold labels into the harness request", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "retrieval-runner-input-"));
     let captured: Record<string, unknown> | null = null;
