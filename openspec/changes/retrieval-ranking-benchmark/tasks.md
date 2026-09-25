@@ -33,4 +33,4 @@
 ## 5. 验证与完整改动前 baseline
 
 - [x] 5.1 运行 `openspec validate retrieval-ranking-benchmark --type change --strict --json`、`bun run validate` 和全部相关 contract tests；审计无 gold-to-harness 泄漏
-- [ ] 5.2 仅在完整 Pack Store/index 可重建、Profile/native runtime ready 且 Lorelum commit 可从干净固定 checkout 重建时，运行全量案例并生成一条完整改动前 baseline 和校验过的结果附件；锁定 N=20/K=5，不设检索分数门槛，禁止使用主仓库合成 smoke IDs。当前固定 harness 使用 Store-local semantic reader，而固定 Lorelum CLI 将 Store-only semantic artifact 发布到 derived cache；harness 返回 `index_unavailable` 而不是候选/最终名单，因此 baseline 阻塞，需主仓库修正 harness 索引路由后重跑
+- [x] 5.2 仅在完整 Pack Store/index 可重建、Profile/native runtime ready 且 Lorelum commit 可从干净固定 checkout 重建时，运行全量案例并生成一条完整改动前 baseline 和校验过的结果附件；锁定 N=20/K=5，不设检索分数门槛，禁止使用主仓库合成 smoke IDs。主仓库 `caecc53694d3162bd145e30f3bc5628ee6902b0c` 修正 derived-cache 路由后，50/50 case 完成；baseline 与 replay 的 candidateIds、finalIds 和 score 一致，记录与证据见 `verification.md`

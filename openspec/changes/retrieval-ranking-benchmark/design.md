@@ -8,7 +8,7 @@
 
 ### 上游 harness v1
 
-主仓库实现固定在 commit `6bf1e1b390df3bffad13d4131939b84126b0242c`（`feat(retrieval): separate candidate and result widths`）。该 commit 只拆开 N/K，保留原候选顺序。协议文档是 `docs/development/semantic-retrieval-benchmark-harness.md`，从锁定 checkout 根目录启动：
+主仓库最初在 commit `6bf1e1b390df3bffad13d4131939b84126b0242c`（`feat(retrieval): separate candidate and result widths`）拆开 N/K，保留原候选顺序；随后在 `caecc53694d3162bd145e30f3bc5628ee6902b0c` 修正 derived-cache 路由并记录 clean-checkout 复现。baseline 固定在 `caecc53694d3162bd145e30f3bc5628ee6902b0c`。协议文档是 `docs/development/semantic-retrieval-benchmark-harness.md`，从锁定 checkout 根目录启动：
 
 ```sh
 bun packages/backend/src/benchmark/semantic-retrieval-harness.ts
@@ -18,7 +18,7 @@ bun packages/backend/src/benchmark/semantic-retrieval-harness.ts
 
 主仓库该 commit 的真实 smoke 使用 Profile `72c7404af9d533dce3dd5f5e62987fcb225ffdfd180ae2951879d3a54044c2a5`、win32-x64 native runtime、ready semantic index、8 条合成 Practice，exit 0 / `status: "ok"`，final 保留旧候选顺序。它只证明 harness/runtime/protocol 可以工作，不是 benchmark baseline；所有 `benchmark.practiceNN` 合成 IDs 禁止进入正式 query、labels 或结果。
 
-当前 Lorelum commit 在本地 `E:\lorelum` 可读，但尚不能由 GitHub API 按 SHA 获取。Runner 允许指定本地 Lorelum git checkout 和 commit 并验证两者一致；完整 baseline 前要求该 commit 对实际运行环境可重建（例如推送到主仓库远端或提供固定 bundle），不能依赖 uncommitted working tree。
+Lorelum commit 已从 `lorelum/lorelum` origin 分支 fetch，并在独立、干净的 detached checkout 中重建后运行。Runner 仍要求指定本地 Lorelum git checkout 和 commit 并验证两者一致，且不能依赖 uncommitted working tree。
 
 ### 固定 corpus
 
@@ -87,9 +87,9 @@ Scorer 报告每个 core 的 Recall@N、final top-K/rank、candidate miss 与 ra
 
 ### 6. 固定比较条件；实现与 baseline 分阶段
 
-现在可用模拟 harness 完成 runner/protocol contract tests，并针对给定协议 v1 开发 corpus setup、scorer 与批次 schema。主仓库本地 commit `6bf1e1b390df3bffad13d4131939b84126b0242c` 和已报告的模型 smoke 是接入基线；正式完整 baseline 还要固定可重建 Lorelum checkout、完整 Pack Store/index、Profile `72c7404af9d533dce3dd5f5e62987fcb225ffdfd180ae2951879d3a54044c2a5`、native runtime 和完整 labels/query revision。合成 smoke IDs 不能被复用。完整 baseline 不设效果门槛；排序改动必须之后进行，并在同一 benchmark revision/config 下对比。
+runner/protocol contract tests 先在模拟 harness 上完成，再对固定协议 v1 开发 corpus setup、scorer 与批次 schema。正式完整 baseline 使用可重建的 Lorelum commit `caecc53694d3162bd145e30f3bc5628ee6902b0c`、固定 Pack Store/index、Profile `72c7404af9d533dce3dd5f5e62987fcb225ffdfd180ae2951879d3a54044c2a5`、native runtime 和完整 labels/query revision。合成 smoke IDs 未被复用。baseline 不设效果门槛；排序改动在 baseline 冻结后进行，并在同一 benchmark revision/config 下对比。
 
-当前实现验证暴露了一个上游前提缺口：固定 harness 直接以 Store root 读取 semantic index，而固定 Lorelum CLI 的 Store-only semantic artifact 发布在 derived cache。结果可以是 CLI `index status` ready，但 harness 仍返回 `index_unavailable`。这属于环境/运行契约问题，不是 candidate recall 或 final ranking 结果。主仓库修正 harness 的索引路由或明确等价输入之前，不生成 baseline，也不改排序算法。
+固定 Lorelum CLI 的 Store-only semantic artifact 发布在 derived cache，而最初 harness 直接以 Store root 读取 semantic index。主仓库已在 baseline commit 中让 harness 从 benchmark 专用 `LORELUM_BENCHMARK_CACHE_ROOT` 读取同一 content-addressed artifact，未设置时回退默认 cache；五字段 stdin、N/K 和输出字段保持不变。该修正后的完整 baseline 与 replay 逐例名单和 score 一致，详见 `verification.md`。
 
 首版预计 30–50 queries、约 8–10 场景组是规划估计，不是硬性数量门槛；以 scenario coverage、完整语料和标签可验证为准。
 

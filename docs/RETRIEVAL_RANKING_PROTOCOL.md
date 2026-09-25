@@ -55,7 +55,7 @@ runner 不读取用户默认 Store，也不使用当前机器上未固定的 Ins
 ```sh
 bun run src/benchmark/retrieval-ranking/runner/run.ts \
   --lorelum-root /absolute/lorelum-checkout \
-  --lorelum-commit 6bf1e1b390df3bffad13d4131939b84126b0242c \
+  --lorelum-commit caecc53694d3162bd145e30f3bc5628ee6902b0c \
   --store-root /absolute/test-store \
   --cache-root /absolute/test-cache \
   --model-id <model-id> \
@@ -67,11 +67,17 @@ bun run src/benchmark/retrieval-ranking/runner/run.ts \
 
 Runner 只有在一个 revision 的全部 case 都返回合法 `0 + status=ok` 时才评分。任何 process、protocol、Profile、runtime 或 index 失败都会让 batch 为 `failed`，结果附件保留逐例执行失败但不保留候选/最终名单，也不进入相关性分母。重跑使用新的 run ID，不拼接 partial results。
 
-## 当前上游阻塞
+## 冻结 baseline
 
-固定 Lorelum commit `6bf1e1b390df3bffad13d4131939b84126b0242c` 的 CLI `index build/status` 为 Store-only query 发布 derived-cache semantic artifact，但同一 commit 的本地 harness 直接用请求中的 `storeRoot` 作为 semantic index root。两者路径不一致时，CLI 可以报告 `index: ready`，harness 仍返回 `index_unavailable`。
+首版 baseline 使用 Lorelum commit `caecc53694d3162bd145e30f3bc5628ee6902b0c`。该 commit 已让 harness 从 `LORELUM_BENCHMARK_CACHE_ROOT` 读取与 Store-only CLI 相同的 derived content-addressed semantic artifact，未设置该变量时回退 `defaultQueryArtifactCacheRoot()`；五字段 stdin、N/K、普通 `lore query` 和公开 API 不变。
 
-该失败是环境/harness 契约问题，不能记成 candidate miss、ranking miss 或 scope error。主仓库必须先让 harness 在收到 `LORELUM_BENCHMARK_CACHE_ROOT` 时读取与 Store-only CLI 相同的 derived semantic artifact，未设置该变量时回退到 `defaultQueryArtifactCacheRoot()`；同时保持现有五字段 stdin 和不返回正文/分数。若选择其他等价且可复现的索引准备合同，必须先同步修改本协议和 benchmark commit。在此之前不生成 baseline。
+- 正式 batch：`retrieval-ranking-v1-baseline-caecc53`，50/50 case 完成，失败为 0。
+- replay：`retrieval-ranking-v1-baseline-caecc53-replay`，50/50 case 完成，逐例 `candidateIds`、`finalIds` 和 score 与正式 batch 一致。
+- 结果：core candidate recall 49/50；core final top-5 hit 42/50；1 个 candidate miss；7 个 final-ranking miss；2 个 scope error case。
+- 记录：`results/records/retrieval-ranking-v1-baseline-caecc53.json` 和同名 `-replay.json`。
+- artifact：`artifacts/retrieval-ranking/<run-id>.json`。按仓库规则，大 artifact 保持忽略，Git 记录路径与 SHA-256；baseline artifact hash 为 `74636841baaf9ea0118ff863fc3ce6441d0d0d50df78ecc6afc58be5450f3790`，replay artifact hash 为 `891d5f157e6ead9cf645630403d16e95623f4c6c0836e718d31e18a45a583034`。
+
+逐例失败名单、native/model/index provenance 和复现证据见本 change 的 [`verification.md`](../openspec/changes/retrieval-ranking-benchmark/verification.md)。baseline 冻结后，后续对比只更换预先声明的 Lorelum build；benchmark revision、corpus、Profile、模型、native runtime 和 N/K 必须保持相同。
 
 ## 逐例判定
 
