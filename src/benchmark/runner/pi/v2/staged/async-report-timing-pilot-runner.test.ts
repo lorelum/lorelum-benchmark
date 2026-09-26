@@ -3,6 +3,7 @@ import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { readTimingPilotPlan, timingPilotPlanPath, type TimingPilotPreflightSummary } from "./async-report-timing-pilot";
 import { runTimingPilotAttempts, type TimingPilotRunnerDependencies } from "./async-report-timing-pilot-runner";
+import { canonicalScratchTimestamp, scratchRunId, scratchRunIdPattern } from "../../scratch-id";
 import { CHECK_IDS, buildEvaluatorResult } from "../../../../../../incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/result";
 import { workspaceRoot } from "../../../../fs";
 import type { StagedPracticeAttemptReport, StagedPracticeRunOptions } from "./staged-practice-delivery";
@@ -255,3 +256,15 @@ test("a Judge indeterminate result remains separate from the hard evaluator", as
   expect(result.attempts[0].status).toBe("indeterminate");
   expect(result.formal_record_created).toBe(false);
 }, 30_000);
+
+test("timestamp-derived scratch run ids always satisfy the runner id pattern", () => {
+  const fixed = new Date("2026-09-26T06:08:22.123Z");
+  // `Date#toISOString` emits uppercase T/Z; the helpers must case-normalize so a
+  // CLI default can never fail the runner's own `scratchRunIdPattern` validation.
+  expect(canonicalScratchTimestamp(fixed)).toBe("2026-09-26t06-08-22-123z");
+  for (const prefix of ["pilot-", "v4-one-block-"]) {
+    const id = scratchRunId(prefix, fixed);
+    expect(scratchRunIdPattern.test(id)).toBe(true);
+    expect(id).toBe(id.toLowerCase());
+  }
+});

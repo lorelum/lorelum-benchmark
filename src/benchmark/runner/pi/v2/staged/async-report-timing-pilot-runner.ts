@@ -4,6 +4,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
 import { sha256Text, workspaceRoot } from "../../../../fs";
 import { run as runCommand } from "../preflight";
+import { scratchRunIdPattern } from "../../scratch-id";
 import { localPiApiKey, localPiModelArgument, localPiModelBaseUrl, localPiShellPath, configureLocalPiModelCatalog } from "../local-pi-model-catalog";
 import {
   validateTimingPilotRunnerIdentity,
@@ -317,7 +318,7 @@ export async function runTimingPilotAttempts(options: {
   const root = resolve(options.root ?? workspaceRoot);
   const plan = options.plan;
   const env = options.env ?? Bun.env;
-  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(options.run_id)) fail("run id is invalid");
+  if (!scratchRunIdPattern.test(options.run_id)) fail("run id is invalid");
   const executionMode = options.preflight.execution_mode;
   if (executionMode !== "judge-scored" && executionMode !== "diagnostic-only") fail("preflight execution mode is invalid");
   if (options.preflight.allowed_to_start !== true || options.preflight.plan_hash !== plan.plan_hash || options.preflight.status !== "ready") fail("successful matching preflight is required before any Agent attempt");

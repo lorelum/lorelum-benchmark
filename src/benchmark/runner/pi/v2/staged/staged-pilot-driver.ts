@@ -1,6 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { workspaceRoot } from "../../../../fs";
+import { scratchRunId } from "../../scratch-id";
 import { resolveTwoStageInjectionCalibration, resolveTwoStagePracticePayload, redactedTwoStageTrace } from "../../../../kernel/profiles/two-stage-injection-calibration/v1/runtime";
 import type { RedactedTwoStageTrace, ResolvedTwoStageProfile } from "../../../../kernel/profiles/two-stage-injection-calibration/v1/types";
 import { configureLocalPiModelCatalog, localPiApiKey } from "../local-pi-model-catalog";
@@ -255,7 +256,7 @@ export const pilotDisclaimer = "one-block diagnostic smoke: 不构成 directiona
 if (import.meta.main) {
   const mode = Bun.argv[2] as "preflight" | "dry-run" | "run" | undefined;
   const runIdArgument = Bun.argv.indexOf("--run-id");
-  const runId = runIdArgument !== -1 && Bun.argv[runIdArgument + 1] ? Bun.argv[runIdArgument + 1] : `v4-one-block-${new Date().toISOString().replaceAll(/[:.]/g, "-")}`;
+  const runId = runIdArgument !== -1 && Bun.argv[runIdArgument + 1] ? Bun.argv[runIdArgument + 1] : scratchRunId("v4-one-block-");
   const blocksArgument = Bun.argv.indexOf("--blocks");
   const blocks = blocksArgument !== -1 && Number.isInteger(Number(Bun.argv[blocksArgument + 1])) ? Number(Bun.argv[blocksArgument + 1]) : 1;
   const outputArgument = Bun.argv.indexOf("--output");

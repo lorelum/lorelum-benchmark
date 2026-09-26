@@ -13,6 +13,7 @@ import { calibrationAttestationKey, calibrationScope, resolveCalibrationStatus }
 import type { CalibrationReport } from "../../../../judge/async-report-replan/v1/types";
 import { configureLocalPiModelCatalog, localPiApiKey, localPiModelArgument, localPiModelBaseUrl, localPiShellPath } from "../local-pi-model-catalog";
 import { piCommand, preflightTimeoutMs, run as runPiCommand } from "../preflight";
+import { scratchRunId } from "../../scratch-id";
 import { assertSeparateRoots, prepareStagedPracticeDelivery, type StagedPracticeDeliveryPlan } from "./staged-practice-delivery";
 import { loadEvaluatorIdentity } from "../../../../../../incubator/practice-injection/async-report-lifecycle-evaluator-v1/private/evaluator/v1/identity";
 
@@ -191,6 +192,7 @@ const timingPilotRunnerSourcePaths = [
   "src/benchmark/runner/pi/v2/staged/checkpoint-marker.ts",
   "src/benchmark/runner/pi/v2/local-pi-model-catalog.ts",
   "src/benchmark/runner/pi/v2/preflight.ts",
+  "src/benchmark/runner/pi/scratch-id.ts",
   "src/benchmark/judge/async-report-replan/v1/accounting.ts",
   "src/benchmark/judge/async-report-replan/v1/calibration.ts",
   "src/benchmark/judge/async-report-replan/v1/evidence.ts",
@@ -1007,7 +1009,7 @@ if (import.meta.main) {
           if (summary.plan_hash !== plan.plan_hash || (executionMode === "judge-scored" && summary.judge.calibration_hash !== cachedCalibration?.hash)) throw new Error("preflight summary does not match the selected plan and calibration report");
           const result = await (await import("./async-report-timing-pilot-runner")).runTimingPilotAttempts({
             root, plan,
-            run_id: argValue(args, "--run-id") ?? "pilot-" + new Date().toISOString().replaceAll(/[:.]/g, "-"),
+            run_id: argValue(args, "--run-id") ?? scratchRunId("pilot-"),
             output_root: join(artifactDirectory, "attempts"),
             preflight: summary,
             ...(cachedCalibration ? { calibration: cachedCalibration } : {}),

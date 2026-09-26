@@ -5,11 +5,11 @@
   "files": [
     {
       "path": "src/benchmark/runner/pi/v2/staged/async-report-timing-pilot.ts",
-      "sha256": "8c8a3328d36a1449f2cd70c4fc9bc894e99a25ee2592bfc9ae52883803d22892"
+      "sha256": "a44e72503b9deb9845db0dadaea82dab096efc202d5609294f17e4052f5711cc"
     },
     {
       "path": "src/benchmark/runner/pi/v2/staged/async-report-timing-pilot-runner.ts",
-      "sha256": "7d7a888fcb534288fc172c0263c243769e6a11958e44118fec055493d0807965"
+      "sha256": "63a9a28bfd98083d292b18d6c1a6a787f5815c0c7d6a37e53f563e8301cd0235"
     },
     {
       "path": "src/benchmark/runner/pi/v2/staged/timing-pilot-judge-diagnostics.ts",
@@ -33,7 +33,7 @@
     },
     {
       "path": "src/benchmark/runner/pi/v2/staged/checkpoint-marker.ts",
-      "sha256": "184ea6f1ea62b816cd462b169d328dbe86082a7377408311d81eb2f202ee16aa"
+      "sha256": "bedf3e4bb3b4498d0f261f2d03d207fb3851411308715075ebd79baf35223612"
     },
     {
       "path": "src/benchmark/runner/pi/v2/local-pi-model-catalog.ts",
@@ -42,6 +42,10 @@
     {
       "path": "src/benchmark/runner/pi/v2/preflight.ts",
       "sha256": "ff5a7ff577b2f6425c62c901bd0a22b45683614b5155abcd858ae73325163327"
+    },
+    {
+      "path": "src/benchmark/runner/pi/scratch-id.ts",
+      "sha256": "b584b53dbfef8b324284c81143f7e8da25043b7c15b6fbcbd3878077810d50cf"
     },
     {
       "path": "src/benchmark/judge/async-report-replan/v1/accounting.ts",

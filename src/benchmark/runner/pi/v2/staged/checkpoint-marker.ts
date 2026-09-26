@@ -8,8 +8,18 @@ function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+/**
+ * Agents frequently wrap the checkpoint marker in inline Markdown emphasis
+ * (`**CHECKPOINT: ...**`, `` `CHECKPOINT: ...` ``, `_CHECKPOINT: ..._`). The
+ * delivery contract still requires the marker to be the whole line, but the
+ * emphasis delimiters around it must not hide an otherwise exact match.
+ */
+function stripInlineEmphasis(line: string): string {
+  return line.replace(/^[`*_]+/, "").replace(/[`*_]+$/, "");
+}
+
 function textHasCheckpointMarker(value: unknown, marker: string): boolean {
-  return typeof value === "string" && value.split(/\r?\n/).some((line) => line.trim() === marker);
+  return typeof value === "string" && value.split(/\r?\n/).some((line) => stripInlineEmphasis(line.trim()) === marker);
 }
 
 function assistantContentHasCheckpointMarker(value: unknown, marker: string): boolean {

@@ -246,7 +246,7 @@ test("physical workspace and artifact boundaries reject symlink aliases", async 
   if (linked) await expect(assertSeparateRoots(workspace, artifacts)).rejects.toThrow();
 });
 
-test("checkpoint marker matching is line-exact and ignores user prompt events", () => {
+test("checkpoint marker matching is whole-line and ignores user prompt events", () => {
   expect(hasCheckpointMarker(`prefix ${checkpointMarker} suffix`)).toBe(false);
   expect(hasCheckpointMarker(`\n${checkpointMarker}\n`)).toBe(false);
   expect(hasCheckpointMarker(JSON.stringify({
@@ -257,6 +257,27 @@ test("checkpoint marker matching is line-exact and ignores user prompt events", 
     type: "message_update",
     message: { role: "assistant", content: [{ type: "text", text: `implementation\n${checkpointMarker}\n` }] },
   }))).toBe(true);
+});
+
+test("checkpoint marker survives inline Markdown emphasis but not a mention inside a sentence", () => {
+  const assistantText = (text: string) => JSON.stringify({
+    type: "message_update",
+    message: { role: "assistant", content: [{ type: "text", text }] },
+  });
+  // Models routinely emphasize the marker; the delimiters must not hide a real signal.
+  for (const wrapped of [
+    `**${checkpointMarker}**`,
+    `__${checkpointMarker}__`,
+    `*${checkpointMarker}*`,
+    `_${checkpointMarker}_`,
+    `\`${checkpointMarker}\``,
+    `  **${checkpointMarker}**  `,
+  ]) {
+    expect(hasCheckpointMarker(assistantText(`The slice is ready.\n\n${wrapped}\n`))).toBe(true);
+  }
+  // Reusing the marker inside prose is still not a delivery signal.
+  expect(hasCheckpointMarker(assistantText(`I will print **${checkpointMarker}** once the slice passes.\n`))).toBe(false);
+  expect(hasCheckpointMarker(assistantText(`Done: **${checkpointMarker}** and more text\n`))).toBe(false);
 });
 
 test("checkpoint extension aborts on assistant text deltas", async () => {
