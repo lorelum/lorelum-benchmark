@@ -1,0 +1,87 @@
+{
+  "schema_version": "async-report-timing-pilot-runner/v1",
+  "id": "async-report-timing-pilot-runner",
+  "version": "v1",
+  "files": [
+    {
+      "path": "src/benchmark/runner/pi/v2/staged/async-report-timing-pilot.ts",
+      "sha256": "a44e72503b9deb9845db0dadaea82dab096efc202d5609294f17e4052f5711cc"
+    },
+    {
+      "path": "src/benchmark/runner/pi/v2/staged/async-report-timing-pilot-runner.ts",
+      "sha256": "63a9a28bfd98083d292b18d6c1a6a787f5815c0c7d6a37e53f563e8301cd0235"
+    },
+    {
+      "path": "src/benchmark/runner/pi/v2/staged/timing-pilot-judge-diagnostics.ts",
+      "sha256": "5612a7e19dace24626a24d4268d672e18cf33e2b319f760ba9ea8f289c3b9b72"
+    },
+    {
+      "path": "src/benchmark/runner/pi/v2/staged/staged-practice-delivery.ts",
+      "sha256": "f9e248e182ce2883f25ee5586f0d186971de749f8acf008cf2f57678e1bf0fb1"
+    },
+    {
+      "path": "src/benchmark/runner/pi/v2/staged/staged-practice-delivery-pi-adapter.ts",
+      "sha256": "fc05fefc8c5544c1792006863aa1b3eb943e99240322fd8aa875d510120c3c37"
+    },
+    {
+      "path": "src/benchmark/runner/pi/v2/staged/timing-pilot-runtime-extension.ts",
+      "sha256": "57c362409e04f9727a00a569e4c2504fefeb0670cddfb0fa11ae3361f623bc22"
+    },
+    {
+      "path": "src/benchmark/runner/pi/v2/staged/checkpoint-stop-extension.ts",
+      "sha256": "5d735236590bf89a6e58aafb2d52905173447eecbc9dcd2e33e9c76512fc23ac"
+    },
+    {
+      "path": "src/benchmark/runner/pi/v2/staged/checkpoint-marker.ts",
+      "sha256": "bedf3e4bb3b4498d0f261f2d03d207fb3851411308715075ebd79baf35223612"
+    },
+    {
+      "path": "src/benchmark/runner/pi/v2/local-pi-model-catalog.ts",
+      "sha256": "0b1918eae075bcf749ffde3b0b298e9068e13524aa117d241a1fff61388d25a5"
+    },
+    {
+      "path": "src/benchmark/runner/pi/v2/preflight.ts",
+      "sha256": "ff5a7ff577b2f6425c62c901bd0a22b45683614b5155abcd858ae73325163327"
+    },
+    {
+      "path": "src/benchmark/runner/pi/scratch-id.ts",
+      "sha256": "b584b53dbfef8b324284c81143f7e8da25043b7c15b6fbcbd3878077810d50cf"
+    },
+    {
+      "path": "src/benchmark/judge/async-report-replan/v1/accounting.ts",
+      "sha256": "b023e0810bf2606c3adbe14ca375172c28cbb8f38cb4404a3f165498f61566c7"
+    },
+    {
+      "path": "src/benchmark/judge/async-report-replan/v1/calibration.ts",
+      "sha256": "102456d871b7c8be5e4b90c257e1ad892ead2337063080d438922500bcb097d3"
+    },
+    {
+      "path": "src/benchmark/judge/async-report-replan/v1/evidence.ts",
+      "sha256": "aefad3360a3c0cfd337c47b9ca579cbb280cf16bab5bc109a3539644ea8fa41d"
+    },
+    {
+      "path": "src/benchmark/judge/async-report-replan/v1/llm.ts",
+      "sha256": "73bb6b4e2a92aa0010a8bbfe6fdd5421bfab504f1c73b3a5a9d968c6375d9f99"
+    },
+    {
+      "path": "src/benchmark/judge/async-report-replan/v1/plan.ts",
+      "sha256": "39bfdb49149f90aa91be8d49cb8eb2402b0466418570052f22a5c90c4cfd38a8"
+    },
+    {
+      "path": "src/benchmark/judge/async-report-replan/v1/provider.ts",
+      "sha256": "c0f80dc24ffecb6940adc2466f3eda206c52a4c9a6c9baf574f4a3472b0170a3"
+    },
+    {
+      "path": "src/benchmark/judge/async-report-replan/v1/rubric.ts",
+      "sha256": "e8f8b1fa1860f9bb93f1cfa37fbe98334717a04eccbc97cc6845444483c2048f"
+    },
+    {
+      "path": "src/benchmark/judge/async-report-replan/v1/run.ts",
+      "sha256": "6943e0426e567f541a7c611e1d6d663eab2f7693ea8b07e7d5acaaea134f17da"
+    },
+    {
+      "path": "src/benchmark/judge/async-report-replan/v1/score.ts",
+      "sha256": "dec75eb78b1e125e19acd2f7e7f4382789b9a9b035cb81afec25ad1ed1f517c7"
+    }
+  ]
+}

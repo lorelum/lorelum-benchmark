@@ -1,0 +1,18 @@
+id: local-pi
+version: v4
+bun: 1.4.2
+node: 24.21.0
+agent_runtime:
+  id: pi
+  version: 0.85.1
+  command: pi
+model:
+  id: deepseek/deepseek-v4-flash
+  version: operator-local-experiment
+sandbox:
+  policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+dependencies:
+  package: '@earendil-works/pi-coding-agent@0.85.1'
+  manifest: package.json
+  lockfile: bun.lock
+  lockfile_sha256: 714a2a5529f6873490187a3a7e0d9b54d36fc8fae23b6e18343663407b2aff9f

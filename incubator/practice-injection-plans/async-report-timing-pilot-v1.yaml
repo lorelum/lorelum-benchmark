@@ -1,0 +1,90 @@
+schema_version: async-report-timing-pilot/v1
+id: async-report-timing-pilot
+version: v1
+lifecycle_stage: pilot
+candidate:
+  path: incubator/practice-injection/async-report-lifecycle-v1
+  source_commit: 74962ee0c98f7775b0eb626f7b49b878035d8778
+  snapshot_id: ee588de3877ab91f2c1dfe8219bb7f9834671dd2a275531485f9d0630e0165d2
+evaluator:
+  id: async-report-deterministic-evaluator
+  version: v1
+  snapshot_id: 7d68a9e9fc32a2fc96407ad1b4f6d416f6138cddc73587614be6b6d5e8db8be1
+runner:
+  id: async-report-timing-pilot-runner
+  version: v1
+  manifest_path: incubator/practice-injection-plans/async-report-timing-pilot-runner-v1.json
+  manifest_sha256: 98d87a56d4ecafc82f7cc04e76f196ba8f64b0e95e132dc4e3017008ef74fba9
+
+treatment:
+  root: treatments/agentic-coding-replan-on-material-drift/v1
+  id: agentic-coding-replan-on-material-drift
+  version: v1
+  pack:
+    repository: https://github.com/lorelum/lorelum-packs.git
+    ref: agentic-coding-v0.4.0
+    version: 0.4.0
+    commit: df89b8d432a01c53361a0e23df6896a772942b09
+  practice:
+    id: agentic-coding.implementation.replan-on-material-drift
+    content_digest: 8913dc851d1b51e5610010b8ea9804b47c31109b8514620187f54e00ca7eb3f9
+    source_sha256: eaec0e27c85f5df6553eccf5cbcb521d2975aecfb0a3ffd0b7d754c89afa2909
+    card_sha256: 4a8de5d1546bfd7ed074b8f40e06ad142c4cb79ebdc90781f4b5c87b1bf03b97
+prompts:
+  task_path: public/task.md
+  followup_path: public/stage-2/task.md
+  task_sha256: 3c6680a7b494c61034b547cb8846ff715e7c9c9f4e513726ecabed852e02d570
+  followup_sha256: cfedffac9345e1bc9b951737f1e817c07714265cd41584bb6f506fc81714ba66
+  system_prompt_path: prompts/async-report-timing-pilot/v1/system.md
+  system_prompt_sha256: 911fb76b383b3be34fe53f073b42b10fe19305c115ffa3c21d10fcde3166c897
+  checkpoint_marker: "CHECKPOINT: compatibility-slice-ready"
+  checkpoint_resume_message: Continue the task after the compatibility checkpoint.
+execution:
+  agent:
+    id: pi
+    version: 0.85.1
+    command: pi
+  model:
+    id: deepseek/deepseek-v4-flash
+    version: operator-local-experiment
+  environment:
+    id: local-pi
+    version: v4
+    bun: 1.4.2
+    node: 24.21.0
+    manifest_sha256: 555acce5f7cc79e203113b0f5025f715fe5a6de88dd4e2b54f308b71a3f20247
+  tools: [read, bash, edit, write, grep, find, ls]
+  tool_policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+  budget:
+    max_turns: 128
+    max_duration_ms: 1500000
+judge:
+  provider_id: judge-agent/async-report-replan/v1
+  provider_version: v1
+  model: deepseek/deepseek-v4-flash
+  evaluation_plan_hash: 3b6ffa1acec2e2d42551032cd6629509260cc026c5a2211798bc3229508da388
+  rubric_hash: 2ff71b4208479e5bd3f246c9450264f52ec01f59de2944916d8e540bd03afe98
+  evidence_schema: replan-evidence/v1
+  accounting_schema: async-report-replan-judge-accounting/v1
+  real_opt_in_env: LORELUM_JUDGE_REAL=1
+  calibration:
+    max_calls: 9
+    repetitions: 3
+  scoring:
+    calls_per_attempt: 1
+    retries: 0
+schedule:
+  algorithm: cyclic-latin-square/v1
+  repetitions: 3
+  slots:
+    - { attempt_id: block-1-position-1-task-start, block: 1, position: 1, repetition: 1, condition_id: task_start, delivery_node: task_start }
+    - { attempt_id: block-1-position-2-constraint-followup, block: 1, position: 2, repetition: 1, condition_id: constraint_followup, delivery_node: constraint_followup }
+    - { attempt_id: block-1-position-3-first-implementation-checkpoint, block: 1, position: 3, repetition: 1, condition_id: first_implementation_checkpoint, delivery_node: first_implementation_checkpoint }
+    - { attempt_id: block-2-position-1-constraint-followup, block: 2, position: 1, repetition: 2, condition_id: constraint_followup, delivery_node: constraint_followup }
+    - { attempt_id: block-2-position-2-first-implementation-checkpoint, block: 2, position: 2, repetition: 2, condition_id: first_implementation_checkpoint, delivery_node: first_implementation_checkpoint }
+    - { attempt_id: block-2-position-3-task-start, block: 2, position: 3, repetition: 2, condition_id: task_start, delivery_node: task_start }
+    - { attempt_id: block-3-position-1-first-implementation-checkpoint, block: 3, position: 1, repetition: 3, condition_id: first_implementation_checkpoint, delivery_node: first_implementation_checkpoint }
+    - { attempt_id: block-3-position-2-task-start, block: 3, position: 2, repetition: 3, condition_id: task_start, delivery_node: task_start }
+    - { attempt_id: block-3-position-3-constraint-followup, block: 3, position: 3, repetition: 3, condition_id: constraint_followup, delivery_node: constraint_followup }
+claim_boundary: "diagnostic-only; no formal record, suite revision, or general/product conclusion"
+plan_hash: 63bd8f40cffb7c48fa0317fc99c70e363c2e00b38e5af928d722ad10504c7532

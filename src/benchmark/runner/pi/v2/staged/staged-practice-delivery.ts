@@ -158,6 +158,7 @@ export type StagedPracticePiAdapter = Readonly<{
 
 export type StagedPracticeRunOptions = Readonly<{
   root?: string;
+  execution_root?: string;
   plan: StagedPracticeDeliveryPlan;
   attempt_id: string;
   artifacts: string;
@@ -606,6 +607,7 @@ export async function assertRunnerOwnedArtifacts(root: string, artifacts: string
 
 export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRunOptions): Promise<StagedPracticeAttemptReport> {
   const root = options.root ?? workspaceRoot;
+  const executionRoot = options.execution_root ?? root;
   let plan: StagedPracticeDeliveryPlan;
   try {
     plan = await parseStagedPracticeDeliveryPlan(options.plan);
@@ -621,8 +623,8 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
   }
 
   await assertSeparateRoots(options.workspace, options.artifacts);
-  await assertRunnerOwnedWorkspace(root, options.workspace);
-  await assertRunnerOwnedArtifacts(root, options.artifacts);
+  await assertRunnerOwnedWorkspace(executionRoot, options.workspace);
+  await assertRunnerOwnedArtifacts(executionRoot, options.artifacts);
   const node = plan.delivery.delivery_node;
   const condition = plan.delivery.condition_id;
   const treatmentVersion = plan.treatment.version;
@@ -639,7 +641,7 @@ export async function runStagedPracticeDeliveryAttempt(options: StagedPracticeRu
     const inputs = await prepareStagedPracticeDelivery(plan, root);
     prepared = inputs.prepared;
     preflightComplete = true;
-    await setUpAttempt(root, inputs.candidate_path, options.workspace, inputs.task_prompt);
+    await setUpAttempt(executionRoot, inputs.candidate_path, options.workspace, inputs.task_prompt);
     if (options.dry_run) {
       deliveryStatus = "indeterminate";
       status = "indeterminate";
