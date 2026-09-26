@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "revision": "v1",
+  "candidateWidth": 20,
+  "resultLimit": 5,
+  "metrics": [
+    "core.candidateRecallAtN",
+    "core.finalHitAtK",
+    "core.finalRank",
+    "core.candidateMiss",
+    "core.finalRankingMiss",
+    "forbidden.finalScopeErrorAtK",
+    "coreForbidden.pairwiseOrder"
+  ]
+}
