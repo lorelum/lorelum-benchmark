@@ -80,6 +80,15 @@ Runner 只有在一个 revision 的全部 case 都返回合法 `0 + status=ok` �
 
 逐例失败名单、native/model/index provenance 和复现证据见本 change 的 [`verification.md`](../openspec/changes/retrieval-ranking-benchmark/verification.md)。baseline 冻结后，后续对比只更换预先声明的 Lorelum build；benchmark revision、corpus、Profile、模型、native runtime 和 N/K 必须保持相同。
 
+### 排序改动对比（Lorelum Issue #236）
+
+baseline 冻结后，主仓库交付只改 Engine 最终排序的 build `09e64be914dc93124230f06483c8dfc4c164a61a`；本轮用新 run ID 在完全相同的 revision/config 下重跑，只更换该 Lorelum build：
+
+- candidate：`results/records/retrieval-ranking-v2-candidate-09e64be.json`（artifact SHA-256 `3420b8048233d15184db1e5a06bf641f4ec356d2385de8d48a619ed60523343e`）
+- replay：`results/records/retrieval-ranking-v2-candidate-09e64be-replay.json`（artifact SHA-256 `09b29632b76358700886f35d6417a223b010a5a101a6cacea276878b7459c252`）
+
+同一 Pack 快照独立重建出的 derived semantic artifact 仍是 `c8f271b7ef3eba96cbc18578a4a0d030a9a470a757b1e5a59b48b26afe93bab7`，与 baseline 相同，因此差异只来自最终排序。相对 baseline：core candidate recall 49/50 不变，core final top-5 hit 42/50 → 48/50，final-ranking miss 7 → 1，forbidden-before-core 2 → 0，没有 baseline 命中被挤出，运行/协议失败为 0。仍未解决的是 `agentic-acceptance-direct`（candidate miss）和 `agentic-limit-investigation`（final-ranking miss，候选名次由 6 降到 11）。逐例名单、scope error 变化和 12 例仅名次变动的诊断见 `verification.md`。
+
 ## 逐例判定
 
 runner 在 harness 返回后才在父进程读取 gold labels，并生成：

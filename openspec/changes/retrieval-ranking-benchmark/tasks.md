@@ -44,3 +44,11 @@
 - [x] 6.3 捕获 Store/index 与 harness client setup 失败，写出带 `setup_failure` 的 failed artifact/record，且不保留部分候选/最终名单
 - [x] 6.4 让存在 record 的 revision 必须处于 frozen 或后续 lifecycle，并增加对应回归测试
 - [x] 6.5 用 v2 新 run ID 重跑 baseline/replay，更新冻结证据、revision 文档和 PR 说明
+
+## 7. 候选 build 对比（Lorelum #236 排序改动）
+
+写入范围：`results/records/`、`docs/RETRIEVAL_RANKING_PROTOCOL.md` 与本 change 的 `verification.md`；不修改 v2 的 query/label/scorer/corpus、schema、scorer 代码和 baseline record。
+
+- [x] 7.1 在主仓库交付只改 Engine 最终排序的 build `09e64be914dc93124230f06483c8dfc4c164a61a` 后，用新 run ID `retrieval-ranking-v2-candidate-09e64be` 在固定 v2 revision、corpus、Profile、model/native runtime 和 N=20/K=5 下重跑全部 50 条，只更换 Lorelum build
+- [x] 7.2 用新 run ID `retrieval-ranking-v2-candidate-09e64be-replay` 与独立 test-owned Store/cache 复验同一 build 的逐例名单和 score 一致，并确认 derived semantic artifact identity 未变
+- [x] 7.3 逐例对比 baseline，分开报告 candidate miss、final-ranking miss、scope error 与运行/协议失败，确认没有 baseline top-5 命中被挤出，并把未解决/局部变差的案例如实保留
