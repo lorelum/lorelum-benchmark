@@ -28,7 +28,7 @@
 
 实现放在新的 `src/benchmark/judge/offline-core/v1/` 原型路径中，并由显式 CLI 驱动。选择独立路径而不是 `generic/v3`，是为了避免把“尚未证明的 core 泛化”伪装成现有通用 judge 的升级，也避免修改冻结实现。
 
-场景材料放在版本化 scenario 目录中，私有 labels 只进入 calibration/report 路径，不进入模型 prompt。具体 fixture 路径在 Plan mode 根据可用材料固定。
+场景材料放在 `src/benchmark/judge/offline-core/v1/scenarios/` 的版本化目录中，私有 labels 与 raw results 放在同一原型的 `private/` 下，只进入 calibration/report 路径，不进入模型 prompt。原型报告写入 `docs/offline-judge-core-generalization.md`。
 
 ### 2. Core 与 scenario 强隔离
 
@@ -57,9 +57,11 @@ CLI 通过显式 scenario 目录加载 profile，不维护需要随场景增长�
 
 ### 5. 模型 artifact、runtime 和离线边界
 
-首版只允许一个 `<=3B` 本地模型 artifact。模型文件不入库，只记录模型 id、artifact hash、量化、tokenizer、上下文预算、chat template、runtime 版本、启动参数、温度、seed 和可复现 locator。
+首版只允许官方 `Qwen/Qwen3-1.7B-GGUF` 的 `Qwen3-1.7B-Q8_0.gguf`。模型 revision 固定为 `90862c4b9d2787eaed51d12237eafdfe7c5f6077`，文件 SHA-256 固定为 `061b54daade076b5d3362dac252678d17da8c68f07560be70818cace6590cb1a`，文件大小固定为 `1834426016` bytes。模型文件不入库，只记录模型 id、artifact hash、量化、tokenizer、上下文预算、chat template、runtime 版本、启动参数、温度、seed 和可复现 locator。
 
-模型调用只允许通过显式本地运行入口连接到已启动的 loopback runtime；命令本身不得下载权重、访问远端 API 或在 artifact 缺失时静默降级。具体 runtime 和模型在 Plan mode 固定；可评估 llama.cpp 兼容 GGUF 或其他单机离线方案，但必须同时满足 Windows CUDA、8GB 显存、可完整记录 identity 和无网络运行。
+Runtime 固定为 Windows 原生 llama.cpp `b11207` CUDA 13.4 x64。binary zip SHA-256 固定为 `3efd633317d9eec15518c21c73641fa637a000c3aea88c6fe4158befe16635b1`，CUDA runtime zip SHA-256 固定为 `738f8c251ac22b70c3ae6f83a10cf222725df0395246a2cf58f32bdb85fbe668`。启动参数固定为 loopback 监听、关闭 thinking、上下文 8192、`temperature=0`、`top_k=1`、`max_tokens=256` 和固定 seed。Gateway evidence budget 固定为每候选最多 6000 字符、单文件最多 2500 字符、最多 6 个文件；Source-authority budget 固定为每候选最多 7000 字符、单文件最多 4000 字符。
+
+模型调用只允许通过显式本地运行入口连接到已启动的 loopback runtime；命令本身不得下载权重、访问远端 API 或在 artifact 缺失时静默降级。任何非 loopback endpoint、缺失或 hash 不匹配的 artifact 都必须 fail closed。
 
 改变模型 artifact、量化、runtime、prompt、温度、seed、上下文预算、schema、阈值或汇总规则都会产生新的实验 identity，不能沿用旧结果宣传 holdout 通过。
 
@@ -94,9 +96,9 @@ Core 在调用模型后必须完成：
 
 - Compaction 摘要：自然语言证据、保留/污染判断和 abstain。
 
-在 holdout 运行前，Plan mode 必须固定 claim、样本、thresholds、聚合规则、模型/runtime identity 和报告解释。Holdout labels 在运行前冻结，不用于 prompt 调参。若 holdout 材料不足以形成可辩护 labels，标记 `holdout-not-ready`，不得临时换更简单的场景。
+在 holdout 运行前，Plan mode 固定的 claim、样本、thresholds、聚合规则、模型/runtime identity 和报告解释如下：每个开发场景至少 10 个 pair 加 2 个 insufficient controls，并做 A/B 双向运行；Compaction holdout 固定 4 个 decisive pair、2 个 equivalent pair 和 2 个 insufficient controls，共 8 个 pair、16 次有序判断。Holdout labels 在运行前冻结，不用于 prompt 调参。
 
-每个场景至少记录 pairwise accuracy、等价对稳定性、A/B 顺序交换一致性、abstain rate、evidence reference validity、schema validity 和 high-confidence errors。样本不足时结论为 `indeterminate`，不以阈值碰巧通过代替证据。
+每个场景至少记录 pairwise accuracy、等价对稳定性、A/B 顺序交换一致性、abstain rate、evidence reference validity、schema validity 和 high-confidence errors。统一门槛为：schema 与 citation validity 100%；开发 decisive accuracy `>=80%`；holdout decisive accuracy `>=75%`；等价稳定率与顺序一致性 `>=75%`；充分证据上的意外 abstain `<=10%`；insufficient controls 必须全部 abstain；高置信错误每场景最多 1 个。样本不足时结论为 `indeterminate`，不以阈值碰巧通过代替证据。
 
 ### 8. Provenance 与 report
 
@@ -109,7 +111,7 @@ Core 在调用模型后必须完成：
 - 每个 decision 的 criterion、evidence ids、原始 verdict、解析后 verdict、confidence 和失败原因；
 - 校准 threshold、运行命令和 run identity。
 
-Generalization report 必须列出 dev 与 holdout 的原始结果、失败样例、abstain 样例、core/prompt zero-diff 证据、允许新增的 adapter diff 边界和未解决问题。报告只对已测试场景范围作结论。
+Generalization report 必须列出 dev 与 holdout 的原始结果、失败样例、abstain 样例、core/prompt zero-diff 证据、允许新增的 adapter diff 边界和未解决问题。报告写入 `docs/offline-judge-core-generalization.md`，raw JSON 结果写入 `src/benchmark/judge/offline-core/v1/private/runs/`。报告只对已测试场景范围作结论。
 
 ### 9. 与固定任务 rubric 和现有 runner 的迁移边界
 
@@ -156,7 +158,5 @@ Generalization report 必须列出 dev 与 holdout 的原始结果、失败样�
 
 ## Open Questions
 
-- 具体 `<=3B` 模型、量化文件、license、artifact hash 和本地 runtime 在 Plan mode 固定。
-- Compaction holdout 的最小 fixture、公开/私有材料、labels 和最小样本量在 Plan mode 确认；材料不足则标记 `holdout-not-ready`。
-- 各场景的 pairwise accuracy、等价稳定性、顺序一致性、abstain 和 high-confidence error thresholds 在查看 holdout 前固定。
-- 原型场景材料最终放在独立源码目录还是 `incubator/calibration-bases/`，以及 raw report 的提交位置，在 Plan mode 按现有布局和泄露审计要求确定。
+- 无。模型/runtime identity、开发与 holdout 样本、thresholds、原型路径、冻结文件集合、raw report 位置和结论解释均已在实施前冻结。
+- 若本地 runtime 无法在当前机器完成显式运行，必须保留已实现与 deterministic verification 结果，并将对应真实模型指标记为 `not-run`，不得改用远端模型或伪造结果。

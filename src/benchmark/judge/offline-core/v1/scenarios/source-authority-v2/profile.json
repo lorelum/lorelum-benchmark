@@ -1,0 +1,7 @@
+{
+  "schema_version": "offline-judge-scenario/v1",
+  "id": "source-authority-v2",
+  "version": "v1",
+  "adapter_version": "source-authority-v2-adapter/v1",
+  "description": "A read-only adapter for the unpublished PX-47 source-authority rubric and its operation-authority calibration variants."
+}

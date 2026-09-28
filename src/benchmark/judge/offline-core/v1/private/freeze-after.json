@@ -1,0 +1,15 @@
+{
+  "schema_version": "offline-judge-freeze/v1",
+  "created_at": "2026-09-28T08:47:44.039Z",
+  "core_hash": "19e12acbba8c8e36c2c8af95563aa1a3710d408155c316f8cef44270f1e1baa7",
+  "system_prompt_hash": "cb208b302d36f9ccfc261abfc1ae981f159c8b93d0d00ddca04b1c45af260c14",
+  "core_files": {
+    "types.ts": "d7e44bd659f386c5cd46291b2b98f644503f81c2e11098297adc0c0c367af075",
+    "prompt.ts": "bd9531272b148dd3ab94ed09ec0b38bccde8dd5dceb851dbeea896f98b05057b",
+    "core.ts": "0e3f0e5f6e49df8feea98a61d8d836c10f6c38805745fd73488357a720166cd8",
+    "runtime.ts": "1183296af7188645aa5435160fd7c74a05e4a921c24a9d5b06424f7ade8a8807",
+    "metrics.ts": "eac4c6dc7abac98667a612c48e24db3366758bf0f05bf875459b868072808b6f",
+    "runner.ts": "a1c54227a4004d8bcea346c20aad2635f48d9f0e09f44447ead78be6bb73d555"
+  },
+  "hidden_files": {}
+}

@@ -1,0 +1,14 @@
+[
+  { "case_id": "authority-reference-vs-anti-full", "expected": "A" },
+  { "case_id": "authority-equivalent-vs-anti-full", "expected": "A" },
+  { "case_id": "authority-never-apply-vs-reference", "expected": "B" },
+  { "case_id": "authority-never-apply-vs-equivalent", "expected": "B" },
+  { "case_id": "authority-reference-vs-anti-superseded", "expected": "A" },
+  { "case_id": "authority-equivalent-vs-anti-superseded", "expected": "A" },
+  { "case_id": "authority-reference-vs-anti-feedback", "expected": "A" },
+  { "case_id": "authority-equivalent-vs-anti-feedback", "expected": "A" },
+  { "case_id": "authority-reference-vs-equivalent-foreground", "expected": "tie" },
+  { "case_id": "authority-reference-vs-equivalent-feedback", "expected": "tie" },
+  { "case_id": "authority-insufficient-missing-a", "expected": "insufficient" },
+  { "case_id": "authority-insufficient-missing-b", "expected": "insufficient" }
+]

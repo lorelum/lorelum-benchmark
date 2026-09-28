@@ -1,0 +1,7 @@
+{
+  "schema_version": "offline-judge-scenario/v1",
+  "id": "compaction-summary-v1",
+  "version": "v1",
+  "adapter_version": "compaction-summary-v1-adapter/v1",
+  "description": "Holdout natural-language compaction summaries with frozen retention, source-authority, uncertainty, and contamination labels."
+}

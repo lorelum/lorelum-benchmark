@@ -1,0 +1,1056 @@
+{
+  "schema_version": "offline-judge-run/v1",
+  "identity": {
+    "run_id": "13260b86ed8aaf835bac03f1880ab72503a98c311cad9fa35de35300ee7efded",
+    "scenario": {
+      "id": "gateway-v3",
+      "version": "v1",
+      "adapter_version": "gateway-v3-adapter/v1"
+    },
+    "core_hash": "19e12acbba8c8e36c2c8af95563aa1a3710d408155c316f8cef44270f1e1baa7",
+    "system_prompt_hash": "cb208b302d36f9ccfc261abfc1ae981f159c8b93d0d00ddca04b1c45af260c14",
+    "rubric_hash": "ac62928328491ab87976658d621950c9384c0b61a81ff077e1310f24ff184d55",
+    "labels_hash": "39aa124e4493af7c03f64a9bf4dc11c184d8d96bcdbbdc47ef194fc13ef38b2b",
+    "model": {
+      "id": "Qwen/Qwen3-1.7B-GGUF",
+      "revision": "90862c4b9d2787eaed51d12237eafdfe7c5f6077",
+      "quantization": "Q8_0",
+      "file_sha256": "061b54daade076b5d3362dac252678d17da8c68f07560be70818cace6590cb1a",
+      "file_size_bytes": 1834426016
+    },
+    "runtime": {
+      "id": "llama.cpp",
+      "version": "b11207",
+      "artifact_sha256": "738f8c251ac22b70c3ae6f83a10cf222725df0395246a2cf58f32bdb85fbe668",
+      "binary_sha256": "3efd633317d9eec15518c21c73641fa637a000c3aea88c6fe4158befe16635b1",
+      "base_url": "http://127.0.0.1:8080",
+      "context_size": 8192,
+      "temperature": 0,
+      "top_k": 1,
+      "seed": 20260927,
+      "max_tokens": 256
+    },
+    "threshold": {
+      "schema_validity": 1,
+      "citation_validity": 1,
+      "equivalence_stability": 0.75,
+      "order_consistency": 0.75,
+      "unexpected_abstain": 0.1,
+      "high_confidence_errors": 1,
+      "development_decisive_accuracy": 0.8,
+      "holdout_decisive_accuracy": 0.75
+    }
+  },
+  "thresholds": {
+    "schema_validity": 1,
+    "citation_validity": 1,
+    "equivalence_stability": 0.75,
+    "order_consistency": 0.75,
+    "unexpected_abstain": 0.1,
+    "high_confidence_errors": 1,
+    "development_decisive_accuracy": 0.8,
+    "holdout_decisive_accuracy": 0.75
+  },
+  "metrics": {
+    "schema_validity": 1,
+    "citation_validity": 1,
+    "decisive_accuracy": 0,
+    "equivalence_stability": 0,
+    "order_consistency": 0.75,
+    "unexpected_abstain": 0.85,
+    "high_confidence_errors": 10,
+    "insufficient_controls_abstained": 4,
+    "insufficient_controls_total": 4
+  },
+  "checks": {
+    "schema_validity": true,
+    "citation_validity": true,
+    "decisive_accuracy": false,
+    "equivalence_stability": false,
+    "order_consistency": true,
+    "unexpected_abstain": false,
+    "insufficient_controls_abstained": true,
+    "high_confidence_errors": false
+  },
+  "passed": false,
+  "decisions": [
+    {
+      "case_id": "gateway-reference-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "raw-response-containment",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/errors.ts",
+        "A:src/server.ts",
+        "A:src/adapters.ts",
+        "B:src/server.ts",
+        "B:src/types.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/errors.ts",
+          "A:src/server.ts",
+          "A:src/adapters.ts",
+          "B:src/server.ts",
+          "B:src/types.ts",
+          "B:tests/gateway.spec.ts"
+        ],
+        "reason": "Both candidates lack sufficient evidence to determine if raw payloads or provider names leak through the public response contract."
+      },
+      "input_hash": "52abd3d0b7e36e192de774dcad14a1095939f00733396fc727faff149135fec9",
+      "prompt_hash": "f0d2f10a912bf8b2e8f1b1b52257685af7b5db5cb9fd4274bdfa902fed4022c6",
+      "evidence_ids": [
+        "A:src/adapters.ts",
+        "A:src/errors.ts",
+        "A:src/server.ts",
+        "B:src/server.ts",
+        "B:src/types.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "reason": "Both candidates lack sufficient evidence to determine if raw payloads or provider names leak through the public response contract."
+    },
+    {
+      "case_id": "gateway-reference-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "raw-response-containment",
+      "orientation": "BA",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "B:src/server.ts",
+        "B:src/types.ts",
+        "A:src/adapters.ts",
+        "A:src/errors.ts",
+        "A:src/server.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/server.ts",
+          "B:src/types.ts",
+          "A:src/adapters.ts",
+          "A:src/errors.ts",
+          "A:src/server.ts"
+        ],
+        "reason": "Both candidates support the criterion by ensuring raw payloads and provider names do not leak through the public response contract."
+      },
+      "input_hash": "ae5ae0b1cbe5fa22428b5ff32bc40bc34ab7e39101b5c4fbcc81ae6c44034a17",
+      "prompt_hash": "230716e58782141c26fffcce9fda4f6067f73ecf7e9d760de3329ff9fc4fccb5",
+      "evidence_ids": [
+        "A:src/adapters.ts",
+        "A:src/errors.ts",
+        "A:src/server.ts",
+        "B:src/server.ts",
+        "B:src/types.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "reason": "Both candidates support the criterion by ensuring raw payloads and provider names do not leak through the public response contract."
+    },
+    {
+      "case_id": "gateway-accounting-oracle-vs-scatter",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "fallback-accounting",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "B:src/executor.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/gateway.ts",
+          "A:src/providers.ts",
+          "A:src/server.ts",
+          "B:src/executor.ts",
+          "B:src/providers.ts",
+          "B:src/server.ts"
+        ],
+        "reason": "The evidence does not contain enough information to determine if the criterion is met."
+      },
+      "input_hash": "5992acba5c4d736ecbdf5f86ffd7611e8247621bbf2a46f680d5d31fe6f22cb0",
+      "prompt_hash": "93812326b07a2bf7b865b8ccf1e8d62a84c5a6b9383edf6163bf94ecf9cc22f4",
+      "evidence_ids": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "B:src/executor.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts"
+      ],
+      "reason": "The evidence does not contain enough information to determine if the criterion is met."
+    },
+    {
+      "case_id": "gateway-accounting-oracle-vs-scatter",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "fallback-accounting",
+      "orientation": "BA",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "B:src/executor.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts",
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/executor.ts",
+          "B:src/providers.ts",
+          "B:src/server.ts",
+          "A:src/gateway.ts",
+          "A:src/providers.ts",
+          "A:src/server.ts"
+        ],
+        "reason": "Both candidates implement the fallback and retries mechanism without duplicate accounting or provider calls."
+      },
+      "input_hash": "1b5c196196393e9cad4ff6a7c3873467d90f1bb074fd0551768c4ac8daafa538",
+      "prompt_hash": "a5d0b1b432ba12fc5894b15c6cc92b9d79792948261cac177c3d61cf9779d4f6",
+      "evidence_ids": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "B:src/executor.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts"
+      ],
+      "reason": "Both candidates implement the fallback and retries mechanism without duplicate accounting or provider calls."
+    },
+    {
+      "case_id": "gateway-naming-a-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "boundary-ownership",
+      "orientation": "AB",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "A:tests/gateway.spec.ts",
+        "B:src/server.ts",
+        "B:docs/gateway-api.md"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "A:src/gateway.ts",
+          "A:src/providers.ts",
+          "A:src/server.ts",
+          "A:tests/gateway.spec.ts",
+          "B:src/server.ts",
+          "B:docs/gateway-api.md"
+        ],
+        "reason": "Both candidates support the criterion by clearly defining boundary responsibilities and separation of concerns in the gateway implementation."
+      },
+      "input_hash": "ef7598a38caa17684212868c9c2ae9dfd28d54f63690b0b190dd0c10478585a4",
+      "prompt_hash": "340e39dcb391655f9703d90688c4da9017c2a89739d760b5120208a918ab32df",
+      "evidence_ids": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "A:tests/gateway.spec.ts",
+        "B:docs/gateway-api.md",
+        "B:src/server.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "reason": "Both candidates support the criterion by clearly defining boundary responsibilities and separation of concerns in the gateway implementation."
+    },
+    {
+      "case_id": "gateway-naming-a-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "boundary-ownership",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/server.ts",
+        "B:tests/gateway.spec.ts",
+        "B:docs/gateway-api.md",
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "A:tests/gateway.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/server.ts",
+          "B:tests/gateway.spec.ts",
+          "B:docs/gateway-api.md",
+          "A:src/gateway.ts",
+          "A:src/providers.ts",
+          "A:src/server.ts",
+          "A:tests/gateway.spec.ts"
+        ],
+        "reason": "Evidence is insufficient to determine if the boundary ownership is clear or not."
+      },
+      "input_hash": "af373118f5415b3752a904f5f274053524a085804b560778856e1db90c9e60ad",
+      "prompt_hash": "36344f13886a2f5cad3bd85ff436a32a1fa48d30bfc1e7f1031ab7384d941673",
+      "evidence_ids": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "A:tests/gateway.spec.ts",
+        "B:docs/gateway-api.md",
+        "B:src/server.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "reason": "Evidence is insufficient to determine if the boundary ownership is clear or not."
+    },
+    {
+      "case_id": "gateway-naming-b-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "policy-centralization",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "B:src/server.ts",
+        "B:tests/gateway.spec.ts",
+        "B:docs/gateway-api.md"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/gateway.ts",
+          "A:src/providers.ts",
+          "A:src/server.ts",
+          "B:src/server.ts",
+          "B:tests/gateway.spec.ts",
+          "B:docs/gateway-api.md"
+        ],
+        "reason": "Both candidates lack sufficient evidence to determine if cross-request policy is centralized."
+      },
+      "input_hash": "9837073e7e3e9942b32aef7425f93e025798c857dfb81695bbeed3cf26c90f54",
+      "prompt_hash": "7113b4293e454d3e42426faf261868ce45504e5401ae37c23b97077d6b8b95ac",
+      "evidence_ids": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "B:docs/gateway-api.md",
+        "B:src/server.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "reason": "Both candidates lack sufficient evidence to determine if cross-request policy is centralized."
+    },
+    {
+      "case_id": "gateway-naming-b-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "policy-centralization",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/server.ts",
+        "B:tests/gateway.spec.ts",
+        "B:docs/gateway-api.md",
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/server.ts",
+          "B:tests/gateway.spec.ts",
+          "B:docs/gateway-api.md",
+          "A:src/gateway.ts",
+          "A:src/providers.ts",
+          "A:src/server.ts"
+        ],
+        "reason": "Evidence is insufficient to determine if the policy is centralized or not."
+      },
+      "input_hash": "568e803f41cd1913f7728eb182faa4d9d7d357a431f16a558e54e71d6d7b83f6",
+      "prompt_hash": "468c23080e1d88e106361b757247bb36e8e0f3cb6708562e24fbcb475e25d901",
+      "evidence_ids": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "B:docs/gateway-api.md",
+        "B:src/server.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "reason": "Evidence is insufficient to determine if the policy is centralized or not."
+    },
+    {
+      "case_id": "gateway-ledger-vs-scatter",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "tenant-budget",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/ledger.ts",
+        "A:src/policy.ts",
+        "A:src/server.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts",
+        "B:src/store.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/ledger.ts",
+          "A:src/policy.ts",
+          "A:src/server.ts",
+          "B:src/providers.ts",
+          "B:src/server.ts",
+          "B:src/store.ts"
+        ],
+        "reason": "The evidence does not contain enough information to determine if the criterion is supported or contradicted."
+      },
+      "input_hash": "379eaffca7c93f2314f7c6cc0fa2bfdf7c2b5c5a59f88a0859072340eca28e58",
+      "prompt_hash": "6d52b0c6404c2c304cbd1d9a4b51c712728346cc8f9c1366fa9b08e06e714c5c",
+      "evidence_ids": [
+        "A:src/ledger.ts",
+        "A:src/policy.ts",
+        "A:src/server.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts",
+        "B:src/store.ts"
+      ],
+      "reason": "The evidence does not contain enough information to determine if the criterion is supported or contradicted."
+    },
+    {
+      "case_id": "gateway-ledger-vs-scatter",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "tenant-budget",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/providers.ts",
+        "B:src/server.ts",
+        "B:src/store.ts",
+        "A:src/ledger.ts",
+        "A:src/policy.ts",
+        "A:src/server.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/providers.ts",
+          "B:src/server.ts",
+          "B:src/store.ts",
+          "A:src/ledger.ts",
+          "A:src/policy.ts",
+          "A:src/server.ts"
+        ],
+        "reason": "The evidence does not contain enough information to determine if the criterion is supported or contradicted."
+      },
+      "input_hash": "aeac2d81478e5148d500582eabe70758a14f89c27045f815c11b4aad0037305c",
+      "prompt_hash": "49a1f7f3f214a1bc61c9ef416a917f54b11f7d7636709702216e5db818af02e4",
+      "evidence_ids": [
+        "A:src/ledger.ts",
+        "A:src/policy.ts",
+        "A:src/server.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts",
+        "B:src/store.ts"
+      ],
+      "reason": "The evidence does not contain enough information to determine if the criterion is supported or contradicted."
+    },
+    {
+      "case_id": "gateway-type-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "protocol-translation",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/adapters.ts",
+        "A:src/openai.ts",
+        "A:src/server.ts",
+        "A:src/types.ts",
+        "B:src/anthropic.ts",
+        "B:src/nebula.ts",
+        "B:src/openai.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/adapters.ts",
+          "A:src/openai.ts",
+          "A:src/server.ts",
+          "A:src/types.ts",
+          "B:src/anthropic.ts",
+          "B:src/nebula.ts",
+          "B:src/openai.ts"
+        ],
+        "reason": "Evidence is insufficient to determine whether the criterion is met."
+      },
+      "input_hash": "26fc8c49409e77e7b7571407df684e2b00ada4e053b55fc2d4aea84e58f09923",
+      "prompt_hash": "261bc3cf2ec12ae7382463551465d67c4341c145867ad44ba0df9d4d602cbd2b",
+      "evidence_ids": [
+        "A:src/adapters.ts",
+        "A:src/openai.ts",
+        "A:src/server.ts",
+        "A:src/types.ts",
+        "B:src/anthropic.ts",
+        "B:src/nebula.ts",
+        "B:src/openai.ts"
+      ],
+      "reason": "Evidence is insufficient to determine whether the criterion is met."
+    },
+    {
+      "case_id": "gateway-type-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "protocol-translation",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/anthropic.ts",
+        "B:src/nebula.ts",
+        "B:src/openai.ts",
+        "A:src/adapters.ts",
+        "A:src/openai.ts",
+        "A:src/server.ts",
+        "A:src/types.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/anthropic.ts",
+          "B:src/nebula.ts",
+          "B:src/openai.ts",
+          "A:src/adapters.ts",
+          "A:src/openai.ts",
+          "A:src/server.ts",
+          "A:src/types.ts"
+        ],
+        "reason": "Insufficient evidence to determine whether the code translates provider-specific wire fields, authentication, and failures."
+      },
+      "input_hash": "06f3fae95bfb30cf84671fd668e4bab83a4465c4df86142a3b9c12df7bed3fff",
+      "prompt_hash": "fee473f7e4d985c32714ed64c4acaec8cdb5eaaa632dcba30a99bf82135efbf8",
+      "evidence_ids": [
+        "A:src/adapters.ts",
+        "A:src/openai.ts",
+        "A:src/server.ts",
+        "A:src/types.ts",
+        "B:src/anthropic.ts",
+        "B:src/nebula.ts",
+        "B:src/openai.ts"
+      ],
+      "reason": "Insufficient evidence to determine whether the code translates provider-specific wire fields, authentication, and failures."
+    },
+    {
+      "case_id": "gateway-docs-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "raw-response-containment",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/server.ts",
+        "A:src/types.ts",
+        "A:tests/gateway.spec.ts",
+        "B:src/server.ts",
+        "B:src/types.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/server.ts",
+          "A:src/types.ts",
+          "A:tests/gateway.spec.ts",
+          "B:src/server.ts",
+          "B:src/types.ts",
+          "B:tests/gateway.spec.ts"
+        ],
+        "reason": "Both candidates lack sufficient evidence to determine if raw upstream payloads and provider names leak through the public response contract."
+      },
+      "input_hash": "397a89581b4f6f750829335b549a90fb23a2c08e17ae5f1e4ccd3ff7f6f9e7d8",
+      "prompt_hash": "1ba923a61514be39a69e2ea7406e93f646e16c20169939cb9608e29ef3bd57a7",
+      "evidence_ids": [
+        "A:src/server.ts",
+        "A:src/types.ts",
+        "A:tests/gateway.spec.ts",
+        "B:src/server.ts",
+        "B:src/types.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "reason": "Both candidates lack sufficient evidence to determine if raw upstream payloads and provider names leak through the public response contract."
+    },
+    {
+      "case_id": "gateway-docs-vs-anti",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "raw-response-containment",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/server.ts",
+        "B:src/types.ts",
+        "B:tests/gateway.spec.ts",
+        "A:src/server.ts",
+        "A:src/types.ts",
+        "A:tests/gateway.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/server.ts",
+          "B:src/types.ts",
+          "B:tests/gateway.spec.ts",
+          "A:src/server.ts",
+          "A:src/types.ts",
+          "A:tests/gateway.spec.ts"
+        ],
+        "reason": "Both candidates lack sufficient evidence to determine if raw upstream payloads and provider names leak through the public response contract."
+      },
+      "input_hash": "91fe62c09352541733574ee0c46524987a095335bf9e8402f3342b4c4fb2ae08",
+      "prompt_hash": "4ac99ab46551fdd01a0d98b9592e0e013133b4cb88cf6035d65451004ccab692",
+      "evidence_ids": [
+        "A:src/server.ts",
+        "A:src/types.ts",
+        "A:tests/gateway.spec.ts",
+        "B:src/server.ts",
+        "B:src/types.ts",
+        "B:tests/gateway.spec.ts"
+      ],
+      "reason": "Both candidates lack sufficient evidence to determine if raw upstream payloads and provider names leak through the public response contract."
+    },
+    {
+      "case_id": "gateway-layout-vs-unused",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "boundary-ownership",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/boundary/adapters.ts",
+        "A:src/boundary/config.ts",
+        "A:src/boundary/errors.ts",
+        "B:src/gateway.ts",
+        "B:src/ledger.ts",
+        "B:src/policy.ts",
+        "B:src/providers.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/boundary/adapters.ts",
+          "A:src/boundary/config.ts",
+          "A:src/boundary/errors.ts",
+          "B:src/gateway.ts",
+          "B:src/ledger.ts",
+          "B:src/policy.ts",
+          "B:src/providers.ts"
+        ],
+        "reason": "Insufficient evidence to determine if the boundary-ownership criterion is met."
+      },
+      "input_hash": "6bb180bcb281234d45cf2a78cec28893ed4497af62ffbbc65ab496cf9dc19fae",
+      "prompt_hash": "8a6aebd49c398a501afbf187cc3629d5b29fff7d663ce1572ace5f0257a38b51",
+      "evidence_ids": [
+        "A:src/boundary/adapters.ts",
+        "A:src/boundary/config.ts",
+        "A:src/boundary/errors.ts",
+        "B:src/gateway.ts",
+        "B:src/ledger.ts",
+        "B:src/policy.ts",
+        "B:src/providers.ts"
+      ],
+      "reason": "Insufficient evidence to determine if the boundary-ownership criterion is met."
+    },
+    {
+      "case_id": "gateway-layout-vs-unused",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "boundary-ownership",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/gateway.ts",
+        "B:src/ledger.ts",
+        "B:src/policy.ts",
+        "B:src/providers.ts",
+        "A:src/boundary/adapters.ts",
+        "A:src/boundary/config.ts",
+        "A:src/boundary/errors.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/gateway.ts",
+          "B:src/ledger.ts",
+          "B:src/policy.ts",
+          "B:src/providers.ts",
+          "A:src/boundary/adapters.ts",
+          "A:src/boundary/config.ts",
+          "A:src/boundary/errors.ts"
+        ],
+        "reason": "Evidence is insufficient to determine the relation to the criterion."
+      },
+      "input_hash": "ae17783bce49261eb0f917b20be0501fa367f6fb408c727f70db8716c8157e8f",
+      "prompt_hash": "ca2ca7b76a0e65730add7e0bc0c9c430b99120c5a64325d2452a158f695cf514",
+      "evidence_ids": [
+        "A:src/boundary/adapters.ts",
+        "A:src/boundary/config.ts",
+        "A:src/boundary/errors.ts",
+        "B:src/gateway.ts",
+        "B:src/ledger.ts",
+        "B:src/policy.ts",
+        "B:src/providers.ts"
+      ],
+      "reason": "Evidence is insufficient to determine the relation to the criterion."
+    },
+    {
+      "case_id": "gateway-reference-vs-equivalent",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "gateway-overall",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/adapters.ts",
+        "A:src/config.ts",
+        "A:src/errors.ts",
+        "B:src/gateway/accounting.ts",
+        "B:src/gateway/domain-errors.ts",
+        "B:src/gateway/execution.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/adapters.ts",
+          "A:src/config.ts",
+          "A:src/errors.ts",
+          "B:src/gateway/accounting.ts",
+          "B:src/gateway/domain-errors.ts",
+          "B:src/gateway/execution.ts"
+        ],
+        "reason": "Both candidates lack sufficient evidence to determine if they meet the criterion."
+      },
+      "input_hash": "ac8aae9ba88ac9546ba87da1da81108a38ffc35f8aa27366f42d7574bce14b95",
+      "prompt_hash": "8b0e233968c19d733a643251895b5770734915bab623746c8107b7f114bce9b7",
+      "evidence_ids": [
+        "A:src/adapters.ts",
+        "A:src/config.ts",
+        "A:src/errors.ts",
+        "B:src/gateway/accounting.ts",
+        "B:src/gateway/domain-errors.ts",
+        "B:src/gateway/execution.ts"
+      ],
+      "reason": "Both candidates lack sufficient evidence to determine if they meet the criterion."
+    },
+    {
+      "case_id": "gateway-reference-vs-equivalent",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "gateway-overall",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/gateway/accounting.ts",
+        "B:src/gateway/domain-errors.ts",
+        "B:src/gateway/execution.ts",
+        "A:src/adapters.ts",
+        "A:src/config.ts",
+        "A:src/errors.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/gateway/accounting.ts",
+          "B:src/gateway/domain-errors.ts",
+          "B:src/gateway/execution.ts",
+          "A:src/adapters.ts",
+          "A:src/config.ts",
+          "A:src/errors.ts"
+        ],
+        "reason": "The evidence does not contain enough information to determine if the implementation honors the task's protocol translation, fallback, accounting, idempotency, tenant budget, streaming failure, and observability requirements."
+      },
+      "input_hash": "47331d548d7e98bd4d6ce573f2825ba9e4b583255b84756f5d500c0b30d6cc4e",
+      "prompt_hash": "8946e6c3376b9bc511d33362f56bd727b9d111730c5b8bb9858c73cd4ab2bdf1",
+      "evidence_ids": [
+        "A:src/adapters.ts",
+        "A:src/config.ts",
+        "A:src/errors.ts",
+        "B:src/gateway/accounting.ts",
+        "B:src/gateway/domain-errors.ts",
+        "B:src/gateway/execution.ts"
+      ],
+      "reason": "The evidence does not contain enough information to determine if the implementation honors the task's protocol translation, fallback, accounting, idempotency, tenant budget, streaming failure, and observability requirements."
+    },
+    {
+      "case_id": "gateway-naming-a-vs-b",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "boundary-ownership",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "A:tests/gateway.spec.ts",
+        "B:src/gateway.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/gateway.ts",
+          "A:src/providers.ts",
+          "A:src/server.ts",
+          "A:tests/gateway.spec.ts",
+          "B:src/gateway.ts",
+          "B:src/providers.ts",
+          "B:src/server.ts"
+        ],
+        "reason": "Both candidates lack sufficient evidence to determine if they meet the boundary-ownership criterion."
+      },
+      "input_hash": "7782b467d064dac9f6e43e65f8238bc014265405b5ee22ee2d6599a5d94b6fe6",
+      "prompt_hash": "70f9baedfa22165a3ec3753cc529332a9506aadf51ba7c0ea73d2b322a74958d",
+      "evidence_ids": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "A:tests/gateway.spec.ts",
+        "B:src/gateway.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts"
+      ],
+      "reason": "Both candidates lack sufficient evidence to determine if they meet the boundary-ownership criterion."
+    },
+    {
+      "case_id": "gateway-naming-a-vs-b",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "boundary-ownership",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/gateway.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts",
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/gateway.ts",
+          "B:src/providers.ts",
+          "B:src/server.ts",
+          "A:src/gateway.ts",
+          "A:src/providers.ts",
+          "A:src/server.ts"
+        ],
+        "reason": "Both candidates lack sufficient evidence to determine if the boundary-ownership criterion is met."
+      },
+      "input_hash": "efd26f92ec771b08c7ae3edaaada3d268faccd8c4c88806aaeaf5981d0a84e34",
+      "prompt_hash": "9bafaacfdebeac75240e1365b4a4bd9891f4bffb53cf1a77c17f80636318d83c",
+      "evidence_ids": [
+        "A:src/gateway.ts",
+        "A:src/providers.ts",
+        "A:src/server.ts",
+        "A:tests/gateway.spec.ts",
+        "B:src/gateway.ts",
+        "B:src/providers.ts",
+        "B:src/server.ts"
+      ],
+      "reason": "Both candidates lack sufficient evidence to determine if the boundary-ownership criterion is met."
+    },
+    {
+      "case_id": "gateway-insufficient-missing-a",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "gateway-overall",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "candidate A evidence was intentionally omitted",
+      "input_hash": "4bb0067b5507b7980f53d1edcd14a5dcba6b9082c107bd15190a7d1ab3393e74",
+      "prompt_hash": "2b173b3aa32b0d3cfabd3b67063c30d21a511aa54c42067db34b20826e5f437f",
+      "evidence_ids": [
+        "B:src/adapters.ts",
+        "B:src/config.ts",
+        "B:src/errors.ts"
+      ]
+    },
+    {
+      "case_id": "gateway-insufficient-missing-a",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "gateway-overall",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "candidate A evidence was intentionally omitted",
+      "input_hash": "cae25d211e6f9000149bfa6c2989b450fd680396c75f2d12fdd461fcb88fbb71",
+      "prompt_hash": "481e1fd8a3be7df45265451b32c098bca077c646808f08b20694051f91c2c615",
+      "evidence_ids": [
+        "B:src/adapters.ts",
+        "B:src/config.ts",
+        "B:src/errors.ts"
+      ]
+    },
+    {
+      "case_id": "gateway-insufficient-missing-b",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "gateway-overall",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "candidate B evidence was intentionally omitted",
+      "input_hash": "9ea4c7bce9541b9b0f5dc81ee770f7f9243b53986838575f9780f19b487d1d73",
+      "prompt_hash": "c329a53b270c12919502024291deb7b54950cac36f9f177052759851d029e66e",
+      "evidence_ids": [
+        "A:src/adapters.ts",
+        "A:src/config.ts",
+        "A:src/errors.ts"
+      ]
+    },
+    {
+      "case_id": "gateway-insufficient-missing-b",
+      "scenario_id": "gateway-v3",
+      "criterion_id": "gateway-overall",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "candidate B evidence was intentionally omitted",
+      "input_hash": "9f4b5cd6151799ccac56a1868d1494e313bb19e8dccb0bc6f93714e799aebd3d",
+      "prompt_hash": "a0630307b86da55b0f87af1a6e8d0c77824f7135c826521c8ebc9388413862e0",
+      "evidence_ids": [
+        "A:src/adapters.ts",
+        "A:src/config.ts",
+        "A:src/errors.ts"
+      ]
+    }
+  ]
+}

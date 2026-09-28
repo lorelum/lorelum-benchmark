@@ -1,0 +1,51 @@
+{
+  "id": "gateway-v3-offline-rubric",
+  "version": "v1",
+  "criteria": [
+    {
+      "id": "gateway-overall",
+      "description": "The implementation honors the task's protocol translation, fallback, accounting, idempotency, tenant budget, streaming failure, and observability requirements.",
+      "include_patterns": ["src/", "tests/", "docs/"]
+    },
+    {
+      "id": "protocol-translation",
+      "description": "Provider-specific wire fields, authentication, and failures are translated from each provider's actual contract rather than inferred from an OpenAI-compatible name.",
+      "include_patterns": ["gateway", "provider", "adapter", "nebula", "openai", "anthropic", "types\\.ts$", "vendors", "server\\.ts$"]
+    },
+    {
+      "id": "fallback-accounting",
+      "description": "Fallback and retries continue one logical request without duplicate accounting or duplicate provider calls.",
+      "include_patterns": ["gateway", "provider", "executor", "execution", "accounting", "ledger", "policy", "server\\.ts$"]
+    },
+    {
+      "id": "tenant-budget",
+      "description": "Tenant dollar budgets are atomically reserved before provider work, settled from actual usage, and cannot be oversubscribed by concurrent requests.",
+      "include_patterns": ["gateway", "provider", "ledger", "policy", "store", "budget", "accounting", "server\\.ts$"]
+    },
+    {
+      "id": "boundary-ownership",
+      "description": "Transport, policy, error, and ledger responsibilities live behind a clear boundary rather than being scattered through handlers or raw response handling.",
+      "include_patterns": ["boundary/", "gateway", "provider", "adapters\\.ts$", "policy\\.ts$", "ledger\\.ts$", "server\\.ts$"]
+    },
+    {
+      "id": "policy-centralization",
+      "description": "Cross-request policy such as fallback, retry, billing, and tenant reservation is centralized instead of duplicated or scattered across handlers.",
+      "include_patterns": ["gateway", "provider", "policy", "ledger", "accounting", "executor", "server\\.ts$"]
+    },
+    {
+      "id": "idempotency",
+      "description": "Repeated requests return the first result without another provider call or charge, while a reused idempotency key with different content conflicts.",
+      "include_patterns": ["idempot", "store", "executor", "server\\.ts$", "types\\.ts$"]
+    },
+    {
+      "id": "streaming-accounting",
+      "description": "A stream that fails after headers emits a terminating SSE error and records only upstream-reported usage.",
+      "include_patterns": ["stream", "usage", "server\\.ts$", "executor", "accounting"]
+    },
+    {
+      "id": "raw-response-containment",
+      "description": "Raw upstream payloads and provider names do not leak directly through the public response contract.",
+      "include_patterns": ["errors\\.ts$", "types\\.ts$", "server\\.ts$", "adapters\\.ts$", "gateway", "provider", "docs/"]
+    }
+  ]
+}

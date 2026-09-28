@@ -1,0 +1,62 @@
+{
+  "cases": [
+    {
+      "id": "compaction-goal-retention",
+      "criterion_id": "goal-and-acceptance",
+      "kind": "decisive",
+      "a": "Goal: deliver a tenant-safe provider gateway. Acceptance covers protocol translation, fallback, single-charge accounting, idempotency, atomic tenant budgets, streaming failure accounting, usage queries, error mapping, and tests. Current work is still inside provider translation; the other acceptance areas remain open.",
+      "b": "Goal: continue the provider translation work. The latest change edited the Nebula adapter and tests. Next, finish that file and run the gateway tests."
+    },
+    {
+      "id": "compaction-source-authority",
+      "criterion_id": "source-authority",
+      "kind": "decisive",
+      "a": "Authoritative sources: the task card, the repository gateway API document, and an accepted maintainer decision that Nebula uses its documented wire contract. A blog post and an old legacy comment are non-authoritative background only.",
+      "b": "The implementation should follow the blog post and legacy comment because they both describe Nebula as OpenAI-compatible. The repository API document is older and can be ignored."
+    },
+    {
+      "id": "compaction-decision-state",
+      "criterion_id": "decision-state",
+      "kind": "decisive",
+      "a": "Accepted: centralize fallback and accounting in the gateway boundary. Open: whether to expose latency in the usage response. Rejected: storing idempotency keys only in process memory because it fails across restarts.",
+      "b": "Centralize fallback in each provider handler. Also consider in-memory idempotency storage as the current plan, because it was the newest approach mentioned before compaction."
+    },
+    {
+      "id": "compaction-evidence-boundary",
+      "criterion_id": "evidence-boundary",
+      "kind": "decisive",
+      "a": "Verified: unit tests for provider translation pass. Unverified: tenant-budget concurrency, streaming failure after headers, and browser-level behavior. The task is not complete until those probes run.",
+      "b": "The task is complete because the latest unit test passed. Tenant budgets and streaming behavior are probably covered by the same success and do not need further verification."
+    },
+    {
+      "id": "compaction-equivalent-verbose",
+      "criterion_id": "summary-equivalence",
+      "kind": "equivalent",
+      "a": "Goal and acceptance remain open. Accepted boundary centralization; rejected in-memory idempotency. Unit translation tests pass; budget, streaming, and browser checks remain unverified.",
+      "b": "Continue the gateway task, not just the latest adapter edit. Boundary centralization is accepted and in-memory idempotency was rejected. Provider translation unit tests passed, while budget concurrency, stream failure, and browser verification are still pending."
+    },
+    {
+      "id": "compaction-equivalent-formatting",
+      "criterion_id": "summary-equivalence",
+      "kind": "equivalent",
+      "a": "- Goal: finish all gateway acceptance areas.\n- State: protocol translation in progress; other work open.\n- Evidence: translation unit tests pass; concurrency and streaming not checked.\n- Decision: central boundary accepted; in-memory idempotency rejected.",
+      "b": "Finish all gateway acceptance areas, not only protocol translation. Translation unit tests are green, but concurrency and streaming remain unverified. Keep the central boundary and do not revive in-memory idempotency."
+    },
+    {
+      "id": "compaction-insufficient-authority",
+      "criterion_id": "source-authority",
+      "kind": "insufficient",
+      "a": "The gateway work has several notes and decisions in the conversation history, but this summary does not state which source is authoritative or what the accepted decision was.",
+      "b": "Continue with the approach mentioned most recently. The summary does not identify whether the approach was accepted, rejected, or merely proposed.",
+      "insufficient_reason": "both summaries omit the authoritative source and accepted decision state"
+    },
+    {
+      "id": "compaction-insufficient-goal",
+      "criterion_id": "goal-and-acceptance",
+      "kind": "insufficient",
+      "a": "Recent work touched the tenant ledger and a streaming handler. Tests were run, but the summary is truncated before the goal or acceptance criteria.",
+      "b": "Continue the current file and fix the failing case. The summary lists implementation details but does not preserve the original goal or completion boundary.",
+      "insufficient_reason": "both summaries omit the original goal and acceptance criteria"
+    }
+  ]
+}

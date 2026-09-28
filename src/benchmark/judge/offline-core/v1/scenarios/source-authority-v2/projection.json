@@ -1,0 +1,6 @@
+{
+  "foreground-authority": ["dashboard", "projects", "foreground", "navigation", "reload"],
+  "background-window-authority": ["dashboard", "projects", "reconciliation", "background", "time", "timestamp"],
+  "superseded-foreground": ["dashboard", "projects", "foreground", "request", "sequence", "time"],
+  "state-feedback-preserved": ["dashboard", "loading", "error", "ready", "reconciliation", "reload"]
+}

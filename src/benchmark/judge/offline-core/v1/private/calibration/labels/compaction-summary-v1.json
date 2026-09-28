@@ -1,0 +1,10 @@
+[
+  { "case_id": "compaction-goal-retention", "expected": "A" },
+  { "case_id": "compaction-source-authority", "expected": "A" },
+  { "case_id": "compaction-decision-state", "expected": "A" },
+  { "case_id": "compaction-evidence-boundary", "expected": "A" },
+  { "case_id": "compaction-equivalent-verbose", "expected": "tie" },
+  { "case_id": "compaction-equivalent-formatting", "expected": "tie" },
+  { "case_id": "compaction-insufficient-authority", "expected": "insufficient" },
+  { "case_id": "compaction-insufficient-goal", "expected": "insufficient" }
+]

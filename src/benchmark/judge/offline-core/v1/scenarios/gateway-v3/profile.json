@@ -1,0 +1,7 @@
+{
+  "schema_version": "offline-judge-scenario/v1",
+  "id": "gateway-v3",
+  "version": "v1",
+  "adapter_version": "gateway-v3-adapter/v1",
+  "description": "Gateway v3 source and runtime relationship evidence with a fixed gateway rubric."
+}

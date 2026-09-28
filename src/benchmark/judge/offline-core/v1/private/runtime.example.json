@@ -1,0 +1,24 @@
+{
+  "schema_version": "offline-judge-runtime/v1",
+  "base_url": "http://127.0.0.1:8080",
+  "model": {
+    "id": "Qwen/Qwen3-1.7B-GGUF",
+    "revision": "90862c4b9d2787eaed51d12237eafdfe7c5f6077",
+    "quantization": "Q8_0",
+    "path": "<ABSOLUTE_PATH_TO_Qwen3-1.7B-Q8_0.gguf>",
+    "file_sha256": "061b54daade076b5d3362dac252678d17da8c68f07560be70818cace6590cb1a",
+    "file_size_bytes": 1834426016
+  },
+  "runtime": {
+    "id": "llama.cpp",
+    "version": "b11207",
+    "artifact_sha256": "738f8c251ac22b70c3ae6f83a10cf222725df0395246a2cf58f32bdb85fbe668",
+    "binary_sha256": "3efd633317d9eec15518c21c73641fa637a000c3aea88c6fe4158befe16635b1",
+    "executable": "<ABSOLUTE_PATH_TO_llama-server.exe>"
+  },
+  "context_size": 8192,
+  "temperature": 0,
+  "top_k": 1,
+  "seed": 20260927,
+  "max_tokens": 256
+}

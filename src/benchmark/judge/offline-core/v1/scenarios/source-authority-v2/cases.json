@@ -1,0 +1,16 @@
+{
+  "cases": [
+    { "id": "authority-reference-vs-anti-full", "criterion_id": "foreground-authority", "kind": "decisive", "a_fixture": "reference", "b_fixture": "anti-pattern" },
+    { "id": "authority-equivalent-vs-anti-full", "criterion_id": "foreground-authority", "kind": "decisive", "a_fixture": "equivalent", "b_fixture": "anti-pattern" },
+    { "id": "authority-never-apply-vs-reference", "criterion_id": "background-window-authority", "kind": "decisive", "a_fixture": "never-apply", "b_fixture": "reference" },
+    { "id": "authority-never-apply-vs-equivalent", "criterion_id": "background-window-authority", "kind": "decisive", "a_fixture": "never-apply", "b_fixture": "equivalent" },
+    { "id": "authority-reference-vs-anti-superseded", "criterion_id": "superseded-foreground", "kind": "decisive", "a_fixture": "reference", "b_fixture": "anti-pattern" },
+    { "id": "authority-equivalent-vs-anti-superseded", "criterion_id": "superseded-foreground", "kind": "decisive", "a_fixture": "equivalent", "b_fixture": "anti-pattern" },
+    { "id": "authority-reference-vs-anti-feedback", "criterion_id": "state-feedback-preserved", "kind": "decisive", "a_fixture": "reference", "b_fixture": "anti-pattern" },
+    { "id": "authority-equivalent-vs-anti-feedback", "criterion_id": "state-feedback-preserved", "kind": "decisive", "a_fixture": "equivalent", "b_fixture": "anti-pattern" },
+    { "id": "authority-reference-vs-equivalent-foreground", "criterion_id": "foreground-authority", "kind": "equivalent", "a_fixture": "reference", "b_fixture": "equivalent" },
+    { "id": "authority-reference-vs-equivalent-feedback", "criterion_id": "state-feedback-preserved", "kind": "equivalent", "a_fixture": "reference", "b_fixture": "equivalent" },
+    { "id": "authority-insufficient-missing-a", "criterion_id": "foreground-authority", "kind": "insufficient", "a_fixture": "reference", "b_fixture": "reference", "insufficient_reason": "candidate A evidence was intentionally omitted" },
+    { "id": "authority-insufficient-missing-b", "criterion_id": "background-window-authority", "kind": "insufficient", "a_fixture": "reference", "b_fixture": "reference", "insufficient_reason": "candidate B evidence was intentionally omitted" }
+  ]
+}

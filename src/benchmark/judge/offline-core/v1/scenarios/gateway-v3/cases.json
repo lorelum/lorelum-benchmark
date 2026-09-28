@@ -1,0 +1,16 @@
+{
+  "cases": [
+    { "id": "gateway-reference-vs-anti", "criterion_id": "raw-response-containment", "kind": "decisive", "a_fixture": "reference", "b_fixture": "anti-pattern" },
+    { "id": "gateway-accounting-oracle-vs-scatter", "criterion_id": "fallback-accounting", "kind": "decisive", "a_fixture": "oracle-sync-ledger", "b_fixture": "baseline-policy-scatter" },
+    { "id": "gateway-naming-a-vs-anti", "criterion_id": "boundary-ownership", "kind": "decisive", "a_fixture": "oracle-naming-variant-a", "b_fixture": "anti-pattern" },
+    { "id": "gateway-naming-b-vs-anti", "criterion_id": "policy-centralization", "kind": "decisive", "a_fixture": "oracle-naming-variant-b", "b_fixture": "anti-pattern" },
+    { "id": "gateway-ledger-vs-scatter", "criterion_id": "tenant-budget", "kind": "decisive", "a_fixture": "ledger-naming-variant", "b_fixture": "baseline-policy-scatter" },
+    { "id": "gateway-type-vs-anti", "criterion_id": "protocol-translation", "kind": "decisive", "a_fixture": "type-based", "b_fixture": "anti-pattern" },
+    { "id": "gateway-docs-vs-anti", "criterion_id": "raw-response-containment", "kind": "decisive", "a_fixture": "docs-present", "b_fixture": "anti-pattern" },
+    { "id": "gateway-layout-vs-unused", "criterion_id": "boundary-ownership", "kind": "decisive", "a_fixture": "different-layout", "b_fixture": "unused-boundary-modules" },
+    { "id": "gateway-reference-vs-equivalent", "criterion_id": "gateway-overall", "kind": "equivalent", "a_fixture": "reference", "b_fixture": "equivalent" },
+    { "id": "gateway-naming-a-vs-b", "criterion_id": "boundary-ownership", "kind": "equivalent", "a_fixture": "oracle-naming-variant-a", "b_fixture": "oracle-naming-variant-b" },
+    { "id": "gateway-insufficient-missing-a", "criterion_id": "gateway-overall", "kind": "insufficient", "a_fixture": "reference", "b_fixture": "reference", "insufficient_reason": "candidate A evidence was intentionally omitted" },
+    { "id": "gateway-insufficient-missing-b", "criterion_id": "gateway-overall", "kind": "insufficient", "a_fixture": "reference", "b_fixture": "reference", "insufficient_reason": "candidate B evidence was intentionally omitted" }
+  ]
+}

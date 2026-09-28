@@ -1,0 +1,17 @@
+{
+  "schema_version": "offline-judge-thresholds/v1",
+  "common": {
+    "schema_validity": 1,
+    "citation_validity": 1,
+    "equivalence_stability": 0.75,
+    "order_consistency": 0.75,
+    "unexpected_abstain": 0.1,
+    "high_confidence_errors": 1
+  },
+  "development": {
+    "decisive_accuracy": 0.8
+  },
+  "holdout": {
+    "decisive_accuracy": 0.75
+  }
+}

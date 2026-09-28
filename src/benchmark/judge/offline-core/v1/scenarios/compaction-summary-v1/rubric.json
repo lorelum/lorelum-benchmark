@@ -1,0 +1,26 @@
+{
+  "id": "compaction-summary-offline-rubric",
+  "version": "v1",
+  "criteria": [
+    {
+      "id": "goal-and-acceptance",
+      "description": "The summary preserves the original goal and complete acceptance semantics rather than only the most recent implementation slice."
+    },
+    {
+      "id": "source-authority",
+      "description": "The summary preserves authoritative requirements and accepted decisions, and does not elevate web notes, legacy comments, or rejected proposals into current authority."
+    },
+    {
+      "id": "decision-state",
+      "description": "The summary distinguishes accepted decisions, open hypotheses, and explicitly rejected approaches."
+    },
+    {
+      "id": "evidence-boundary",
+      "description": "The summary does not overstate verified evidence or mark unfinished work complete."
+    },
+    {
+      "id": "summary-equivalence",
+      "description": "Two summaries are equivalent when they preserve the same authoritative facts, state, uncertainty, and next action."
+    }
+  ]
+}

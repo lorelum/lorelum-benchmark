@@ -1,0 +1,14 @@
+[
+  { "case_id": "gateway-reference-vs-anti", "expected": "A" },
+  { "case_id": "gateway-accounting-oracle-vs-scatter", "expected": "A" },
+  { "case_id": "gateway-naming-a-vs-anti", "expected": "A" },
+  { "case_id": "gateway-naming-b-vs-anti", "expected": "A" },
+  { "case_id": "gateway-ledger-vs-scatter", "expected": "A" },
+  { "case_id": "gateway-type-vs-anti", "expected": "A" },
+  { "case_id": "gateway-docs-vs-anti", "expected": "A" },
+  { "case_id": "gateway-layout-vs-unused", "expected": "A" },
+  { "case_id": "gateway-reference-vs-equivalent", "expected": "tie" },
+  { "case_id": "gateway-naming-a-vs-b", "expected": "tie" },
+  { "case_id": "gateway-insufficient-missing-a", "expected": "insufficient" },
+  { "case_id": "gateway-insufficient-missing-b", "expected": "insufficient" }
+]

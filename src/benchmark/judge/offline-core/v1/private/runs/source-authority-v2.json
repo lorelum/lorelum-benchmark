@@ -1,0 +1,935 @@
+{
+  "schema_version": "offline-judge-run/v1",
+  "identity": {
+    "run_id": "0f81e42cdb46be0fdaa9ba28378626dbb61ae47bfd649c102b53f9f2b6f4d6c4",
+    "scenario": {
+      "id": "source-authority-v2",
+      "version": "v1",
+      "adapter_version": "source-authority-v2-adapter/v1"
+    },
+    "core_hash": "19e12acbba8c8e36c2c8af95563aa1a3710d408155c316f8cef44270f1e1baa7",
+    "system_prompt_hash": "cb208b302d36f9ccfc261abfc1ae981f159c8b93d0d00ddca04b1c45af260c14",
+    "rubric_hash": "ec58147baaf777bc00ee4c46074b5d8d8bd425e9bac4276b420d91cf33b49a40",
+    "labels_hash": "beeb2a3571890bd31e3ea878b468b99018a2872f0a50f8ac6523daa5f58c7606",
+    "model": {
+      "id": "Qwen/Qwen3-1.7B-GGUF",
+      "revision": "90862c4b9d2787eaed51d12237eafdfe7c5f6077",
+      "quantization": "Q8_0",
+      "file_sha256": "061b54daade076b5d3362dac252678d17da8c68f07560be70818cace6590cb1a",
+      "file_size_bytes": 1834426016
+    },
+    "runtime": {
+      "id": "llama.cpp",
+      "version": "b11207",
+      "artifact_sha256": "738f8c251ac22b70c3ae6f83a10cf222725df0395246a2cf58f32bdb85fbe668",
+      "binary_sha256": "3efd633317d9eec15518c21c73641fa637a000c3aea88c6fe4158befe16635b1",
+      "base_url": "http://127.0.0.1:8080",
+      "context_size": 8192,
+      "temperature": 0,
+      "top_k": 1,
+      "seed": 20260927,
+      "max_tokens": 256
+    },
+    "threshold": {
+      "schema_validity": 1,
+      "citation_validity": 1,
+      "equivalence_stability": 0.75,
+      "order_consistency": 0.75,
+      "unexpected_abstain": 0.1,
+      "high_confidence_errors": 1,
+      "development_decisive_accuracy": 0.8,
+      "holdout_decisive_accuracy": 0.75
+    }
+  },
+  "thresholds": {
+    "schema_validity": 1,
+    "citation_validity": 1,
+    "equivalence_stability": 0.75,
+    "order_consistency": 0.75,
+    "unexpected_abstain": 0.1,
+    "high_confidence_errors": 1,
+    "development_decisive_accuracy": 0.8,
+    "holdout_decisive_accuracy": 0.75
+  },
+  "metrics": {
+    "schema_validity": 0.7083333333333334,
+    "citation_validity": 0.7083333333333334,
+    "decisive_accuracy": 0.0625,
+    "equivalence_stability": 0.25,
+    "order_consistency": 0.5833333333333334,
+    "unexpected_abstain": 0.55,
+    "high_confidence_errors": 6,
+    "insufficient_controls_abstained": 4,
+    "insufficient_controls_total": 4
+  },
+  "checks": {
+    "schema_validity": false,
+    "citation_validity": false,
+    "decisive_accuracy": false,
+    "equivalence_stability": false,
+    "order_consistency": false,
+    "unexpected_abstain": false,
+    "insufficient_controls_abstained": true,
+    "high_confidence_errors": false
+  },
+  "passed": false,
+  "decisions": [
+    {
+      "case_id": "authority-reference-vs-anti-full",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "foreground-authority",
+      "orientation": "AB",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts"
+        ],
+        "reason": "Both candidates support the criterion with sufficient evidence."
+      },
+      "input_hash": "bf75293483d3cc1871aa57d80aad9561195087954d22bf381781f784da3aca8f",
+      "prompt_hash": "738d7a707ee034ba921586efedce949df07fa6a90cf3364afb6afc8c80518ce6",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Both candidates support the criterion with sufficient evidence."
+    },
+    {
+      "case_id": "authority-reference-vs-anti-full",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "foreground-authority",
+      "orientation": "BA",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts"
+        ],
+        "reason": "Both candidates support the criterion with sufficient evidence."
+      },
+      "input_hash": "13cbace94e59085e20ce9a136152e9809da3cc2a5c9738fa1452028d5f8dcf18",
+      "prompt_hash": "32f76280de1bbc9da3df9c7d7032071c8e4297ffe91e968a93785da1994990af",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Both candidates support the criterion with sufficient evidence."
+    },
+    {
+      "case_id": "authority-equivalent-vs-anti-full",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "foreground-authority",
+      "orientation": "AB",
+      "state": "observed",
+      "verdict": "A",
+      "canonical_verdict": "A",
+      "confidence": "high",
+      "citations": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts"
+        ],
+        "reason": "Both candidates support the criterion with sufficient evidence."
+      },
+      "input_hash": "6c6a65ef8715dfa18e7609371dd6c31a75f6cde66e12361ac452bbef8f67ea1e",
+      "prompt_hash": "123e4523c9f70166f755ecd64673d675812bbbfdfc709d17428177929d30a7b9",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Both candidates support the criterion with sufficient evidence."
+    },
+    {
+      "case_id": "authority-equivalent-vs-anti-full",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "foreground-authority",
+      "orientation": "BA",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts"
+        ],
+        "reason": "Both candidates support the criterion with sufficient evidence."
+      },
+      "input_hash": "c34d573ba651cd3637a67f07728ce0b594bfc42c75434e1fb68494bbb6bce733",
+      "prompt_hash": "df50f5ef09680cb7125a7f40b19b931aac8fb96e46fe3de838eaf1f34f836da0",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Both candidates support the criterion with sufficient evidence."
+    },
+    {
+      "case_id": "authority-never-apply-vs-reference",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "background-window-authority",
+      "orientation": "AB",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts"
+        ],
+        "reason": "Both candidates implement the required background reconciliation authority with elapsed-time/window conditions and proper handling of project list state."
+      },
+      "input_hash": "32f6dbe43a87ea749ee4384ff5b8e4531327bbe8c27a995072127d4382e6bdf5",
+      "prompt_hash": "d266be42a0724e88f8b33b065d55ed08885f2c06939071f5db41d5d31574ff25",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Both candidates implement the required background reconciliation authority with elapsed-time/window conditions and proper handling of project list state."
+    },
+    {
+      "case_id": "authority-never-apply-vs-reference",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "background-window-authority",
+      "orientation": "BA",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts",
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts",
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "A:tests/dashboard.spec.ts"
+        ],
+        "reason": "Both candidates implement the required behavior with explicit elapsed-time / window conditions and ensure reconciliation results are applied only when the window is satisfied."
+      },
+      "input_hash": "204355a1faa4b8b60875db7cacd71087f299e83eab558680c9c0ae8122bfcd67",
+      "prompt_hash": "c8a75a74ab0a129b259f9a11118c29979cbdff1401a24cbadee7f9c5fa7033f2",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Both candidates implement the required behavior with explicit elapsed-time / window conditions and ensure reconciliation results are applied only when the window is satisfied."
+    },
+    {
+      "case_id": "authority-never-apply-vs-equivalent",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "background-window-authority",
+      "orientation": "AB",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts"
+        ],
+        "reason": "Both candidates implement the required background reconciliation authority with elapsed-time / window condition and proper handling of project list changes."
+      },
+      "input_hash": "b72ed378eec074b08b5cbc3241eaf2a47e994c780d940dd209a705de8e47d4ac",
+      "prompt_hash": "5348b12bdc6fff7adc930029dc653880a744dc7fca14b1a84865dbae85dd0af9",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Both candidates implement the required background reconciliation authority with elapsed-time / window condition and proper handling of project list changes."
+    },
+    {
+      "case_id": "authority-never-apply-vs-equivalent",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "background-window-authority",
+      "orientation": "BA",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts",
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts",
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "A:tests/dashboard.spec.ts"
+        ],
+        "reason": "Both candidates implement the required behavior with explicit elapsed-time / window conditions and ensure reconciliation results are applied only when the window is satisfied."
+      },
+      "input_hash": "768379d30be7b04f2f2161a85282f7b8994dfd0840113ece63129d2be923f213",
+      "prompt_hash": "bd239404bfa2390ef99fe756267d7d161db028ae09248673c240e2cb7449a599",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Both candidates implement the required behavior with explicit elapsed-time / window conditions and ensure reconciliation results are applied only when the window is satisfied."
+    },
+    {
+      "case_id": "authority-reference-vs-anti-superseded",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "superseded-foreground",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "A:tests/dashboard.spec.ts",
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts"
+        ],
+        "reason": "Evidence is insufficient to determine if the criterion is met."
+      },
+      "input_hash": "27defcd0473eecb9e4ae79973ce80ca6000e82105fcd54d40a76935f0d2150ab",
+      "prompt_hash": "53ac17ae18f69ad8d9ce0dc8ac45143d071be61f85e8838f7ac6561fd2f84f81",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Evidence is insufficient to determine if the criterion is met."
+    },
+    {
+      "case_id": "authority-reference-vs-anti-superseded",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "superseded-foreground",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts"
+        ],
+        "reason": "Evidence is incomplete and lacks sufficient information to determine if the criterion is met."
+      },
+      "input_hash": "1661fa0e1e409f20a707ff790c301c5cde1ae9847de2b1bd05a40b396332401b",
+      "prompt_hash": "cc69ef6a95a895c599520bd155cff6d51b0ccf6ae6c83d7cf2eff8dcaba3fe8a",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Evidence is incomplete and lacks sufficient information to determine if the criterion is met."
+    },
+    {
+      "case_id": "authority-equivalent-vs-anti-superseded",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "superseded-foreground",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "A:tests/dashboard.spec.ts",
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts"
+        ],
+        "reason": "Evidence is insufficient to determine if the criterion is met."
+      },
+      "input_hash": "893c98967ec90c5d79ad4d5808a2eee1b9f5f4ef07ef53f3cd72ea4cfde4b35f",
+      "prompt_hash": "4b675a6a645384d9f3935c5b35e2105a30775d0d128d2a0087f94485831be363",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Evidence is insufficient to determine if the criterion is met."
+    },
+    {
+      "case_id": "authority-equivalent-vs-anti-superseded",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "superseded-foreground",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts",
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts",
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "A:tests/dashboard.spec.ts"
+        ],
+        "reason": "Evidence is insufficient to determine if the criterion is met."
+      },
+      "input_hash": "595b87b9f493f5b12c52151c3377a358bf1a0543491ffdebd4da56c053ac69c7",
+      "prompt_hash": "2ca316ca34d0fdddf13b173c1f3a1b496212d699a211f448ece37545826e4c1f",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Evidence is insufficient to determine if the criterion is met."
+    },
+    {
+      "case_id": "authority-reference-vs-anti-feedback",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "state-feedback-preserved",
+      "orientation": "AB",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:tests/dashboard.spec.tsx",
+          "B:src/Dashboard.tsx",
+          "B:tests/dashboard.spec.tsx"
+        ],
+        "reason": "Both candidates support the criterion by maintaining loading, success, error, reload, and reconciliation experiences while ensuring background reconciliation does not alter the project list, loading, or error view."
+      },
+      "reason": "Offline judge model output error: model cited unknown evidence id A:tests/dashboard.spec.tsx",
+      "input_hash": "1f2157a7751eaeb6caae9e8833a0dd73b52c3dc03ca1a589b2b320707e9885b3",
+      "prompt_hash": "3a915a8c6e849fb3c3df8d55805132c80299bc8e4f2c691f1a02f9f6ea1b5b50",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-reference-vs-anti-feedback",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "state-feedback-preserved",
+      "orientation": "BA",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:tests/dashboard.spec.tsx",
+          "A:src/Dashboard.tsx",
+          "A:tests/dashboard.spec.tsx"
+        ],
+        "reason": "Both candidates support the criterion by implementing the required behavior."
+      },
+      "reason": "Offline judge model output error: model cited unknown evidence id B:tests/dashboard.spec.tsx",
+      "input_hash": "309dea682ffc5e102538f3394a559f2d534737b3a05ec6cff86151db986260ff",
+      "prompt_hash": "0e280b0bf69f66c8503675354cacab0850e4f6c3c0f9a3a0fd87e805bef7730d",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-equivalent-vs-anti-feedback",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "state-feedback-preserved",
+      "orientation": "AB",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:tests/dashboard.spec.tsx",
+          "B:src/Dashboard.tsx",
+          "B:tests/dashboard.spec.tsx"
+        ],
+        "reason": "Both candidates support the criterion by maintaining loading, success, error, reload, and reconciliation experiences while ensuring background reconciliation does not alter the project list, loading, or error view."
+      },
+      "reason": "Offline judge model output error: model cited unknown evidence id A:tests/dashboard.spec.tsx",
+      "input_hash": "2478f0f8b2b1c2f360a77e959fbc68bebbb97f883a8bb8e8770d2f7894b405a5",
+      "prompt_hash": "50e9ff1ab1306e0131cf3f9ed0f8d2b8caad5a2f0ef894e2a7ec7d7c5d7be649",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-equivalent-vs-anti-feedback",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "state-feedback-preserved",
+      "orientation": "BA",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:tests/dashboard.spec.tsx",
+          "A:src/Dashboard.tsx",
+          "A:tests/dashboard.spec.tsx"
+        ],
+        "reason": "Both candidates support the criterion by implementing the required behavior."
+      },
+      "reason": "Offline judge model output error: model cited unknown evidence id B:tests/dashboard.spec.tsx",
+      "input_hash": "0e38afa557309b12926dc3045ea5db662906a0327cf5990383390d82e02cf709",
+      "prompt_hash": "ead146bc5119be5fadb6dfb79cd893bf4cac216861eb9032cc843f68aaa67087",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-reference-vs-equivalent-foreground",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "foreground-authority",
+      "orientation": "AB",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:src/services/projects.ts",
+          "A:tests/dashboard.spec.ts"
+        ],
+        "reason": "Both candidates support the criterion with sufficient evidence."
+      },
+      "reason": "Offline judge model output error: observed verdict must cite evidence from both candidates",
+      "input_hash": "ed7ebbab0742457e7d210c391e19477def8b3fbdc772cc89e8b360f141e2b022",
+      "prompt_hash": "8b159fc96c84b7bfd5614ca8bc4f70280251e303412a851ea5953f575e7eb611",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-reference-vs-equivalent-foreground",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "foreground-authority",
+      "orientation": "BA",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:src/services/projects.ts",
+          "B:tests/dashboard.spec.ts"
+        ],
+        "reason": "Both candidates support the criterion with sufficient evidence."
+      },
+      "reason": "Offline judge model output error: observed verdict must cite evidence from both candidates",
+      "input_hash": "369292364346d091aaa7f918087aa446e03af7b82d1e77699b56a05d75ff2e4b",
+      "prompt_hash": "1db3bb510f8769fefa871633ca14e1a649398ec8d866c62750c4bf992e588e70",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-reference-vs-equivalent-feedback",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "state-feedback-preserved",
+      "orientation": "AB",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "A:src/Dashboard.tsx",
+          "A:tests/dashboard.spec.tsx",
+          "B:src/Dashboard.tsx",
+          "B:tests/dashboard.spec.tsx"
+        ],
+        "reason": "Both candidates support the criterion with sufficient evidence."
+      },
+      "reason": "Offline judge model output error: model cited unknown evidence id A:tests/dashboard.spec.tsx",
+      "input_hash": "250d9254180eaef984eeeab90959dda480357cad65ced8d0522a813e712ffa38",
+      "prompt_hash": "b1e8b78a533b7778eca86021ebcb4fdc35510e56e322b6b83f2c0e03eed62912",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-reference-vs-equivalent-feedback",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "state-feedback-preserved",
+      "orientation": "BA",
+      "state": "observed",
+      "verdict": "tie",
+      "canonical_verdict": "tie",
+      "confidence": "high",
+      "citations": [
+        "B:src/Dashboard.tsx",
+        "B:tests/dashboard.spec.ts",
+        "A:src/Dashboard.tsx",
+        "A:tests/dashboard.spec.ts"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "tie",
+        "confidence": "high",
+        "citations": [
+          "B:src/Dashboard.tsx",
+          "B:tests/dashboard.spec.ts",
+          "A:src/Dashboard.tsx",
+          "A:tests/dashboard.spec.ts"
+        ],
+        "reason": "Both candidates support the criterion with sufficient evidence."
+      },
+      "input_hash": "ef41dac70d490f0baf8abda4fa7883c72845e3d382e37f99f2f99a6010dedf83",
+      "prompt_hash": "12f810d95e6953de528b6c2331f95e9e02b1765722ec340620fdfcbe1c94990a",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:tests/dashboard.spec.ts",
+        "B:src/Dashboard.tsx",
+        "B:tests/dashboard.spec.ts"
+      ],
+      "reason": "Both candidates support the criterion with sufficient evidence."
+    },
+    {
+      "case_id": "authority-insufficient-missing-a",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "foreground-authority",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "candidate A evidence was intentionally omitted",
+      "input_hash": "ce7a2084e49f5b92a277e09a088489e9aaaa2baaed79cb1c5e50e9280ff51b97",
+      "prompt_hash": "cb714dd8f08a5e1c18b3a96280bfa25eca4e3054c240380e49871bebf18f54b4",
+      "evidence_ids": [
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-insufficient-missing-a",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "foreground-authority",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "candidate A evidence was intentionally omitted",
+      "input_hash": "e8fc13d5f765ead2c486eee750af373839fa29cb57bbb0ca538bfd421d44aeac",
+      "prompt_hash": "e4899076f07d1c59e7755c53bf8c73565953412c267d422acc0bef65041a5d62",
+      "evidence_ids": [
+        "B:src/Dashboard.tsx",
+        "B:src/services/projects.ts",
+        "B:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-insufficient-missing-b",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "background-window-authority",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "candidate B evidence was intentionally omitted",
+      "input_hash": "15ac07950de9adfb8f90a655e7ddb60d3d1ad751b592dcacd2c6d88e42cbb504",
+      "prompt_hash": "0b360bc0dcea0a712da065337942d636af93f9db8cbfea66d6f761b6a40b5632",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts"
+      ]
+    },
+    {
+      "case_id": "authority-insufficient-missing-b",
+      "scenario_id": "source-authority-v2",
+      "criterion_id": "background-window-authority",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "candidate B evidence was intentionally omitted",
+      "input_hash": "883cb86be6c428afd5265c0f58c44aa74d1f5a524b8f0d8e57d1ca9c750602af",
+      "prompt_hash": "1feb1fe011b8a146bf619b126131b7b7cd3a0349a0b5eec67d08adbbc532b053",
+      "evidence_ids": [
+        "A:src/Dashboard.tsx",
+        "A:src/services/projects.ts",
+        "A:tests/dashboard.spec.ts"
+      ]
+    }
+  ]
+}

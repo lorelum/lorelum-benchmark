@@ -1,0 +1,515 @@
+{
+  "schema_version": "offline-judge-run/v1",
+  "identity": {
+    "run_id": "da026580647b6a495f6cb451f9ad9feceded6ac19efb38f0ff3138c75c7f9cdf",
+    "scenario": {
+      "id": "compaction-summary-v1",
+      "version": "v1",
+      "adapter_version": "compaction-summary-v1-adapter/v1"
+    },
+    "core_hash": "19e12acbba8c8e36c2c8af95563aa1a3710d408155c316f8cef44270f1e1baa7",
+    "system_prompt_hash": "cb208b302d36f9ccfc261abfc1ae981f159c8b93d0d00ddca04b1c45af260c14",
+    "rubric_hash": "058e5f04255d8bde0ce0ce21ab80b558bce963a5e9b3ae38d65cb733287a724b",
+    "labels_hash": "508b94d3bf2f9badcb7ab814ce75206f3e0fa40144ad70854f108fa35ad07111",
+    "model": {
+      "id": "Qwen/Qwen3-1.7B-GGUF",
+      "revision": "90862c4b9d2787eaed51d12237eafdfe7c5f6077",
+      "quantization": "Q8_0",
+      "file_sha256": "061b54daade076b5d3362dac252678d17da8c68f07560be70818cace6590cb1a",
+      "file_size_bytes": 1834426016
+    },
+    "runtime": {
+      "id": "llama.cpp",
+      "version": "b11207",
+      "artifact_sha256": "738f8c251ac22b70c3ae6f83a10cf222725df0395246a2cf58f32bdb85fbe668",
+      "binary_sha256": "3efd633317d9eec15518c21c73641fa637a000c3aea88c6fe4158befe16635b1",
+      "base_url": "http://127.0.0.1:8080",
+      "context_size": 8192,
+      "temperature": 0,
+      "top_k": 1,
+      "seed": 20260927,
+      "max_tokens": 256
+    },
+    "threshold": {
+      "schema_validity": 1,
+      "citation_validity": 1,
+      "equivalence_stability": 0.75,
+      "order_consistency": 0.75,
+      "unexpected_abstain": 0.1,
+      "high_confidence_errors": 1,
+      "development_decisive_accuracy": 0.8,
+      "holdout_decisive_accuracy": 0.75
+    }
+  },
+  "thresholds": {
+    "schema_validity": 1,
+    "citation_validity": 1,
+    "equivalence_stability": 0.75,
+    "order_consistency": 0.75,
+    "unexpected_abstain": 0.1,
+    "high_confidence_errors": 1,
+    "development_decisive_accuracy": 0.8,
+    "holdout_decisive_accuracy": 0.75
+  },
+  "metrics": {
+    "schema_validity": 0.625,
+    "citation_validity": 0.625,
+    "decisive_accuracy": 0,
+    "equivalence_stability": 0,
+    "order_consistency": 0.25,
+    "unexpected_abstain": 0.6666666666666666,
+    "high_confidence_errors": 4,
+    "insufficient_controls_abstained": 4,
+    "insufficient_controls_total": 4
+  },
+  "checks": {
+    "schema_validity": false,
+    "citation_validity": false,
+    "decisive_accuracy": false,
+    "equivalence_stability": false,
+    "order_consistency": false,
+    "unexpected_abstain": false,
+    "insufficient_controls_abstained": true,
+    "high_confidence_errors": false
+  },
+  "passed": false,
+  "decisions": [
+    {
+      "case_id": "compaction-goal-retention",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "goal-and-acceptance",
+      "orientation": "AB",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "contradicts",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "A:text"
+        ],
+        "reason": "Candidate A explicitly mentions acceptance areas, while candidate B focuses on ongoing work and tests, contradicting the goal-and-acceptance criterion."
+      },
+      "reason": "Offline judge model output error: observed verdict must cite evidence from both candidates",
+      "input_hash": "5b848d3a58466647e2b909f6f4d822984a73e12315bdc1b767c361799e95f257",
+      "prompt_hash": "a4c698724b39fa4764887e9f5b2590c074db29e2b3bdcd895cd547e025db5551",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    },
+    {
+      "case_id": "compaction-goal-retention",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "goal-and-acceptance",
+      "orientation": "BA",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "contradicts",
+        "b_relation": "supports",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "A:text",
+          "B:text"
+        ],
+        "reason": "Candidate A contradicts the criterion by focusing on a different goal and acceptance area than candidate B."
+      },
+      "reason": "Offline judge model output error: A verdict requires candidate A to support the criterion",
+      "input_hash": "9bfd5166ed5b3df12b9308c283c3ad1ba80e77ce6a04001e467846f911a0d31e",
+      "prompt_hash": "5d89e5749ee2438a75d0a89cb2cccd39749c4997efba0ec5233ed501166f078c",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    },
+    {
+      "case_id": "compaction-source-authority",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "source-authority",
+      "orientation": "AB",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "contradicts",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "A:text"
+        ],
+        "reason": "A supports the criterion by citing authoritative sources, while B contradicts it by promoting non-authoritative sources."
+      },
+      "reason": "Offline judge model output error: observed verdict must cite evidence from both candidates",
+      "input_hash": "c4db4f71bcce5d5a5179fa1b05394f55393844e4d4368a72881e81ec3f76e5c8",
+      "prompt_hash": "87bb6f80929bb92c84aa721e4496d86fed715ae9c8face3f7951abd8090e1c85",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    },
+    {
+      "case_id": "compaction-source-authority",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "source-authority",
+      "orientation": "BA",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "contradicts",
+        "b_relation": "supports",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "B:text"
+        ],
+        "reason": "Candidate A contradicts candidate B by including blog post and legacy comment as authoritative sources, while candidate B excludes them."
+      },
+      "reason": "Offline judge model output error: A verdict requires candidate A to support the criterion",
+      "input_hash": "ecd018060d146f27959cb851bfc1b31eab24fac2599a96e503d00fc6df205b69",
+      "prompt_hash": "5be4e7b433160939da10ce41c4610082e8d4e87c463c6c6bddbc25d02ff042e2",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    },
+    {
+      "case_id": "compaction-decision-state",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "decision-state",
+      "orientation": "AB",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "contradicts",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "A:text"
+        ],
+        "reason": "Candidate A supports the criterion by explicitly stating 'centralize fallback and accounting in the gateway boundary' and 'rejected: storing idempotency keys only in process memory because it fails across restarts'. Candidate B contradicts by stating 'centralize fallback in each provider handler' and 'in-memory idempotency storage as the current plan, because it was the newest approach mentioned before compaction'."
+      },
+      "reason": "Offline judge model output error: observed verdict must cite evidence from both candidates",
+      "input_hash": "e0cee0313a2ab8907bad1813da6032c45876d55a13639ee4f849cfa4dd250a66",
+      "prompt_hash": "0ac2f4e20c92f7fae3db9951f630fb0818064b04c1c2e6d321eeeefca27a939b",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    },
+    {
+      "case_id": "compaction-decision-state",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "decision-state",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "B:text",
+        "A:text"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "B:text",
+          "A:text"
+        ],
+        "reason": "Evidence does not provide enough information to determine relation to criterion"
+      },
+      "input_hash": "4bb8b0438f1035c2de4711c77126696080ca4fd193adfa7cfd1b45d07d7509b3",
+      "prompt_hash": "52cc581a60889cb5b230bd0277f4d5b8e6a4ab7dfe4da5f9c5b630a334ddb0c8",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ],
+      "reason": "Evidence does not provide enough information to determine relation to criterion"
+    },
+    {
+      "case_id": "compaction-evidence-boundary",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "evidence-boundary",
+      "orientation": "AB",
+      "state": "observed",
+      "verdict": "B",
+      "canonical_verdict": "B",
+      "confidence": "high",
+      "citations": [
+        "A:text",
+        "B:text"
+      ],
+      "raw": {
+        "a_relation": "contradicts",
+        "b_relation": "supports",
+        "verdict": "B",
+        "confidence": "high",
+        "citations": [
+          "A:text",
+          "B:text"
+        ],
+        "reason": "Candidate B supports the criterion by marking task as complete, while candidate A marks it as incomplete."
+      },
+      "input_hash": "be6d72663af5965be01903f631a4b099472119e868de00157c3c6b39b318a1ac",
+      "prompt_hash": "f36410089f1607ddcc6dae4acb6ef82188fefa1f5f727b3ec6aed9898593855e",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ],
+      "reason": "Candidate B supports the criterion by marking task as complete, while candidate A marks it as incomplete."
+    },
+    {
+      "case_id": "compaction-evidence-boundary",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "evidence-boundary",
+      "orientation": "BA",
+      "state": "invalid",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": {
+        "a_relation": "contradicts",
+        "b_relation": "supports",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "B:text"
+        ],
+        "reason": "Candidate A contradicts the criterion by claiming the task is complete, while candidate B supports it by indicating unverified work remains."
+      },
+      "reason": "Offline judge model output error: A verdict requires candidate A to support the criterion",
+      "input_hash": "6a9b8aadc74bd79d159e9190fd913dab11b48f678afdf558fc0f634abab19a87",
+      "prompt_hash": "f9e7bac68ccae04f16ad22ba80dc56427edb518fc10397971313c00525740141",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    },
+    {
+      "case_id": "compaction-equivalent-verbose",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "summary-equivalence",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": "high",
+      "citations": [
+        "A:text",
+        "B:text"
+      ],
+      "raw": {
+        "a_relation": "insufficient",
+        "b_relation": "insufficient",
+        "verdict": "insufficient",
+        "confidence": "high",
+        "citations": [
+          "A:text",
+          "B:text"
+        ],
+        "reason": "Evidence lacks sufficient information to determine equivalence"
+      },
+      "input_hash": "c82dc8c049f4044df82e0c2f5557f6029a1cfab5c0e75f6ffe5046e03df8694d",
+      "prompt_hash": "a5863a15ccf9b377b33a4aa75507ee9bcbfe070298202e948c7653ad1604bd21",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ],
+      "reason": "Evidence lacks sufficient information to determine equivalence"
+    },
+    {
+      "case_id": "compaction-equivalent-verbose",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "summary-equivalence",
+      "orientation": "BA",
+      "state": "observed",
+      "verdict": "A",
+      "canonical_verdict": "B",
+      "confidence": "high",
+      "citations": [
+        "B:text",
+        "A:text"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "B:text",
+          "A:text"
+        ],
+        "reason": "Both summaries preserve the same authoritative facts, state, uncertainty, and next action."
+      },
+      "input_hash": "f9693a491fcbd3fc60970f0bd9c2ffe212f251ad11017ebc1981cc7e5dce6787",
+      "prompt_hash": "3fe0958cb04d4cb4936a26a69814963a148f5462e989eb30da7df7ed62fafdfe",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ],
+      "reason": "Both summaries preserve the same authoritative facts, state, uncertainty, and next action."
+    },
+    {
+      "case_id": "compaction-equivalent-formatting",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "summary-equivalence",
+      "orientation": "AB",
+      "state": "observed",
+      "verdict": "A",
+      "canonical_verdict": "A",
+      "confidence": "high",
+      "citations": [
+        "A:text",
+        "B:text"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "A:text",
+          "B:text"
+        ],
+        "reason": "Both summaries support the same authoritative facts, state, uncertainty, and next action."
+      },
+      "input_hash": "f57bf7cecc0b32fa4ae16952565a9bb8da31807d35d17c2803b29f35c4cf6a3e",
+      "prompt_hash": "d7d28622a626911bfc31a859676176210c22fab0bc34ce26a39998fbd6000da0",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ],
+      "reason": "Both summaries support the same authoritative facts, state, uncertainty, and next action."
+    },
+    {
+      "case_id": "compaction-equivalent-formatting",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "summary-equivalence",
+      "orientation": "BA",
+      "state": "observed",
+      "verdict": "A",
+      "canonical_verdict": "B",
+      "confidence": "high",
+      "citations": [
+        "B:text",
+        "A:text"
+      ],
+      "raw": {
+        "a_relation": "supports",
+        "b_relation": "supports",
+        "verdict": "A",
+        "confidence": "high",
+        "citations": [
+          "B:text",
+          "A:text"
+        ],
+        "reason": "Both summaries support the same authoritative facts, state, uncertainty, and next action."
+      },
+      "input_hash": "2b3241c744ee604df85919b3b0761eeddc51964c35d02cae57ae51a86af239b6",
+      "prompt_hash": "e587523c92dabf0713d0714f219fb5d1a6d7cde3862f4abc0ad20d23ab9e49f9",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ],
+      "reason": "Both summaries support the same authoritative facts, state, uncertainty, and next action."
+    },
+    {
+      "case_id": "compaction-insufficient-authority",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "source-authority",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "both summaries omit the authoritative source and accepted decision state",
+      "input_hash": "f02207c89fa60864d202c6dc6d7112d1c3f26c35d109144b82b837df50206d0f",
+      "prompt_hash": "c7dd651c8e5dc0a8e092208ebcbe5393ebca231523d41ebcfa58d7cbcf07cd56",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    },
+    {
+      "case_id": "compaction-insufficient-authority",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "source-authority",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "both summaries omit the authoritative source and accepted decision state",
+      "input_hash": "571a9a6aafe415775c37a3580524ebb272b5c44384bf5dbb62f2e176993a3090",
+      "prompt_hash": "f2ed13fba12dfc5017a7a6765bc01607be094ab5efacc14d73266208f88f2402",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    },
+    {
+      "case_id": "compaction-insufficient-goal",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "goal-and-acceptance",
+      "orientation": "AB",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "both summaries omit the original goal and acceptance criteria",
+      "input_hash": "af288dd5d8951f3ea2159564cd89c30574feaff21bbc0fb1a9743a15986d1d6b",
+      "prompt_hash": "ce784feb8b96fc9fa399f742e80467f6720a48c18b93ee233a0deff21e6321c4",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    },
+    {
+      "case_id": "compaction-insufficient-goal",
+      "scenario_id": "compaction-summary-v1",
+      "criterion_id": "goal-and-acceptance",
+      "orientation": "BA",
+      "state": "insufficient",
+      "verdict": "insufficient",
+      "canonical_verdict": "insufficient",
+      "confidence": null,
+      "citations": [],
+      "raw": null,
+      "reason": "both summaries omit the original goal and acceptance criteria",
+      "input_hash": "3d56535597fd9b44da14218e6c6fb3b050263570c4f582b35e0ce90528aa4838",
+      "prompt_hash": "97e29c085ae84f413f0139444290de6f6643350705f0f8354c67a5d307b8d28b",
+      "evidence_ids": [
+        "A:text",
+        "B:text"
+      ]
+    }
+  ]
+}
