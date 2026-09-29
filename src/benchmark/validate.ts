@@ -4,6 +4,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
 import { directoryExists, joinPath, listDirectories, listFiles, pathExists, relativePath, sha256File, workspaceRoot } from "./fs";
 import { loadPackPracticeTreatment } from "./treatments/pack-practice/v1/contract";
+import { readTimingPilotPlan, timingPilotEnvironmentPath, timingPilotPlanPath, timingPilotSystemPromptPath } from "./runner/pi/v2/staged/async-report-timing-pilot";
 
 const failures: string[] = [];
 const lifecycleStages = new Set(["candidate", "pilot", "frozen", "official", "published", "retired"]);
@@ -23,6 +24,10 @@ const requiredJudgeSchemas = [
   "replan-evidence-v1.schema.json",
   "async-report-replan-evaluation-plan-v1.schema.json",
   "async-report-replan-judge-accounting-v1.schema.json",
+  "async-report-timing-pilot-v1.schema.json",
+  "async-report-timing-pilot-preflight-v1.schema.json",
+  "async-report-timing-pilot-judge-calibration-diagnostics-v1.schema.json",
+  "async-report-timing-pilot-run-v1.schema.json",
 ];
 
 type DiscoveredTask = {
@@ -310,7 +315,7 @@ async function validateVersionedManifests(path: string, manifestName: string, sc
 }
 
 const suitesPath = joinPath(workspaceRoot, "suites");
-for (const schema of ["suite.schema.json", "task-card.schema.json", "task-rule-audit.schema.json", "evaluator-result-v2.schema.json", "judge-result-v1.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "pack-practice-treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json", "staged-practice-delivery.schema.json", "staged-practice-delivery-audit.schema.json", "staged-practice-delivery-public.schema.json", "staged-practice-attempt-summary.schema.json"]) {
+for (const schema of ["suite.schema.json", "task-card.schema.json", "task-rule-audit.schema.json", "evaluator-result-v2.schema.json", "judge-result-v1.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "pack-practice-treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json", "staged-practice-delivery.schema.json", "staged-practice-delivery-audit.schema.json", "staged-practice-delivery-public.schema.json", "staged-practice-attempt-summary.schema.json", "async-report-timing-pilot-v1.schema.json", "async-report-timing-pilot-preflight-v1.schema.json", "async-report-timing-pilot-judge-calibration-diagnostics-v1.schema.json"]) {
   await requirePath(joinPath(workspaceRoot, "schemas", schema));
 }
 
@@ -416,6 +421,21 @@ for (const track of await listDirectories(joinPath(workspaceRoot, "incubator")))
   const candidatesPath = joinPath(workspaceRoot, "incubator", track);
   for (const candidate of await listDirectories(candidatesPath)) {
     await findGeneratedStarterOutput(joinPath(candidatesPath, candidate, "public", "starter"));
+  }
+}
+
+const timingPilotPlanAbsolutePath = joinPath(workspaceRoot, timingPilotPlanPath);
+const hasPracticeInjectionCandidates = await pathExists(joinPath(workspaceRoot, "incubator", "practice-injection"));
+if (hasPracticeInjectionCandidates) {
+  await requirePath(timingPilotPlanAbsolutePath);
+  await requirePath(joinPath(workspaceRoot, timingPilotEnvironmentPath));
+  await requirePath(joinPath(workspaceRoot, timingPilotSystemPromptPath));
+  if (await pathExists(timingPilotPlanAbsolutePath)) {
+    try {
+      await readTimingPilotPlan(timingPilotPlanAbsolutePath);
+    } catch (error) {
+      failures.push(`Async-report timing pilot plan is invalid: ${relativePath(timingPilotPlanAbsolutePath)}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 }
 

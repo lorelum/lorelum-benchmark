@@ -1,6 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { joinPath, workspaceRoot } from "../../fs";
+import { canonicalScratchTimestamp } from "./scratch-id";
 import { evaluatorResultFromOutput, failedExecutionEntry, piResultFromOutput, taskReferenceFromId, type LocalDiagnosticEntry } from "./v2/local-diagnostic";
 import type { PiRunRequestV2 } from "./v2/types";
 
@@ -14,7 +15,7 @@ function parseOptions(): Options {
   if (!plan) fail("Usage: bun run pi:diagnose -- <experiment-plan.yaml> [--smoke] [--output <ignored-directory>] [--dry-run] [--continue-on-failure]");
   const outputIndex = args.indexOf("--output");
   const resume = args.includes("--resume");
-  const output = outputIndex === -1 ? joinPath(workspaceRoot, "scratch", "local-diagnostics", `${new Date().toISOString().replaceAll(/[:.]/g, "-")}`) : args[outputIndex + 1];
+  const output = outputIndex === -1 ? joinPath(workspaceRoot, "scratch", "local-diagnostics", canonicalScratchTimestamp()) : args[outputIndex + 1];
   if (!output) fail("--output requires a directory");
   const outputPath = resolve(workspaceRoot, output);
   if (!outputPath.startsWith(resolve(workspaceRoot, "scratch"))) fail("Local diagnostic output must stay under ignored scratch/");

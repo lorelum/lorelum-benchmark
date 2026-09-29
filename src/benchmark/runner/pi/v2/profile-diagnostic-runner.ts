@@ -1,6 +1,7 @@
 import { cp, lstat, mkdir, realpath, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { joinPath, relativePath, sha256Directory, sha256File, workspaceRoot } from "../../../fs";
+import { canonicalScratchTimestamp } from "../scratch-id";
 import * as v1Runtime from "../../../kernel/profiles/injection-calibration/v1/runtime";
 import * as v2Runtime from "../../../kernel/profiles/injection-calibration/v2/runtime";
 import { resolveRuntimeClosureIfDeclared } from "../../../evaluator/runtime-closure";
@@ -258,7 +259,7 @@ export function requireScratchPath(path: string): string {
 }
 
 function timestamp(): string {
-  return new Date().toISOString().replaceAll(/[:.]/g, "-");
+  return canonicalScratchTimestamp();
 }
 
 export async function readYaml<T>(path: string, label: string): Promise<T> {

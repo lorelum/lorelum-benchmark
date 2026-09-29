@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "async-report-timing-pilot-judge-calibration-diagnostics-v1.schema.json",
+  "title": "Async report timing pilot private Judge calibration diagnostics v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "calibration",
+    "contract_snapshot_verified",
+    "thresholds",
+    "gate_checks",
+    "observations"
+  ],
+  "properties": {
+    "schema_version": { "const": "async-report-timing-pilot-judge-calibration-diagnostics/v1" },
+    "status": { "enum": ["captured", "details_unavailable"] },
+    "reason": { "enum": ["cached_report_without_sidecar", "calibration_run_failed"] },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "hash", "status", "model", "calls", "duration_ms", "usage", "medians"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "status": { "enum": ["qualified", "diagnostic", "not-run", "unavailable"] },
+        "model": { "type": ["string", "null"] },
+        "calls": { "type": "integer", "minimum": 0, "maximum": 9 },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "usage": { "$ref": "#/$defs/usage" },
+        "medians": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reference": { "type": "number", "minimum": 0, "maximum": 100 },
+            "equivalent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "anti-pattern": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        },
+        "report_reason": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "contract_snapshot_verified": { "type": ["boolean", "null"] },
+    "thresholds": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reference_min", "equivalent_max_difference", "anti_pattern_max", "reference_min_difference"],
+          "properties": {
+            "reference_min": { "type": "number", "minimum": 0, "maximum": 100 },
+            "equivalent_max_difference": { "type": "number", "minimum": 0, "maximum": 100 },
+            "anti_pattern_max": { "type": "number", "minimum": 0, "maximum": 100 },
+            "reference_min_difference": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        }
+      ]
+    },
+    "gate_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "observed", "operator", "threshold", "status"],
+        "properties": {
+          "id": { "enum": ["reference_minimum", "equivalent_distance", "anti_pattern_maximum", "reference_separation"] },
+          "observed": { "type": ["number", "null"] },
+          "operator": { "enum": [">=", "<="] },
+          "threshold": { "type": "number", "minimum": 0, "maximum": 100 },
+          "status": { "enum": ["passed", "failed", "not_evaluable"] }
+        }
+      }
+    },
+    "observations": {
+      "type": "array",
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["call_index", "fixture_group", "opaque_case_id", "repetition", "status", "score", "confidence", "criteria", "prompt_hash", "input_hash", "duration_ms", "usage"],
+        "properties": {
+          "call_index": { "type": "integer", "minimum": 1, "maximum": 9 },
+          "fixture_group": { "enum": ["reference", "equivalent", "anti-pattern", "unmapped"] },
+          "opaque_case_id": { "type": "string", "pattern": "^case-[a-z0-9]{12,64}$" },
+          "repetition": { "type": "integer", "minimum": 1, "maximum": 3 },
+          "status": { "enum": ["observed", "indeterminate", "unavailable"] },
+          "score": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+          "confidence": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+          "criteria": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "points", "max_points", "rationale"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "points": { "type": "integer", "minimum": 0 },
+                "max_points": { "type": "integer", "minimum": 1 },
+                "rationale": { "type": "string", "maxLength": 500 }
+              }
+            }
+          },
+          "prompt_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "input_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "duration_ms": { "type": "integer", "minimum": 0 },
+          "usage": { "$ref": "#/$defs/usage" },
+          "failure": { "$ref": "#/$defs/failure" },
+          "reason": { "type": "string", "maxLength": 240 }
+        }
+      }
+    },
+    "failure": { "$ref": "#/$defs/failure" }
+  },
+  "$defs": {
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_tokens", "output_tokens", "total_tokens", "cost_usd"],
+      "properties": {
+        "input_tokens": { "anyOf": [{ "type": "number", "minimum": 0 }, { "const": "unavailable" }] },
+        "output_tokens": { "anyOf": [{ "type": "number", "minimum": 0 }, { "const": "unavailable" }] },
+        "total_tokens": { "anyOf": [{ "type": "number", "minimum": 0 }, { "const": "unavailable" }] },
+        "cost_usd": { "anyOf": [{ "type": "number", "minimum": 0 }, { "const": "unavailable" }] }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "code"],
+      "properties": {
+        "stage": { "enum": ["input", "request", "response", "scoring", "runner"] },
+        "code": { "enum": ["timeout", "http_error", "transport_error", "response_parse_error", "empty_response", "invalid_structured_output", "precondition_rejected", "unknown"] },
+        "http_status": { "type": "integer", "minimum": 100, "maximum": 599 }
+      }
+    }
+  }
+}

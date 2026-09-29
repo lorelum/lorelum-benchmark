@@ -196,6 +196,26 @@ test("workspace setup never deletes a caller-provided non-empty workspace", asyn
   expect(await Bun.file(sentinel).text()).toBe("caller-owned");
 });
 
+test("staged delivery can resolve frozen repository inputs while isolating artifacts under a scratch execution root", async () => {
+  const executionRoot = join(workspaceRoot, "scratch", `timing-pilot-execution-root-${crypto.randomUUID()}`);
+  roots.push(executionRoot);
+  const workspace = join(executionRoot, ".run-workspaces", "workspace");
+  const artifacts = join(executionRoot, ".run-workspaces", "artifacts");
+  const report = await runStagedPracticeDeliveryAttempt({
+    root: workspaceRoot,
+    execution_root: executionRoot,
+    plan: await planFor("task_start"),
+    attempt_id: "scratch-execution-root",
+    artifacts,
+    workspace,
+    dry_run: true,
+  });
+  expect(report.status).toBe("dry-run");
+  expect(report.summary_path.startsWith(executionRoot)).toBe(true);
+  expect(report.public_trace_path.startsWith(executionRoot)).toBe(true);
+  expect(report.comparable).toBe(false);
+});
+
 test("artifact ownership rejects frozen input paths before any write", async () => {
   const root = await temp("artifact-ownership");
   const workspace = join(root, "workspace");
@@ -226,7 +246,7 @@ test("physical workspace and artifact boundaries reject symlink aliases", async 
   if (linked) await expect(assertSeparateRoots(workspace, artifacts)).rejects.toThrow();
 });
 
-test("checkpoint marker matching is line-exact and ignores user prompt events", () => {
+test("checkpoint marker matching is whole-line and ignores user prompt events", () => {
   expect(hasCheckpointMarker(`prefix ${checkpointMarker} suffix`)).toBe(false);
   expect(hasCheckpointMarker(`\n${checkpointMarker}\n`)).toBe(false);
   expect(hasCheckpointMarker(JSON.stringify({
@@ -237,6 +257,27 @@ test("checkpoint marker matching is line-exact and ignores user prompt events", 
     type: "message_update",
     message: { role: "assistant", content: [{ type: "text", text: `implementation\n${checkpointMarker}\n` }] },
   }))).toBe(true);
+});
+
+test("checkpoint marker survives inline Markdown emphasis but not a mention inside a sentence", () => {
+  const assistantText = (text: string) => JSON.stringify({
+    type: "message_update",
+    message: { role: "assistant", content: [{ type: "text", text }] },
+  });
+  // Models routinely emphasize the marker; the delimiters must not hide a real signal.
+  for (const wrapped of [
+    `**${checkpointMarker}**`,
+    `__${checkpointMarker}__`,
+    `*${checkpointMarker}*`,
+    `_${checkpointMarker}_`,
+    `\`${checkpointMarker}\``,
+    `  **${checkpointMarker}**  `,
+  ]) {
+    expect(hasCheckpointMarker(assistantText(`The slice is ready.\n\n${wrapped}\n`))).toBe(true);
+  }
+  // Reusing the marker inside prose is still not a delivery signal.
+  expect(hasCheckpointMarker(assistantText(`I will print **${checkpointMarker}** once the slice passes.\n`))).toBe(false);
+  expect(hasCheckpointMarker(assistantText(`Done: **${checkpointMarker}** and more text\n`))).toBe(false);
 });
 
 test("checkpoint extension aborts on assistant text deltas", async () => {
@@ -365,6 +406,8 @@ test("production adapter uses a private append-system-prompt file without puttin
   const workspace = join(root, "workspace");
   const sessionDir = join(root, "sessions");
   const logs = join(root, "logs");
+  const basePrompt = join(root, "system-prompt.md");
+  await Bun.write(basePrompt, "neutral system prompt\n");
   await mkdir(workspace, { recursive: true });
   await mkdir(sessionDir, { recursive: true });
   const commands: string[][] = [];
@@ -375,10 +418,12 @@ test("production adapter uses a private append-system-prompt file without puttin
     await Bun.write(join(sessionDir, `session-${sessionId}.jsonl`), `{"type":"session","id":"${sessionId}"}\n`);
     return { code: 0, stdout: `{"type":"session","id":"${sessionId}"}\n`, stderr: "", timedOut: false, durationMs: 1 };
   };
-  const adapter = productionStagedPracticePiAdapter({ command: "pi", model: "mock/model", tools: "read", stage_budget_ms: 1_000, log_directory: logs }, commandRunner);
+  const adapter = productionStagedPracticePiAdapter({ command: "pi", model: "mock/model", tools: "read", stage_budget_ms: 1_000, log_directory: logs, base_system_prompt_path: basePrompt }, commandRunner);
   const prepared = (await prepareStagedPracticeDelivery(await planFor("task_start"))).prepared;
   await adapter.start({ phase: "task_start", workspace, session_dir: sessionDir, prompt_path: "task.md", practice: prepared.payload });
   expect(commands[0]).toContain("--append-system-prompt");
+  expect(commands[0]).toContain(basePrompt);
+  expect(commands[0]?.filter((arg) => arg === "--append-system-prompt")).toHaveLength(2);
   expect(commands[0]?.join(" ")).not.toContain(prepared.payload.text);
   expect(commands[0]?.join(" ")).not.toContain(prepared.payload.card_sha256);
 });
