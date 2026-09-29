@@ -1,0 +1,522 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "lorelum/lorelum-packs",
+  "snapshotCommit": "3a48b6a026554ce7f30caf1e7d52130e5eb01db3",
+  "practiceCount": 97,
+  "packs": [
+    {
+      "name": "agentic-coding",
+      "releaseVersion": "0.5.1",
+      "sourceCommit": "954324cda7961ae899578649847aa32e1aa90a6f",
+      "practices": [
+        {
+          "id": "agentic-coding.context.give-delegated-agents-decision-context",
+          "sourcePath": "practices/context/give-delegated-agents-decision-context.md",
+          "contentDigest": "8dc26e311950b13f68d12e11c3c8c9f306bdb3bd6e20de12e843e0a88df8c15c"
+        },
+        {
+          "id": "agentic-coding.context.write-decision-dense-checkpoint",
+          "sourcePath": "practices/context/write-decision-dense-checkpoint.md",
+          "contentDigest": "a75f22f52bceb7d082ef4c9e55fbcf1804419c16736c46644029cceea338a833"
+        },
+        {
+          "id": "agentic-coding.correction.restore-authoritative-baseline",
+          "sourcePath": "practices/correction/restore-authoritative-baseline.md",
+          "contentDigest": "63bce23b4c7fd754e2dc707d6cd8d915e82e16a0eecaebc3e4f27f5cc662a315"
+        },
+        {
+          "id": "agentic-coding.delivery.claim-only-supported-outcome",
+          "sourcePath": "practices/delivery/claim-only-supported-outcome.md",
+          "contentDigest": "1b6224f4c7ecaabfd248563f93c4c037a736bfea937f5d496bfd6bb6004adacb"
+        },
+        {
+          "id": "agentic-coding.delivery.report-material-residuals",
+          "sourcePath": "practices/delivery/report-material-residuals.md",
+          "contentDigest": "840d9bd0dc15a58318fe73e35c538313e284eeaaa56149f80b23c5d1c1aff029"
+        },
+        {
+          "id": "agentic-coding.implementation.choose-smallest-sufficient-design",
+          "sourcePath": "practices/implementation/choose-smallest-sufficient-design.md",
+          "contentDigest": "d07d0e1257d1c010921d8a0dd4c665058b055f6d8b06c61cad57dc0455492f71"
+        },
+        {
+          "id": "agentic-coding.implementation.confirm-product-surface-expansion",
+          "sourcePath": "practices/implementation/confirm-product-surface-expansion.md",
+          "contentDigest": "88fad4bcc8fb3c9d48a2b4c03a2e657d37e73264f17ce146fcac46b417b59c39"
+        },
+        {
+          "id": "agentic-coding.implementation.inspect-and-reuse-existing-capability",
+          "sourcePath": "practices/implementation/inspect-and-reuse-existing-capability.md",
+          "contentDigest": "83f7dcfc22b19c62fc73a54a69422c687ebbf27003ff9694b3477916cbcf1350"
+        },
+        {
+          "id": "agentic-coding.implementation.limit-investigation-to-current-decision",
+          "sourcePath": "practices/implementation/limit-investigation-to-current-decision.md",
+          "contentDigest": "ac7adabc18cf4a034e9f903c94b8b8023501df2aa4c55e2ae59ad1cfd266d072"
+        },
+        {
+          "id": "agentic-coding.implementation.make-recovery-behavior-explicit",
+          "sourcePath": "practices/implementation/make-recovery-behavior-explicit.md",
+          "contentDigest": "b9556098df841af41684cd41b9e7d54c294a22d777cc7b2583529a440f4bca2a"
+        },
+        {
+          "id": "agentic-coding.implementation.preserve-responsibility-boundaries",
+          "sourcePath": "practices/implementation/preserve-responsibility-boundaries.md",
+          "contentDigest": "990268a92014ff70f9f41cc318674ba01a60eb6b77abc6a131aaa9a222aa3402"
+        },
+        {
+          "id": "agentic-coding.implementation.replan-on-material-drift",
+          "sourcePath": "practices/implementation/replan-on-material-drift.md",
+          "contentDigest": "79b1193ef1a75e56138998280135d7b844c692d4902d040f82dfb8bfe1f24911"
+        },
+        {
+          "id": "agentic-coding.implementation.surface-unconfirmed-assumptions",
+          "sourcePath": "practices/implementation/surface-unconfirmed-assumptions.md",
+          "contentDigest": "5a34d678cbc68136611d9d297b4733bfb73507153ff69f5e18c23fbc97249e52"
+        },
+        {
+          "id": "agentic-coding.implementation.validate-at-the-owning-boundary",
+          "sourcePath": "practices/implementation/validate-at-the-owning-boundary.md",
+          "contentDigest": "856118e7aa6b5f45874a341ac08ad230f04ed2dc93c4a272ef63c457ae9bdb41"
+        },
+        {
+          "id": "agentic-coding.planning.decide-scope-and-stop-conditions",
+          "sourcePath": "practices/planning/decide-scope-and-stop-conditions.md",
+          "contentDigest": "c4c6fe2b281a8751a740c33a0dac5f0a429fd8b75a584dc98d7cbc3eb84b8074"
+        },
+        {
+          "id": "agentic-coding.planning.derive-committed-set-from-concerns",
+          "sourcePath": "practices/planning/derive-committed-set-from-concerns.md",
+          "contentDigest": "c1de63e833d7b8daf57af30f25e22365c4eef706a5571faf7f5f03c5d40e0427"
+        },
+        {
+          "id": "agentic-coding.planning.keep-acceptance-path-completable",
+          "sourcePath": "practices/planning/keep-acceptance-path-completable.md",
+          "contentDigest": "c147eae61a6df8952c6f6c2b8f1319083fba3f0dccbb2278a8f688e4996ee8a2"
+        },
+        {
+          "id": "agentic-coding.planning.map-plan-to-user-capability",
+          "sourcePath": "practices/planning/map-plan-to-user-capability.md",
+          "contentDigest": "65cecda2dba123da62dbf01aa9bbef6a48737038a6068b5270b6990468bfc41f"
+        },
+        {
+          "id": "agentic-coding.planning.plan-sufficient-evidence",
+          "sourcePath": "practices/planning/plan-sufficient-evidence.md",
+          "contentDigest": "01b1fa10ac944da35fc4f97788f0e851fae754e79edfb81e385578bf888aafec"
+        },
+        {
+          "id": "agentic-coding.planning.scale-work-to-risk-and-cost",
+          "sourcePath": "practices/planning/scale-work-to-risk-and-cost.md",
+          "contentDigest": "162b2c9b390a2bdc5b3c9169ef618f5eb26626e375c505acba573610607790c1"
+        },
+        {
+          "id": "agentic-coding.recovery.reground-after-context-loss",
+          "sourcePath": "practices/context/reground-after-context-loss.md",
+          "contentDigest": "2036b321dd7fab146640650715c942d45dc77615b981425de57437213203e48f"
+        },
+        {
+          "id": "agentic-coding.recovery.validate-handoff-before-continuation",
+          "sourcePath": "practices/context/validate-handoff-before-continuation.md",
+          "contentDigest": "e40fe7adf4dced57bc03240cd3920faa58feabc04cbf41a8168f74c318164c6e"
+        },
+        {
+          "id": "agentic-coding.requirements.define-acceptance-and-non-goals",
+          "sourcePath": "practices/requirements/define-acceptance-and-non-goals.md",
+          "contentDigest": "e67d15e59c96073796f181fc75d8469cbe50aed653c8b5be622e3afaf86b0411"
+        },
+        {
+          "id": "agentic-coding.requirements.ground-user-goal",
+          "sourcePath": "practices/requirements/ground-user-goal.md",
+          "contentDigest": "20124dfed3d0733cf4e1e193409f36a6684fa6c2adcc68f7ed4a583394604906"
+        },
+        {
+          "id": "agentic-coding.requirements.resolve-source-authority",
+          "sourcePath": "practices/requirements/resolve-source-authority.md",
+          "contentDigest": "8a4faabd97dbbc0033d05e0fb539bcd7788559863519c824d5d68ff886ea1f1a"
+        },
+        {
+          "id": "agentic-coding.review.run-subtractive-review-before-commit",
+          "sourcePath": "practices/review/run-subtractive-review-before-commit.md",
+          "contentDigest": "8b35954ad9f3ba4ed35af858611d9ed7338d5f1778b7b2afc7fb6f4b2258e7dd"
+        },
+        {
+          "id": "agentic-coding.review.validate-findings-before-action",
+          "sourcePath": "practices/review/validate-findings-before-action.md",
+          "contentDigest": "db12081f9d618e39ec9690f1d9069e136fa0e4181b41eb187e0b28cb02bf41ff"
+        },
+        {
+          "id": "agentic-coding.testing.anchor-tests-to-requirements",
+          "sourcePath": "practices/testing/anchor-tests-to-requirements.md",
+          "contentDigest": "b9d73ee27cfd25ee12eac1825d39cd4d362b491aa03883fd86bf8ebf059b6ee9"
+        },
+        {
+          "id": "agentic-coding.testing.assert-observable-behavior",
+          "sourcePath": "practices/testing/assert-observable-behavior.md",
+          "contentDigest": "89bc8da24b8713e40f6d70115c86017c1d3ea8b5319cd7b2ea09607e92af67d5"
+        },
+        {
+          "id": "agentic-coding.testing.classify-failure-before-changing-test",
+          "sourcePath": "practices/testing/classify-failure-before-changing-test.md",
+          "contentDigest": "1783f9bc7b56fbc41d7b36fcad767eeccb49cc9b03c6871cd9782c8c7669aa67"
+        },
+        {
+          "id": "agentic-coding.testing.justify-regression-protection",
+          "sourcePath": "practices/testing/justify-regression-protection.md",
+          "contentDigest": "d00a426b282c2f6d27d848f10eb8d1d294ace8678ad31a2b8da78389e08298da"
+        },
+        {
+          "id": "agentic-coding.verification.bind-evidence-to-artifact-state",
+          "sourcePath": "practices/verification/bind-evidence-to-artifact-state.md",
+          "contentDigest": "7cf5b60a9d9c47e75bc0b760c20deb45c6b356bb2bb47c0bca04115d365fdbdb"
+        },
+        {
+          "id": "agentic-coding.verification.close-or-declare-evidence-gaps",
+          "sourcePath": "practices/verification/close-or-declare-evidence-gaps.md",
+          "contentDigest": "677c5b69e818a1e6612541db6f3972b72989464d9efbc4610b08c2f3dd2ad78d"
+        },
+        {
+          "id": "agentic-coding.verification.map-evidence-to-acceptance",
+          "sourcePath": "practices/verification/map-evidence-to-acceptance.md",
+          "contentDigest": "f2a3a2471c1958ffd772e67f5349d59f56c5f14eaa6d0a17df0f6c8d3ee4760c"
+        }
+      ]
+    },
+    {
+      "name": "issue-pr-etiquette",
+      "releaseVersion": "0.1.0",
+      "sourceCommit": "45484847e02ea11e8438c7f3c17d7b2eee5b4dfc",
+      "practices": [
+        {
+          "id": "issue-pr-etiquette.communication.read-back-your-post-before-requesting-review",
+          "sourcePath": "practices/communication/read-back-your-post-before-requesting-review.md",
+          "contentDigest": "f4c0329bb4a6ce267ea752556a05de64b68cff7b7bfa8af5148e8d8789aff852"
+        },
+        {
+          "id": "issue-pr-etiquette.communication.write-in-the-repos-collaboration-language-with-clean-markdown",
+          "sourcePath": "practices/communication/write-in-the-repos-collaboration-language-with-clean-markdown.md",
+          "contentDigest": "fa663b37940b17798779fc5bcd326a343e0f036e3f60502a485ad13e0263d4d2"
+        },
+        {
+          "id": "issue-pr-etiquette.issue.converge-on-one-problem-with-testable-acceptance-criteria",
+          "sourcePath": "practices/issue/converge-on-one-problem-with-testable-acceptance-criteria.md",
+          "contentDigest": "2b753d07c71e17f5c660ea5429082bc9a7081f72b8777fbe83e30a0295c5b535"
+        },
+        {
+          "id": "issue-pr-etiquette.issue.ground-the-problem-in-cited-evidence",
+          "sourcePath": "practices/issue/ground-the-problem-in-cited-evidence.md",
+          "contentDigest": "d3b3f8ce9dca0b5b95c902b87f0ffb4596b92ff5513ca32587b988364fe8b38b"
+        },
+        {
+          "id": "issue-pr-etiquette.issue.separate-direction-from-design-and-state-non-goals",
+          "sourcePath": "practices/issue/separate-direction-from-design-and-state-non-goals.md",
+          "contentDigest": "e3fff90f218d4addb986f081eef7696db65be4296160e475029b8d87fd2e436b"
+        },
+        {
+          "id": "issue-pr-etiquette.pull-request.keep-one-pr-to-one-declared-scope",
+          "sourcePath": "practices/pull-request/keep-one-pr-to-one-declared-scope.md",
+          "contentDigest": "cefd7f611555a4c64d20ff9830b6da06842b9fa802c2d1da6f0d79f9ce8cfb99"
+        },
+        {
+          "id": "issue-pr-etiquette.pull-request.keep-secrets-and-private-material-out-of-the-diff",
+          "sourcePath": "practices/pull-request/keep-secrets-and-private-material-out-of-the-diff.md",
+          "contentDigest": "0e40bd57e0df3a6e1da9b05a0427ffe50354fc388639789ec4d1fc1de3e9cf6c"
+        },
+        {
+          "id": "issue-pr-etiquette.pull-request.match-the-change-to-the-required-upstream-gate",
+          "sourcePath": "practices/pull-request/match-the-change-to-the-required-upstream-gate.md",
+          "contentDigest": "c037dae87a94db2787f8b5262fe262b42399341627192cb76e13c72d5b11a030"
+        },
+        {
+          "id": "issue-pr-etiquette.pull-request.title-and-commit-conventionally",
+          "sourcePath": "practices/pull-request/title-and-commit-conventionally.md",
+          "contentDigest": "38295290f02a3eb545d8d01e5e15e5e00ffd339de3c1d8c7428da7383c2378cf"
+        },
+        {
+          "id": "issue-pr-etiquette.pull-request.write-the-pr-body-for-a-cold-reviewer",
+          "sourcePath": "practices/pull-request/write-the-pr-body-for-a-cold-reviewer.md",
+          "contentDigest": "8ae1688b4a0fc8025201bdff2f10a0de5253b3b47badcc6ab0d3791ce4896cfd"
+        },
+        {
+          "id": "issue-pr-etiquette.review.address-feedback-with-new-commits-and-freeze-during-review",
+          "sourcePath": "practices/review/address-feedback-with-new-commits-and-freeze-during-review.md",
+          "contentDigest": "15cbb4ad361381cf51658ed57dc561f85ed082ca8664f8e81df2bd780515cf56"
+        },
+        {
+          "id": "issue-pr-etiquette.review.disclose-ai-assistance-and-its-review-findings",
+          "sourcePath": "practices/review/disclose-ai-assistance-and-its-review-findings.md",
+          "contentDigest": "b458d90ee00702a3d91898d6b60ab0815b22e68e6ad53d811f662156e6ef8192"
+        }
+      ]
+    },
+    {
+      "name": "pack-creator",
+      "releaseVersion": "0.2.0",
+      "sourceCommit": "f144a5a5e69636a5a6cd97a8b519018d2941bac6",
+      "practices": [
+        {
+          "id": "pack-creator.authoring.choose-reference-asset-or-script",
+          "sourcePath": "practices/authoring/choose-reference-asset-or-script.md",
+          "contentDigest": "1380461374d4e32bc089400ad83f58561dacc0fe37e4e468757acbef090cbe45"
+        },
+        {
+          "id": "pack-creator.authoring.create-a-project-local-pack",
+          "sourcePath": "practices/authoring/create-a-project-local-pack.md",
+          "contentDigest": "be952c557fed368b6e2a7a083975aa1f5284f6473fa759bab2d3a0fe87403502"
+        },
+        {
+          "id": "pack-creator.authoring.explain-the-direct-causal-reason",
+          "sourcePath": "practices/authoring/explain-the-direct-causal-reason.md",
+          "contentDigest": "3895f0ec8d48078b384bcd2b2762656683f035a0b705042ac6977c63a12325aa"
+        },
+        {
+          "id": "pack-creator.authoring.give-anti-pattern-and-example-distinct-jobs",
+          "sourcePath": "practices/authoring/give-anti-pattern-and-example-distinct-jobs.md",
+          "contentDigest": "a1555a6130c394c9dae5ece19fa350509f794f2bb453522a4c975ea5ae6996ec"
+        },
+        {
+          "id": "pack-creator.authoring.link-pack-resources-from-the-practice",
+          "sourcePath": "practices/authoring/link-pack-resources-from-the-practice.md",
+          "contentDigest": "27ea5ab2a0f5298309d10373db103e3b6384367733e0f4f6a4cde8549c32bce5"
+        },
+        {
+          "id": "pack-creator.authoring.make-examples-self-contained",
+          "sourcePath": "practices/authoring/make-examples-self-contained.md",
+          "contentDigest": "cc511dd443bdd54b2ed4b0f6e179d2c2c62c8f342f95c14a1d0a7e7bf38c44c5"
+        },
+        {
+          "id": "pack-creator.authoring.prefer-plain-language-and-concrete-referents",
+          "sourcePath": "practices/authoring/prefer-plain-language-and-concrete-referents.md",
+          "contentDigest": "22e232118c7b38195a653ddbdd3d86d647ceee75277985630f7b70af3daacd95"
+        },
+        {
+          "id": "pack-creator.authoring.use-realistic-failure-mechanisms",
+          "sourcePath": "practices/authoring/use-realistic-failure-mechanisms.md",
+          "contentDigest": "c71d48b45679e1a5d5dea69150b4b8ef99ade89ff1ba9920edca24e24d7f5492"
+        },
+        {
+          "id": "pack-creator.authoring.write-concrete-guidance-and-stop-condition",
+          "sourcePath": "practices/authoring/write-concrete-guidance-and-stop-condition.md",
+          "contentDigest": "7f80f0348ddc8b06c7a76b8b70e6e94b74a58aeb0290a7c2943ec5371f4b27ed"
+        },
+        {
+          "id": "pack-creator.authoring.write-discriminating-applies-when",
+          "sourcePath": "practices/authoring/write-discriminating-applies-when.md",
+          "contentDigest": "57598f987fd2d0f870f88a86af4f3d9cc4c37aa728df1f4ebcb3790dc650d173"
+        },
+        {
+          "id": "pack-creator.authoring.write-specific-exceptions-and-boundaries",
+          "sourcePath": "practices/authoring/write-specific-exceptions-and-boundaries.md",
+          "contentDigest": "1ba7a23bf1540a576021dcf02ea875761876b34b2a4cdeb14b2062a88ab3ab27"
+        },
+        {
+          "id": "pack-creator.design.compose-inherited-project-layers",
+          "sourcePath": "practices/design/compose-inherited-project-layers.md",
+          "contentDigest": "e614aeb6dcfe13b70c25f642645a92dc0f952fff6a451964cdf87bd0da100908"
+        },
+        {
+          "id": "pack-creator.design.decompose-one-decision-per-practice",
+          "sourcePath": "practices/design/decompose-one-decision-per-practice.md",
+          "contentDigest": "4f522a6364c03ff0ed5324b2f4db266df638d04af12f5562f4a2acdf1ad91df0"
+        },
+        {
+          "id": "pack-creator.design.keep-each-practice-standalone",
+          "sourcePath": "practices/design/keep-each-practice-standalone.md",
+          "contentDigest": "e73470155ce8ef883ac11a08d867a177a5a7607278d691a3a3b42430e959060c"
+        },
+        {
+          "id": "pack-creator.design.separate-neighboring-triggers",
+          "sourcePath": "practices/design/separate-neighboring-triggers.md",
+          "contentDigest": "adbdffce8cfdfef5eb2939697f9e065fc53222f86cb8e2fd9e3f0b66d15e5a48"
+        },
+        {
+          "id": "pack-creator.discovery.choose-project-local-or-registry-release",
+          "sourcePath": "practices/discovery/choose-project-local-or-registry-release.md",
+          "contentDigest": "598602203a34ea39843933484bbf7f1b617555d67216774969def08a269d74df"
+        },
+        {
+          "id": "pack-creator.discovery.define-pack-decision-outcome",
+          "sourcePath": "practices/discovery/define-pack-decision-outcome.md",
+          "contentDigest": "238ab2b9edd46f14e063448f8895136cb06814482b63b38726091a309af4e1fa"
+        },
+        {
+          "id": "pack-creator.discovery.ground-content-in-sources-and-observed-needs",
+          "sourcePath": "practices/discovery/ground-content-in-sources-and-observed-needs.md",
+          "contentDigest": "20b6c1ece6511b46b556c6e6c618a7ac3429088dd79b163cc942e16dc6eaf418"
+        },
+        {
+          "id": "pack-creator.discovery.identify-retrieval-moments",
+          "sourcePath": "practices/discovery/identify-retrieval-moments.md",
+          "contentDigest": "9a96814e14c0e2afae87d0363a0a305999dfc2a5d3ddbe40b853b60c8dfa7f24"
+        },
+        {
+          "id": "pack-creator.evaluation.separate-structural-and-semantic-evidence",
+          "sourcePath": "practices/evaluation/separate-structural-and-semantic-evidence.md",
+          "contentDigest": "a552b0aeacead97df3cd7e1b0ac87515abaf4c2da818b544e962877d71baacd8"
+        },
+        {
+          "id": "pack-creator.evaluation.test-retrieval-with-contrasting-queries",
+          "sourcePath": "practices/evaluation/test-retrieval-with-contrasting-queries.md",
+          "contentDigest": "c147e47c8c9696078edf9dc0fabe81b2bfb3d113e1758785502454b8706c7347"
+        },
+        {
+          "id": "pack-creator.evaluation.verify-project-local-pack-activation",
+          "sourcePath": "practices/evaluation/verify-project-local-pack-activation.md",
+          "contentDigest": "605dde68693bccc25bf6d2c016f62152dc63a63ca8bf35c64d5349f3dd9858e5"
+        },
+        {
+          "id": "pack-creator.evaluation.verify-resource-integrity-without-overclaiming",
+          "sourcePath": "practices/evaluation/verify-resource-integrity-without-overclaiming.md",
+          "contentDigest": "5b846f6e8c2f48eade3aba7c6beb3902b3ec261524c2aa913edd8b3c89d7e40b"
+        },
+        {
+          "id": "pack-creator.localization.localize-for-human-review-without-forking-runtime",
+          "sourcePath": "practices/localization/localize-for-human-review-without-forking-runtime.md",
+          "contentDigest": "d369e4bc4311db303a4c94417b55896d59d037255eea199e3cb59b71546d8c2e"
+        },
+        {
+          "id": "pack-creator.release.preserve-versioned-content-and-provenance",
+          "sourcePath": "practices/release/preserve-versioned-content-and-provenance.md",
+          "contentDigest": "4953638bab703269381f9d2fb1173f1fb6ba3bb0b2df5b3729c9fb8733d3e780"
+        },
+        {
+          "id": "pack-creator.release.verify-the-supported-install-path-before-claiming-release",
+          "sourcePath": "practices/release/verify-the-supported-install-path-before-claiming-release.md",
+          "contentDigest": "9350d3979795789ab4067252a909fd8e8e1e9200d42970459cc17d970bab6ec4"
+        },
+        {
+          "id": "pack-creator.review.run-subtractive-content-review",
+          "sourcePath": "practices/review/run-subtractive-content-review.md",
+          "contentDigest": "cc5f73ad46f674fbc5e2486c73c2905dd5929db192c0f1e49cb9c6e718e02a6c"
+        }
+      ]
+    },
+    {
+      "name": "react-web-craft",
+      "releaseVersion": "0.1.0",
+      "sourceCommit": "293e6b1327b0d9b4c01a711748db14c610908655",
+      "practices": [
+        {
+          "id": "react.async.await-after-cheap-work",
+          "sourcePath": "practices/async/await-after-cheap-work.md",
+          "contentDigest": "707b7f429ad30ebea6398364d6678f17e56ad649a223514be5e386737ce54a46"
+        },
+        {
+          "id": "react.async.chain-nested-item-fetches",
+          "sourcePath": "practices/async/chain-nested-item-fetches.md",
+          "contentDigest": "9413ef50b2cd3732b698d77d48803186ecdef95979e80cc6e5c45e06be6d2299"
+        },
+        {
+          "id": "react.async.parallel-independent-work",
+          "sourcePath": "practices/async/parallel-independent-work.md",
+          "contentDigest": "f864a4980205c00a79bd788bdfb52260fca86adaa344f31e2b913f695616b0ea"
+        },
+        {
+          "id": "react.async.suspense-boundary-scope",
+          "sourcePath": "practices/async/suspense-boundary-scope.md",
+          "contentDigest": "557f7502869da647d5dcda95a410619f35057ef017c419435887c8d8bf4f6793"
+        },
+        {
+          "id": "react.bundle.defer-heavy-loads",
+          "sourcePath": "practices/bundle/defer-heavy-loads.md",
+          "contentDigest": "e7b1dde7df8de23556d212847bad1b5d893ae3ec4526435c220c3b28c1795c68"
+        },
+        {
+          "id": "react.bundle.preload-on-intent",
+          "sourcePath": "practices/bundle/preload-on-intent.md",
+          "contentDigest": "f374dcac9daf5adfd2985336807d0993484a68fbbc27a97a3e2033fd67e16bdc"
+        },
+        {
+          "id": "react.composition.children-over-render-props",
+          "sourcePath": "practices/composition/children-over-render-props.md",
+          "contentDigest": "1e1273c9edacb59b9c9003708cc9292b65cb459767547deb5b681876c32f74cb"
+        },
+        {
+          "id": "react.composition.explicit-variants-over-flags",
+          "sourcePath": "practices/composition/explicit-variants-over-flags.md",
+          "contentDigest": "52f82a044ae51e80ffc5e3780b33e852de89d35c448be9494ed6821a231defd2"
+        },
+        {
+          "id": "react.composition.model-mutually-exclusive-props",
+          "sourcePath": "practices/composition/model-mutually-exclusive-props.md",
+          "contentDigest": "74cd9bd615ebcb0e467d4777169d19a0b73eecf4b5b04f91d00b41173f57f5c0"
+        },
+        {
+          "id": "react.composition.react19-ref-prop",
+          "sourcePath": "practices/composition/react19-ref-prop.md",
+          "contentDigest": "20d4efd734d8231f5dc84045a1d92f8d4266a4c3e1e8382e774cb9324bcbb04a"
+        },
+        {
+          "id": "react.rendering.boolean-render-guards",
+          "sourcePath": "practices/rendering/boolean-render-guards.md",
+          "contentDigest": "ad314aee12d77bcf9d2cc26a6aefad151220e4a6a208387e050c8847f311afce"
+        },
+        {
+          "id": "react.rendering.derive-dont-mirror",
+          "sourcePath": "practices/rendering/derive-dont-mirror.md",
+          "contentDigest": "cd617f7be8295a358c479b7a0170ae4bced38a8924413a41ae49cc74c702751f"
+        },
+        {
+          "id": "react.rendering.hydration-consistency",
+          "sourcePath": "practices/rendering/hydration-consistency.md",
+          "contentDigest": "4c3a0ba13e8e5c4ba5e6079da797f9ec72a77f2dd0abc86615d944c7843e1302"
+        },
+        {
+          "id": "react.rendering.resource-hints-scripts",
+          "sourcePath": "practices/rendering/resource-hints-scripts.md",
+          "contentDigest": "6c2b568b990b7128a53402c53f84bd3b48aeb4d78fe69aa6cb4ca88251150a36"
+        },
+        {
+          "id": "react.rendering.update-priority",
+          "sourcePath": "practices/rendering/update-priority.md",
+          "contentDigest": "4ab678a605c628457dce7a635a6bfe09c047733949626dee1484bc54ff6c86d5"
+        },
+        {
+          "id": "react.server.authorize-server-actions",
+          "sourcePath": "practices/server/authorize-server-actions.md",
+          "contentDigest": "c7f2482a276d858ee55db28da60e9e49ff4e9d71d024116edc8e3a981dc89f7b"
+        },
+        {
+          "id": "react.server.no-module-request-state",
+          "sourcePath": "practices/server/no-module-request-state.md",
+          "contentDigest": "3609a385af55109180af6d7ed82fb27e17d83192ed4f9327a69137c2e28aa72f"
+        },
+        {
+          "id": "react.server.request-dedup-cache",
+          "sourcePath": "practices/server/request-dedup-cache.md",
+          "contentDigest": "8a0069d5d2e64fb899a8131b16d09b59dceaa205dbc02932492e650b0989d2f2"
+        },
+        {
+          "id": "react.state.fallback-until-overridden",
+          "sourcePath": "practices/state/fallback-until-overridden.md",
+          "contentDigest": "724883e1ee7a5f82b3347237cb3f56a491a107b8b702239f8ce444fdec508648"
+        },
+        {
+          "id": "react.state.functional-updater-scope",
+          "sourcePath": "practices/state/functional-updater-scope.md",
+          "contentDigest": "ef6ca0d92e10b4af302b2b1f60bb36535e0b21d800125a79686a3a4ee5dfc136"
+        },
+        {
+          "id": "react.state.lazy-initializer",
+          "sourcePath": "practices/state/lazy-initializer.md",
+          "contentDigest": "22117ad324769424a971d137f2f45cbf31369cb26487ee0971d7e5daf037a0ab"
+        },
+        {
+          "id": "react.state.model-exclusive-modes",
+          "sourcePath": "practices/state/model-exclusive-modes.md",
+          "contentDigest": "6cd4fc860cb47c34b816dc8b54dd5ee7169264c393007ee49d7abb3e3c2aa203"
+        },
+        {
+          "id": "react.state.ref-for-nonrendered-values",
+          "sourcePath": "practices/state/ref-for-nonrendered-values.md",
+          "contentDigest": "4103084774c8aa7241ee315a75358f9078cfac2f70421736261cf79da53873f0"
+        },
+        {
+          "id": "react.state.share-one-owner",
+          "sourcePath": "practices/state/share-one-owner.md",
+          "contentDigest": "222d849d63fea75570c9acae6b7ec86b83fc4870c9df11b9bf04a9985b27fccf"
+        }
+      ]
+    }
+  ],
+  "corpusDigest": "89209b7d0d9b5c180648bcc7b235b438a4a3e2237b5006eb462d86d45ca03998"
+}
