@@ -19,7 +19,7 @@ function requireSuccess(result: { exitCode: number; stdout: string; stderr: stri
 
 if (Bun.env.LORELUM_SANDBOX_ENFORCED !== "1") fail("Sandbox preflight requires LORELUM_SANDBOX_ENFORCED=1");
 
-const environmentPath = join(workspaceRoot, "environments", "formal-pi-deepseek-v4-pro", "v2", "environment.yaml");
+const environmentPath = join(workspaceRoot, "environments", "formal-pi-deepseek-v4-pro", "v3", "environment.yaml");
 const environment = Bun.YAML.parse(await Bun.file(environmentPath).text()) as Record<string, unknown>;
 const sandbox = formalContainerSandbox(environment);
 const runtimeVersions = containerRuntimeVersions(environment);
