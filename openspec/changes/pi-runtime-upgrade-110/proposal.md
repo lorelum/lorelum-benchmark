@@ -32,3 +32,6 @@ Issue #238 要求将 benchmark 的 Pi 运行时从 `@earendil-works/pi-coding-ag
 - `docs/FORMAL_SANDBOX.md`、`docs/PI_RUNNER.md`、`environments/README.md`。
 - 不修改 `suites/`、既有正式 record、历史 incubator private conditions、Practice/oracle/evaluator/scoring、模型运行条件，也不执行模型调用。
 - Node 运行时无仓库内变更；本地 workstation 从 `v24.14.0` 升级到 `v24.21.0` 属于机器环境操作，不计入本 PR diff。
+- 同步 `docs/FORMAL_SMOKE.md` 的 formal 环境引用，并将 `src/benchmark/runner/pi/v2/sandbox-preflight.ts` 与 `local-sandbox-preflight.ts` 指向 active 版本。`local-sandbox-preflight.ts` 在 main 上指向 `local-wsl-pi/v2`（Pi `0.80.10`），属于既有陈旧引用，本 change 一并迁移到 `local-wsl-pi/v4`。
+- 同步 `src/benchmark/runner/pi/v2/contract-app.test.ts` 的 dry-run fixture 到 `formal-pi-deepseek-v4-pro/v3` 与 Pi `1.1.0`。
+- formal v3 的镜像 digest 通过 `publish-formal-pi-image.yml` 的 `workflow_dispatch` 发布得到，记录于 design 的 Formal Image Digest Decision。

@@ -52,3 +52,14 @@
 - 不改动 Bun 版本。
 - 不迁移历史 candidate、incubator condition 或 record。
 - 不引入 Pi 新特性（codemode、MCP、tool_search 等）到 runner。
+
+## Plan Confirmation Record
+
+- 2026-10-09：Plan 已展示；需求方回复“继续”，按推荐默认值执行。Node 本地升级由操作者完成；不执行真实模型调用；正式 record 不创建。
+- 同步记录见 Issue #238 评论。
+
+## Formal Image Digest Decision
+
+- formal v3 必须引用已发布的 digest，不得使用 tag 或占位符。
+- 通过 `publish-formal-pi-image.yml` 的 `workflow_dispatch` 在本分支构建并发布；digest 为 `sha256:4d0e64ec1927665a52617ad938ff6fb277a398b68cbc2c3671df16c4c5b98c7a`（run 37872526780）。
+- 合并后若 `main` 的 Dockerfile/lockfile 输入变化并重新发布，需另建 environment version，不原地替换 digest。
