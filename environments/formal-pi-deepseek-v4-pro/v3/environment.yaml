@@ -1,0 +1,36 @@
+id: formal-pi-deepseek-v4-pro
+version: v3
+bun: 1.4.2
+node: 24.21.0
+agent_runtime:
+  id: pi
+  version: 1.1.0
+  command: pi
+model:
+  id: deepseek/deepseek-v4-pro
+  version: pending-provider-snapshot
+sandbox:
+  policy_path: policies/public-only-workspace/v1/policy.yaml
+  policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+  enforcement: protected-runner-required
+  network: api-only
+  secrets: protected-environment
+  container:
+    runtime: docker
+    image: ghcr.io/lorelum/lorelum-benchmark/formal-pi@sha256:4d0e64ec1927665a52617ad938ff6fb277a398b68cbc2c3671df16c4c5b98c7a
+    network: lorelum-formal-egress
+    proxy_url: http://lorelum-egress-proxy:3128
+    allowed_endpoint: api.deepseek.com:443
+    workspace_path: /workspace
+    skill_path: /lorelum/treatment/SKILL.md
+    pids_limit: 256
+    memory_limit: 2g
+dependencies:
+  package: '@earendil-works/pi-coding-agent@1.1.0'
+  manifest: package.json
+  lockfile: bun.lock
+  lockfile_sha256: b7f11323d5ee7505753ab40a9ceff49bac722b0aa19a4eaf38bee135ec4d2d24
+artifact_storage:
+  uri: s3://required-bucket/lorelum-benchmark/runs
+  mode: immutable-after-upload
+  uploader: s3-object-lock

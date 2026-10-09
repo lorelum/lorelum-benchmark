@@ -12,7 +12,7 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile && ln -s /opt/formal-pi/node_modules/.bin/pi /usr/local/bin/pi && \
     test "$(bun --version)" = "1.4.2" && \
     test "$(node --version)" = "v24.21.0" && \
-    test "$(pi --version)" = "0.85.1"
+    test "$(pi --version)" = "1.1.0"
 
 USER 65532:65532
 ENTRYPOINT ["pi"]
