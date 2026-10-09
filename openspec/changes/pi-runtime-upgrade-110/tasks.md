@@ -33,6 +33,6 @@
 
 ## 5. Handoff
 
-- [ ] 5.1 Run the two-round independent read-only review required by `docs/PR_REVIEW.md`. Round 1 ran on `3130d19` (no must-fix; findings addressed in this commit). Round 2 pending on the final SHA.
+- [x] 5.1 Two-round independent read-only review per `docs/PR_REVIEW.md`. Round 1 (ai-code-review focus) on `3130d19`: no must-fix; its process findings were addressed in `716cd8b`. Round 2 (thermo-nuclear structural review) on `716cd8b`: no blocking items; the lockfile hash check and digest note were added in `0508dde`. Non-blocking duplication of active environment paths across scripts/preflights is left as is (refactor out of scope).
 - [ ] 5.2 Update Issue #238 and PR #239 with root cause, scope, validation evidence, residual uncertainty, and the environment migration rule.
 - [ ] 5.3 Operator to upgrade the local workstation Node from `v24.14.0` to `v24.21.0` (machine operation outside this PR), then rerun `bun run check:runtime`.
