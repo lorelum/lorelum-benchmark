@@ -14,7 +14,7 @@ concurrency:
 env:
   BUN_VERSION: "1.4.2"
   NODE_VERSION: "24.21.0"
-  PI_VERSION: "0.85.1"
+  PI_VERSION: "1.1.0"
 
 jobs:
   changes:
