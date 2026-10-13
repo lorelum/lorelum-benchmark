@@ -1,0 +1,190 @@
+{
+  "schema_version": "retrieval-batch-record/v1",
+  "track": "retrieval-ranking",
+  "run_id": "retrieval-ranking-v2-candidate-09e64be-replay",
+  "batch_status": "complete",
+  "started_at": "2026-09-26T02:35:53.752Z",
+  "finished_at": "2026-09-26T02:40:51.147Z",
+  "benchmark": {
+    "suiteId": "retrieval-ranking",
+    "suiteVersion": "1.0.0",
+    "revision": "v2",
+    "casesSha256": "54b621402859e637ee1b92a24dc22e5830b289f3ddd2b9fbfc25f924e5e608f1",
+    "labelsSha256": "5be851190d696e7bb90d8dd2f810b7d3762ddb99807c1af0a466dc1e582ad776",
+    "scorerSha256": "f9ff1bba5af690b90ebb6b6d685fa778793295fedb5d485bbc30e4d0af5845e6"
+  },
+  "corpus": {
+    "source_repository": "lorelum/lorelum-packs",
+    "snapshot_commit": "3a48b6a026554ce7f30caf1e7d52130e5eb01db3",
+    "corpus_digest": "61176ea93dfa9cdd94193f1024e3a2a6ea8107c1a5e076330ddc60479ad79a69",
+    "practice_count": 97,
+    "pack_artifacts": [
+      {
+        "name": "agentic-coding",
+        "releaseVersion": "0.5.1",
+        "sourceCommit": "954324cda7961ae899578649847aa32e1aa90a6f",
+        "artifactDigest": "f2c1925846923c9b4bcab2e3d9a68102539f0a76f3289b1317f8f217cc63b62b",
+        "practiceIds": [
+          "agentic-coding.context.give-delegated-agents-decision-context",
+          "agentic-coding.context.write-decision-dense-checkpoint",
+          "agentic-coding.correction.restore-authoritative-baseline",
+          "agentic-coding.delivery.claim-only-supported-outcome",
+          "agentic-coding.delivery.report-material-residuals",
+          "agentic-coding.implementation.choose-smallest-sufficient-design",
+          "agentic-coding.implementation.confirm-product-surface-expansion",
+          "agentic-coding.implementation.inspect-and-reuse-existing-capability",
+          "agentic-coding.implementation.limit-investigation-to-current-decision",
+          "agentic-coding.implementation.make-recovery-behavior-explicit",
+          "agentic-coding.implementation.preserve-responsibility-boundaries",
+          "agentic-coding.implementation.replan-on-material-drift",
+          "agentic-coding.implementation.surface-unconfirmed-assumptions",
+          "agentic-coding.implementation.validate-at-the-owning-boundary",
+          "agentic-coding.planning.decide-scope-and-stop-conditions",
+          "agentic-coding.planning.derive-committed-set-from-concerns",
+          "agentic-coding.planning.keep-acceptance-path-completable",
+          "agentic-coding.planning.map-plan-to-user-capability",
+          "agentic-coding.planning.plan-sufficient-evidence",
+          "agentic-coding.planning.scale-work-to-risk-and-cost",
+          "agentic-coding.recovery.reground-after-context-loss",
+          "agentic-coding.recovery.validate-handoff-before-continuation",
+          "agentic-coding.requirements.define-acceptance-and-non-goals",
+          "agentic-coding.requirements.ground-user-goal",
+          "agentic-coding.requirements.resolve-source-authority",
+          "agentic-coding.review.run-subtractive-review-before-commit",
+          "agentic-coding.review.validate-findings-before-action",
+          "agentic-coding.testing.anchor-tests-to-requirements",
+          "agentic-coding.testing.assert-observable-behavior",
+          "agentic-coding.testing.classify-failure-before-changing-test",
+          "agentic-coding.testing.justify-regression-protection",
+          "agentic-coding.verification.bind-evidence-to-artifact-state",
+          "agentic-coding.verification.close-or-declare-evidence-gaps",
+          "agentic-coding.verification.map-evidence-to-acceptance"
+        ]
+      },
+      {
+        "name": "issue-pr-etiquette",
+        "releaseVersion": "0.1.0",
+        "sourceCommit": "45484847e02ea11e8438c7f3c17d7b2eee5b4dfc",
+        "artifactDigest": "7e10e53d173c5d3eb6ea5bbd43444558a72b0b2d4f8466d11c090f1d1e11a910",
+        "practiceIds": [
+          "issue-pr-etiquette.communication.read-back-your-post-before-requesting-review",
+          "issue-pr-etiquette.communication.write-in-the-repos-collaboration-language-with-clean-markdown",
+          "issue-pr-etiquette.issue.converge-on-one-problem-with-testable-acceptance-criteria",
+          "issue-pr-etiquette.issue.ground-the-problem-in-cited-evidence",
+          "issue-pr-etiquette.issue.separate-direction-from-design-and-state-non-goals",
+          "issue-pr-etiquette.pull-request.keep-one-pr-to-one-declared-scope",
+          "issue-pr-etiquette.pull-request.keep-secrets-and-private-material-out-of-the-diff",
+          "issue-pr-etiquette.pull-request.match-the-change-to-the-required-upstream-gate",
+          "issue-pr-etiquette.pull-request.title-and-commit-conventionally",
+          "issue-pr-etiquette.pull-request.write-the-pr-body-for-a-cold-reviewer",
+          "issue-pr-etiquette.review.address-feedback-with-new-commits-and-freeze-during-review",
+          "issue-pr-etiquette.review.disclose-ai-assistance-and-its-review-findings"
+        ]
+      },
+      {
+        "name": "pack-creator",
+        "releaseVersion": "0.2.0",
+        "sourceCommit": "f144a5a5e69636a5a6cd97a8b519018d2941bac6",
+        "artifactDigest": "1c85be66acaddd458ca9a26bd4bc8b279bcb85c2475d15a58b71c416758fd604",
+        "practiceIds": [
+          "pack-creator.authoring.choose-reference-asset-or-script",
+          "pack-creator.authoring.create-a-project-local-pack",
+          "pack-creator.authoring.explain-the-direct-causal-reason",
+          "pack-creator.authoring.give-anti-pattern-and-example-distinct-jobs",
+          "pack-creator.authoring.link-pack-resources-from-the-practice",
+          "pack-creator.authoring.make-examples-self-contained",
+          "pack-creator.authoring.prefer-plain-language-and-concrete-referents",
+          "pack-creator.authoring.use-realistic-failure-mechanisms",
+          "pack-creator.authoring.write-concrete-guidance-and-stop-condition",
+          "pack-creator.authoring.write-discriminating-applies-when",
+          "pack-creator.authoring.write-specific-exceptions-and-boundaries",
+          "pack-creator.design.compose-inherited-project-layers",
+          "pack-creator.design.decompose-one-decision-per-practice",
+          "pack-creator.design.keep-each-practice-standalone",
+          "pack-creator.design.separate-neighboring-triggers",
+          "pack-creator.discovery.choose-project-local-or-registry-release",
+          "pack-creator.discovery.define-pack-decision-outcome",
+          "pack-creator.discovery.ground-content-in-sources-and-observed-needs",
+          "pack-creator.discovery.identify-retrieval-moments",
+          "pack-creator.evaluation.separate-structural-and-semantic-evidence",
+          "pack-creator.evaluation.test-retrieval-with-contrasting-queries",
+          "pack-creator.evaluation.verify-project-local-pack-activation",
+          "pack-creator.evaluation.verify-resource-integrity-without-overclaiming",
+          "pack-creator.localization.localize-for-human-review-without-forking-runtime",
+          "pack-creator.release.preserve-versioned-content-and-provenance",
+          "pack-creator.release.verify-the-supported-install-path-before-claiming-release",
+          "pack-creator.review.run-subtractive-content-review"
+        ]
+      },
+      {
+        "name": "react-web-craft",
+        "releaseVersion": "0.1.0",
+        "sourceCommit": "293e6b1327b0d9b4c01a711748db14c610908655",
+        "artifactDigest": "06b25f234334bb0398c12b431cac521d3b0eb768ee5161260c1b133898f9f347",
+        "practiceIds": [
+          "react.async.await-after-cheap-work",
+          "react.async.chain-nested-item-fetches",
+          "react.async.parallel-independent-work",
+          "react.async.suspense-boundary-scope",
+          "react.bundle.defer-heavy-loads",
+          "react.bundle.preload-on-intent",
+          "react.composition.children-over-render-props",
+          "react.composition.explicit-variants-over-flags",
+          "react.composition.model-mutually-exclusive-props",
+          "react.composition.react19-ref-prop",
+          "react.rendering.boolean-render-guards",
+          "react.rendering.derive-dont-mirror",
+          "react.rendering.hydration-consistency",
+          "react.rendering.resource-hints-scripts",
+          "react.rendering.update-priority",
+          "react.server.authorize-server-actions",
+          "react.server.no-module-request-state",
+          "react.server.request-dedup-cache",
+          "react.state.fallback-until-overridden",
+          "react.state.functional-updater-scope",
+          "react.state.lazy-initializer",
+          "react.state.model-exclusive-modes",
+          "react.state.ref-for-nonrendered-values",
+          "react.state.share-one-owner"
+        ]
+      }
+    ]
+  },
+  "lorelum": {
+    "repository": "lorelum/lorelum",
+    "commit": "09e64be914dc93124230f06483c8dfc4c164a61a",
+    "protocol_version": 1,
+    "entrypoint": "packages/backend/src/benchmark/semantic-retrieval-harness.ts"
+  },
+  "embedding": {
+    "profile_id": "72c7404af9d533dce3dd5f5e62987fcb225ffdfd180ae2951879d3a54044c2a5",
+    "model": {
+      "id": "granite-embedding-97m-multilingual-r2-GGUF",
+      "version": "7a8af1473a747268bbb3968b77d5b822a6506667+q4_0",
+      "nativeRuntime": "win32-x64"
+    }
+  },
+  "retrieval": {
+    "candidate_width": 20,
+    "result_limit": 5
+  },
+  "environment": {
+    "platform": "win32",
+    "arch": "x64",
+    "bunVersion": "1.4.2"
+  },
+  "result_artifact": {
+    "path": "C:\\Users\\HP\\.codex\\worktrees\\retrieval-ranking-benchmark\\lorelum-benchmark\\artifacts\\retrieval-ranking\\retrieval-ranking-v2-candidate-09e64be-replay.json",
+    "sha256": "09b29632b76358700886f35d6417a223b010a5a101a6cacea276878b7459c252"
+  },
+  "execution": {
+    "case_count": 50,
+    "successful_case_count": 50,
+    "failure_count": 0,
+    "failures": []
+  },
+  "setup_failure": null,
+  "outcome": {
+    "retrieval_scored": true
+  }
+}

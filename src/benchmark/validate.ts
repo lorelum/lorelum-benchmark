@@ -4,6 +4,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { isGeneratedOutput } from "./kernel/core/v1/types";
 import { directoryExists, joinPath, listDirectories, listFiles, pathExists, relativePath, sha256File, workspaceRoot } from "./fs";
 import { loadPackPracticeTreatment } from "./treatments/pack-practice/v1/contract";
+import { validateRetrievalRankingRecordBinding, validateRetrievalRankingSuite } from "./retrieval-ranking/validate";
 
 const failures: string[] = [];
 const lifecycleStages = new Set(["candidate", "pilot", "frozen", "official", "published", "retired"]);
@@ -243,6 +244,50 @@ async function validateRunRecords(): Promise<void> {
       failures.push(`Run record must be a JSON object: ${relativePath(path)}`);
       continue;
     }
+    if (record.schema_version === "retrieval-batch-record/v1") {
+      const retrievalValidator = await schemaValidator("retrieval-batch-record.schema.json");
+      if (!retrievalValidator) continue;
+      if (!retrievalValidator(record)) {
+        addSchemaFailures(path, retrievalValidator.errors);
+        continue;
+      }
+      failures.push(...(await validateRetrievalRankingRecordBinding(record, joinPath(workspaceRoot, "suites", "retrieval-ranking"))));
+      const runId = record.run_id;
+      if (typeof runId === "string" && !runIds.add(runId)) failures.push(`Duplicate run record id: ${runId}`);
+      const execution = record.execution;
+      const outcome = record.outcome;
+      const batchStatus = record.batch_status;
+      if (isRecord(execution)) {
+        const caseCount = execution.case_count;
+        const successCount = execution.successful_case_count;
+        const failureCount = execution.failure_count;
+        if (typeof caseCount === "number" && typeof successCount === "number" && typeof failureCount === "number" && caseCount !== successCount + failureCount) {
+          failures.push(`Retrieval batch case counts do not add up: ${relativePath(path)}`);
+        }
+        if (batchStatus === "complete" && failureCount !== 0) failures.push(`Complete retrieval batch cannot contain failures: ${relativePath(path)}`);
+        if (batchStatus === "failed" && failureCount === 0) failures.push(`Failed retrieval batch must contain a failure: ${relativePath(path)}`);
+      }
+      if (isRecord(outcome) && outcome.retrieval_scored !== (batchStatus === "complete")) {
+        failures.push(`Retrieval batch scoring status disagrees with batch status: ${relativePath(path)}`);
+      }
+      const artifact = record.result_artifact;
+      if (isRecord(artifact) && typeof artifact.path === "string" && typeof artifact.sha256 === "string") {
+        const artifactPath = resolve(workspaceRoot, artifact.path);
+        if (await pathExists(artifactPath)) {
+          if (await sha256File(artifactPath) !== artifact.sha256) {
+            failures.push(`Retrieval result artifact hash does not match: ${relativePath(artifactPath)}`);
+          }
+          try {
+            const artifactDocument = JSON.parse(await Bun.file(artifactPath).text()) as unknown;
+            const artifactValidator = await schemaValidator("retrieval-batch-artifact.schema.json");
+            if (artifactValidator && !artifactValidator(artifactDocument)) addSchemaFailures(artifactPath, artifactValidator.errors);
+          } catch (error) {
+            failures.push(`Invalid retrieval result artifact ${relativePath(artifactPath)}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+      }
+      continue;
+    }
     const validator = await schemaValidator("run-record.schema.json");
     if (!validator) continue;
     if (!validator(record)) {
@@ -310,7 +355,7 @@ async function validateVersionedManifests(path: string, manifestName: string, sc
 }
 
 const suitesPath = joinPath(workspaceRoot, "suites");
-for (const schema of ["suite.schema.json", "task-card.schema.json", "task-rule-audit.schema.json", "evaluator-result-v2.schema.json", "judge-result-v1.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "pack-practice-treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json", "staged-practice-delivery.schema.json", "staged-practice-delivery-audit.schema.json", "staged-practice-delivery-public.schema.json", "staged-practice-attempt-summary.schema.json"]) {
+for (const schema of ["suite.schema.json", "retrieval-suite.schema.json", "retrieval-cases.schema.json", "retrieval-labels.schema.json", "retrieval-scorer-config.schema.json", "retrieval-batch-record.schema.json", "retrieval-batch-artifact.schema.json", "task-card.schema.json", "task-rule-audit.schema.json", "evaluator-result-v2.schema.json", "judge-result-v1.schema.json", "run-record.schema.json", "run-manifest.schema.json", "treatment.schema.json", "pack-practice-treatment.schema.json", "environment.schema.json", "artifact.schema.json", "report.schema.json", "coverage-manifest.schema.json", "pi-run-request-v2.schema.json", "pi-run-artifact-manifest-v2.schema.json", "experiment-plan.schema.json", "staged-practice-delivery.schema.json", "staged-practice-delivery-audit.schema.json", "staged-practice-delivery-public.schema.json", "staged-practice-attempt-summary.schema.json"]) {
   await requirePath(joinPath(workspaceRoot, "schemas", schema));
 }
 
@@ -318,9 +363,17 @@ for (const suite of await listDirectories(suitesPath)) {
   const suitePath = joinPath(suitesPath, suite);
   const suiteManifest = joinPath(suitePath, "suite.yaml");
   await requirePath(suiteManifest);
-  const suiteDocument = await validateYaml(suiteManifest, "suite.schema.json");
+  const suitePreliminary = await readYaml(suiteManifest);
+  const suiteSchema = suitePreliminary?.track === "retrieval-ranking"
+    ? "retrieval-suite.schema.json"
+    : "suite.schema.json";
+  const suiteDocument = await validateYaml(suiteManifest, suiteSchema);
   if (suiteDocument && !lifecycleStages.has(String(suiteDocument.lifecycle_stage))) {
     failures.push(`Invalid lifecycle_stage in ${relativePath(suiteManifest)}`);
+  }
+  if (suiteDocument?.track === "retrieval-ranking") {
+    failures.push(...await validateRetrievalRankingSuite(suitePath));
+    continue;
   }
 
   const tasksPath = joinPath(suitePath, "tasks");

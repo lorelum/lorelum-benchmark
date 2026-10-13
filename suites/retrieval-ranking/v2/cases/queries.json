@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "revision": "v2",
+  "cases": [
+    {
+      "id": "agentic-scope-direct",
+      "query": "We have a long list of nice-to-have improvements, but I need to know what is actually committed and when this work will stop."
+    },
+    {
+      "id": "agentic-scope-paraphrase",
+      "query": "Please turn the accepted concerns into a bounded plan; I do not want adjacent opportunities to keep moving the finish line."
+    },
+    {
+      "id": "agentic-acceptance-direct",
+      "query": "The request says make the dashboard better. I need to turn that into something we can verify and state what is out of scope."
+    },
+    {
+      "id": "agentic-goal-paraphrase",
+      "query": "Before planning, check that our restatement of the user's problem is faithful; there are two plausible interpretations."
+    },
+    {
+      "id": "agentic-evidence-plan",
+      "query": "We are about to make a risky storage migration. What checks should exist in the plan so we can know it worked?"
+    },
+    {
+      "id": "agentic-proportionate-validation",
+      "query": "This is a one-line copy change, but the team is proposing a full browser matrix and load test. Decide how much verification is proportionate."
+    },
+    {
+      "id": "agentic-smallest-design",
+      "query": "Both approaches work, but one introduces a cache and an extra service layer. Decide whether the current task really needs that."
+    },
+    {
+      "id": "agentic-reuse-before-build",
+      "query": "I am about to add a date formatter; first check whether the repo already has one under our current constraints."
+    },
+    {
+      "id": "agentic-limit-investigation",
+      "query": "I keep following references into more files, but I cannot name the decision each file will change."
+    },
+    {
+      "id": "agentic-shared-rule-owner",
+      "query": "A permission rule must stay identical in the HTTP layer and the background worker. Decide where that rule belongs."
+    },
+    {
+      "id": "agentic-validation-boundary",
+      "query": "The handler and the domain service could both validate this invariant. Which boundary should own the check?"
+    },
+    {
+      "id": "agentic-temporary-assumption",
+      "query": "One small implementation detail is uncertain, but it is reversible and cannot change public behavior. I need to proceed without turning it into a requirement."
+    },
+    {
+      "id": "agentic-recovery-contract",
+      "query": "The new retry path catches a timeout and returns stale cache data. Make sure the caller's success contract is still true."
+    },
+    {
+      "id": "agentic-replan-drift",
+      "query": "While implementing, we discovered that the API response has a new required field. That changes the accepted scope; should the old plan continue?"
+    },
+    {
+      "id": "agentic-subtractive-review",
+      "query": "Before commit, remove code and abstractions this change does not need, even if they look useful later."
+    },
+    {
+      "id": "agentic-review-finding",
+      "query": "A review comment says the migration is unsafe. Check the claim against the code and tests before changing anything."
+    },
+    {
+      "id": "agentic-evidence-artifact-state",
+      "query": "The test result was captured before a generated file changed; record exactly which artifact revision the evidence covers."
+    },
+    {
+      "id": "agentic-declare-gap",
+      "query": "All automated checks pass, but one acceptance path was never exercised. Either add evidence or call the gap out explicitly."
+    },
+    {
+      "id": "agentic-map-evidence",
+      "query": "Map each acceptance criterion to its test or manual observation so the final report shows what is covered."
+    },
+    {
+      "id": "agentic-supported-claim",
+      "query": "I only ran unit tests and typecheck. Can I tell the user the feature is deployed and accepted?"
+    },
+    {
+      "id": "agentic-report-residuals",
+      "query": "We are handing off with a known migration limitation and one failed optional check. Decide what the next engineer must know."
+    },
+    {
+      "id": "agentic-reground-after-summary",
+      "query": "The context was compacted and I only have a summary. I am about to edit; how should I recover the real request and current file state?"
+    },
+    {
+      "id": "agentic-validate-handoff",
+      "query": "Another agent reported success and supplied a diff. Before I continue, verify that its summary matches the actual commit and test output."
+    },
+    {
+      "id": "agentic-checkpoint",
+      "query": "We are pausing for a week. Write a note that preserves the decisions and current state without including exploratory dead ends."
+    },
+    {
+      "id": "agentic-confirmed-correction",
+      "query": "The user rejected the direction I started. Stop building on it and return to the last authoritative baseline before continuing."
+    },
+    {
+      "id": "agentic-tests-from-acceptance",
+      "query": "Write tests from the acceptance criteria, not from the helper functions I happened to create."
+    },
+    {
+      "id": "agentic-observable-tests",
+      "query": "This test reaches into private state and asserts an implementation detail. Rewrite it around behavior callers can observe."
+    },
+    {
+      "id": "agentic-classify-test-failure",
+      "query": "The test failed after my change. Decide whether the expected behavior or the production code is wrong before editing the test."
+    },
+    {
+      "id": "agentic-regression-justification",
+      "query": "Is this rare edge case worth a permanent regression test, or is the protection disproportionate?"
+    },
+    {
+      "id": "issue-pr-body-scope-conflict",
+      "query": "I am opening a PR that fixes a React cache bug; a reviewer will see it without our chat history, so make the context and decision self-contained."
+    },
+    {
+      "id": "issue-pr-one-scope",
+      "query": "The branch now contains a bug fix and a broad refactor. Prepare it for review without mixing two scopes."
+    },
+    {
+      "id": "issue-pr-upstream-gate-scope-conflict",
+      "query": "This change alters a Knowledge Pack benchmark contract and touches the schema. What review and validation gate must be completed before implementation?"
+    },
+    {
+      "id": "issue-pr-review-feedback-scope-conflict",
+      "query": "Review is in progress and I have fixes for a dependency upgrade that broke React hooks. Should I amend the reviewed commit or add new commits?"
+    },
+    {
+      "id": "issue-pr-ai-disclosure",
+      "query": "AI helped draft this PR and suggested issues that I resolved. What must the pull request disclose?"
+    },
+    {
+      "id": "issue-pr-one-problem",
+      "query": "This issue mixes a runner bug, a schema change, and a docs cleanup. Reshape it so each reviewable problem has testable acceptance criteria."
+    },
+    {
+      "id": "issue-pr-readback-pack-context",
+      "query": "After editing the Pack release issue on GitHub, check that the actual saved Markdown did not flatten the lists or lose paragraph breaks."
+    },
+    {
+      "id": "pack-creator-discriminating-trigger",
+      "query": "The Practice trigger uses topic words like schema and matches validation requests even when the action is about release provenance. Rewrite the applicability condition."
+    },
+    {
+      "id": "pack-creator-split-decision",
+      "query": "One Practice draft tells authors how to choose a file format and how to verify release installation; these are separate decisions."
+    },
+    {
+      "id": "pack-creator-neighbor-boundary",
+      "query": "Two Practices both answer how should I name this Pack, and users cannot tell which action applies. Decide how to separate their triggers or merge them."
+    },
+    {
+      "id": "pack-creator-retrieval-contrasts",
+      "query": "I need a retrieval test set with a direct prompt, a paraphrase, a query aimed at the neighboring Practice, and a near miss that should not select it."
+    },
+    {
+      "id": "pack-creator-evidence-separation-scope-conflict",
+      "query": "YAML validation passed and every React example file is present; can I say the Pack's guidance is semantically validated?"
+    },
+    {
+      "id": "react-derive-not-mirror",
+      "query": "A component stores fullName in state and recomputes it whenever firstName changes. Simplify it using the current props."
+    },
+    {
+      "id": "react-boolean-guard",
+      "query": "When the cart count is zero, the conditional block renders the number 0 on the page."
+    },
+    {
+      "id": "react-hydration-zh",
+      "query": "服务端输出的时间和客户端首次渲染的时间不同，页面因此出现 hydration 警告。应该如何处理这个差异？"
+    },
+    {
+      "id": "react-shared-state-zh",
+      "query": "两个子组件各自保存筛选条件，再通过回调互相同步，经常不一致。应该怎么组织这个状态？"
+    },
+    {
+      "id": "react-exclusive-modes",
+      "query": "A dialog receives isCreating and isEditing booleans, and both can be true. Model the mutually exclusive modes so invalid combinations cannot be passed."
+    },
+    {
+      "id": "react-reactive-default",
+      "query": "An editable threshold should follow the server's changing default until the user explicitly saves their own value."
+    },
+    {
+      "id": "react-lazy-state",
+      "query": "useState creates a large parsed dataset on every render even though only the first value is used."
+    },
+    {
+      "id": "react-nonrendered-ref",
+      "query": "A timer identifier is stored in state even though changing it never affects rendering."
+    },
+    {
+      "id": "react-functional-updater-capture",
+      "query": "A useCallback uses setItems(prev => ...) and omits items from dependencies, but the callback also reads an unrelated reactive filter."
+    }
+  ]
+}
