@@ -30,15 +30,17 @@
     "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "counts": { "type": "object", "additionalProperties": { "$ref": "#/$defs/count" } },
     "measurement": { "type": "object", "additionalProperties": false, "required": ["available", "sum"], "properties": { "available": { "$ref": "#/$defs/count" }, "sum": { "type": "number", "minimum": 0 } } },
+    "token_measurement": { "type": "object", "additionalProperties": false, "required": ["available", "sum"], "properties": { "available": { "$ref": "#/$defs/count" }, "sum": { "$ref": "#/$defs/count" } } },
     "condition": {
       "type": "object", "additionalProperties": false,
-      "required": ["planned", "observed", "missing", "eligible", "health", "semantic", "quality", "eligible_semantic", "eligible_quality", "query", "get_success", "get_failed", "get_indeterminate", "duration_ms", "cost_usd"],
+      "required": ["planned", "observed", "missing", "eligible", "health", "semantic", "quality", "eligible_semantic", "eligible_quality", "query", "get_success", "get_failed", "get_indeterminate", "duration_ms", "cost_usd", "input_tokens", "output_tokens", "total_tokens"],
       "properties": {
         "planned": { "$ref": "#/$defs/count" }, "observed": { "$ref": "#/$defs/count" }, "missing": { "$ref": "#/$defs/count" }, "eligible": { "$ref": "#/$defs/count" },
         "health": { "$ref": "#/$defs/counts" }, "semantic": { "$ref": "#/$defs/counts" }, "quality": { "$ref": "#/$defs/counts" }, "query": { "$ref": "#/$defs/counts" },
         "eligible_semantic": { "$ref": "#/$defs/counts" }, "eligible_quality": { "$ref": "#/$defs/counts" },
         "get_success": { "$ref": "#/$defs/count" }, "get_failed": { "$ref": "#/$defs/count" }, "get_indeterminate": { "$ref": "#/$defs/count" },
-        "duration_ms": { "$ref": "#/$defs/measurement" }, "cost_usd": { "$ref": "#/$defs/measurement" }
+        "duration_ms": { "$ref": "#/$defs/measurement" }, "cost_usd": { "$ref": "#/$defs/measurement" },
+        "input_tokens": { "$ref": "#/$defs/token_measurement" }, "output_tokens": { "$ref": "#/$defs/token_measurement" }, "total_tokens": { "$ref": "#/$defs/token_measurement" }
       }
     },
     "run": {

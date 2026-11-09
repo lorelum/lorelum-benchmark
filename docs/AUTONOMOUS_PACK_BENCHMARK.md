@@ -22,11 +22,14 @@ bun --no-env-file run environments/autonomous-pack/v1/isolation-preflight.ts '<�
 
 构建使用固定的 Lore 发行包摘要；preflight 检查无网络容器的工具版本、文件和凭据隔离以及独立临时状态。**它不验证模型 API 的代理出站、语义索引或真实 Agent。** 仅凭镜像构建或离线 preflight 不得将运行记为有效对照。
 
+镜像包含 Lore backend 验证进程身份所需的 `ps`，preflight 会检查该命令。模型代理组件只允许固定的 HTTPS 上游和指定模型；它还未接入配对执行器，单独启动代理或通过上述 preflight 都不能证明 Agent 的出站隔离。生产执行必须将代理与 Agent 放在不同的网络边界，并且不能把上游凭据传给 Agent。
+
 ## 冻结 Pack 与公开输入
 
 `src/benchmark/autonomous-pack/v1/snapshot.ts` 的 `snapshotPack(source, destination)` 将源目录复制到不存在的目标目录，拒绝符号链接，核验复制前后内容并返回完整目录 SHA-256。目标应放在隔离的 artifact 存储，不应放进 Agent 任务目录或 Git 提交。保留快照本身、digest、Lore 版本、安装返回的 artifact digest、模型及检索 profile 和索引身份；不同算法的 digest 不应假定相等。
 
-每个运行只从 `public/task.md` 与 `public/starter/` 创建干净工作区；`private/` 中的 evaluator、oracle、校准和评分不能进入 Agent 输入。安装 Pack 不等于语义索引就绪：必须核验真实 Lore 返回的 index/profile 状态；`preparing`、`indexing`、失败或部分覆盖不能记为空结果或有效检索。
+每个运行只从 `public/task.md` 与 `public/starter/` 创建干净工作区；`private/` 中的 evaluator、oracle、校准和评分不能进入 Agent 输入。安装 Pack 不等于语义索引就绪：固定 embedding 模型内容及 `encodingId`，并将 `query.retrievalMethod` 配置为与工具使用的 `single-vector` 一致；核验真实 Lore 返回的 index/profile 状态。`index status` 返回 ready 后，实际语义查询仍可能报告 indexing，因此还要检查查询结果的 profile 一致且 coverage 为 complete；`preparing`、`indexing`、失败或部分覆盖不能记为空结果或有效检索。
+索引就绪预检应在受控准备阶段进行，不向 Agent 提供检索词、结果或预选 Practice。
 
 ## 候选任务与离线校准
 
@@ -48,7 +51,7 @@ Remove-Item Env:WORKSPACE
 ## 检查契约与解释结果
 
 ```sh
-bun --no-env-file test src/benchmark/autonomous-pack/v1/trace.test.ts src/benchmark/autonomous-pack/v1/snapshot.test.ts src/benchmark/autonomous-pack/v1/plan.test.ts
+bun --no-env-file test src/benchmark/autonomous-pack/v1/trace.test.ts src/benchmark/autonomous-pack/v1/snapshot.test.ts src/benchmark/autonomous-pack/v1/plan.test.ts src/benchmark/autonomous-pack/v1/model-proxy.test.ts
 bun --no-env-file src/benchmark/validate.ts
 bun --no-env-file src/benchmark/snapshot.ts
 openspec validate autonomous-pack-benchmark-242 --type change --strict --json

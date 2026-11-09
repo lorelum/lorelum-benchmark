@@ -21,7 +21,7 @@ const observation = (slot: ScheduledRun): AutonomousObservation => ({
   verification: { input: true, isolation: true, treatment: true, reasons: [] },
   health: "evaluated", failure_reasons: [], semantic: "pass", quality: "judge-unavailable", quality_probes: [],
   trace: { complete: true, query: "not-queried", get_success: 0, get_failed: 0, get_indeterminate: 0 },
-  duration_ms: null, cost_usd: null, artifacts: []
+  duration_ms: null, cost_usd: null, input_tokens: null, output_tokens: null, total_tokens: null, artifacts: []
 });
 
 describe("autonomous Pack plan and summary", () => {
@@ -65,6 +65,37 @@ describe("autonomous Pack plan and summary", () => {
     expect(result.runs[1].reasons).toContain("timeout");
     const schema = JSON.parse(readFileSync(new URL("../../../../schemas/autonomous-pack-summary-v1.schema.json", import.meta.url), "utf8"));
     expect(new Ajv2020({ strict: true }).compile(schema)(result)).toBe(true);
+  });
+
+  test("aggregates available token counts independently without treating missing usage as zero", () => {
+    const slots = schedulePlan(plan);
+    const empty = slots.filter(slot => slot.condition === "empty-store");
+    const pack = slots.filter(slot => slot.condition === "pack-installed");
+    const result = summarizePlan(plan, [
+      { ...observation(empty[0]), input_tokens: 0, output_tokens: null, total_tokens: null, cost_usd: 0 },
+      { ...observation(empty[1]), input_tokens: 12, output_tokens: 3, total_tokens: 15, cost_usd: 0.25 },
+      { ...observation(pack[0]), input_tokens: null, output_tokens: 0, total_tokens: 0 },
+      { ...observation(pack[1]), input_tokens: 8, output_tokens: 2, total_tokens: 10, health: "execution-failed", failure_reasons: ["timeout"], semantic: "not-run", quality: "not-run" }
+    ]);
+    expect(result.conditions["empty-store"].input_tokens).toEqual({ available: 2, sum: 12 });
+    expect(result.conditions["empty-store"].output_tokens).toEqual({ available: 1, sum: 3 });
+    expect(result.conditions["empty-store"].total_tokens).toEqual({ available: 1, sum: 15 });
+    expect(result.conditions["empty-store"].cost_usd).toEqual({ available: 2, sum: 0.25 });
+    expect(result.conditions["pack-installed"].input_tokens).toEqual({ available: 1, sum: 8 });
+    expect(result.conditions["pack-installed"].output_tokens).toEqual({ available: 2, sum: 2 });
+    expect(result.conditions["pack-installed"].total_tokens).toEqual({ available: 2, sum: 10 });
+    expect(result.conditions["pack-installed"].cost_usd).toEqual({ available: 0, sum: 0 });
+    const noUsage = summarizePlan(plan, [observation(empty[0])]);
+    expect(noUsage.conditions["empty-store"].input_tokens).toEqual({ available: 0, sum: 0 });
+    const zeroUsage = summarizePlan(plan, [{ ...observation(empty[0]), input_tokens: 0 }]);
+    expect(zeroUsage.conditions["empty-store"].input_tokens).toEqual({ available: 1, sum: 0 });
+    const schema = JSON.parse(readFileSync(new URL("../../../../schemas/autonomous-pack-summary-v1.schema.json", import.meta.url), "utf8"));
+    expect(new Ajv2020({ strict: true }).compile(schema)(result)).toBe(true);
+    for (const field of ["input_tokens", "output_tokens", "total_tokens"] as const) {
+      expect(() => assertObservation({ ...observation(empty[0]), [field]: undefined })).toThrow();
+      expect(() => assertObservation({ ...observation(empty[0]), [field]: -1 })).toThrow();
+      expect(() => assertObservation({ ...observation(empty[0]), [field]: 0.5 })).toThrow();
+    }
   });
 
   test("requires identities, trace and healthy paired evidence before comparison", () => {

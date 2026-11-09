@@ -15,6 +15,7 @@ export type AutonomousObservation = {
   quality_probes: { id: string; status: AutonomousObservation["quality"]; points: number | null; max_points: number | null }[];
   trace: { complete: boolean; query: TraceAudit["query"]; get_success: number; get_failed: number; get_indeterminate: number };
   duration_ms: number | null; cost_usd: number | null;
+  input_tokens: number | null; output_tokens: number | null; total_tokens: number | null;
   artifacts: { kind: string; uri: string; sha256: string }[];
 };
 
@@ -64,8 +65,9 @@ export function summarizePlan(plan: AutonomousPlan, observations: readonly unkno
     planned: 0, observed: 0, missing: 0, eligible: 0,
     health: {} as Record<string, number>, semantic: {} as Record<string, number>, quality: {} as Record<string, number>, eligible_semantic: {} as Record<string, number>, eligible_quality: {} as Record<string, number>, query: {} as Record<string, number>,
     get_success: 0, get_failed: 0, get_indeterminate: 0,
-    duration_ms: { available: 0, sum: 0 }, cost_usd: { available: 0, sum: 0 }
-  }])) as Record<Condition, { planned: number; observed: number; missing: number; eligible: number; health: Record<string, number>; semantic: Record<string, number>; quality: Record<string, number>; eligible_semantic: Record<string, number>; eligible_quality: Record<string, number>; query: Record<string, number>; get_success: number; get_failed: number; get_indeterminate: number; duration_ms: { available: number; sum: number }; cost_usd: { available: number; sum: number } }>;
+    duration_ms: { available: 0, sum: 0 }, cost_usd: { available: 0, sum: 0 },
+    input_tokens: { available: 0, sum: 0 }, output_tokens: { available: 0, sum: 0 }, total_tokens: { available: 0, sum: 0 }
+  }])) as Record<Condition, { planned: number; observed: number; missing: number; eligible: number; health: Record<string, number>; semantic: Record<string, number>; quality: Record<string, number>; eligible_semantic: Record<string, number>; eligible_quality: Record<string, number>; query: Record<string, number>; get_success: number; get_failed: number; get_indeterminate: number; duration_ms: { available: number; sum: number }; cost_usd: { available: number; sum: number }; input_tokens: { available: number; sum: number }; output_tokens: { available: number; sum: number }; total_tokens: { available: number; sum: number } }>;
   const runs = schedule.map(slot => {
     const totals = conditions[slot.condition];
     totals.planned++;
@@ -81,6 +83,10 @@ export function summarizePlan(plan: AutonomousPlan, observations: readonly unkno
     totals.get_indeterminate += observation.trace.get_indeterminate;
     if (observation.duration_ms !== null) { totals.duration_ms.available++; totals.duration_ms.sum += observation.duration_ms; }
     if (observation.cost_usd !== null) { totals.cost_usd.available++; totals.cost_usd.sum += observation.cost_usd; }
+    for (const field of ["input_tokens", "output_tokens", "total_tokens"] as const) {
+      const value = observation[field];
+      if (value !== null) { totals[field].available++; totals[field].sum += value; }
+    }
     const reasons = [...observation.verification.reasons, ...observation.failure_reasons];
     if (!observation.verification.input || observation.input_sha256 !== slot.input_sha256 || observation.common_sha256 !== slot.common_sha256) reasons.push("Input identity unverified or mismatched");
     if (!observation.verification.isolation) reasons.push("Isolation unverified");

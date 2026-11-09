@@ -44,6 +44,7 @@ try {
     'test "$(node --version)" = v26.13.0',
     'test "$(pi --version)" = 1.5.0',
     '/opt/lorelum/lore --version | grep -F 0.1.0-alpha.7 >/dev/null',
+    'test -n "$(ps -o lstart= -o stat= -p $$)"',
     'test "$HOME" = /tmp/lorelum/home',
     'test "$LORE_CLI_PATH" = /opt/lorelum/lore',
     'test "$LORE_STORE_ROOT" = /tmp/lorelum/store',

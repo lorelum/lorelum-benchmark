@@ -2,7 +2,7 @@ FROM node:26.13.0-trixie-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300
 
 # Lore's Linux release is built on Ubuntu 24.04; trixie supplies a compatible
 # glibc. Keep the release binary beside its native runtime, as upstream requires.
-RUN apt-get update && apt-get install --yes --no-install-recommends ca-certificates curl libstdc++6 && rm -rf /var/lib/apt/lists/* && \
+RUN apt-get update && apt-get install --yes --no-install-recommends ca-certificates curl libstdc++6 procps && rm -rf /var/lib/apt/lists/* && \
     npm install --global bun@1.4.4 && \
     curl --fail --location --silent --show-error --output /tmp/lore.tar.gz https://github.com/lorelum/lorelum/releases/download/v0.1.0-alpha.7/lore-0.1.0-alpha.7-linux-x64.tar.gz && \
     echo '675b837c378e9af3400bbcdb15af25d2bd021b9ea31f76c52a8660cb4aabec0f  /tmp/lore.tar.gz' | sha256sum -c - && \
