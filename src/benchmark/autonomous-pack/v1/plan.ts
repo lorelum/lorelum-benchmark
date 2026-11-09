@@ -13,7 +13,7 @@ export type AutonomousPlan = {
   common: {
     environment_sha256: string; image_sha256: string; agent: string; model: string;
     model_parameters_sha256: string; profile_sha256: string; tool_policy_sha256: string; system_prompt_sha256: string;
-    budget: { max_turns: number; max_duration_ms: number; max_tokens: number };
+    budget: { max_turns: number; max_duration_ms: number };
   };
   pack: { source: string; snapshot_uri: string; snapshot_sha256: string; index_sha256: string };
 };

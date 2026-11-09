@@ -1,6 +1,6 @@
 # 自主 Pack 对照：维护与离线验证
 
-本文描述 Issue [#242](https://github.com/lorelum/lorelum-benchmark/issues/242) 的实验方法和当前已实现的离线组件，不是正式运行授权。**配对执行器和严格总 token 预算尚未就绪，当前不能用本指南运行真实 Agent 对照或生成正式结论。**
+本文描述 Issue [#242](https://github.com/lorelum/lorelum-benchmark/issues/242) 的实验方法和当前已实现的离线组件，不是正式运行授权。**配对执行器尚未就绪，当前不能用本指南运行真实 Agent 对照或生成正式结论。**
 
 ## 对照与结论边界
 
@@ -56,4 +56,4 @@ openspec validate autonomous-pack-benchmark-242 --type change --strict --json
 
 `schedulePlan` 生成固定配对次序，`summarizePlan` 将缺失、失败和不可比较的运行保留在计划分母；其输出不是正式 record。完整 trace 中的未查询、空结果、查询失败和读取失败是不同状态；trace 截断或无法观测的调用不能判为未查询。目前 shell 可以绕过专用工具调用 Lore，因此 trace 中有 `bash` 或 `powershell` 时审计保守标为不可判定；需要完整进程级检索观测后才能把这种运行纳入比较。功能是否完成由语义断言决定，架构及可维护性为独立质量证据，不使用隐藏加权总分。
 
-用户选择了**严格输入加输出总 token 上限**。仅限制输出 token 不具备这一能力；在供应商提供或可证明请求前的完整安全上界、执行器能强制预算并通过隔离验证之前，不得运行真实模型。OpenCode 的 [推理文档](https://opencode.ai/docs/console/api/inference/)描述响应中的 usage，不应把事后 usage 或本地估算当作严格事前上界。真实模型运行、正式记录和提升为 suite revision 均仍需各自的生命周期与授权门禁。
+用户已取消严格总 token 上限；两组仍须使用相同的时间和轮次预算。后续真实运行应分别记录供应商返回的输入、输出、总 token 和费用，缺失或异常时标为不可用，不用估计冒充实测。**这不提供严格 token 或费用封顶**；真实模型运行、正式记录和提升为 suite revision 仍需各自的生命周期、安全和授权门禁。

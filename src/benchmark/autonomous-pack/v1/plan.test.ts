@@ -10,7 +10,7 @@ const plan: AutonomousPlan = {
   schema_version: "autonomous-pack-plan/v1", id: "pilot", run_kind: "pilot",
   tasks: ["one", "two", "three"].map(id => ({ id, source_sha256: h("a"), input_sha256: h("b"), evaluator_sha256: h("c") })),
   repetitions: 3, order_seed: 71,
-  common: { environment_sha256: h("d"), image_sha256: h("e"), agent: "pi/1.5.0", model: "provider/model@version", model_parameters_sha256: h("4"), profile_sha256: h("f"), tool_policy_sha256: h("0"), system_prompt_sha256: h("1"), budget: { max_turns: 3, max_duration_ms: 60000, max_tokens: 2000 } },
+  common: { environment_sha256: h("d"), image_sha256: h("e"), agent: "pi/1.5.0", model: "provider/model@version", model_parameters_sha256: h("4"), profile_sha256: h("f"), tool_policy_sha256: h("0"), system_prompt_sha256: h("1"), budget: { max_turns: 3, max_duration_ms: 60000 } },
   pack: { source: "local working tree", snapshot_uri: "snapshots/pack", snapshot_sha256: h("2"), index_sha256: h("3") }
 };
 const observation = (slot: ScheduledRun): AutonomousObservation => ({

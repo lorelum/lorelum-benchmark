@@ -38,11 +38,10 @@
         "system_prompt_sha256": { "$ref": "#/$defs/digest" },
         "budget": {
           "type": "object", "additionalProperties": false,
-          "required": ["max_turns", "max_duration_ms", "max_tokens"],
+          "required": ["max_turns", "max_duration_ms"],
           "properties": {
             "max_turns": { "type": "integer", "minimum": 1 },
-            "max_duration_ms": { "type": "integer", "minimum": 1 },
-            "max_tokens": { "type": "integer", "minimum": 1 }
+            "max_duration_ms": { "type": "integer", "minimum": 1 }
           }
         }
       }
