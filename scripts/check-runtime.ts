@@ -27,6 +27,7 @@ assertEqual(packageJson.devDependencies?.["@earendil-works/pi-coding-agent"], ex
 
 const lockfileSha256 = new Bun.CryptoHasher("sha256").update(await Bun.file(join(root, "bun.lock")).arrayBuffer()).digest("hex");
 for (const relativePath of [
+  "environments/formal-pi-deepseek-v4-pro/v4/environment.yaml",
   "environments/local-pi/v5/environment.yaml",
   "environments/local-wsl-pi/v5/environment.yaml"
 ]) {
@@ -46,4 +47,4 @@ if (!manifestOnly) {
   assertEqual(await readCommandVersion("pi"), expected.pi, "Pi runtime");
 }
 
-console.log(`Local runtime manifests are consistent${manifestOnly ? " (host checks skipped)" : " and host versions match"}.`);
+console.log(`Runtime manifests are consistent${manifestOnly ? " (host checks skipped)" : " and host versions match"}.`);
