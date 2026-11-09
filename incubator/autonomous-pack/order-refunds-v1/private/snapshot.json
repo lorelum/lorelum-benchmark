@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "c8a7b3d7b8f810ab2d656d025c77ff5c80d2aa87dcd74441b5edd6a20957f95e",
+  "files": {
+    "private/README.md": "7e81e1accb4a0767440b2a877f569167b16a0c4d8b0f52f533ad8e5ba8c47207",
+    "private/calibration/defect-balance/src/index.js": "7e8f07c3ce2367e53103d57e8b4e70b8c34c0c1741f3070a4a0d59b9cd8b0b8d",
+    "private/calibration/defect-balance/src/shared.js": "075dbaf4174079dd20cf15e3e694a0de5b2930891026f8e8c7e9dc610069db99",
+    "private/calibration/defect-idempotency/src/index.js": "9b0b8dbfecc580db8b276d0620a63976961b2681635e3f46c08c254417a6304c",
+    "private/calibration/defect-idempotency/src/shared.js": "075dbaf4174079dd20cf15e3e694a0de5b2930891026f8e8c7e9dc610069db99",
+    "private/calibration/valid-atomic/src/index.js": "1843f09d2fdfdabb6532ec26ff88cf61a12fff0d6c4005484d562bcf3335f055",
+    "private/calibration/valid-atomic/src/shared.js": "075dbaf4174079dd20cf15e3e694a0de5b2930891026f8e8c7e9dc610069db99",
+    "private/calibration/valid-queue/src/index.js": "bd9d5bdb384c52f04dbd5a6d55df88e33c6b6a52bf6512170ff6ceb899983001",
+    "private/candidate.yaml": "5806dbfe09dc622274f55770a53ea23bd457cf186a57ceaed4e92204b3c7fa82",
+    "private/evaluator/bridge.mjs": "d4a1c8a319f5cc7509114010e682592375f164fe0fac8dac879dbe1919925104",
+    "private/evaluator/semantic.test.mjs": "d9b76d0e3e4083080ed058b57b457401a2549f848883b12a0a9a611026189103",
+    "public/starter/package.json": "9876d1956aebc2c3c9e1993763975fb77db44e74497f8610c16211bdc691f32f",
+    "public/starter/src/errors.js": "e3df79776146b71e55206734bc568298d1a4a1b12dea1674836d565213eb0cf4",
+    "public/starter/src/index.js": "1c4cdeb2547da055c209c95e20b190c808d64482b7bab417c5ee63032b023e21",
+    "public/starter/src/orders.js": "8b2e0705c8e68e73b0575ff9e1f0b4285517978c5dd2dc5cf092be93b2a2ee71",
+    "public/starter/src/refund-service.js": "51e338e3f58a2a0227a6045d0eacc995f53ee26fa8b721b22ee61107ef2765c0",
+    "public/task.md": "e2c1d9b21afa7c16343f27149a3b71b545750d3b32b63486394187af360edf72"
+  }
+}

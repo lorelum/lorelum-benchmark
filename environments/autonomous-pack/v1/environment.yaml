@@ -1,0 +1,39 @@
+id: autonomous-pack
+version: v1
+bun: 1.4.4
+node: 26.13.0
+agent_runtime:
+  id: pi
+  version: 1.5.0
+  command: pi
+model:
+  id: opencode-go/deepseek-v4.1-flash
+  version: operator-configured
+lore:
+  version: 0.1.0-alpha.7
+  platform: linux-x64
+  archive_url: https://github.com/lorelum/lorelum/releases/download/v0.1.0-alpha.7/lore-0.1.0-alpha.7-linux-x64.tar.gz
+  archive_sha256: 675b837c378e9af3400bbcdb15af25d2bd021b9ea31f76c52a8660cb4aabec0f
+  command: /opt/lorelum/lore
+  store_root: /tmp/lorelum/store
+  cache_root: /tmp/lorelum/cache
+sandbox:
+  enforcement: protected-runner-required
+  policy_path: policies/public-only-workspace/v1/policy.yaml
+  policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+  network: internal-proxy
+  home: /tmp/lorelum/home
+  workspace_path: /workspace
+  tmpfs: /tmp:rw,nosuid,nodev,size=2g,mode=1777
+  image_identity: local-sha256-id-required
+  # The agent joins only a fresh internal network. An isolated proxy joins that
+  # network and an upstream network, holds the credential, and restricts egress
+  # to the configured model endpoint. Offline preflight alone does not prove it.
+  model_api_egress: proxy-required
+  private_material: never-mounted
+  secrets: never-baked-into-image
+dependencies:
+  package: '@earendil-works/pi-coding-agent@1.5.0'
+  manifest: package.json
+  lockfile: bun.lock
+  lockfile_sha256: 39d5b82637cb8c5e824fbde97d005d680b041486374c2092947c1467e9740b4a

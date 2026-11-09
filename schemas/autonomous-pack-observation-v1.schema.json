@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "autonomous-pack-observation-v1.schema.json",
+  "title": "Autonomous Pack run observation v1 (not a formal record)",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "plan_id", "plan_sha256", "pair_id", "condition", "ordinal", "input_sha256", "common_sha256", "pack_snapshot_sha256", "index_sha256", "verification", "health", "failure_reasons", "semantic", "quality", "quality_probes", "trace", "duration_ms", "cost_usd", "artifacts"],
+  "properties": {
+    "schema_version": { "const": "autonomous-pack-observation/v1" },
+    "plan_id": { "type": "string", "minLength": 1 },
+    "plan_sha256": { "$ref": "#/$defs/digest" },
+    "pair_id": { "type": "string", "minLength": 1 },
+    "condition": { "enum": ["empty-store", "pack-installed"] },
+    "ordinal": { "type": "integer", "minimum": 0 },
+    "input_sha256": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+    "common_sha256": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+    "pack_snapshot_sha256": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+    "index_sha256": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+    "verification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["input", "isolation", "treatment", "reasons"],
+      "properties": {
+        "input": { "type": "boolean" }, "isolation": { "type": "boolean" }, "treatment": { "type": "boolean" },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "health": { "enum": ["evaluated", "execution-failed", "invalid-output", "not-executable", "indeterminate"] },
+    "failure_reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "semantic": { "enum": ["pass", "fail", "not-run"] },
+    "quality": { "enum": ["observed", "not-observed", "indeterminate", "not-run", "judge-unavailable"] },
+    "quality_probes": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "status", "points", "max_points"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["observed", "not-observed", "indeterminate", "not-run", "judge-unavailable"] },
+          "points": { "type": ["number", "null"], "minimum": 0 },
+          "max_points": { "type": ["number", "null"], "minimum": 0 }
+        }
+      }
+    },
+    "trace": {
+      "type": "object", "additionalProperties": false,
+      "required": ["complete", "query", "get_success", "get_failed", "get_indeterminate"],
+      "properties": {
+        "complete": { "type": "boolean" },
+        "query": { "enum": ["not-queried", "queried-empty", "queried", "query-failed", "indeterminate"] },
+        "get_success": { "type": "integer", "minimum": 0 },
+        "get_failed": { "type": "integer", "minimum": 0 },
+        "get_indeterminate": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "duration_ms": { "type": ["number", "null"], "minimum": 0 },
+    "cost_usd": { "type": ["number", "null"], "minimum": 0 },
+    "artifacts": {
+      "type": "array", "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["kind", "uri", "sha256"],
+        "properties": { "kind": { "type": "string", "minLength": 1 }, "uri": { "type": "string", "minLength": 1 }, "sha256": { "$ref": "#/$defs/digest" } }
+      }
+    }
+  },
+  "allOf": [
+    { "if": { "properties": { "health": { "not": { "const": "evaluated" } } } }, "then": { "properties": { "semantic": { "const": "not-run" }, "quality": { "enum": ["not-run", "indeterminate", "judge-unavailable"] } } } },
+    { "if": { "properties": { "trace": { "type": "object", "properties": { "complete": { "const": false } }, "required": ["complete"] } } }, "then": { "properties": { "trace": { "type": "object", "properties": { "query": { "const": "indeterminate" } } } } } }
+  ],
+  "$defs": { "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+}
