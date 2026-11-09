@@ -2,15 +2,20 @@
 
 ## Purpose
 定义 benchmark 仓库可重建 runtime 与 CI 校验拓扑，确保工具链版本一致、pull request 校验不重复、成本分层路径可控，并保留失败诊断与正式运行边界。
+
 ## Requirements
+
 ### Requirement: Exact runtime identity is synchronized
 
-The repository MUST declare and validate one exact baseline runtime for the active development/CI/formal Pi path: Bun `1.4.2`, Node `24.21.0`, and `@earendil-works/pi-coding-agent` `1.1.0`. The package manifest, lockfile, formal image, active environment manifests (`formal-pi-deepseek-v4-pro/v3`, `local-pi/v4`, and `local-wsl-pi/v4`), docs, and CI assertions MUST agree. Existing environment versions (including `formal-pi-deepseek-v4-pro/v2`, `local-pi/v3`, and `local-wsl-pi/v3`) and historical incubator condition pins MUST NOT be rewritten by this change.
+The repository MUST declare and validate exact baseline Bun, Node and Pi versions for the active development, CI and formal paths. The package manifest, lockfile, formal image, active environment manifests, documentation and CI assertions MUST agree. Runtime upgrades MUST create new active environment versions and MUST NOT rewrite the identity of historical environments or records.
 
 #### Scenario: Fresh install resolves the declared runtime
+- **WHEN** a clean checkout runs the frozen dependency installation and runtime preflight
+- **THEN** dependency resolution succeeds and Bun, Node and Pi report the exact declared versions without a model call
 
-- **WHEN** a clean checkout runs `bun install --frozen-lockfile` and the runtime preflight
-- **THEN** dependency resolution succeeds and Bun/Node/Pi report the exact declared versions (`1.4.2`, `24.21.0`, `1.1.0`) without a model call
+#### Scenario: Historical environment remains interpretable
+- **WHEN** a new runtime is activated
+- **THEN** the prior environment versions and their recorded runtime identities remain unchanged
 
 ### Requirement: Pull request validation is single-run and cancellable
 
@@ -57,4 +62,3 @@ Runner/coordinator black-box tests MUST set explicit test and subprocess budgets
 
 - **WHEN** the process-backed contract fixture runs on Windows with Bun `1.4.2`
 - **THEN** the test remains bounded, completes or fails with a diagnostic timeout, and cleans all generated paths without leaving a record
-
