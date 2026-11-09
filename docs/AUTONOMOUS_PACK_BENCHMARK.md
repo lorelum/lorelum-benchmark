@@ -59,6 +59,7 @@ docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-
 ```
 
 分别以 `CONDITION=empty-store` 和 `CONDITION=pack-installed`、不同的空 `OUT` 运行。命令核验 Pack 和模型内容、真实语义查询 coverage、profile、模型编码及停止后的 backend，并输出身份 JSON。`OUT/index.tar` 包含完整 Store 和 cache，保留安装 Pack 的相对符号链接；`index_sha256` 是该归档实际字节的 SHA-256，必须与归档一同保存。只对已验证摘要的归档在新隔离目录中恢复；不要将准备产物挂载到 Agent 公开任务目录。本命令不启动编码 Agent，也不生成 benchmark record。
+运行时应把归档中的 `store` 内容恢复到 `$HOME/.lorelum`，将 `cache` 内容恢复到 `$HOME/.lorelum/cache`，并写入相同 embedding 模型和 `single-vector` 配置。这样原生 `lore` 默认路径与专用工具显式使用的 Store、cache 一致；当前配对执行器尚未自动完成恢复。
 
 ## 候选任务与离线校准
 

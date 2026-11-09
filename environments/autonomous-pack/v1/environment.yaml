@@ -15,8 +15,8 @@ lore:
   archive_url: https://github.com/lorelum/lorelum/releases/download/v0.1.0-alpha.7/lore-0.1.0-alpha.7-linux-x64.tar.gz
   archive_sha256: 675b837c378e9af3400bbcdb15af25d2bd021b9ea31f76c52a8660cb4aabec0f
   command: /opt/lorelum/lore
-  store_root: /tmp/lorelum/store
-  cache_root: /tmp/lorelum/cache
+  store_root: /tmp/lorelum/home/.lorelum
+  cache_root: /tmp/lorelum/home/.lorelum/cache
 embedding:
   model_sha256: 18e8ce8ce834790618e90d26bed465cca87362076f3042eb0d8eee0732596f59
   encoding_id: ed34b3105cb6c3ab217fdb7b7c926c05808bd47474468c2f74a5110a590a42de

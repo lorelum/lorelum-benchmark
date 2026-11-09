@@ -34,7 +34,7 @@ try {
   await docker([
     "run", "-d", "--name", agent, "--network", "none", "--read-only", "--tmpfs", "/tmp:rw,nosuid,nodev,size=256m,mode=1777",
     "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--entrypoint", "sh", agentImage,
-    "-c", "mkfifo /tmp/audit-gate; echo audit-gate-ready; read x </tmp/audit-gate; /opt/lorelum/lore --json --store-root /tmp/store --no-project query --mode keyword -- probe; rc=$?; echo audit-probe-exit:$rc; read x </tmp/audit-gate; exit $rc",
+    "-c", "mkfifo /tmp/audit-gate; echo audit-gate-ready; read x </tmp/audit-gate; lore --json --store-root /tmp/store --no-project query --mode keyword -- probe; rc=$?; echo audit-probe-exit:$rc; read x </tmp/audit-gate; exit $rc",
   ]);
   const follower = Bun.spawn(["docker", "logs", "--follow", agent], { env, stdout: "pipe", stderr: "pipe" });
   logFollower = follower;
@@ -71,7 +71,7 @@ try {
   await docker(["exec", agent, "sh", "-c", "printf go > /tmp/audit-gate"]);
   const agentExit = await docker(["wait", agent]);
   if (![0, 130].includes(exit) || agentExit !== "0") throw new Error(`Probe or audit process failed (tracer ${exit}, agent ${agentExit})`);
-  if (!trace.includes('execve("/opt/lorelum/lore"') || !trace.includes("protocolVersion") || !trace.includes('\\"command\\":\\"query\\"')) {
+  if (!trace.includes('execve(\"/usr/local/bin/lore\"') || !trace.includes("protocolVersion") || !trace.includes('\\\"command\\\":\\\"query\\\"')) {
     throw new Error("Audit did not capture native Lore invocation and response");
   }
   console.log("Separate tracer observed native Lore exec and JSON response; full audit coverage is not established.");

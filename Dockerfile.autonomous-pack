@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install --yes --no-install-recommends ca-certifica
     mkdir -p /opt/lorelum && \
     tar -xzf /tmp/lore.tar.gz --strip-components=1 -C /opt/lorelum && \
     rm /tmp/lore.tar.gz && \
-    test -x /opt/lorelum/lore && test -x /opt/lorelum/native/linux-x64/lore-model
+    test -x /opt/lorelum/lore && test -x /opt/lorelum/native/linux-x64/lore-model && ln -s /opt/lorelum/lore /usr/local/bin/lore
 
 WORKDIR /opt/autonomous-pack
 COPY package.json bun.lock ./
@@ -24,8 +24,8 @@ ENV HOME=/tmp/lorelum/home \
     XDG_CACHE_HOME=/tmp/lorelum/home/.cache \
     XDG_DATA_HOME=/tmp/lorelum/home/.local/share \
     LORE_CLI_PATH=/opt/lorelum/lore \
-    LORE_STORE_ROOT=/tmp/lorelum/store \
-    LORE_CACHE_ROOT=/tmp/lorelum/cache
+    LORE_STORE_ROOT=/tmp/lorelum/home/.lorelum \
+    LORE_CACHE_ROOT=/tmp/lorelum/home/.lorelum/cache
 USER 65532:65532
 WORKDIR /workspace
 ENTRYPOINT ["/usr/local/bin/autonomous-pack-entrypoint"]
