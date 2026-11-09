@@ -24,6 +24,18 @@ bun --no-env-file run environments/autonomous-pack/v1/isolation-preflight.ts '<�
 
 镜像包含 Lore backend 验证进程身份所需的 `ps`，preflight 会检查该命令。模型代理组件只允许固定的 HTTPS 上游和指定模型；它还未接入配对执行器，单独启动代理或通过上述 preflight 都不能证明 Agent 的出站隔离。生产执行必须将代理与 Agent 放在不同的网络边界，并且不能把上游凭据传给 Agent。
 
+用户选择保留 shell 中的原生 Lore CLI。可用以下离线预检检查独立审计容器能否附着到测试容器，并看到一次真实的原生 CLI 调用和响应；需要 Docker 允许审计容器拥有 `SYS_PTRACE` 和指定的 seccomp 设置，Agent 测试容器不获得该 capability：
+
+```sh
+tar -cf - Dockerfile.autonomous-pack-audit |
+  docker build --platform linux/amd64 -f Dockerfile.autonomous-pack-audit -t lorelum-autonomous-pack-audit:v1 -
+docker image inspect --format '{{.Id}}' lorelum-autonomous-pack:v1
+docker image inspect --format '{{.Id}}' lorelum-autonomous-pack-audit:v1
+bun --no-env-file run environments/autonomous-pack/v1/audit-preflight.ts '<Agent镜像完整ID>' '<审计镜像完整ID>'
+```
+
+该预检只覆盖固定的单次 CLI 调用，不证明所有调用路径、审计完整性或输出解析已就绪。审计证据可能包含用户查询与工具输出，必须作为受控材料处理，不得进入 Agent 工作区或公开日志；当前运行遇到无法观测的 shell 调用仍标为不可判定。
+
 调用方进程中已存在的环境变量可能优先于仓库 `.env`。准备真实运行前，操作者应确认实际生效的 `LORELUM_PI_BASE_URL` 和 `LORELUM_PI_API_KEY` 来自预期配置；不要输出、记录或提交 key。纯离线验证使用 `bun --no-env-file` 并移除进程环境中的相关凭据。
 
 ## 冻结 Pack 与公开输入
