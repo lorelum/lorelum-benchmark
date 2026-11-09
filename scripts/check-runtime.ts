@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-const expected = { bun: "1.4.2", node: "24.21.0", pi: "1.1.0" } as const;
+const expected = { bun: "1.4.4", node: "26.13.0", pi: "1.5.0" } as const;
 const manifestOnly = Bun.argv.includes("--manifest-only");
 const root = process.cwd();
 
@@ -27,9 +27,8 @@ assertEqual(packageJson.devDependencies?.["@earendil-works/pi-coding-agent"], ex
 
 const lockfileSha256 = new Bun.CryptoHasher("sha256").update(await Bun.file(join(root, "bun.lock")).arrayBuffer()).digest("hex");
 for (const relativePath of [
-  "environments/formal-pi-deepseek-v4-pro/v3/environment.yaml",
-  "environments/local-pi/v4/environment.yaml",
-  "environments/local-wsl-pi/v4/environment.yaml"
+  "environments/local-pi/v5/environment.yaml",
+  "environments/local-wsl-pi/v5/environment.yaml"
 ]) {
   const environment = Bun.YAML.parse(await Bun.file(join(root, relativePath)).text()) as Record<string, unknown>;
   assertEqual(environment.bun, expected.bun, `${relativePath} bun`);
@@ -47,4 +46,4 @@ if (!manifestOnly) {
   assertEqual(await readCommandVersion("pi"), expected.pi, "Pi runtime");
 }
 
-console.log(`Runtime manifests are consistent${manifestOnly ? " (host checks skipped)" : " and host versions match"}.`);
+console.log(`Local runtime manifests are consistent${manifestOnly ? " (host checks skipped)" : " and host versions match"}.`);

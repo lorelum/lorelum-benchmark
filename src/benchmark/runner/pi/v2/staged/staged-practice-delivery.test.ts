@@ -9,6 +9,7 @@ import {
   hashStagedPracticeDeliveryPlan,
   parseStagedPracticeDeliveryPlan,
   hasCheckpointMarker,
+  hasGracefulCheckpointStop,
   prepareStagedPracticeDelivery,
   runStagedPracticeDeliveryAttempt,
   stagedPracticeConditions,
@@ -237,6 +238,17 @@ test("checkpoint marker matching is line-exact and ignores user prompt events", 
     type: "message_update",
     message: { role: "assistant", content: [{ type: "text", text: `implementation\n${checkpointMarker}\n` }] },
   }))).toBe(true);
+});
+
+test("recognizes a graceful checkpoint in Pi 1.5 JSON wire events", () => {
+  // Pi strips the cumulative message and partial snapshot from message_update on stdout.
+  const stdout = [
+    { type: "message_start", message: { role: "assistant", content: [] } },
+    { type: "message_update", usage: {}, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: checkpointMarker } },
+    { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: checkpointMarker }], stopReason: "aborted" } },
+  ].map((event) => JSON.stringify(event)).join("\n");
+  expect(hasCheckpointMarker(stdout)).toBe(true);
+  expect(hasGracefulCheckpointStop(stdout)).toBe(true);
 });
 
 test("checkpoint extension aborts on assistant text deltas", async () => {

@@ -5,6 +5,9 @@ JSON 请求，但不接受用户提供的工作目录。adapter 会核对 suite�
 treatment manifest 和 environment manifest，随后在 `.run-workspaces/<run-id>/` 创建全新的
 工作区。
 
+本地新版运行时及正式环境升级边界见 [`environments/README.md`](../environments/README.md)；
+旧 formal 镜像与新工作区 lockfile 不等价，不得把本地新版验证当作正式环境验收。
+
 本页的 `pi:requests` / `pi:coordinate` 工作区规则针对正式 G0/G1 `pi/v2` 执行路径；不概括其他
 Pi profile 或 Practice diagnostic runner 的全部 Agent 输入。该正式路径的任务工作区从
 `public/task.md` 与 `public/starter/` 构建，但这只是任务 fixture 起始内容，并非 Agent 可见输入的完整集合。
