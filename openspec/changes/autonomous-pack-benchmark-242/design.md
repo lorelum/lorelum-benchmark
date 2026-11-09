@@ -2,7 +2,7 @@
 
 ## Context
 
-#242 的目标与现有 `pack-practice-treatment/v1` 不同：后者预先固定 query 和 Practice，staged runner 注入结果。不能将该路径重命名为自主检索。#222 的静态排名轨道独立保留。未来 Pack 尚不存在，固定现有 Pack 仅用于链路验证，不能据此声称未来 Pack 有效。
+#242 的目标与现有 `pack-practice-treatment/v1` 不同：后者预先固定 query 和 Practice，staged runner 注入结果。不能将该路径重命名为自主检索。#222 的静态排名轨道独立保留。用户确认首个对象是 `E:/lorelum-packs/packs/agentic-coding` 当前本地工作树，包含未提交内容；必须冻结实际内容快照及 digest，不能将 Git commit 或 pack.yaml 版本单独视为内容身份，也不能将其称为已发布版本。
 
 ## Goals / Non-Goals
 
@@ -11,7 +11,7 @@
 ## Decisions
 
 1. **条件**：两组均安装同版本 Lore CLI，暴露相同调用方式和通用工具说明；基线为空 Store，处理组仅多安装固定 Pack。不得在 task 或系统提示中加入题目专属查询指令；预先建立可用语义索引，固定 profile、模型、运行时和版本。Pack 带来的可观察差异是 treatment 本身，不能声称完整模型输入逐字相同。独立目录和环境隔离宿主已有 Pack、缓存及凭据；禁止私有评测材料被访问。预算和工具权限保持相同。
-2. **身份与执行**：`schemas/` 定义实验、条件与观测的版本化契约；`treatments/` 记录 Pack 来源、不可变 commit/ref、内容 digest、安装及索引身份；`environments/` 固定 CLI、Agent、profile 和依赖；`src/benchmark/` 增加独立执行与审计路径，复用既有工作区和结果契约。文件具体拆分实施规划时按现有模块确定。安装或索引不匹配、输入不一致、隔离失败及 trace 不可用不得记作有效比较。
+2. **身份与执行**：`schemas/` 定义实验、条件与观测的版本化契约；`treatments/` 记录 Pack 来源及完整实际内容快照、digest、安装及索引身份；`environments/` 固定 CLI、Agent、profile 和依赖；`src/benchmark/` 增加独立执行与审计路径，复用既有工作区和结果契约。文件具体拆分实施规划时按现有模块确定。安装或索引不匹配、输入不一致、隔离失败及 trace 不可用不得记作有效比较。本地工作树试验须可依据保存的完整快照重建，禁止覆盖源仓库或把不匹配内容冒充 release。
 3. **任务**：`incubator/` 中建立多文件、真实维护场景的候选，产品行为可客观验证，有不止一种合理架构方案；公共题面、starter 独立于 Pack 和评估标准。私有 evaluator、oracle、校准和 blind rubric 留在 `private/`。分别使用合理解、缺陷解及不同合理设计校准，避免质量探针惩罚等价设计。现有有结果 revision 和 helper 不变。是否冻结正式 snapshot 取决于生命周期门禁。
 4. **观测与评估**：捕获 Agent 真正的 query/get 调用及结果状态、时间顺序和 Practice 身份，并限制敏感日志；非查询、空结果、失败、trace 缺失分开。独立报告 health、semantic、质量探针、条件盲审、成本与延迟；judge 只作软信号，确定性语义检查不是 LLM judge。查询是过程观察，不作为任务完成门槛，也不能单独证明因果机制。
 5. **实验**：预注册任务、条件、重复数和随机化顺序；配对同任务及固定配置，报告完整分母、失败和不确定；不把随机配对 seed 误称模型 seed。固定 task/source snapshot、evaluator、Pack、索引、environment、模型和输入 hash。pilot 与正式记录分开；未经生命周期、隔离审计和授权不执行模型调用或创建正式 record。
