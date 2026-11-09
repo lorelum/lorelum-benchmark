@@ -1,0 +1,18 @@
+id: local-pi
+version: v5
+bun: 1.4.4
+node: 26.13.0
+agent_runtime:
+  id: pi
+  version: 1.5.0
+  command: pi
+model:
+  id: deepseek/deepseek-v4-pro
+  version: local-native-skill-2026-07-19
+sandbox:
+  policy_hash: 095f0cb4693f8753ecad07d0b86a0cb3e83c153f109b5b6e6a102eb819cb6dd2
+dependencies:
+  package: '@earendil-works/pi-coding-agent@1.5.0'
+  manifest: package.json
+  lockfile: bun.lock
+  lockfile_sha256: 39d5b82637cb8c5e824fbde97d005d680b041486374c2092947c1467e9740b4a

@@ -46,6 +46,23 @@ test("extracts only declared bash tool timeouts from Pi trace events", () => {
   expect(piToolTimeoutEvent(JSON.stringify({ type: "tool_execution_start", toolCallId: "read", toolName: "read", args: { timeout: 120 } }))).toBeUndefined();
 });
 
+test("audits Pi 1.5 JSON events without cumulative message_update snapshots", () => {
+  const events = [
+    { type: "session", version: 3, id: "session", timestamp: "2026-11-02T00:00:00.000Z", cwd: "/workspace" },
+    { type: "agent_start" },
+    { type: "message_start", message: { role: "user", content: [{ type: "text", text: skill }] } },
+    { type: "message_update", usage: {}, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "Reading rules" } },
+    ...successfulRead("read-dependencies", "/lorelum/treatment/rules/async-dependencies.md"),
+    ...successfulRead("read-parallel", "/lorelum/treatment/rules/async-parallel.md"),
+    { type: "tool_execution_start", toolCallId: "edit", toolName: "edit", args: { path: "/workspace/app.ts" } },
+    { type: "agent_end", messages: [] }
+  ];
+  const audit = auditPiJsonTrace(events.map((event) => JSON.stringify(event)).join("\n"), { treatment: { id: "vercel-skill", version: "v2" } }, memberHubRuleAudit);
+  expect(audit.valid).toBe(true);
+  expect(audit.rule_reads).toEqual(["async-dependencies.md", "async-parallel.md"]);
+  expect(audit.first_edit_event).toBe(9);
+});
+
 test("accepts a baseline trace without Skill access", () => {
   const audit = auditPiJsonTrace(eventStream("Implement the task"), { treatment: { id: "baseline", version: "v1" } }, memberHubRuleAudit);
   expect(audit.valid).toBe(true);

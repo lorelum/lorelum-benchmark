@@ -1,18 +1,18 @@
-FROM node:24.21.0-bookworm-slim
+FROM node:26.13.0-bookworm-slim
 
 ARG PLAYWRIGHT_VERSION=1.61.1
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 RUN apt-get update && apt-get install --yes --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/* && \
-    npm install --global bun@1.4.2 playwright@${PLAYWRIGHT_VERSION} && \
+    npm install --global bun@1.4.4 playwright@${PLAYWRIGHT_VERSION} && \
     playwright install --with-deps chromium
 
 WORKDIR /opt/formal-pi
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile && ln -s /opt/formal-pi/node_modules/.bin/pi /usr/local/bin/pi && \
-    test "$(bun --version)" = "1.4.2" && \
-    test "$(node --version)" = "v24.21.0" && \
-    test "$(pi --version)" = "1.1.0"
+    test "$(bun --version)" = "1.4.4" && \
+    test "$(node --version)" = "v26.13.0" && \
+    test "$(pi --version)" = "1.5.0"
 
 USER 65532:65532
 ENTRYPOINT ["pi"]
