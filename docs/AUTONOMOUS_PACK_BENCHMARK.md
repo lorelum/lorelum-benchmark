@@ -14,7 +14,7 @@
 
 ```sh
 bun install --frozen-lockfile
-tar -cf - Dockerfile.autonomous-pack package.json bun.lock environments/autonomous-pack/v1/entrypoint.sh |
+tar -cf - Dockerfile.autonomous-pack package.json bun.lock environments/autonomous-pack/v1/entrypoint.sh src/benchmark/fs.ts src/benchmark/autonomous-pack/v1/index-prepare.ts |
   docker build --platform linux/amd64 -f Dockerfile.autonomous-pack -t lorelum-autonomous-pack:v1 -
 docker image inspect --format '{{.Id}}' lorelum-autonomous-pack:v1
 bun --no-env-file run environments/autonomous-pack/v1/isolation-preflight.ts '<上一条输出的完整镜像ID>'
@@ -24,12 +24,29 @@ bun --no-env-file run environments/autonomous-pack/v1/isolation-preflight.ts '<�
 
 镜像包含 Lore backend 验证进程身份所需的 `ps`，preflight 会检查该命令。模型代理组件只允许固定的 HTTPS 上游和指定模型；它还未接入配对执行器，单独启动代理或通过上述 preflight 都不能证明 Agent 的出站隔离。生产执行必须将代理与 Agent 放在不同的网络边界，并且不能把上游凭据传给 Agent。
 
+调用方进程中已存在的环境变量可能优先于仓库 `.env`。准备真实运行前，操作者应确认实际生效的 `LORELUM_PI_BASE_URL` 和 `LORELUM_PI_API_KEY` 来自预期配置；不要输出、记录或提交 key。纯离线验证使用 `bun --no-env-file` 并移除进程环境中的相关凭据。
+
 ## 冻结 Pack 与公开输入
 
 `src/benchmark/autonomous-pack/v1/snapshot.ts` 的 `snapshotPack(source, destination)` 将源目录复制到不存在的目标目录，拒绝符号链接，核验复制前后内容并返回完整目录 SHA-256。目标应放在隔离的 artifact 存储，不应放进 Agent 任务目录或 Git 提交。保留快照本身、digest、Lore 版本、安装返回的 artifact digest、模型及检索 profile 和索引身份；不同算法的 digest 不应假定相等。
 
 每个运行只从 `public/task.md` 与 `public/starter/` 创建干净工作区；`private/` 中的 evaluator、oracle、校准和评分不能进入 Agent 输入。安装 Pack 不等于语义索引就绪：固定 embedding 模型内容及 `encodingId`，并将 `query.retrievalMethod` 配置为与工具使用的 `single-vector` 一致；核验真实 Lore 返回的 index/profile 状态。`index status` 返回 ready 后，实际语义查询仍可能报告 indexing，因此还要检查查询结果的 profile 一致且 coverage 为 complete；`preparing`、`indexing`、失败或部分覆盖不能记为空结果或有效检索。
-索引就绪预检应在受控准备阶段进行，不向 Agent 提供检索词、结果或预选 Practice。
+空 Store 的 `index status` 可以是 `missing`，但实际语义查询仍应成功返回相同 profile、complete coverage 和空结果；不可把它与安装组索引缺失混淆。索引就绪预检应在受控准备阶段进行，不向 Agent 提供检索词、结果或预选 Practice。
+
+离线准备每个条件的 Store 和语义索引时，使用前述镜像的完整 ID、已冻结的 Pack 目录和 embedding 模型目录。`OUT` 必须是新的空目录，Docker 必须能以容器用户 `65532` 写入它。以下变量分别是 `IMAGE`、`PACK_SNAPSHOT`、`MODEL_DIR`、`OUT` 的绝对路径或镜像 ID，以及已核验的 `PACK_SHA`、`MODEL_SHA`、`PROFILE_ID`、`ENCODING_ID`：
+
+```sh
+docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+  --pids-limit 256 --memory 3g --workdir /tmp \
+  --tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777 \
+  --mount "type=bind,src=$PACK_SNAPSHOT,dst=/pack,readonly" \
+  --mount "type=bind,src=$MODEL_DIR,dst=/model,readonly" \
+  --mount "type=bind,src=$OUT,dst=/out" \
+  --entrypoint bun "$IMAGE" run /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/index-prepare.ts \
+  "$CONDITION" "$PACK_SHA" "$MODEL_SHA" "$PROFILE_ID" "$ENCODING_ID"
+```
+
+分别以 `CONDITION=empty-store` 和 `CONDITION=pack-installed`、不同的空 `OUT` 运行。命令核验 Pack 和模型内容、真实语义查询 coverage、profile、模型编码及停止后的 backend，并输出身份 JSON。`OUT/index.tar` 包含完整 Store 和 cache，保留安装 Pack 的相对符号链接；`index_sha256` 是该归档实际字节的 SHA-256，必须与归档一同保存。只对已验证摘要的归档在新隔离目录中恢复；不要将准备产物挂载到 Agent 公开任务目录。本命令不启动编码 Agent，也不生成 benchmark record。
 
 ## 候选任务与离线校准
 

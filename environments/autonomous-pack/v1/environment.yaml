@@ -17,6 +17,11 @@ lore:
   command: /opt/lorelum/lore
   store_root: /tmp/lorelum/store
   cache_root: /tmp/lorelum/cache
+embedding:
+  model_sha256: 18e8ce8ce834790618e90d26bed465cca87362076f3042eb0d8eee0732596f59
+  encoding_id: ed34b3105cb6c3ab217fdb7b7c926c05808bd47474468c2f74a5110a590a42de
+  profile_id: f86744be739936072d165f616c596c3e2fe6fb26233bdf5ae7d0093843f134f0
+  retrieval_method: single-vector
 sandbox:
   enforcement: protected-runner-required
   policy_path: policies/public-only-workspace/v1/policy.yaml
