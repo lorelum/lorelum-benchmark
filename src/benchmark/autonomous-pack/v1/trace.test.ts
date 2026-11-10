@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { auditTrace } from "./trace";
 
 const base = [{ type: "session", version: 3 }, { type: "agent_start" }];
-const end = { type: "agent_end", messages: [] };
+const end = { type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] };
 const jsonl = (events: unknown[]) => events.map((event) => JSON.stringify(event)).join("\n") + "\n";
 const trace = (...events: unknown[]) => jsonl([...base, ...events, end, { type: "agent_settled", aborted: false }]);
 const wrap = (command: string, data: unknown, ok = true) => ({
@@ -22,6 +22,7 @@ describe("autonomous Pack Pi trace audit", () => {
     }
     expect(auditTrace(jsonl([...base, end])).query).toBe("indeterminate");
     expect(auditTrace(jsonl([...base, end, { type: "agent_settled", aborted: true }])).query).toBe("indeterminate");
+    expect(auditTrace(jsonl([...base, { type: "agent_end", messages: [{ role: "assistant", stopReason: "length", content: [] }] }, { type: "agent_settled", aborted: false }])).query).toBe("indeterminate");
   });
 
   test("correlates query and get with their envelopes and line evidence", () => {

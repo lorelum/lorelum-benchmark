@@ -120,7 +120,7 @@ describe("autonomous Pack plan and summary", () => {
   });
 
   test("distinguishes no query and indeterminate trace without exposing contents", () => {
-    const complete = auditTrace('{"type":"session","version":3}\n{"type":"agent_start"}\n{"type":"agent_end","messages":[]}\n{"type":"agent_settled","aborted":false}\n');
+    const complete = auditTrace('{"type":"session","version":3}\n{"type":"agent_start"}\n{"type":"agent_end","messages":[{"role":"assistant","stopReason":"stop","content":[]}]}\n{"type":"agent_settled","aborted":false}\n');
     expect(traceObservation(complete)).toEqual({ complete: true, query: "not-queried", get_success: 0, get_failed: 0, get_indeterminate: 0 });
     expect(traceObservation(auditTrace("")).query).toBe("indeterminate");
   });

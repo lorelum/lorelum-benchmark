@@ -9,7 +9,8 @@ import { randomUUID } from 'node:crypto';
 const here = path.dirname(fileURLToPath(import.meta.url));
 if (!process.env.WORKSPACE || !path.isAbsolute(process.env.WORKSPACE)) throw new Error('WORKSPACE must be an absolute candidate workspace path');
 const workspace = path.resolve(process.env.WORKSPACE);
-const name = `lorelum-evaluator-${randomUUID()}`;
+const name = process.env.LORELUM_EVALUATOR_CONTAINER_NAME || `lorelum-evaluator-${randomUUID()}`;
+if (!/^lorelum-evaluator-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(name)) throw new Error('Invalid evaluator container name');
 const child = spawn('docker', [
   'run', '--rm', '-i', '--name', name, '--network', 'none', '--read-only',
   '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pids-limit', '128',
@@ -39,7 +40,7 @@ createInterface({ input: child.stdout, crlfDelay: Infinity }).on('line', line =>
   pending.delete(response.id);
   clearTimeout(entry.timer);
   if (!response.ok) {
-    entry.reject(Object.assign(new Error(response.error?.message || 'Candidate error'), { code: response.error?.code }));
+    entry.reject(Object.assign(new Error(response.error?.message || 'Candidate error'), { code: response.error?.code, name: 'CandidateError' }));
   } else {
     if (response.value && typeof response.value === 'object') references.set(response.value, response.id);
     entry.resolve(response.value);

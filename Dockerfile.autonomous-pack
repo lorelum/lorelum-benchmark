@@ -16,7 +16,12 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile && ln -s /opt/autonomous-pack/node_modules/.bin/pi /usr/local/bin/pi && \
     test "$(bun --version)" = "1.4.4" && test "$(node --version)" = "v26.13.0" && test "$(pi --version)" = "1.5.0"
 COPY src/benchmark/fs.ts /opt/autonomous-pack/src/benchmark/fs.ts
+COPY src/benchmark/autonomous-pack/v1/snapshot.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/snapshot.ts
 COPY src/benchmark/autonomous-pack/v1/index-prepare.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/index-prepare.ts
+COPY src/benchmark/autonomous-pack/v1/index-archive.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/index-archive.ts
+COPY src/benchmark/autonomous-pack/v1/index-restore.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/index-restore.ts
+COPY src/benchmark/autonomous-pack/v1/agent-bootstrap.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/agent-bootstrap.ts
+COPY src/benchmark/autonomous-pack/v1/lore-extension.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/lore-extension.ts
 COPY environments/autonomous-pack/v1/entrypoint.sh /usr/local/bin/autonomous-pack-entrypoint
 RUN chmod 755 /usr/local/bin/autonomous-pack-entrypoint
 ENV HOME=/tmp/lorelum/home \

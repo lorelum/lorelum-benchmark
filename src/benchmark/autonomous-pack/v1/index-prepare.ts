@@ -1,6 +1,7 @@
 import { lstat, mkdir, readdir, readlink, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { sha256Directory, sha256File } from "../../fs";
+import { sha256File } from "../../fs";
+import { sha256SnapshotDirectory } from "./snapshot";
 
 // Run only in the declared networkless preparation container, not in an Agent workspace.
 const [condition, packDigest, modelDigest, profileId, encodingId] = process.argv.slice(2);
@@ -27,7 +28,7 @@ async function checkTree(root: string, directory: string, allowInternalLinks: bo
 }
 await checkTree(pack, pack, false);
 if (await sha256File(model) !== modelDigest) throw new Error("Embedding model digest mismatch");
-if (await sha256Directory(pack) !== packDigest) throw new Error("Pack snapshot digest mismatch");
+if (await sha256SnapshotDirectory(pack) !== packDigest) throw new Error("Pack snapshot digest mismatch");
 // Exclusive creation refuses to mix this preparation with previous artifacts.
 await mkdir(store);
 await mkdir(cache);
@@ -86,14 +87,14 @@ try {
   requireSuccess(await lore(["backend", "stop"]), "Backend stop");
   stopped = true;
   await checkTree(pack, pack, false);
-  if (await sha256File(model) !== modelDigest || await sha256Directory(pack) !== packDigest) throw new Error("Preparation input changed during indexing");
+  if (await sha256File(model) !== modelDigest || await sha256SnapshotDirectory(pack) !== packDigest) throw new Error("Preparation input changed during indexing");
   await checkTree(store, store, true);
   await checkTree(cache, cache, true);
   // Archive the quiesced directories, including relative symlinks: a file-only
   // directory digest silently omits Lore's installed-Pack `current` link.
   const archive = "/out/index.tar";
   await writeFile(archive, "", { flag: "wx", mode: 0o600 });
-  const tar = Bun.spawn(["tar", "-C", "/out", "-cf", archive, "store", "cache"], { stdout: "pipe", stderr: "pipe" });
+  const tar = Bun.spawn(["tar", "--format=ustar", "--hard-dereference", "-C", "/out", "-cf", archive, "store", "cache"], { stdout: "pipe", stderr: "pipe" });
   const [tarExit, tarError] = await Promise.all([tar.exited, new Response(tar.stderr).text()]);
   if (tarExit !== 0) throw new Error(`Index archive failed: ${tarError.trim()}`);
   const indexSha256 = await sha256File(archive);

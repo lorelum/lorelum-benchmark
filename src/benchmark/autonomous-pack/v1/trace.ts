@@ -90,9 +90,13 @@ export function auditTrace(stdout: string): TraceAudit {
       continue;
     }
     if (event.type === "agent_end") {
+      if (!Array.isArray(event.messages)) errors.push(`Missing agent messages at line ${eventIndex}`);
+      const assistants = Array.isArray(event.messages) ? event.messages.filter(message => record(message) && message.role === "assistant") : [];
+      const finalAssistant = assistants.at(-1);
+      if (!record(finalAssistant) || finalAssistant.stopReason !== "stop") errors.push(`Missing completed assistant response at line ${eventIndex}`);
       if (Array.isArray(event.messages)) for (const message of event.messages) {
         if (!record(message) || message.role !== "assistant") continue;
-        if (message.stopReason === "error" || message.stopReason === "aborted") errors.push(`Assistant did not complete at line ${eventIndex}`);
+        if (message.stopReason === "error" || message.stopReason === "aborted" || message.stopReason === "length") errors.push(`Assistant did not complete at line ${eventIndex}`);
         if (Array.isArray(message.content)) for (const part of message.content) {
           if (!record(part) || part.type !== "toolCall") continue;
           if (typeof part.id !== "string" || !part.id || typeof part.name !== "string" || !part.name || (announced.has(part.id) && announced.get(part.id) !== part.name)) {
@@ -111,7 +115,7 @@ export function auditTrace(stdout: string): TraceAudit {
     }
     if (phase !== "running") errors.push(`Event outside agent run at line ${eventIndex}`);
     if (event.type === "message_end" && record(event.message) && event.message.role === "assistant") {
-      if (event.message.stopReason === "error" || event.message.stopReason === "aborted") errors.push(`Assistant did not complete at line ${eventIndex}`);
+      if (event.message.stopReason === "error" || event.message.stopReason === "aborted" || event.message.stopReason === "length") errors.push(`Assistant did not complete at line ${eventIndex}`);
       if (Array.isArray(event.message.content)) for (const part of event.message.content) {
         if (!record(part) || part.type !== "toolCall") continue;
         if (typeof part.id !== "string" || !part.id || typeof part.name !== "string" || !part.name || announced.has(part.id)) {
