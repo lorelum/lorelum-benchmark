@@ -1,7 +1,7 @@
 # Treatments（实验处理）
 
-treatment 描述施加给 Agent 的实验条件：基线或外部 Skill。每个可复用 treatment 都有
-版本化目录和 manifest；修改 prompt、注入或工具时必须创建新版本。
+treatment 描述施加给 Agent 的实验条件：基线或外部 Skill。Pi v2 可复用 treatment 使用
+版本化目录和 manifest；修改 prompt、注入或工具时必须创建新版本。自主 Pack 对照使用下述独立的版本化实验计划。
 
 Pi v2 从 `treatments/<id>/v<version>/treatment.yaml` 解析 treatment，并核对请求的
 `id`、`version` 和 `tool_policy_hash`。`baseline/v1` 是不注入额外内容的最小可执行条件；
@@ -41,3 +41,17 @@ The prepared selection and provenance are saved under the treatment's `private/`
 staged runner consumes that frozen result; it must not query, rerank, or replace a Practice during a
 condition or delivery node. CI uses command fixtures and does not invoke the real Lore CLI, network,
 or semantic model.
+
+## Autonomous Pack comparison
+
+`autonomous-pack-plan/v1` 是自主 Pack 对照的版本化条件清单，契约见
+[`schemas/autonomous-pack-plan-v1.schema.json`](../schemas/autonomous-pack-plan-v1.schema.json)；
+它不是 Pi v2 的 Practice 注入 treatment，也不会预选 query 或注入 Practice。
+计划固定 Pack 实际内容快照及安装组索引的 digest，引用可重建的快照，固定环境、模型、
+profile、工具、提示和预算；runner 将同一计划配对为 `empty-store` 与 `pack-installed`。
+空组和安装组分别从独立 Store 恢复，Agent 自行决定是否查询。
+
+初始对象可以是包含未提交内容的本地工作树；运行前必须保存其完整快照和摘要，不能以
+Git commit 或版本号代替。环境与准备、执行、证据边界见
+[`docs/AUTONOMOUS_PACK_BENCHMARK.md`](../docs/AUTONOMOUS_PACK_BENCHMARK.md)。
+pilot 产物和本地快照保存在受控 artifact 存储，不作为正式结果提交。

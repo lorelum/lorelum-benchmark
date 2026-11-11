@@ -3,7 +3,7 @@
 ## 1. 契约与候选
 
 - [x] 1.1 在 `schemas/` 定义版本化实验计划、Pack 身份、运行观测与结果契约，固定输入和失败语义。
-- [ ] 1.2 在 `treatments/` 与 `environments/` 定义可复现 Pack 安装和空 Store 对照，首个对象为本地 `agentic-coding` 实际工作树快照；固定完整内容 hash、Lore、索引 profile、Agent 及环境身份。
+- [x] 1.2 在 `treatments/` 与 `environments/` 定义可复现 Pack 安装和空 Store 对照，首个对象为本地 `agentic-coding` 实际工作树快照；固定完整内容 hash、Lore、索引 profile、Agent 及环境身份。
 - [x] 1.3 在 `incubator/` 构建多文件真实代码演进候选及 public starter，私有 oracle、校准和质量 rubric 不可进入 Agent 输入；记录生命周期和 snapshot 身份。
 
 ## 2. Evaluator 与 runner
@@ -22,4 +22,4 @@
 
 ## 4. 结果与生命周期
 
-- [ ] 4.1 审计 public/private 泄露和不可变身份；仅在满足生命周期与授权时创建正式 record 或升级 revision，保留 pilot 和失败证据及限制。
+- [x] 4.1 审计 public/private 泄露和不可变身份；仅在满足生命周期与授权时创建正式 record 或升级 revision，保留 pilot 和失败证据及限制。
