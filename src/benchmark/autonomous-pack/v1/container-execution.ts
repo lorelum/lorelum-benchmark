@@ -138,6 +138,8 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
   let artifactRoot: string | undefined;
   let artifactOwned = false;
   let proxyRunning = false;
+  let proxy: Attached | undefined;
+  let usageDone: Promise<void> | undefined;
   let error = "execution failed";
   let cleanupFailed = false;
   try {
@@ -176,9 +178,10 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     containers.push(names.proxy);
     await command(["create", "--name", names.proxy, "--label", `lorelum.execution=${suffix}`, ...hardened, "-i", "--network", names.internal, o.proxyImage]);
     await command(["network", "connect", names.upstream, names.proxy]);
-    const proxy = attached(["start", "-a", "-i", names.proxy]); processes.push(proxy);
+    proxy = attached(["start", "-a", "-i", names.proxy]); processes.push(proxy);
     proxyRunning = true;
     const usage = await collect(proxy.child.stdout, join(artifactRoot, "proxy-usage.jsonl"), /^model-proxy-ready:8080\r?$/m);
+    usageDone = usage.done;
     streams.push(usage.done);
     proxy.child.stderr.resume();
     proxy.child.stdin.on("error", () => {});
@@ -242,18 +245,40 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     const markers = [...stderr.matchAll(/^AGENT_RESULT ([a-z0-9_]+)\r?$/gm)];
     result.agentResult = markers.length === 1 ? markers[0]![1]! : null;
     if (agentExit !== "0" || logCode !== 0 || result.agentResult !== "exit_0") throw Error("agent did not complete successfully");
-    await command(["kill", "--signal", "TERM", names.proxy]);
-    const proxyCode = await deadline(proxy.exit, o.auditWaitMs, "proxy stop timeout");
-    proxyRunning = false;
-    await deadline(usage.done, o.auditWaitMs, "proxy stream timeout");
-    result.usage = auditUsageStream(await readFile(join(artifactRoot, "proxy-usage.jsonl"), "utf8"), proxyCode === 0);
+    // Proxy shutdown and usage auditing also run on every failure path below.
     result.status = "completed"; error = "";
   } catch (e) {
     // Never expose command stderr, credentials, model response or input text.
     error = e instanceof Error && /^(?:invalid image or artifact identity|invalid budget|invalid public input or proxy configuration|invalid upstream URL|invalid host path|invalid mount source|invalid proxy network address|unsupported Docker mount path|mounted path overlaps private material|private paths overlap|image identity mismatch|docker (?:image|network|create|start|inspect|exec|wait|kill|rm|ps) failed|docker command timeout|proxy readiness timeout|audit readiness timeout|unexpected bootstrap PID|agent finish timeout|agent log stream timeout|agent log drain timeout|agent did not complete successfully|finish log stream timeout|finish log drain timeout|proxy stop timeout|proxy stream timeout|isolation topology identity unavailable|isolation topology mismatch)$/.test(e.message) ? e.message : "execution failed";
   } finally {
-    if (proxyRunning) {
-      try { await command(["kill", "--signal", "TERM", names.proxy], 10_000); } catch { /* The container may already have stopped. */ }
+    // Stop a possibly still-running agent first, including when start or a
+    // handshake timed out. A failed stop must not mask the original error.
+    if (error && containers.includes(names.agent)) {
+      try { await command(["kill", names.agent], Math.min(o.auditWaitMs, 10_000)); } catch { /* It may not have started or may already have exited. */ }
+    }
+    if (proxyRunning && proxy) {
+      let stopped = false;
+      let proxyCode: number | null = null;
+      let drained = false;
+      let proxyError = "";
+      try {
+        await command(["kill", "--signal", "TERM", names.proxy], Math.min(o.auditWaitMs, 10_000));
+        stopped = true;
+      } catch { proxyError = "proxy stop failed"; }
+      try { proxyCode = await deadline(proxy.exit, o.auditWaitMs, "proxy stop timeout"); }
+      catch { proxyError ||= "proxy stop timeout"; }
+      if (usageDone) {
+        try { await deadline(usageDone, o.auditWaitMs, "proxy stream timeout"); drained = true; }
+        catch { proxyError ||= "proxy stream timeout"; }
+      }
+      // Only a deliberate stop, clean exit and completely drained private
+      // stream permit the strict audit to report totals.
+      if (drained && artifactRoot) {
+        try {
+          result.usage = auditUsageStream(await readFile(join(artifactRoot, "proxy-usage.jsonl"), "utf8"), stopped && proxyCode === 0);
+        } catch { proxyError ||= "proxy stream read failed"; }
+      }
+      if (proxyError && result.status === "completed") { result.status = "failed"; error = proxyError; }
     }
     for (const p of processes) if (p.child.exitCode === null) p.child.kill();
     for (const name of containers.reverse()) {

@@ -3,7 +3,7 @@ import { copyFile, lstat, mkdir, readFile, realpath, writeFile } from "node:fs/p
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { sha256File } from "../../fs";
-import { executeContainerRun } from "./container-execution";
+import { executeContainerRun, type ContainerExecutionResult } from "./container-execution";
 import { evaluateSemantic } from "./evaluator";
 import { assertPlan, type AutonomousPlan } from "./plan";
 import { prepareInputs, prepareRunWorkspace, type PreparationSources } from "./runner-preparation";
@@ -51,6 +51,38 @@ function parseMetadata(value: unknown, condition: IndexMetadata["condition"], pl
 async function copyVerified(source: string, destination: string, expected: string) {
   await copyFile(source, destination, constants.COPYFILE_EXCL);
   if (await sha256File(destination) !== expected) throw new Error("Frozen artifact digest mismatch");
+}
+
+/** Record observable trace evidence and return whether semantic evaluation may run. */
+export async function observeRunTrace(
+  observation: AutonomousObservation,
+  run: Pick<ContainerExecutionResult, "status" | "reason" | "artifacts">,
+): Promise<boolean> {
+  if (run.status !== "completed") {
+    observation.failure_reasons = [run.reason ?? "Agent execution failed"];
+    if (run.artifacts.pi) {
+      try {
+        const counts = traceObservation(auditTrace(await readFile(run.artifacts.pi.path, "utf8")));
+        observation.trace = { ...counts, complete: false, query: "indeterminate" };
+      } catch {
+        // An unavailable trace is not evidence of any additional tool calls.
+      }
+    }
+    return false;
+  }
+  if (!run.artifacts.pi) {
+    observation.failure_reasons = [run.reason ?? "Agent execution failed"];
+    return false;
+  }
+  const trace = auditTrace(await readFile(run.artifacts.pi.path, "utf8"));
+  observation.trace = traceObservation(trace);
+  const structuralErrors = trace.errors.filter(error => error !== "Shell access can invoke Lore outside the instrumented tools");
+  if (structuralErrors.length) {
+    observation.health = "indeterminate";
+    observation.failure_reasons = ["Pi trace was incomplete or reported an agent error"];
+    return false;
+  }
+  return true;
 }
 
 /** A pilot does not create a formal record; the upstream and Docker daemon are trusted. */
@@ -128,32 +160,21 @@ export async function runPairedPilot(options: PairedPilotOptions) {
         observation.cost_usd = run.usage.totals.costUsd ?? null;
       }
       for (const [kind, artifact] of Object.entries(run.artifacts)) if (artifact) observation.artifacts.push({ kind, uri: pathToFileURL(artifact.path).href, sha256: artifact.sha256 });
-      if (run.status !== "completed" || !run.artifacts.pi) {
-        observation.failure_reasons = [run.reason ?? "Agent execution failed"];
-      } else {
-        const trace = auditTrace(await readFile(run.artifacts.pi.path, "utf8"));
-        const counts = traceObservation(trace);
-        observation.trace = counts;
-        const structuralErrors = trace.errors.filter(error => error !== "Shell access can invoke Lore outside the instrumented tools");
-        if (structuralErrors.length) {
-          observation.health = "indeterminate";
-          observation.failure_reasons = ["Pi trace was incomplete or reported an agent error"];
-        } else {
-          const workspaceSha = await sha256SnapshotDirectory(prepared.workspace);
-          const evaluationDirectory = join(evaluations, String(slot.ordinal));
-          const evaluated = await evaluateSemantic({ workspace: prepared.workspace, evaluatorRoot: task.evaluator, evaluatorSha256: plannedTask.evaluator_sha256, imageId: `sha256:${plan.common.image_sha256}`, outputDirectory: evaluationDirectory });
-          if (workspaceSha !== await sha256SnapshotDirectory(prepared.workspace)) throw new Error("Workspace changed during evaluation");
-          observation.health = evaluated.health;
-          observation.semantic = evaluated.semantic;
-          observation.quality = evaluated.quality;
-          observation.quality_probes = evaluated.quality_probes;
-          observation.failure_reasons = evaluated.failure_reasons;
-          const evaluationResult = join(evaluationDirectory, "result.json");
-          observation.artifacts.push({ kind: "semantic-evaluation", uri: pathToFileURL(evaluationResult).href, sha256: await sha256File(evaluationResult) });
-          const workspaceIdentity = join(runs, String(slot.ordinal), "workspace.json");
-          await writeFile(workspaceIdentity, JSON.stringify({ algorithm: "autonomous-pack-tree/v1", uri: pathToFileURL(prepared.workspace).href, sha256: workspaceSha }) + "\n", { flag: "wx", mode: 0o600 });
-          observation.artifacts.push({ kind: "workspace-identity", uri: pathToFileURL(workspaceIdentity).href, sha256: await sha256File(workspaceIdentity) });
-        }
+      if (await observeRunTrace(observation, run)) {
+        const workspaceSha = await sha256SnapshotDirectory(prepared.workspace);
+        const evaluationDirectory = join(evaluations, String(slot.ordinal));
+        const evaluated = await evaluateSemantic({ workspace: prepared.workspace, evaluatorRoot: task.evaluator, evaluatorSha256: plannedTask.evaluator_sha256, imageId: `sha256:${plan.common.image_sha256}`, outputDirectory: evaluationDirectory });
+        if (workspaceSha !== await sha256SnapshotDirectory(prepared.workspace)) throw new Error("Workspace changed during evaluation");
+        observation.health = evaluated.health;
+        observation.semantic = evaluated.semantic;
+        observation.quality = evaluated.quality;
+        observation.quality_probes = evaluated.quality_probes;
+        observation.failure_reasons = evaluated.failure_reasons;
+        const evaluationResult = join(evaluationDirectory, "result.json");
+        observation.artifacts.push({ kind: "semantic-evaluation", uri: pathToFileURL(evaluationResult).href, sha256: await sha256File(evaluationResult) });
+        const workspaceIdentity = join(runs, String(slot.ordinal), "workspace.json");
+        await writeFile(workspaceIdentity, JSON.stringify({ algorithm: "autonomous-pack-tree/v1", uri: pathToFileURL(prepared.workspace).href, sha256: workspaceSha }) + "\n", { flag: "wx", mode: 0o600 });
+        observation.artifacts.push({ kind: "workspace-identity", uri: pathToFileURL(workspaceIdentity).href, sha256: await sha256File(workspaceIdentity) });
       }
     } catch {
       observation.health = "indeterminate";
