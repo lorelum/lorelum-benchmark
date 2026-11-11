@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { constants } from "node:fs";
 import { lstat, mkdir, open, readFile, writeFile } from "node:fs/promises";
+import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import { isIP } from "node:net";
 
 const ROOT = "/opt/autonomous-pack/src/benchmark/autonomous-pack/v1";
@@ -13,6 +14,7 @@ type Config = {
   model_sha256: string;
   proxy_url: string;
   model_id: string;
+  catalog_provider: string;
   context_window: number;
   max_tokens: number;
   max_turns: number;
@@ -23,7 +25,7 @@ type Config = {
 function parseConfig(value: unknown): Config {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid agent configuration");
   const c = value as Record<string, unknown>;
-  const keys = ["index_sha256", "model_sha256", "proxy_url", "model_id", "context_window", "max_tokens", "max_turns", "max_duration_ms", "audit_wait_ms"];
+  const keys = ["index_sha256", "model_sha256", "proxy_url", "model_id", "catalog_provider", "context_window", "max_tokens", "max_turns", "max_duration_ms", "audit_wait_ms"];
   if (Object.keys(c).length !== keys.length || keys.some(key => !Object.hasOwn(c, key))) throw new Error("Invalid agent configuration fields");
   for (const key of ["index_sha256", "model_sha256"]) if (typeof c[key] !== "string" || !/^[a-f0-9]{64}$/.test(c[key] as string)) throw new Error("Invalid digest");
   for (const key of ["context_window", "max_tokens", "max_turns", "max_duration_ms", "audit_wait_ms"]) {
@@ -31,6 +33,7 @@ function parseConfig(value: unknown): Config {
   }
   if ((c.max_tokens as number) > (c.context_window as number)) throw new Error("Invalid model limits");
   if (typeof c.model_id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(c.model_id)) throw new Error("Invalid model identifier");
+  if (typeof c.catalog_provider !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(c.catalog_provider)) throw new Error("Invalid catalog provider");
   if (typeof c.proxy_url !== "string") throw new Error("Invalid proxy URL");
   let url: URL;
   try { url = new URL(c.proxy_url); } catch { throw new Error("Invalid proxy URL"); }
@@ -103,7 +106,10 @@ async function run(): Promise<number> {
   const restoreCode = await childExit(restore);
   if (restoreCode !== 0) throw new Error("Index restore failed");
   await mkdir(AGENT, { recursive: true, mode: 0o700 });
-  await writeFile(`${AGENT}/models.json`, JSON.stringify({ providers: { gateway: { baseUrl: config.proxy_url, api: "openai-completions", apiKey: "$LORELUM_PLACEHOLDER_KEY", models: [{ id: config.model_id, name: config.model_id, reasoning: false, input: ["text"], contextWindow: config.context_window, maxTokens: config.max_tokens }] } } }), { flag: "wx", mode: 0o600 });
+  const catalog = builtinModels().getModel(config.catalog_provider, config.model_id);
+  if (!catalog || catalog.api !== "openai-completions" || config.context_window > catalog.contextWindow || config.max_tokens > catalog.maxTokens) throw new Error("Model does not match the pinned Pi catalog");
+  const model = { id: catalog.id, name: catalog.name, reasoning: catalog.reasoning, input: ["text"], contextWindow: config.context_window, maxTokens: config.max_tokens, compat: catalog.compat, thinkingLevelMap: catalog.thinkingLevelMap };
+  await writeFile(`${AGENT}/models.json`, JSON.stringify({ providers: { [config.catalog_provider]: { baseUrl: config.proxy_url, api: catalog.api, apiKey: "$LORELUM_PLACEHOLDER_KEY", models: [model] } } }), { flag: "wx", mode: 0o600 });
   await writeFile(`${AGENT}/settings.json`, JSON.stringify({ compaction: { enabled: false }, retry: { enabled: false, provider: { maxRetries: 0 } }, shellPath: "/bin/bash" }), { flag: "wx", mode: 0o600 });
 
   // Agent-core awaits turn_start before preparing the next provider request.
@@ -114,7 +120,7 @@ async function run(): Promise<number> {
 
   // The runner attaches to this process and all descendants before acknowledging.
   await handshake("/control/attached", "ATTACHED\n", config.audit_wait_ms, `AUDIT_READY ${process.pid}\n`);
-  const child = spawn("/usr/local/bin/pi", ["--print", "--mode", "json", "--no-session", "--no-approve", "--offline", "--no-extensions", "--no-mcp", "--no-skills", "--no-prompt-templates", "--no-themes", "--no-context-files", "--extension", `${ROOT}/lore-extension.ts`, "--extension", guard, "--tools", "read,bash,edit,write,grep,find,ls,lore_query,lore_get", "--provider", "gateway", "--model", config.model_id, "--system-prompt", system], { cwd: "/workspace", env, detached: true, stdio: ["pipe", "inherit", "ignore"] });
+  const child = spawn("/usr/local/bin/pi", ["--print", "--mode", "json", "--no-session", "--no-approve", "--offline", "--no-extensions", "--no-mcp", "--no-skills", "--no-prompt-templates", "--no-themes", "--no-context-files", "--extension", `${ROOT}/lore-extension.ts`, "--extension", guard, "--tools", "read,bash,edit,write,grep,find,ls,lore_query,lore_get", "--provider", config.catalog_provider, "--model", config.model_id, "--system-prompt", system], { cwd: "/workspace", env, detached: true, stdio: ["pipe", "inherit", "ignore"] });
   // Stdin avoids Pi's positional @file expansion and preserves task text exactly.
   child.stdin?.on("error", () => {});
   child.stdin?.end(task);

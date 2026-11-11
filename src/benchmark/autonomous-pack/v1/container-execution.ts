@@ -4,6 +4,7 @@ import { createReadStream } from "node:fs";
 import { lstat, mkdir, open, readFile, realpath, writeFile } from "node:fs/promises";
 import { isIP } from "node:net";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { inspectEgressTopology, type EgressInspectionResult } from "./egress-proof";
 import { auditUsageStream, type ProviderUsage } from "./provider-usage";
 
 /** All paths are host paths. workspace must be a fresh, writable PUBLIC workspace;
@@ -19,7 +20,7 @@ export type ContainerExecutionOptions = {
   workspace: string; index: string; modelFile: string; privateRoot: string; artifactRoot: string;
   task: string; system: string;
   indexSha256: string; modelSha256: string;
-  modelId: string; contextWindow: number; maxTokens: number; maxTurns: number;
+  modelId: string; modelProvider: string; contextWindow: number; maxTokens: number; maxTurns: number;
   maxDurationMs: number; auditWaitMs: number;
   upstreamBaseUrl: string; upstreamApiKey: string;
 };
@@ -28,6 +29,7 @@ export type ContainerExecutionResult = {
   reason: string | null;
   agentResult: string | null;
   durationMs: number | null;
+  topology: EgressInspectionResult | null;
   usage: { complete: boolean; totals: ProviderUsage | null };
   // Trace coverage and stdout attribution are not established by this primitive.
   nativeAudit: "indeterminate";
@@ -37,7 +39,7 @@ export type ContainerExecutionResult = {
   cleanup: "unverified";
   comparable: false;
   resourceNames: { internal: string; upstream: string; proxy: string; agent: string; tracer: string };
-  artifacts: { pi: Artifact | null; trace: Artifact | null; usage: Artifact | null; agentStderr: Artifact | null; finishLog: Artifact | null };
+  artifacts: { pi: Artifact | null; trace: Artifact | null; usage: Artifact | null; agentStderr: Artifact | null; finishLog: Artifact | null; topology: Artifact | null };
 };
 export type Artifact = { path: string; sha256: string };
 type Attached = { child: ChildProcessWithoutNullStreams; exit: Promise<number | null> };
@@ -48,7 +50,7 @@ const timerMax = 2_147_483_647;
 function requireOptions(o: ContainerExecutionOptions) {
   if (![o.agentImage, o.proxyImage, o.auditImage].every(x => /^sha256:[a-f0-9]{64}$/.test(x)) || ![o.indexSha256, o.modelSha256].every(x => /^[a-f0-9]{64}$/.test(x))) throw Error("invalid image or artifact identity");
   if (![o.contextWindow, o.maxTokens, o.maxTurns, o.maxDurationMs, o.auditWaitMs].every(x => Number.isSafeInteger(x) && x > 0 && x <= timerMax) || o.maxTokens > o.contextWindow) throw Error("invalid budget");
-  if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(o.modelId) || typeof o.task !== "string" || typeof o.system !== "string" || !o.upstreamApiKey) throw Error("invalid public input or proxy configuration");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(o.modelId) || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(o.modelProvider) || typeof o.task !== "string" || typeof o.system !== "string" || !o.upstreamApiKey) throw Error("invalid public input or proxy configuration");
   let url: URL; try { url = new URL(o.upstreamBaseUrl); } catch { throw Error("invalid upstream URL"); }
   if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) throw Error("invalid upstream URL");
   for (const path of [o.workspace, o.index, o.modelFile, o.privateRoot, o.artifactRoot]) if (!isAbsolute(path) || /[,\r\n]/.test(path)) throw Error("invalid host path");
@@ -128,7 +130,7 @@ function attached(args: string[]): Attached {
 export async function executeContainerRun(o: ContainerExecutionOptions): Promise<ContainerExecutionResult> {
   const suffix = randomUUID();
   const names = { internal: `ap-in-${suffix}`, upstream: `ap-out-${suffix}`, proxy: `ap-proxy-${suffix}`, agent: `ap-agent-${suffix}`, tracer: `ap-trace-${suffix}` };
-  const result: ContainerExecutionResult = { status: "failed", reason: "execution failed", agentResult: null, durationMs: null, usage: { complete: false, totals: null }, nativeAudit: "indeterminate", isolation: "unverified", cleanup: "unverified", comparable: false, resourceNames: names, artifacts: { pi: null, trace: null, usage: null, agentStderr: null, finishLog: null } };
+  const result: ContainerExecutionResult = { status: "failed", reason: "execution failed", agentResult: null, durationMs: null, topology: null, usage: { complete: false, totals: null }, nativeAudit: "indeterminate", isolation: "unverified", cleanup: "unverified", comparable: false, resourceNames: names, artifacts: { pi: null, trace: null, usage: null, agentStderr: null, finishLog: null, topology: null } };
   const containers: string[] = [], networks: string[] = [];
   const processes: Attached[] = [];
   const streams: Promise<void>[] = [];
@@ -172,7 +174,7 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     const inspect = JSON.parse(await command(["inspect", names.proxy]));
     const ip = inspect[0]?.NetworkSettings?.Networks?.[names.internal]?.IPAddress;
     if (typeof ip !== "string" || isIP(ip) !== 4 || !/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(ip)) throw Error("invalid proxy network address");
-    await writeFile(join(publicDir, "agent.json"), JSON.stringify({ index_sha256: o.indexSha256, model_sha256: o.modelSha256, proxy_url: `http://${ip}:8080/v1`, model_id: o.modelId, context_window: o.contextWindow, max_tokens: o.maxTokens, max_turns: o.maxTurns, max_duration_ms: o.maxDurationMs, audit_wait_ms: o.auditWaitMs }), { mode: 0o644, flag: "wx" });
+    await writeFile(join(publicDir, "agent.json"), JSON.stringify({ index_sha256: o.indexSha256, model_sha256: o.modelSha256, proxy_url: `http://${ip}:8080/v1`, model_id: o.modelId, catalog_provider: o.modelProvider, context_window: o.contextWindow, max_tokens: o.maxTokens, max_turns: o.maxTurns, max_duration_ms: o.maxDurationMs, audit_wait_ms: o.auditWaitMs }), { mode: 0o644, flag: "wx" });
     containers.push(names.agent);
     // FIFO creation happens inside tmpfs, so no host FIFO semantics are needed on Windows.
     await command(["create", "--name", names.agent, "--label", `lorelum.execution=${suffix}`, ...hardened, "--network", names.internal, "--pids-limit", "256", "--memory", "3g", "--workdir", "/workspace", "--tmpfs", "/tmp:rw,nosuid,nodev,size=2g,mode=1777", "--tmpfs", "/control:rw,nosuid,nodev,mode=1777", "--mount", `type=bind,src=${workspace},dst=/workspace`, "--mount", `type=bind,src=${publicDir},dst=/inputs,readonly`, "--mount", `type=bind,src=${index},dst=/inputs/index.tar,readonly`, "--mount", `type=bind,src=${model},dst=/model/model.gguf,readonly`, "--entrypoint", "/bin/sh", o.agentImage, "-c", `mkfifo /control/attached /control/finished && exec /usr/local/bin/bun run ${rootInImage}/agent-bootstrap.ts`]);
@@ -191,6 +193,28 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     const trace = await collect(tracer.child.stderr, join(artifactRoot, "native-trace.log"), /^(?:\/usr\/bin\/)?strace: Process 1 attached(?: with [1-9][0-9]* threads)?\r?$/m);
     streams.push(trace.done);
     await deadline(trace.ready, o.auditWaitMs, "tracer attachment timeout");
+    const agentInspect: unknown = JSON.parse(await command(["inspect", names.agent]));
+    const proxyInspect: unknown = JSON.parse(await command(["inspect", names.proxy]));
+    const internalInspect: unknown = JSON.parse(await command(["network", "inspect", names.internal]));
+    const upstreamInspect: unknown = JSON.parse(await command(["network", "inspect", names.upstream]));
+    const identity = (value: unknown): string => {
+      if (!Array.isArray(value) || value.length !== 1 || !value[0] || typeof value[0] !== "object" || typeof value[0].Id !== "string") throw Error("isolation topology identity unavailable");
+      return value[0].Id;
+    };
+    result.topology = inspectEgressTopology({
+      agent: agentInspect, proxy: proxyInspect, internalNetwork: internalInspect, upstreamNetwork: upstreamInspect,
+      agentImage: o.agentImage, proxyImage: o.proxyImage, agentId: identity(agentInspect), proxyId: identity(proxyInspect),
+      internalId: identity(internalInspect), upstreamId: identity(upstreamInspect),
+      agentMounts: [
+        { source: workspace, destination: "/workspace", rw: true },
+        { source: publicDir, destination: "/inputs", rw: false },
+        { source: index, destination: "/inputs/index.tar", rw: false },
+        { source: model, destination: "/model/model.gguf", rw: false },
+      ],
+      proxyMounts: [],
+    });
+    await writeFile(join(artifactRoot, "topology.json"), JSON.stringify(result.topology, null, 2) + "\n", { flag: "wx", mode: 0o600 });
+    if (result.topology.status !== "observed") throw Error("isolation topology mismatch");
     const started = performance.now();
     await command(["exec", names.agent, "sh", "-c", "printf 'ATTACHED\\n' > /control/attached"], o.auditWaitMs);
     // Docker logs may chunk markers arbitrarily. A second follower reads the full
@@ -222,7 +246,7 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     result.status = "completed"; error = "";
   } catch (e) {
     // Never expose command stderr, credentials, model response or input text.
-    error = e instanceof Error && /^(invalid |unsupported |mounted path|private paths|image identity|docker |proxy readiness|audit readiness|unexpected bootstrap|tracer |agent |trace stream|finish log|proxy stop|proxy stream|proxy usage)/.test(e.message) ? e.message : "execution failed";
+    error = e instanceof Error && /^(invalid |unsupported |mounted path|private paths|image identity|docker |proxy readiness|audit readiness|unexpected bootstrap|tracer |agent |trace stream|finish log|proxy stop|proxy stream|proxy usage|isolation topology)/.test(e.message) ? e.message : "execution failed";
   } finally {
     if (proxyRunning) {
       try { await command(["kill", "--signal", "TERM", names.proxy], 10_000); } catch { /* The container may already have stopped. */ }
@@ -240,10 +264,26 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
         await command(["network", "rm", name]);
       } catch { cleanupFailed = true; }
     }
+    // A timed-out Docker create can still finish in the daemon after the client
+    // exits. Discover owned resources by this run's unique label as well as by
+    // the names already returned; an empty snapshot is not a future guarantee.
+    for (const kind of ["container", "network"] as const) {
+      try {
+        const list = kind === "container" ? ["ps", "-aq", "--no-trunc", "--filter", `label=lorelum.execution=${suffix}`] : ["network", "ls", "-q", "--no-trunc", "--filter", `label=lorelum.execution=${suffix}`];
+        const found = await command(list, 10_000);
+        for (const id of found ? found.split(/\s+/) : []) {
+          if (!/^[a-f0-9]{64}$/.test(id)) throw Error("invalid owned resource identity");
+          const inspect = kind === "container" ? ["inspect", "--format", '{{index .Config.Labels "lorelum.execution"}}', id] : ["network", "inspect", "--format", '{{index .Labels "lorelum.execution"}}', id];
+          if (await command(inspect, 10_000) !== suffix) throw Error("resource ownership mismatch");
+          await command(kind === "container" ? ["rm", "-f", id] : ["network", "rm", id], 10_000);
+        }
+        if (await command(list, 10_000)) throw Error("owned resources remain");
+      } catch { cleanupFailed = true; }
+    }
     let streamsSettled = true;
     try { await deadline(Promise.allSettled(streams), 30_000, "stream cleanup timeout"); } catch { cleanupFailed = true; streamsSettled = false; }
     if (artifactRoot && artifactOwned && streamsSettled) {
-      [result.artifacts.pi, result.artifacts.trace, result.artifacts.usage, result.artifacts.agentStderr, result.artifacts.finishLog] = await Promise.all([digest(join(artifactRoot, "pi.jsonl")), digest(join(artifactRoot, "native-trace.log")), digest(join(artifactRoot, "proxy-usage.jsonl")), digest(join(artifactRoot, "agent-stderr.log")), digest(join(artifactRoot, "agent-finish.log"))]);
+      [result.artifacts.pi, result.artifacts.trace, result.artifacts.usage, result.artifacts.agentStderr, result.artifacts.finishLog, result.artifacts.topology] = await Promise.all([digest(join(artifactRoot, "pi.jsonl")), digest(join(artifactRoot, "native-trace.log")), digest(join(artifactRoot, "proxy-usage.jsonl")), digest(join(artifactRoot, "agent-stderr.log")), digest(join(artifactRoot, "agent-finish.log")), digest(join(artifactRoot, "topology.json"))]);
     }
     if (result.status === "completed" && Object.values(result.artifacts).some(artifact => artifact === null)) {
       result.status = "failed"; error = "artifact hashing failed";

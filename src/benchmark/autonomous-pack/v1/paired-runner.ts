@@ -77,6 +77,9 @@ export async function runPairedDiagnostic(options: PairedDiagnosticOptions) {
   const inputs = await prepareInputs(plan, options.sources, join(root, "inputs"));
   const profile = parseProfile(JSON.parse(await readFile(inputs.common.profile, "utf8")));
   const model = parseModel(JSON.parse(await readFile(inputs.common.modelParameters, "utf8")));
+  const separator = plan.common.model.indexOf("/");
+  const modelProvider = plan.common.model.slice(0, separator);
+  if (separator < 1 || plan.common.model.slice(separator + 1) !== model.api_model_id) throw new Error("Model parameters do not match the planned catalog identity");
   const toolPolicy: unknown = JSON.parse(await readFile(inputs.common.toolPolicy, "utf8"));
   if (JSON.stringify(toolPolicy) !== JSON.stringify(tools)) throw new Error("Tool policy does not match the pinned Pi entrypoint");
   const environment: unknown = Bun.YAML.parse(await readFile(inputs.common.environment, "utf8"));
@@ -114,7 +117,7 @@ export async function runPairedDiagnostic(options: PairedDiagnosticOptions) {
       observation.input_sha256 = slot.input_sha256;
       observation.common_sha256 = slot.common_sha256;
       observation.verification.input = true;
-      const run = await executeContainerRun({ agentImage: `sha256:${plan.common.image_sha256}`, proxyImage: `sha256:${profile.proxy_image_sha256}`, auditImage: `sha256:${profile.audit_image_sha256}`, workspace: prepared.workspace, index: isInstalled ? installedArchive : emptyArchive, modelFile, privateRoot: dirname(task.evaluator), artifactRoot: join(runs, String(slot.ordinal)), task: prepared.prompt, system, indexSha256: isInstalled ? plan.pack.index_sha256 : profile.empty_index_sha256, modelSha256: profile.model_sha256, modelId: model.api_model_id, contextWindow: model.context_window, maxTokens: model.max_tokens, maxTurns: plan.common.budget.max_turns, maxDurationMs: plan.common.budget.max_duration_ms, auditWaitMs: options.auditWaitMs, upstreamBaseUrl: endpoint.href, upstreamApiKey: "synthetic-local-only" });
+      const run = await executeContainerRun({ agentImage: `sha256:${plan.common.image_sha256}`, proxyImage: `sha256:${profile.proxy_image_sha256}`, auditImage: `sha256:${profile.audit_image_sha256}`, workspace: prepared.workspace, index: isInstalled ? installedArchive : emptyArchive, modelFile, privateRoot: dirname(task.evaluator), artifactRoot: join(runs, String(slot.ordinal)), task: prepared.prompt, system, indexSha256: isInstalled ? plan.pack.index_sha256 : profile.empty_index_sha256, modelSha256: profile.model_sha256, modelId: model.api_model_id, modelProvider, contextWindow: model.context_window, maxTokens: model.max_tokens, maxTurns: plan.common.budget.max_turns, maxDurationMs: plan.common.budget.max_duration_ms, auditWaitMs: options.auditWaitMs, upstreamBaseUrl: endpoint.href, upstreamApiKey: "synthetic-local-only" });
       observation.duration_ms = run.durationMs;
       if (run.usage.complete && run.usage.totals) {
         observation.input_tokens = run.usage.totals.promptTokens;

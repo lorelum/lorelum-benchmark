@@ -34,7 +34,7 @@ docker image inspect --format '{{.Id}}' lorelum-autonomous-pack-proxy:v1
 bun --no-env-file run environments/autonomous-pack/v1/egress-preflight.ts '<Agent镜像完整ID>' '<代理镜像完整ID>'
 ```
 
-该预检覆盖有限的本地连接、代理目标和请求数量限制，并在输出中列明未覆盖项；它不证明真实供应商的出站路径或所有网络与凭据边界。代理的请求数量上限应与两组的轮次上限相同，独立于 Pi 的轮次终止；这不是 token 或费用上限。
+该预检检查本次 Docker 容器、网络成员、镜像与挂载配置，并覆盖有限的本地连接、代理目标和请求数量限制；输出列出未覆盖项。配对诊断在每次释放 Agent 前重新检查该次拓扑，不复用 preflight 结果；但这些观察仍不证明真实供应商出站或所有网络与凭据边界。代理的请求数量上限应与两组的轮次上限相同，独立于 Pi 的轮次终止；这不是 token 或费用上限。
 
 用户选择保留 shell 中的原生 Lore CLI。可用以下离线预检检查独立审计容器能否附着到测试容器，并看到一次真实的原生 CLI 调用和响应；需要 Docker 允许审计容器拥有 `SYS_PTRACE` 和指定的 seccomp 设置，Agent 测试容器不获得该 capability：
 
@@ -103,7 +103,7 @@ docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-
 }
 ```
 
-准备 model parameters JSON，例如 `{"api_model_id":"synthetic","context_window":8192,"max_tokens":1024}`，以及工具策略 JSON 数组 `["read","bash","edit","write","grep","find","ls","lore_query","lore_get"]`。这里的 `max_tokens` 是合成模型的单次输出配置，不是总 token 或费用上限。准备相同的公开 system prompt 文件。按 [plan schema](../schemas/autonomous-pack-plan-v1.schema.json) 构造 `run_kind: "pilot"` 的计划；`pack.index_sha256` 是安装组归档摘要，`common.profile_sha256` 是上述 profile 文件的字节摘要，`common.image_sha256` 是 Agent 镜像 ID。
+准备 model parameters JSON，例如合成服务模拟目标模型时使用 `{"api_model_id":"deepseek-v4.1-flash","context_window":8192,"max_tokens":1024}`，以及工具策略 JSON 数组 `["read","bash","edit","write","grep","find","ls","lore_query","lore_get"]`。计划中的模型身份必须为 `<Pi 内置 provider>/<api_model_id>`；入口从固定镜像内的 Pi 目录加载该模型的 reasoning、compat 和 thinking level 映射，并拒绝不存在或超过目录上限的模型配置，合成服务也必须接受相同的模型 ID。这里的 `max_tokens` 是合成模型的单次输出配置，不是总 token 或费用上限。准备相同的公开 system prompt 文件。按 [plan schema](../schemas/autonomous-pack-plan-v1.schema.json) 构造 `run_kind: "pilot"` 的计划；`pack.index_sha256` 是安装组归档摘要，`common.profile_sha256` 是上述 profile 文件的字节摘要，`common.image_sha256` 是 Agent 镜像 ID。
 
 任务的 `source_sha256` 和 `evaluator_sha256` 使用 `sha256SnapshotDirectory`；`input_sha256` 是 `hashContract({task_sha256, starter_sha256})`，其中 task 摘要与其余普通文件摘要使用 `sha256File`。不要用仓库历史 `sha256Directory` 代替完整树摘要。以下命令可输出一个候选所需的三个任务身份；变量指向绝对路径：
 
@@ -140,7 +140,7 @@ console.log(JSON.stringify({source_sha256:starter,input_sha256:hashContract({tas
 bun --no-env-file run src/benchmark/autonomous-pack/v1/paired-runner.ts /absolute/path/to/diagnostic.json
 ```
 
-输出目录含冻结输入、独立工作区、受控 trace、语义评估、每次 observation 和 `summary.json`；不得提交或分享原始 trace、私有映射与 evaluator。它们可能含任务及 Agent 输出。元数据、归档或模型摘要不符时会在模型请求前失败。`summary.json` 保留计划分母；人工中断可能留下未完成的输出目录，不能当作完成的诊断或正式 record。
+输出目录含冻结输入、独立工作区、每次运行的 `topology.json`、受控 trace、语义评估、每次 observation 和 `summary.json`；不得提交或分享原始 trace、私有映射与 evaluator。它们可能含任务及 Agent 输出。拓扑不符会在释放 Agent 前失败；元数据、归档或模型摘要不符会在模型请求前失败。拓扑状态 `observed` 不等于完整隔离证明。`summary.json` 保留计划分母；人工中断可能留下未完成的输出目录，不能当作完成的诊断或正式 record。
 
 ## 候选任务与离线校准
 

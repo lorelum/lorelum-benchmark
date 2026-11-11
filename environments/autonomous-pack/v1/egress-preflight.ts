@@ -3,6 +3,7 @@ import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { inspectEgressTopology, type EgressInspectionResult } from "../../../src/benchmark/autonomous-pack/v1/egress-proof";
 
 // Synthetic local HTTPS only. This is not a provider egress or model test.
 const [agentImage, proxyImage] = process.argv.slice(2);
@@ -15,8 +16,7 @@ if (process.argv.length !== 4 || ![agentImage, proxyImage].every(x => /^sha256:[
 const allowedEnv = /^(PATH|SYSTEMROOT|COMSPEC|PATHEXT|HOME|USERPROFILE|DOCKER_HOST|DOCKER_CONTEXT|DOCKER_CONFIG|DOCKER_TLS_VERIFY|DOCKER_CERT_PATH|TMP|TEMP|TMPDIR|XDG_RUNTIME_DIR)$/i;
 const env = Object.fromEntries(Object.keys(process.env).filter(k => allowedEnv.test(k)).map(k => [k, process.env[k]]));
 const suffix = randomUUID();
-const containers: string[] = [];
-const networks: string[] = [];
+const label = `lorelum.egress-preflight=${suffix}`;
 type AttachedProxy = {
   stdin: { write(data: string): unknown; end(): unknown };
   stdout: ReadableStream<Uint8Array>;
@@ -41,15 +41,13 @@ async function docker(args: string[]): Promise<string> {
   return result.out;
 }
 async function createContainer(args: string[]): Promise<string> {
-  const id = await docker(["create", ...args]);
+  const id = await docker(["create", "--label", label, ...args]);
   if (!/^[a-f0-9]{64}$/.test(id)) throw new Error("Invalid created container ID");
-  containers.push(id);
   return id;
 }
 async function createNetwork(args: string[]): Promise<string> {
-  const id = await docker(["network", "create", ...args]);
+  const id = await docker(["network", "create", "--label", label, ...args]);
   if (!/^[a-f0-9]{64}$/.test(id)) throw new Error("Invalid created network ID");
-  networks.push(id);
   return id;
 }
 async function awaitReady(child: AttachedProxy): Promise<{ output: Promise<string> }> {
@@ -80,6 +78,7 @@ async function awaitReady(child: AttachedProxy): Promise<{ output: Promise<strin
       }
     } finally { reader.releaseLock(); }
   })();
+  void output.catch(() => {});
   void new Response(child.stderr).arrayBuffer().catch(() => {});
   return { output };
 }
@@ -105,6 +104,9 @@ const connect=(host,port)=>new Promise(resolve=>{const s=net.connect({host,port}
 async function request(path, method, body) { const r=await fetch('http://proxy:8080'+path,{method,headers:{'content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(7000)}); return {status:r.status,text:await r.text()}; }
 let stage='agent-identity';
 (async()=>{
+  const gate=Promise.withResolvers();
+  const timer=setInterval(()=>{if(fs.existsSync('/tmp/egress-release')){clearInterval(timer);gate.resolve()}},50);
+  await gate.promise;
   if (process.getuid() !== 65532) throw Error();
   stage='host-sentinel';
   if (process.env.LORELUM_PREFLIGHT_SENTINEL || fs.existsSync(p.privatePath)) throw Error();
@@ -134,6 +136,7 @@ let stage='agent-identity';
 
 const host = createServer(socket => socket.destroy());
 let cleanupFailed = false;
+let report: { result: string; topology: EgressInspectionResult; coverage: string[]; gaps: string[] } | undefined;
 try {
   for (const image of [agentImage, proxyImage]) {
     if (await docker(["image", "inspect", "--format", "{{.Id}}", image]) !== image) throw new Error("Image ID mismatch");
@@ -174,8 +177,19 @@ try {
   attached.stdin.write(JSON.stringify({ baseUrl: "https://upstream:8443/fixture", apiKey: randomBytes(32).toString("hex"), model: "synthetic", port: 8080, hostname: "0.0.0.0", maxRequests: 2 }));
   attached.stdin.end();
   const { output } = await awaitReady(attached);
-  const agent = await createContainer([...hardened, "--network", internal, "--entrypoint", "node", agentImage, "-e", agentProgram, JSON.stringify({ upstream: upstreamIp, gateway, hostPort, privatePath })]);
-  const result = await run(["docker", "start", "-a", agent], 45_000);
+  const agent = await createContainer([...hardened, "--network", internal, "--tmpfs", "/tmp:rw,nosuid,nodev,mode=1777", "--entrypoint", "node", agentImage, "-e", agentProgram, JSON.stringify({ upstream: upstreamIp, gateway, hostPort, privatePath })]);
+  await docker(["start", agent]);
+  const topology = inspectEgressTopology({
+    agent: JSON.parse(await docker(["inspect", agent])), proxy: JSON.parse(await docker(["inspect", proxy])),
+    internalNetwork: JSON.parse(await docker(["network", "inspect", internal])), upstreamNetwork: JSON.parse(await docker(["network", "inspect", upstreamNet])),
+    agentImage, proxyImage, agentId: agent, proxyId: proxy, internalId: internal, upstreamId: upstreamNet, upstreamPeerIds: [fixture],
+    agentMounts: [], proxyMounts: [{ source: cert, destination: "/cert/ca.pem", rw: false }],
+  });
+  if (topology.status !== "observed") throw new Error(`Topology inspection failed: ${topology.failures.join("; ")}`);
+  await docker(["exec", agent, "node", "-e", "require('node:fs').writeFileSync('/tmp/egress-release','')"]);
+  const wait = await run(["docker", "wait", agent], 45_000);
+  const logs = await run(["docker", "logs", agent]);
+  const result = { code: wait.code === 0 && wait.out === "0" ? logs.code : 1, out: logs.out };
   if (result.code !== 0 || result.out !== "synthetic-egress-checks-passed") {
     const stage = /^failed:([a-z-]+)$/.exec(result.out)?.[1] ?? "agent-start-or-output";
     throw new Error(`Synthetic egress check failed at ${stage}; no isolation claim established`);
@@ -189,20 +203,39 @@ try {
   if (terminal.length !== 1) throw new Error("Proxy terminal usage marker missing");
   const snapshot = JSON.parse(terminal[0].slice("model-proxy-stopped:".length));
   if (snapshot.complete !== false || snapshot.totals !== null || snapshot.records?.length !== 2 || snapshot.records[0]?.status !== "complete" || snapshot.records[1]?.status !== "error") throw new Error("Proxy terminal usage was incomplete or inconsistent");
-  console.log(JSON.stringify({
+  report = {
     result: "synthetic-checks-passed",
-    coverage: ["non-root agent", "agent cannot connect to local upstream IP or 1.1.1.1:443 during this probe", "host-only synthetic sentinel absent from tested agent environment and path", "proxy rejects wrong model, path, query and method", "proxy reaches local HTTPS fixture, does not follow redirects, and enforces the request budget", ...(gateway ? ["agent cannot connect to temporary host listener via internal gateway"] : [])],
-    gaps: ["Synthetic HTTPS fixture and custom CA are not real provider egress or a model request", "No assertion that arbitrary host credentials or every agent-readable path are absent", "TCP failures alone do not establish universal outbound isolation", "Docker DNS forwarding and host networking outside the tested gateway were not verified", ...(!gateway ? ["Internal network gateway unavailable; host-listener boundary not checked"] : []), "No assertion about other ports, protocols, IPv6, networks or future configuration"],
-  }));
+    topology,
+    coverage: ["Docker inspection of this fixture topology and exact bind mounts", "non-root agent", "agent cannot connect to local upstream IP or 1.1.1.1:443 during this probe", "host-only synthetic sentinel absent from tested agent environment and path", "proxy rejects wrong model, path, query and method", "proxy reaches local HTTPS fixture, does not follow redirects, and enforces the request budget", ...(gateway ? ["agent cannot connect to temporary host listener via internal gateway"] : [])],
+    gaps: ["Synthetic HTTPS fixture and custom CA are not real provider egress or a model request", "No assertion that arbitrary host credentials or every agent-readable path are absent", "TCP failures alone do not establish universal outbound isolation", "Docker DNS forwarding and host networking outside the tested gateway were not verified", ...(!gateway ? ["Internal network gateway unavailable; host-listener boundary not checked"] : []), "No assertion about other ports, protocols, IPv6, networks or future configuration", ...topology.limitations],
+  };
 } finally {
   attached?.kill();
-  for (const id of containers.reverse()) if ((await run(["docker", "rm", "-f", id])).code !== 0) cleanupFailed = true;
-  for (const id of networks.reverse()) if ((await run(["docker", "network", "rm", id])).code !== 0) cleanupFailed = true;
+  // Discover by unique label, including resources created by a command that
+  // timed out or returned malformed output before its ID could be recorded.
+  const cleanupRun = async (args: string[]) => {
+    try { return await run(args); } catch { return { code: -1, out: "" }; }
+  };
+  for (const kind of ["container", "network"] as const) {
+    const list = kind === "container" ? ["ps", "-aq", "--filter", `label=${label}`] : ["network", "ls", "-q", "--filter", `label=${label}`];
+    const found = await cleanupRun(["docker", ...list]);
+    if (found.code !== 0) { cleanupFailed = true; continue; }
+    for (const id of found.out ? found.out.split(/\s+/) : []) {
+      if (!/^[a-f0-9]{12,64}$/.test(id)) { cleanupFailed = true; continue; }
+      const removal = kind === "container" ? ["rm", "-f", id] : ["network", "rm", id];
+      if ((await cleanupRun(["docker", ...removal])).code !== 0) cleanupFailed = true;
+    }
+    const remaining = await cleanupRun(["docker", ...list]);
+    if (remaining.code !== 0 || remaining.out !== "") cleanupFailed = true;
+  }
   if (host.listening) {
     const closed = Promise.withResolvers<void>();
     host.close(() => closed.resolve());
     await closed.promise;
   }
-  if (root) await rm(root, { recursive: true, force: true });
-  if (cleanupFailed) throw new Error("Failed to remove one or more preflight-owned Docker resources");
+  if (root) {
+    try { await rm(root, { recursive: true, force: true }); } catch { cleanupFailed = true; }
+  }
+  if (cleanupFailed) throw new Error(`Preflight cleanup indeterminate; inspect Docker resources labelled ${label} and the temporary directory`);
 }
+if (report) console.log(JSON.stringify({ ...report, cleanup: { status: "observed", scope: "No resources with this invocation's unique Docker label remain; temporary directory removal and listener closure completed.", limitations: ["Trusted Docker daemon and host required", "Does not attest cleanup of another run or unlabelled resources"] } }));
