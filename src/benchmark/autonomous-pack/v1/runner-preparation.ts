@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { assertPlan, hashContract, schedulePlan, type AutonomousPlan, type ScheduledRun } from "./plan";
 import { snapshotPack } from "./snapshot";
@@ -92,6 +92,20 @@ export async function prepareInputs(plan: AutonomousPlan, sources: PreparationSo
   }
 }
 
+// This tree is public and dedicated to one agent. Docker's container UID may
+// map to any host UID (including a subordinate rootless UID), so ownership
+// changes cannot reliably grant access. Keep executable bits on starter files.
+async function makeWorkspaceWritable(path: string): Promise<void> {
+  const info = await lstat(path);
+  if (info.isSymbolicLink()) throw new Error("Workspace cannot contain symbolic links");
+  if (info.isDirectory()) {
+    await chmod(path, 0o777);
+    for (const entry of await readdir(path)) await makeWorkspaceWritable(join(path, entry));
+  } else if (info.isFile()) {
+    await chmod(path, 0o666 | (info.mode & 0o111));
+  } else throw new Error("Workspace cannot contain special files");
+}
+
 /** Materialize one fresh public workspace from the frozen starter, never the
  * evaluator or Pack. The prompt is returned separately, after re-verification. */
 export async function prepareRunWorkspace(inputs: PreparedInputs, ordinal: number): Promise<{ workspace: string; prompt: string }> {
@@ -112,5 +126,8 @@ export async function prepareRunWorkspace(inputs: PreparedInputs, ordinal: numbe
     await rm(workspace, { recursive: true, force: true });
     throw new Error("Frozen starter digest mismatch");
   }
+  // Windows bind mounts use Docker Desktop's file sharing rather than POSIX
+  // host ownership; do not change their Windows read-only attributes.
+  if (process.platform !== "win32") await makeWorkspaceWritable(workspace);
   return { workspace, prompt };
 }

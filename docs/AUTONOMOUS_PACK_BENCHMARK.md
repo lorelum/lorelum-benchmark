@@ -133,11 +133,11 @@ bun --no-env-file run src/benchmark/autonomous-pack/v1/paired-runner.ts /absolut
 
 ## 候选任务与离线校准
 
-`incubator/autonomous-pack/order-refunds-v1/` 是多文件退款服务候选，不是冻结的正式 suite 任务。私有 evaluator 由控制端运行，候选代码在无网络只读容器内通过通用 JSONL bridge 接收请求；私有断言不挂载给候选。先构建上述镜像，再在 PowerShell 中运行：
+`incubator/autonomous-pack/order-refunds-v2/` 是多文件退款服务候选，不是冻结的正式 suite 任务；v2 保留 v1 公共题面与 starter，修复私有 evaluator 对同步 API 的漏判。v1 及其 pilot 保留原始评测身份。私有 evaluator 由控制端运行，候选代码在无网络只读容器内通过通用 JSONL bridge 接收请求；私有断言不挂载给候选。先构建上述镜像，再在 PowerShell 中运行：
 
 ```powershell
-$base = (Resolve-Path 'incubator/autonomous-pack/order-refunds-v1').Path
-foreach ($name in 'valid-atomic','valid-queue','defect-idempotency','defect-balance') {
+$base = (Resolve-Path 'incubator/autonomous-pack/order-refunds-v2').Path
+foreach ($name in 'valid-atomic','valid-queue','defect-idempotency','defect-balance','defect-sync-return','defect-sync-throw') {
   $env:WORKSPACE = Join-Path $base "private/calibration/$name"
   node --test (Join-Path $base 'private/evaluator/semantic.test.mjs')
 }
@@ -146,7 +146,7 @@ node --test (Join-Path $base 'private/evaluator/semantic.test.mjs')
 Remove-Item Env:WORKSPACE
 ```
 
-两种 `valid-*` 应通过，两个 `defect-*` 和未完成 starter 应失败。非零退出还可能是 Docker 不可用、超时或环境错误，必须检查具体原因，不可一律记为语义失败。任务细节与盲审维度见该候选 `private/README.md`；其内容不得复制给 Agent。
+两种 `valid-*` 应通过，四个 `defect-*` 和未完成 starter 应失败；其中同步返回和同步抛错的缺陷用于检查公开异步 API。非零退出还可能是 Docker 不可用、超时或环境错误，必须检查具体原因，不可一律记为语义失败。任务细节与盲审维度见该候选 `private/README.md`；其内容不得复制给 Agent。
 
 ### 条件盲审
 

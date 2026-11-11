@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "bd668e26f9c5a6417f9d0e323933fbd30d2b9182d91bc7b16c9b65b210db1ca7",
+  "files": {
+    "private/README.md": "c138778ee5eebab254bdfc3e19d9515d24a852c0441290c512b18f24e3ff3c5d",
+    "private/calibration/defect-balance/src/index.js": "7e8f07c3ce2367e53103d57e8b4e70b8c34c0c1741f3070a4a0d59b9cd8b0b8d",
+    "private/calibration/defect-balance/src/shared.js": "075dbaf4174079dd20cf15e3e694a0de5b2930891026f8e8c7e9dc610069db99",
+    "private/calibration/defect-idempotency/src/index.js": "9b0b8dbfecc580db8b276d0620a63976961b2681635e3f46c08c254417a6304c",
+    "private/calibration/defect-idempotency/src/shared.js": "075dbaf4174079dd20cf15e3e694a0de5b2930891026f8e8c7e9dc610069db99",
+    "private/calibration/defect-sync-return/src/index.js": "1843f09d2fdfdabb6532ec26ff88cf61a12fff0d6c4005484d562bcf3335f055",
+    "private/calibration/defect-sync-return/src/shared.js": "a21ea2e63784edf3578e68b8a9aef16baecb07ea28a25b930de2df8f9c6d4718",
+    "private/calibration/defect-sync-throw/src/index.js": "1843f09d2fdfdabb6532ec26ff88cf61a12fff0d6c4005484d562bcf3335f055",
+    "private/calibration/defect-sync-throw/src/shared.js": "a9ba1d7cd1bd8f8834fb217074d5980c6cbb60e0fc21dcefd0291eb8d67eb012",
+    "private/calibration/valid-atomic/src/index.js": "1843f09d2fdfdabb6532ec26ff88cf61a12fff0d6c4005484d562bcf3335f055",
+    "private/calibration/valid-atomic/src/shared.js": "075dbaf4174079dd20cf15e3e694a0de5b2930891026f8e8c7e9dc610069db99",
+    "private/calibration/valid-queue/src/index.js": "bd9d5bdb384c52f04dbd5a6d55df88e33c6b6a52bf6512170ff6ceb899983001",
+    "private/candidate.yaml": "1c948617fc52cb5367695e22d20ef14a0ef5f5a81a99ce6d48f1bad2847c9465",
+    "private/evaluator/bridge.mjs": "ed029778b71688e24b287b43946de9484067e110c9768807c9471d414a0ef690",
+    "private/evaluator/semantic.test.mjs": "9f1a3986eb08d434685df81118ed4106299b4d9a0b517c0062d9893c8c6a32ad",
+    "public/starter/package.json": "9876d1956aebc2c3c9e1993763975fb77db44e74497f8610c16211bdc691f32f",
+    "public/starter/src/errors.js": "e3df79776146b71e55206734bc568298d1a4a1b12dea1674836d565213eb0cf4",
+    "public/starter/src/index.js": "1c4cdeb2547da055c209c95e20b190c808d64482b7bab417c5ee63032b023e21",
+    "public/starter/src/orders.js": "8b2e0705c8e68e73b0575ff9e1f0b4285517978c5dd2dc5cf092be93b2a2ee71",
+    "public/starter/src/refund-service.js": "51e338e3f58a2a0227a6045d0eacc995f53ee26fa8b721b22ee61107ef2765c0",
+    "public/task.md": "e2c1d9b21afa7c16343f27149a3b71b545750d3b32b63486394187af360edf72"
+  }
+}

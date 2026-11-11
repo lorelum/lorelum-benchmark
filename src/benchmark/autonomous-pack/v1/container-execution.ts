@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
-import { lstat, mkdir, open, readFile, realpath, writeFile } from "node:fs/promises";
+import { constants, createReadStream } from "node:fs";
+import { chmod, copyFile, lstat, mkdir, open, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { isIP } from "node:net";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { inspectEgressTopology, type EgressInspectionResult } from "./egress-proof";
@@ -15,6 +15,10 @@ import { auditUsageStream, type ProviderUsage } from "./provider-usage";
  * bind mounts. The upstream is trusted with the key: a malicious upstream could
  * echo it in a successful response, which the existing proxy forwards unchanged.
  * Credentials are sent to the proxy only on stdin, never as argv or environment. */
+// Public workspace contents are writable by any host user able to traverse its
+// private ancestors. Only dedicate a fresh workspace to this run. Container
+// output defaults to host-readable modes, but an agent can explicitly restrict
+// permissions; the host cannot override another UID without privilege.
 export type ContainerExecutionOptions = {
   agentImage: string; proxyImage: string;
   workspace: string; index: string; modelFile: string; privateRoot: string; artifactRoot: string;
@@ -148,11 +152,23 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     await mkdir(artifactRoot, { mode: 0o700 });
     artifactOwned = true;
     const publicDir = join(artifactRoot, "public-inputs");
+    const mountDir = join(artifactRoot, "mount-inputs");
     await mkdir(publicDir, { mode: 0o755 });
+    await mkdir(mountDir, { mode: 0o700 });
+    // Bind-mount independent copies, never chmod source inputs. Reflinks avoid
+    // duplicating large models where the filesystem supports them.
+    const stagedIndex = join(mountDir, "index.tar");
+    const stagedModel = join(mountDir, "model.gguf");
+    await copyFile(index, stagedIndex, constants.COPYFILE_EXCL | constants.COPYFILE_FICLONE);
+    await copyFile(model, stagedModel, constants.COPYFILE_EXCL | constants.COPYFILE_FICLONE);
     await writeFile(join(publicDir, "task.md"), o.task, { mode: 0o644, flag: "wx" });
     await writeFile(join(publicDir, "system.md"), o.system, { mode: 0o644, flag: "wx" });
     // Supply the nested bind mountpoint before mounting /inputs read-only.
     await writeFile(join(publicDir, "index.tar"), "", { mode: 0o644, flag: "wx" });
+    if (process.platform !== "win32") {
+      await chmod(publicDir, 0o755);
+      for (const path of [stagedIndex, stagedModel, join(publicDir, "task.md"), join(publicDir, "system.md"), join(publicDir, "index.tar")]) await chmod(path, 0o644);
+    }
     for (const image of [o.agentImage, o.proxyImage]) if (await command(["image", "inspect", "--format", "{{.Id}}", image]) !== image) throw Error("image identity mismatch");
     networks.push(names.internal); await command(["network", "create", "--label", `lorelum.execution=${suffix}`, "--internal", names.internal]);
     networks.push(names.upstream); await command(["network", "create", "--label", `lorelum.execution=${suffix}`, names.upstream]);
@@ -172,9 +188,10 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     const ip = inspect[0]?.NetworkSettings?.Networks?.[names.internal]?.IPAddress;
     if (typeof ip !== "string" || isIP(ip) !== 4 || !/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(ip)) throw Error("invalid proxy network address");
     await writeFile(join(publicDir, "agent.json"), JSON.stringify({ index_sha256: o.indexSha256, model_sha256: o.modelSha256, proxy_url: `http://${ip}:8080/v1`, model_id: o.modelId, catalog_provider: o.modelProvider, context_window: o.contextWindow, max_tokens: o.maxTokens, max_turns: o.maxTurns, max_duration_ms: o.maxDurationMs, audit_wait_ms: o.auditWaitMs }), { mode: 0o644, flag: "wx" });
+    if (process.platform !== "win32") await chmod(join(publicDir, "agent.json"), 0o644);
     containers.push(names.agent);
     // FIFO creation happens inside tmpfs, so no host FIFO semantics are needed on Windows.
-    await command(["create", "--name", names.agent, "--label", `lorelum.execution=${suffix}`, ...hardened, "--network", names.internal, "--pids-limit", "256", "--memory", "3g", "--workdir", "/workspace", "--tmpfs", "/tmp:rw,nosuid,nodev,size=2g,mode=1777", "--tmpfs", "/control:rw,nosuid,nodev,mode=1777", "--mount", `type=bind,src=${workspace},dst=/workspace`, "--mount", `type=bind,src=${publicDir},dst=/inputs,readonly`, "--mount", `type=bind,src=${index},dst=/inputs/index.tar,readonly`, "--mount", `type=bind,src=${model},dst=/model/model.gguf,readonly`, "--entrypoint", "/bin/sh", o.agentImage, "-c", `mkfifo /control/attached /control/finished && exec /usr/local/bin/bun run ${rootInImage}/agent-bootstrap.ts`]);
+    await command(["create", "--name", names.agent, "--label", `lorelum.execution=${suffix}`, ...hardened, "--network", names.internal, "--pids-limit", "256", "--memory", "3g", "--workdir", "/workspace", "--tmpfs", "/tmp:rw,nosuid,nodev,size=2g,mode=1777", "--tmpfs", "/control:rw,nosuid,nodev,mode=1777", "--mount", `type=bind,src=${workspace},dst=/workspace`, "--mount", `type=bind,src=${publicDir},dst=/inputs,readonly`, "--mount", `type=bind,src=${stagedIndex},dst=/inputs/index.tar,readonly`, "--mount", `type=bind,src=${stagedModel},dst=/model/model.gguf,readonly`, "--entrypoint", "/bin/sh", o.agentImage, "-c", `umask 000 && mkfifo /control/attached /control/finished && exec /usr/local/bin/bun run ${rootInImage}/agent-bootstrap.ts`]);
     await command(["start", names.agent]);
     const logs = attached(["logs", "--follow", names.agent]); processes.push(logs); logs.child.stdin.end();
     const pi = await collect(logs.child.stdout, join(artifactRoot, "pi.jsonl"));
@@ -199,8 +216,8 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
       agentMounts: [
         { source: workspace, destination: "/workspace", rw: true },
         { source: publicDir, destination: "/inputs", rw: false },
-        { source: index, destination: "/inputs/index.tar", rw: false },
-        { source: model, destination: "/model/model.gguf", rw: false },
+        { source: stagedIndex, destination: "/inputs/index.tar", rw: false },
+        { source: stagedModel, destination: "/model/model.gguf", rw: false },
       ],
       proxyMounts: [],
     });
@@ -266,6 +283,9 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
         }
         if (await command(list, 10_000)) throw Error("owned resources remain");
       } catch { cleanupFailed = true; }
+    }
+    if (artifactRoot && artifactOwned) {
+      try { await rm(join(artifactRoot, "mount-inputs"), { recursive: true, force: true }); } catch { cleanupFailed = true; }
     }
     let streamsSettled = true;
     try { await deadline(Promise.allSettled(streams), 30_000, "stream cleanup timeout"); } catch { cleanupFailed = true; streamsSettled = false; }

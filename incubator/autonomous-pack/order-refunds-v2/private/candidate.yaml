@@ -1,0 +1,19 @@
+id: order-refunds-v2
+lifecycle_stage: candidate
+source:
+  kind: repository-local-starter
+  public_root: public/starter
+  identity: private/snapshot.json
+runtime:
+  node: '22'
+  package_manager: none
+  dependencies: []
+public_contract:
+  task: public/task.md
+  starter: public/starter
+  treatment_materialized: false
+private_material:
+  evaluator: private/evaluator/semantic.test.mjs
+  calibration: private/calibration
+  instructions_and_rubric: private/README.md
+record_policy: no-pilot-or-formal-record-created
