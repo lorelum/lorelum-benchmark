@@ -8,6 +8,24 @@
 
 当前首个 Pack 源是本地 `E:/lorelum-packs/packs/agentic-coding` 工作树；它可能包含未提交内容，版本号和 Git commit 不能代替完整内容身份。不要在用户 Pack 仓库中覆盖已安装内容。
 
+## 从哪里开始
+
+1. **选题**：准备一个真实代码演进任务、相同的 starter 和私有功能测试；不要把目标 Practice 或建议查询词写进题面。
+2. **准备两组**：冻结实际 Pack 内容，在相同 Lore 和 embedding profile 下分别准备空 Store 与安装 Pack 的索引。
+3. **固定配置**：两组使用同一个任务、模型、提示、工具和预算；计划中的唯一处理差异是 Pack 是否安装。
+4. **运行与判断**：Agent 自己决定是否调用 Lore。分别看可见查询、功能测试、代码质量和运行失败，不能用查询次数直接代表效果。
+
+下面的命令以本仓库 `order-refunds-v2` 候选和 Bash 为例；Windows 可使用 Git Bash 或其他支持这些命令的环境。真实模型运行会产生费用，需事先获授权。
+
+## 如何设计题目
+
+- **来自真实工作而不是 Practice 改写**：选择 Pack 可能有帮助、但不要求特定 Practice 的维护任务；例如给已有服务增加幂等退款、处理并发和错误边界。
+- **留出设计空间**：题目明确外部行为与约束，允许多种合理架构；不要暗示特定文件拆分、模式名称或某条知识的标题。
+- **公开输入与私有验收分离**：`public/task.md` 描述用户需求，`public/starter/` 是两组相同的起始代码；私有 evaluator、参考解和质量 rubric 不进入 Agent 工作区或提示。
+- **功能与质量分开**：功能用对外可观察行为测试，并用合理实现和缺陷实现校准；可读性、维护性及架构以独立质量证据或匿名盲评报告，不把单一风格当成功能门槛。
+- **不要强制检索**：两组公开同样的通用工具说明，不指定 query、不预注入 Practice、不要求 Agent 必须调用 Lore。未查询本身也是观察结果；证据不完整时标记不确定。
+- **不要用一题定结论**：实际比较应事先列出多种任务和重复次数，保留失败与缺失运行；一次通过或一次查询不能说明 Pack 整体有效。
+
 ## 准备运行时与隔离镜像
 
 工作区依赖的 Bun、Node 和 Pi 版本以及安装步骤见 [environments/README.md](../environments/README.md)。在仓库根目录的支持管道的 shell 中：
@@ -59,11 +77,33 @@ export PACK_SHA
 每个运行只从 `public/task.md` 与 `public/starter/` 创建干净工作区；`private/` 中的 evaluator、oracle、校准和评分不能进入 Agent 输入。安装 Pack 不等于语义索引就绪：固定 embedding 模型内容及 `encodingId`，并将 `query.retrievalMethod` 配置为与工具使用的 `single-vector` 一致；核验真实 Lore 返回的 index/profile 状态。`index status` 返回 ready 后，实际语义查询仍可能报告 indexing，因此还要检查查询结果的 profile 一致且 coverage 为 complete；`preparing`、`indexing`、失败或部分覆盖不能记为空结果或有效检索。
 空 Store 的 `index status` 可以是 `missing`，但实际语义查询仍应成功返回相同 profile、complete coverage 和空结果；不可把它与安装组索引缺失混淆。索引就绪预检应在受控准备阶段进行，不向 Agent 提供检索词、结果或预选 Practice。
 
-离线准备每个条件的 Store 和语义索引时，使用前述镜像的完整 ID、已冻结的 Pack 目录和 embedding 模型目录。`OUT` 必须是新的空目录，Docker 必须能以容器用户 `65532` 写入它。以下变量分别是 `IMAGE`、`PACK_SNAPSHOT`、`MODEL_DIR`、`OUT` 的绝对路径或镜像 ID，以及已核验的 `PACK_SHA`、`MODEL_SHA`、`PROFILE_ID`、`ENCODING_ID`：
+离线准备索引前，需要与 `environments/autonomous-pack/v1/environment.yaml` 一致的 embedding 模型文件 `model.gguf`。可预先提供已核验文件；若本机已安装兼容的 Lore，也可用 `lore model load` 准备默认缓存。该命令可能启动或复用本机 Lore backend，并可能联网下载模型；运行前应确认本机环境和网络策略。默认缓存一般位于 `~/.lorelum/models/<MODEL_SHA>/model.gguf`，实际路径以本机配置为准。
+
+下列身份对应当前 `autonomous-pack/v1` 环境；升级 Lore 或 embedding 模型时应建立并核验相应的新环境，而不是只改摘要。`MODEL_DIR` 是包含 `model.gguf` 的目录。Windows 使用本机 `C:/...` 或 `E:/...` 形式的绝对路径。
+
+```sh
+export IMAGE="$(docker image inspect --format '{{.Id}}' lorelum-autonomous-pack:v1)"
+export MODEL_SHA="18e8ce8ce834790618e90d26bed465cca87362076f3042eb0d8eee0732596f59"
+export ENCODING_ID="ed34b3105cb6c3ab217fdb7b7c926c05808bd47474468c2f74a5110a590a42de"
+export PROFILE_ID="f86744be739936072d165f616c596c3e2fe6fb26233bdf5ae7d0093843f134f0"
+export MODEL_DIR="/absolute/path/to/model-directory"
+export MODEL_FILE="$MODEL_DIR/model.gguf"
+export EMPTY_DIR="/absolute/path/to/new-empty-index"
+export INSTALLED_DIR="/absolute/path/to/new-installed-index"
+mkdir "$EMPTY_DIR" "$INSTALLED_DIR"
+```
+
+用以下命令核验 `MODEL_FILE`；不匹配时不要继续：
+
+```sh
+bun --no-env-file -e 'import {sha256File} from "./src/benchmark/fs"; if (await sha256File(process.env.MODEL_FILE) !== process.env.MODEL_SHA) throw new Error("Embedding model digest mismatch"); console.log("Embedding model digest verified");'
+```
+
+两份输出目录必须是新建空目录，且当前用户可写。下面命令以当前用户的 UID/GID 运行准备容器，使宿主能读取生成的归档；不会修改 Pack 或模型源文件：
 
 ```sh
 docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
-  --pids-limit 256 --memory 3g --workdir /tmp \
+  --user "$(id -u):$(id -g)" --pids-limit 256 --memory 3g --workdir /tmp \
   --tmpfs /tmp:rw,nosuid,nodev,size=2g,mode=1777 \
   --mount "type=bind,src=$PACK_SNAPSHOT,dst=/pack,readonly" \
   --mount "type=bind,src=$MODEL_DIR,dst=/model,readonly" \
@@ -71,6 +111,8 @@ docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-
   --entrypoint bun "$IMAGE" run /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/index-prepare.ts \
   "$CONDITION" "$PACK_SHA" "$MODEL_SHA" "$PROFILE_ID" "$ENCODING_ID" > "$OUT/metadata.json"
 ```
+
+分别设置 `CONDITION=empty-store`、`OUT="$EMPTY_DIR"` 和 `CONDITION=pack-installed`、`OUT="$INSTALLED_DIR"` 后运行以上命令各一次。
 
 分别以 `CONDITION=empty-store` 和 `CONDITION=pack-installed`、不同的空 `OUT` 运行。命令核验 Pack 和模型内容、真实语义查询 coverage、profile、模型编码及停止后的 backend，并将身份 JSON 保存为 `metadata.json`。`OUT/index.tar` 包含完整 Store 和 cache，保留安装 Pack 的相对符号链接；`index_sha256` 是该归档实际字节的 SHA-256，必须与归档及元数据一同保存。只对已验证摘要的归档在新隔离目录中恢复；不要将准备产物挂载到 Agent 公开任务目录。本命令不启动编码 Agent，也不生成 benchmark record。
 镜像内 `index-restore.ts` 在启动 Agent 前验证模型和归档摘要、拒绝越界归档路径与不安全链接，然后将 `store` 恢复到 `$HOME/.lorelum`、将 `cache` 恢复到 `$HOME/.lorelum/cache`，并写入相同 embedding 和 `single-vector` 配置。原生 `lore` 默认路径与专用工具显式使用的 Store、cache 因而一致。
@@ -138,6 +180,71 @@ bun --no-env-file run src/benchmark/autonomous-pack/v1/paired-runner.ts /absolut
 ```
 
 输出目录含冻结输入、独立工作区、每次运行的 `topology.json`、受控 trace、语义评估、每次 observation 和 `summary.json`；不得提交或分享原始 trace、私有映射与 evaluator。拓扑不符会在释放 Agent 前失败；元数据、归档或模型摘要不符会在模型请求前失败。`observed` 表示在可信 Docker、镜像、代理和上游的前提下观察到预期配置，不是对所有网络行为的证明。`summary.json` 保留计划分母；人工中断可能留下未完成目录。
+
+### 完整配置示例
+
+在仓库根目录、完成上面的 Pack 快照与两组索引准备后，设置以下环境变量。路径均用绝对路径；Windows 的 Bun 使用 `E:/...` 形式的本机路径，而不是 Git Bash 的 `/e/...` 形式。`PREP_DIR` 的父目录必须存在，但 `PREP_DIR` 本身必须不存在，且不能位于任何输入目录内。`AGENT_IMAGE` 和 `PROXY_IMAGE` 使用 `docker image inspect --format '{{.Id}}'` 返回的完整 ID。地址和 key 由操作者安全地放入环境，不写进下列文件。
+
+```sh
+export CANDIDATE="/absolute/path/to/lorelum-benchmark/incubator/autonomous-pack/order-refunds-v2"
+export PACK_SNAPSHOT="/absolute/path/to/frozen-pack"
+export MODEL_FILE="/absolute/path/to/model.gguf"
+export EMPTY_DIR="/absolute/path/to/empty-index"
+export INSTALLED_DIR="/absolute/path/to/installed-index"
+export PREP_DIR="/absolute/path/to/new-pilot-directory"
+export AGENT_IMAGE="sha256:<agent-image-id>"
+export PROXY_IMAGE="sha256:<proxy-image-id>"
+export PILOT_ID="refund-comparison-001"
+# 另行安全设置 LORELUM_PI_BASE_URL 和 LORELUM_PI_API_KEY。
+```
+
+以下命令生成两个条件共用的计划与配置，不调用模型。示例固定 `opencode-go/deepseek-v4.1-flash`，每组最多 20 轮、8 分钟；这是单次 pilot，不是统计意义上的充分样本。更换模型时也要同步版本化环境配置及模型参数。
+
+```sh
+bun --no-env-file - <<'TS'
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { sha256File } from "./src/benchmark/fs";
+import { sha256SnapshotDirectory } from "./src/benchmark/autonomous-pack/v1/snapshot";
+import { assertPlan, hashContract, modelEndpointSha256 } from "./src/benchmark/autonomous-pack/v1/plan";
+
+const need = name => { const value = process.env[name]; if (!value) throw new Error(`Missing ${name}`); return value; };
+const candidate = resolve(need("CANDIDATE")), pack = resolve(need("PACK_SNAPSHOT"));
+const empty = resolve(need("EMPTY_DIR")), installed = resolve(need("INSTALLED_DIR"));
+const modelFile = resolve(need("MODEL_FILE")), prep = resolve(need("PREP_DIR"));
+const image = need("AGENT_IMAGE"), proxyImage = need("PROXY_IMAGE");
+if (![image, proxyImage].every(x => /^sha256:[a-f0-9]{64}$/.test(x))) throw new Error("Use complete Docker image IDs");
+const environment = resolve("environments/autonomous-pack/v1/environment.yaml");
+const emptyMeta = join(empty, "metadata.json"), installedMeta = join(installed, "metadata.json");
+const [baseline, treatment] = await Promise.all([emptyMeta, installedMeta].map(async p => JSON.parse(await readFile(p, "utf8"))));
+if (baseline.condition !== "empty-store" || treatment.condition !== "pack-installed" || ["pack_sha256", "model_sha256", "profile_id", "encoding_id"].some(k => baseline[k] !== treatment[k])) throw new Error("Index metadata does not match");
+if (await sha256SnapshotDirectory(pack) !== treatment.pack_sha256 || await sha256File(modelFile) !== treatment.model_sha256) throw new Error("Pack or embedding model identity mismatch");
+await mkdir(prep, { mode: 0o700 });
+const profile = join(prep, "profile.json"), modelParams = join(prep, "model.json"), toolPolicy = join(prep, "tools.json"), systemPrompt = join(prep, "system.txt");
+const dump = (path, value) => writeFile(path, JSON.stringify(value, null, 2) + "\n", { flag: "wx", mode: 0o600 });
+await dump(profile, { schema_version: "autonomous-pack-execution-profile/v1", profile_id: treatment.profile_id, encoding_id: treatment.encoding_id, model_sha256: treatment.model_sha256, empty_index_sha256: baseline.index_sha256, empty_metadata_sha256: await sha256File(emptyMeta), installed_metadata_sha256: await sha256File(installedMeta), proxy_image_sha256: proxyImage.slice(7) });
+await dump(modelParams, { api_model_id: "deepseek-v4.1-flash", context_window: 1000000, max_tokens: 8192 });
+await dump(toolPolicy, ["read", "bash", "edit", "write", "grep", "find", "ls", "lore_query", "lore_get"]);
+await writeFile(systemPrompt, "You are a coding agent. Complete the user task using the available tools. Decide independently which tools to use.\n", { flag: "wx", mode: 0o600 });
+const publicRoot = join(candidate, "public"), evaluatorRoot = join(candidate, "private", "evaluator");
+const starterSha = await sha256SnapshotDirectory(join(publicRoot, "starter"));
+const taskSha = await sha256File(join(publicRoot, "task.md"));
+const plan = { schema_version: "autonomous-pack-plan/v1", id: need("PILOT_ID"), run_kind: "pilot", tasks: [{ id: "candidate", source_sha256: starterSha, input_sha256: hashContract({ task_sha256: taskSha, starter_sha256: starterSha }), evaluator_sha256: await sha256SnapshotDirectory(evaluatorRoot) }], repetitions: 1, order_seed: 8, common: { environment_sha256: await sha256File(environment), image_sha256: image.slice(7), agent: "pi", model: "opencode-go/deepseek-v4.1-flash", model_endpoint_sha256: modelEndpointSha256(need("LORELUM_PI_BASE_URL")), model_parameters_sha256: await sha256File(modelParams), profile_sha256: await sha256File(profile), tool_policy_sha256: await sha256File(toolPolicy), system_prompt_sha256: await sha256File(systemPrompt), budget: { max_turns: 20, max_duration_ms: 480000 } }, pack: { source: "operator-frozen-pack", snapshot_uri: pathToFileURL(pack).href, snapshot_sha256: treatment.pack_sha256, index_sha256: treatment.index_sha256 } };
+assertPlan(plan);
+const config = { plan, sources: { pack, tasks: { candidate: { publicRoot, evaluatorRoot } }, common: { environment, modelParameters: modelParams, profile, toolPolicy, systemPrompt } }, outputDirectory: join(prep, "output"), modelFile, indexes: { empty: { archive: join(empty, "index.tar"), metadata: emptyMeta }, installed: { archive: join(installed, "index.tar"), metadata: installedMeta } }, auditWaitMs: 30000 };
+await dump(join(prep, "pilot.json"), config);
+console.log(`Prepared ${join(prep, "pilot.json")}`);
+TS
+```
+
+确认真实模型运行已获授权后执行：
+
+```sh
+bun --no-env-file run src/benchmark/autonomous-pack/v1/paired-runner.ts "$PREP_DIR/pilot.json"
+```
+
+先看 `$PREP_DIR/output/summary.json` 中的计划分母、`pairs.eligible` 和 `semantic_comparable`，再看每个 observation 的 `health`、`semantic`、`trace` 与用量。任一运行失败或无法核验时，不把该配对当作有效比较；原始 trace 和私有评价材料只留在受控存储。
 
 ## 候选任务与离线校准
 
