@@ -44,6 +44,8 @@ Agent 可直接从 shell 使用原生 Lore CLI，也可使用 `lore_query` 和 `
 
 `src/benchmark/autonomous-pack/v1/snapshot.ts` 的 `snapshotPack(source, destination)` 将源目录复制到不存在的目标目录，拒绝符号链接，并用 `autonomous-pack-tree/v1` 树摘要核验复制前后内容：包含隐藏文件和空目录，不包含跨操作系统不稳定的文件权限。该摘要与仓库其他历史目录摘要算法不同，不能互换；旧算法产生的试验性 Pack 摘要和索引归档需要重新准备。目标应放在隔离的 artifact 存储，不应放进 Agent 任务目录或 Git 提交。保留快照本身、digest、Lore 版本、安装返回的 artifact digest、模型及检索 profile 和索引身份；不同算法的 digest 不应假定相等。
 
+公开工作区在 Linux 上统一将文件和目录模式设为 `0777`，不继承源执行位；其宿主私有父目录仍受限。Windows Docker Desktop 的共享挂载权限由 Docker 管理；该归一不修改源快照或私有 evaluator。
+
 在支持 shell 的环境中，设置 `PACK_SOURCE` 为本地实际工作树、`PACK_SNAPSHOT` 为尚不存在的隔离目标路径，然后运行：
 
 ```sh
@@ -93,6 +95,12 @@ docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-
 ```
 
 准备 model parameters JSON，例如 `{"api_model_id":"deepseek-v4.1-flash","context_window":1000000,"max_tokens":8192}`，以及工具策略 JSON 数组 `["read","bash","edit","write","grep","find","ls","lore_query","lore_get"]`。计划中的模型身份必须为 `<Pi 内置 provider>/<api_model_id>`；入口从固定镜像内的 Pi 目录加载模型的 reasoning、compat 和 thinking level 映射，并拒绝不存在或超过目录上限的模型配置。`max_tokens` 是单次模型输出配置，不是总 token 或费用上限。准备两组相同的通用 system prompt。按 [plan schema](../schemas/autonomous-pack-plan-v1.schema.json) 构造 `run_kind: "pilot"` 的计划；`pack.index_sha256` 是安装组归档摘要，`common.profile_sha256` 是上述 profile 文件的字节摘要，`common.image_sha256` 是 Agent 镜像 ID。
+
+新 pilot 的计划还必须设置 `common.model_endpoint_sha256`。先将预期地址放入进程环境变量 `LORELUM_PI_BASE_URL`，运行以下命令得到有效 `/chat/completions` 地址的摘要；不要将地址中的凭据、API key 或原始地址写进计划。执行时会重新计算并匹配，端点不同或字段缺失时，在创建输出及发请求前拒绝。旧 pilot 计划仍可读取，但不能直接作为新运行的计划。
+
+```sh
+bun --no-env-file -e 'import {modelEndpointSha256} from "./src/benchmark/autonomous-pack/v1/plan"; console.log(modelEndpointSha256(process.env.LORELUM_PI_BASE_URL));'
+```
 
 任务的 `source_sha256` 和 `evaluator_sha256` 使用 `sha256SnapshotDirectory`；`input_sha256` 是 `hashContract({task_sha256, starter_sha256})`，其中 task 摘要与其余普通文件摘要使用 `sha256File`。不要用仓库历史 `sha256Directory` 代替完整树摘要。以下命令可输出一个候选所需的三个任务身份；变量指向绝对路径：
 
@@ -190,7 +198,7 @@ bun --no-env-file src/benchmark/snapshot.ts
 openspec validate autonomous-pack-benchmark-242 --type change --strict --json
 ```
 
-`schedulePlan` 生成固定配对次序，`summarizePlan` 将缺失、失败和不可比较的运行保留在计划分母；其输出不是正式 record。完整覆盖时未查询、空结果、查询失败和读取失败是不同状态；trace 截断或无法观测的调用不能判为未查询。shell 可以绕过专用工具调用 Lore，因此出现 shell 调用时检索总体状态保守标为 `indeterminate`；这不单独排除其他条件满足的功能比较。功能是否完成由语义断言决定，架构及可维护性为独立质量证据，不使用隐藏加权总分。
+`schedulePlan` 生成固定配对次序，`summarizePlan` 将缺失、失败和不可比较的运行保留在计划分母；其输出不是正式 record。完整覆盖时未查询、空结果、查询失败和读取失败是不同状态；trace 截断或无法观测的调用不能判为未查询。shell 可以绕过专用工具调用 Lore，因此出现 shell 调用时检索总体状态保守标为 `indeterminate`；已观察的 query 成功、空结果、失败和不确定次数仍分别记录与汇总，只代表轨迹中可见的调用。旧观测缺少这些计数字段时标为不可得，不当作零。这不单独排除其他条件满足的功能比较。功能是否完成由语义断言决定，架构及可维护性为独立质量证据，不使用隐藏加权总分。
 
 Agent 失败时不执行语义评估，也不纳入有效配对；仍保留已完成的可见 Lore 读取计数，整体检索状态为不可判定。代理独立收尾后，如供应商用量事件完整且终态可核验，失败运行仍报告相应用量；缺失或中断时不估算。
 

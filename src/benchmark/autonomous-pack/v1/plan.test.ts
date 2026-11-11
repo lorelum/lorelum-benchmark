@@ -155,7 +155,48 @@ describe("autonomous Pack plan and summary", () => {
 
   test("distinguishes no query and indeterminate trace without exposing contents", () => {
     const complete = auditTrace('{"type":"session","version":3}\n{"type":"agent_start"}\n{"type":"agent_end","messages":[{"role":"assistant","stopReason":"stop","content":[]}]}\n{"type":"agent_settled","aborted":false}\n');
-    expect(traceObservation(complete)).toEqual({ complete: true, query: "not-queried", get_success: 0, get_failed: 0, get_indeterminate: 0 });
+    expect(traceObservation(complete)).toEqual({ complete: true, query: "not-queried", query_success: 0, query_empty: 0, query_failed: 0, query_indeterminate: 0, get_success: 0, get_failed: 0, get_indeterminate: 0 });
     expect(traceObservation(auditTrace("")).query).toBe("indeterminate");
+  });
+
+  test("aggregates observed queries including failed runs while preserving legacy unavailability", () => {
+    const slots = schedulePlan(plan).filter(slot => slot.condition === "empty-store");
+    const makeTrace = (ok: boolean) => {
+      const result = { content: [{ type: "text", text: JSON.stringify({ protocolVersion: 2, toolVersion: "0.1.0-alpha.7", command: "query", ok, data: ok ? { mode: "semantic", coverage: "complete", results: [] } : { message: "failed" } }) }], details: { exitCode: ok ? 0 : 2 } };
+      return auditTrace([
+        { type: "session", version: 3 }, { type: "agent_start" },
+        { type: "tool_execution_start", toolCallId: "shell", toolName: "bash", args: {} },
+        { type: "tool_execution_end", toolCallId: "shell", toolName: "bash", result: {}, isError: false },
+        { type: "tool_execution_start", toolCallId: "q", toolName: "lore_query", args: {} },
+        { type: "tool_execution_end", toolCallId: "q", toolName: "lore_query", result, isError: false },
+        { type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+        { type: "agent_settled", aborted: false }
+      ].map(event => JSON.stringify(event)).join("\n"));
+    };
+    const empty = { ...observation(slots[0]), trace: traceObservation(makeTrace(true)) };
+    const failed = { ...observation(slots[1]), trace: traceObservation(makeTrace(false)), health: "execution-failed" as const, failure_reasons: ["timeout"], semantic: "not-run" as const, quality: "not-run" as const };
+    const legacy = observation(slots[2]);
+    const zero = { ...observation(slots[3]), trace: traceObservation(auditTrace('{"type":"session"}\n{"type":"agent_start"}\n{"type":"agent_end","messages":[{"role":"assistant","stopReason":"stop","content":[]}]}\n{"type":"agent_settled","aborted":false}\n')) };
+    const summary = summarizePlan(plan, [empty, failed, legacy, zero]);
+    const totals = summary.conditions["empty-store"];
+    expect(totals.query.indeterminate).toBe(2);
+    expect(totals.query_empty).toEqual({ available: 3, sum: 1 });
+    expect(totals.query_failed).toEqual({ available: 3, sum: 1 });
+    expect(totals.query_success).toEqual({ available: 3, sum: 0 });
+    expect(totals.query_indeterminate).toEqual({ available: 3, sum: 0 });
+    expect(summary.runs[slots[1].ordinal]).toMatchObject({ status: "ineligible", reasons: ["timeout", "Health: execution-failed"] });
+    expect(summarizePlan(plan, [legacy]).conditions["empty-store"].query_empty).toEqual({ available: 0, sum: 0 });
+    expect(summarizePlan(plan, [zero]).conditions["empty-store"].query_empty).toEqual({ available: 1, sum: 0 });
+    assertObservation(legacy);
+    for (const field of ["query_success", "query_empty", "query_failed", "query_indeterminate"] as const) {
+      expect(() => assertObservation({ ...zero, trace: { ...zero.trace, [field]: -1 } })).toThrow();
+      expect(() => assertObservation({ ...zero, trace: { ...zero.trace, [field]: 0.5 } })).toThrow();
+      expect(() => assertObservation({ ...zero, trace: { ...zero.trace, [field]: null } })).toThrow();
+    }
+    const schema = JSON.parse(readFileSync(new URL("../../../../schemas/autonomous-pack-summary-v1.schema.json", import.meta.url), "utf8"));
+    const valid = new Ajv2020({ strict: true }).compile(schema);
+    expect(valid(summary)).toBe(true);
+    const oldConditions = Object.fromEntries(Object.entries(summary.conditions).map(([key, { query_success, query_empty, query_failed, query_indeterminate, ...condition }]) => [key, condition]));
+    expect(valid({ ...summary, conditions: oldConditions })).toBe(true);
   });
 });

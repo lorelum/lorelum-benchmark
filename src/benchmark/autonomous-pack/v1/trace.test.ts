@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { auditTrace } from "./trace";
+import { traceObservation } from "./summary";
 
 const base = [{ type: "session", version: 3 }, { type: "agent_start" }];
 const end = { type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] };
@@ -45,6 +46,19 @@ describe("autonomous Pack Pi trace audit", () => {
     expect(auditTrace(trace(start("q"), finish("q", null, "lore_query", true))).query).toBe("query-failed");
     expect(auditTrace(trace(start("a"), finish("a", empty), start("b"), finish("b", wrap("query", data([found]))))).query).toBe("queried");
     expect(auditTrace(trace(start("a"), finish("a", empty), start("b"), finish("b", failed))).query).toBe("query-failed");
+  });
+
+  test("retains observed query outcomes despite shell uncertainty", () => {
+    const shell = [start("shell", "bash"), finish("shell", {}, "bash")];
+    const empty = auditTrace(trace(...shell, start("q"), finish("q", wrap("query", data([])))));
+    const failed = auditTrace(trace(...shell, start("q"), finish("q", wrap("query", { message: "failed" }, false))));
+    expect(empty.query).toBe("indeterminate");
+    expect(failed.query).toBe("indeterminate");
+    expect(traceObservation(empty)).toMatchObject({ complete: false, query: "indeterminate", query_success: 0, query_empty: 1, query_failed: 0, query_indeterminate: 0 });
+    expect(traceObservation(failed)).toMatchObject({ complete: false, query: "indeterminate", query_success: 0, query_empty: 0, query_failed: 1, query_indeterminate: 0 });
+    expect(empty.errors).toContain("Shell access can invoke Lore outside the instrumented tools");
+    const mixed = auditTrace(trace(...shell, start("a"), finish("a", wrap("query", data([found]))), start("b"), finish("b", null), start("c")));
+    expect(traceObservation(mixed)).toMatchObject({ query: "indeterminate", query_success: 1, query_empty: 0, query_failed: 0, query_indeterminate: 2 });
   });
 
   test("does not interpret absent, pending, mismatched or malformed responses as empty", () => {

@@ -12,6 +12,8 @@ export type AutonomousPlan = {
   order_seed: number;
   common: {
     environment_sha256: string; image_sha256: string; agent: string; model: string;
+    /** SHA-256 of the normalized HTTPS chat-completions URL, without credentials. Optional only for historical plans. */
+    model_endpoint_sha256?: string;
     model_parameters_sha256: string; profile_sha256: string; tool_policy_sha256: string; system_prompt_sha256: string;
     budget: { max_turns: number; max_duration_ms: number };
   };
@@ -38,6 +40,15 @@ export function hashContract(value: unknown): string {
   };
   return createHash("sha256").update(canonical(value)).digest("hex");
 }
+/** Hash the effective proxy endpoint without retaining the URL or API key in the plan. */
+export function modelEndpointSha256(baseUrl: string): string {
+  let base: URL;
+  try { base = new URL(baseUrl); } catch { throw new Error("Invalid model endpoint"); }
+  if (base.protocol !== "https:" || base.username || base.password || base.search || base.hash) throw new Error("Invalid model endpoint");
+  const endpoint = new URL(`${base.pathname.replace(/\/+$/, "")}/chat/completions`, base.origin);
+  return createHash("sha256").update(endpoint.href, "utf8").digest("hex");
+}
+
 
 export function assertPlan(value: unknown): asserts value is AutonomousPlan {
   if (!validate(value)) throw new Error(`Invalid autonomous Pack plan: ${JSON.stringify(validate.errors)}`);

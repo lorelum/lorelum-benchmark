@@ -47,6 +47,10 @@
         "planned": { "$ref": "#/$defs/count" }, "observed": { "$ref": "#/$defs/count" }, "missing": { "$ref": "#/$defs/count" }, "eligible": { "$ref": "#/$defs/count" },
         "health": { "$ref": "#/$defs/counts" }, "semantic": { "$ref": "#/$defs/counts" }, "quality": { "$ref": "#/$defs/counts" }, "query": { "$ref": "#/$defs/counts" },
         "eligible_semantic": { "$ref": "#/$defs/counts" }, "eligible_quality": { "$ref": "#/$defs/counts" },
+        "query_success": { "$ref": "#/$defs/token_measurement", "description": "Observed successful query calls; available counts observations with this field." },
+        "query_empty": { "$ref": "#/$defs/token_measurement", "description": "Observed empty query calls; available counts observations with this field." },
+        "query_failed": { "$ref": "#/$defs/token_measurement", "description": "Observed failed query calls; available counts observations with this field." },
+        "query_indeterminate": { "$ref": "#/$defs/token_measurement", "description": "Observed indeterminate query calls; available counts observations with this field." },
         "get_success": { "$ref": "#/$defs/count" }, "get_failed": { "$ref": "#/$defs/count" }, "get_indeterminate": { "$ref": "#/$defs/count" },
         "duration_ms": { "$ref": "#/$defs/measurement" }, "cost_usd": { "$ref": "#/$defs/measurement" },
         "input_tokens": { "$ref": "#/$defs/token_measurement" }, "output_tokens": { "$ref": "#/$defs/token_measurement" }, "total_tokens": { "$ref": "#/$defs/token_measurement" }

@@ -92,9 +92,10 @@ export async function prepareInputs(plan: AutonomousPlan, sources: PreparationSo
   }
 }
 
-// This tree is public and dedicated to one agent. Docker's container UID may
-// map to any host UID (including a subordinate rootless UID), so ownership
-// changes cannot reliably grant access. Keep executable bits on starter files.
+// The tree/v1 digest excludes modes, so public workspaces use canonical modes
+// independent of the starter. Docker UIDs may map to arbitrary host UIDs;
+// 0777 also permits writes through Linux bind mounts, including Docker Desktop.
+// This applies only to the public workspace, not its private ancestors.
 async function makeWorkspaceWritable(path: string): Promise<void> {
   const info = await lstat(path);
   if (info.isSymbolicLink()) throw new Error("Workspace cannot contain symbolic links");
@@ -102,7 +103,7 @@ async function makeWorkspaceWritable(path: string): Promise<void> {
     await chmod(path, 0o777);
     for (const entry of await readdir(path)) await makeWorkspaceWritable(join(path, entry));
   } else if (info.isFile()) {
-    await chmod(path, 0o666 | (info.mode & 0o111));
+    await chmod(path, 0o777);
   } else throw new Error("Workspace cannot contain special files");
 }
 
@@ -126,8 +127,8 @@ export async function prepareRunWorkspace(inputs: PreparedInputs, ordinal: numbe
     await rm(workspace, { recursive: true, force: true });
     throw new Error("Frozen starter digest mismatch");
   }
-  // Windows bind mounts use Docker Desktop's file sharing rather than POSIX
-  // host ownership; do not change their Windows read-only attributes.
+  // Windows Docker Desktop uses file sharing rather than POSIX host modes.
+  // Canonical POSIX modes are guaranteed only on non-Windows hosts.
   if (process.platform !== "win32") await makeWorkspaceWritable(workspace);
   return { workspace, prompt };
 }

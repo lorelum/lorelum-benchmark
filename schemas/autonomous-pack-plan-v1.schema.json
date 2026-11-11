@@ -32,6 +32,7 @@
         "image_sha256": { "$ref": "#/$defs/digest" },
         "agent": { "type": "string", "minLength": 1 },
         "model": { "type": "string", "minLength": 1 },
+        "model_endpoint_sha256": { "$ref": "#/$defs/digest" },
         "model_parameters_sha256": { "$ref": "#/$defs/digest" },
         "profile_sha256": { "$ref": "#/$defs/digest" },
         "tool_policy_sha256": { "$ref": "#/$defs/digest" },

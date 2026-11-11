@@ -40,10 +40,15 @@
     },
     "trace": {
       "type": "object", "additionalProperties": false,
+      "description": "Query outcome counts cover observed lore_query calls only; omitted counts are unavailable in older observations, not zero. An incomplete trace may omit other calls.",
       "required": ["complete", "query", "get_success", "get_failed", "get_indeterminate"],
       "properties": {
         "complete": { "type": "boolean" },
         "query": { "enum": ["not-queried", "queried-empty", "queried", "query-failed", "indeterminate"] },
+        "query_success": { "type": "integer", "minimum": 0 },
+        "query_empty": { "type": "integer", "minimum": 0 },
+        "query_failed": { "type": "integer", "minimum": 0 },
+        "query_indeterminate": { "type": "integer", "minimum": 0 },
         "get_success": { "type": "integer", "minimum": 0 },
         "get_failed": { "type": "integer", "minimum": 0 },
         "get_indeterminate": { "type": "integer", "minimum": 0 }

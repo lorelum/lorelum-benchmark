@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { sha256File } from "../../fs";
 import { executeContainerRun, type ContainerExecutionResult } from "./container-execution";
 import { evaluateSemantic } from "./evaluator";
-import { assertPlan, type AutonomousPlan } from "./plan";
+import { assertPlan, modelEndpointSha256, type AutonomousPlan } from "./plan";
 import { prepareInputs, prepareRunWorkspace, type PreparationSources } from "./runner-preparation";
 import { sha256SnapshotDirectory } from "./snapshot";
 import { assertObservation, summarizePlan, traceObservation, type AutonomousObservation } from "./summary";
@@ -89,9 +89,11 @@ export async function observeRunTrace(
 export async function runPairedPilot(options: PairedPilotOptions) {
   assertPlan(options.plan);
   const plan = options.plan;
-  let endpoint: URL;
-  try { endpoint = new URL(options.upstreamBaseUrl); } catch { throw new Error("Invalid model endpoint"); }
-  if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !options.upstreamApiKey) throw new Error("Invalid model endpoint or credential");
+  const endpointSha256 = modelEndpointSha256(options.upstreamBaseUrl);
+  if (!options.upstreamApiKey) throw new Error("Invalid model credential");
+  if (!plan.common.model_endpoint_sha256) throw new Error("Model endpoint identity is required for new pilot runs");
+  if (plan.common.model_endpoint_sha256 !== endpointSha256) throw new Error("Model endpoint identity mismatch");
+  const endpoint = new URL(options.upstreamBaseUrl);
   if (plan.run_kind !== "pilot") throw new Error("Formal runs require the separate lifecycle and isolation gates");
   if (!isAbsolute(options.outputDirectory)) throw new Error("Diagnostic output must be an absolute path");
   const requested = resolve(options.outputDirectory);

@@ -13,7 +13,7 @@ export type AutonomousObservation = {
   semantic: "pass" | "fail" | "not-run";
   quality: "observed" | "not-observed" | "indeterminate" | "not-run" | "judge-unavailable";
   quality_probes: { id: string; status: AutonomousObservation["quality"]; points: number | null; max_points: number | null }[];
-  trace: { complete: boolean; query: TraceAudit["query"]; get_success: number; get_failed: number; get_indeterminate: number };
+  trace: { complete: boolean; query: TraceAudit["query"]; query_success?: number; query_empty?: number; query_failed?: number; query_indeterminate?: number; get_success: number; get_failed: number; get_indeterminate: number };
   duration_ms: number | null; cost_usd: number | null;
   input_tokens: number | null; output_tokens: number | null; total_tokens: number | null;
   artifacts: { kind: string; uri: string; sha256: string }[];
@@ -24,9 +24,14 @@ const validate = new Ajv2020({ allErrors: true, strict: true }).compile(schema);
 
 /** Retains counts, not raw tool arguments/results, in the shareable observation. */
 export function traceObservation(audit: TraceAudit): AutonomousObservation["trace"] {
+  const queries = audit.calls.filter(call => call.tool === "lore_query");
   const gets = audit.calls.filter(call => call.tool === "lore_get");
   return {
     complete: audit.complete, query: audit.query,
+    query_success: queries.filter(call => call.status === "success").length,
+    query_empty: queries.filter(call => call.status === "empty").length,
+    query_failed: queries.filter(call => call.status === "failed").length,
+    query_indeterminate: queries.filter(call => call.status === "indeterminate").length,
     get_success: gets.filter(call => call.status === "success").length,
     get_failed: gets.filter(call => call.status === "failed").length,
     get_indeterminate: gets.filter(call => call.status === "indeterminate" || call.status === "empty").length
@@ -64,10 +69,11 @@ export function summarizePlan(plan: AutonomousPlan, observations: readonly unkno
   const conditions = Object.fromEntries((["empty-store", "pack-installed"] as Condition[]).map(condition => [condition, {
     planned: 0, observed: 0, missing: 0, eligible: 0,
     health: {} as Record<string, number>, semantic: {} as Record<string, number>, quality: {} as Record<string, number>, eligible_semantic: {} as Record<string, number>, eligible_quality: {} as Record<string, number>, query: {} as Record<string, number>,
+    query_success: { available: 0, sum: 0 }, query_empty: { available: 0, sum: 0 }, query_failed: { available: 0, sum: 0 }, query_indeterminate: { available: 0, sum: 0 },
     get_success: 0, get_failed: 0, get_indeterminate: 0,
     duration_ms: { available: 0, sum: 0 }, cost_usd: { available: 0, sum: 0 },
     input_tokens: { available: 0, sum: 0 }, output_tokens: { available: 0, sum: 0 }, total_tokens: { available: 0, sum: 0 }
-  }])) as Record<Condition, { planned: number; observed: number; missing: number; eligible: number; health: Record<string, number>; semantic: Record<string, number>; quality: Record<string, number>; eligible_semantic: Record<string, number>; eligible_quality: Record<string, number>; query: Record<string, number>; get_success: number; get_failed: number; get_indeterminate: number; duration_ms: { available: number; sum: number }; cost_usd: { available: number; sum: number }; input_tokens: { available: number; sum: number }; output_tokens: { available: number; sum: number }; total_tokens: { available: number; sum: number } }>;
+  }])) as Record<Condition, { planned: number; observed: number; missing: number; eligible: number; health: Record<string, number>; semantic: Record<string, number>; quality: Record<string, number>; eligible_semantic: Record<string, number>; eligible_quality: Record<string, number>; query: Record<string, number>; query_success: { available: number; sum: number }; query_empty: { available: number; sum: number }; query_failed: { available: number; sum: number }; query_indeterminate: { available: number; sum: number }; get_success: number; get_failed: number; get_indeterminate: number; duration_ms: { available: number; sum: number }; cost_usd: { available: number; sum: number }; input_tokens: { available: number; sum: number }; output_tokens: { available: number; sum: number }; total_tokens: { available: number; sum: number } }>;
   const runs = schedule.map(slot => {
     const totals = conditions[slot.condition];
     totals.planned++;
@@ -78,6 +84,10 @@ export function summarizePlan(plan: AutonomousPlan, observations: readonly unkno
     increment(totals.semantic, observation.semantic);
     increment(totals.quality, observation.quality);
     increment(totals.query, observation.trace.query);
+    for (const field of ["query_success", "query_empty", "query_failed", "query_indeterminate"] as const) {
+      const value = observation.trace[field];
+      if (value !== undefined) { totals[field].available++; totals[field].sum += value; }
+    }
     totals.get_success += observation.trace.get_success;
     totals.get_failed += observation.trace.get_failed;
     totals.get_indeterminate += observation.trace.get_indeterminate;
