@@ -67,6 +67,23 @@ describe("autonomous Pack plan and summary", () => {
     expect(new Ajv2020({ strict: true }).compile(schema)(result)).toBe(true);
   });
 
+  test("preserves each reviewed quality probe in the per-run summary", () => {
+    const slots = schedulePlan(plan);
+    const positive = { ...observation(slots[0]), quality: "observed" as const, quality_probes: [{ id: "robustness", status: "observed" as const, points: 1, max_points: 2 }] };
+    const negative = { ...observation(slots[1]), quality: "observed" as const, quality_probes: [{ id: "robustness", status: "not-observed" as const, points: 0, max_points: 2 }] };
+    const result = summarizePlan(plan, [positive, negative]);
+    expect(result.runs[0].quality_probes).toEqual(positive.quality_probes);
+    expect(result.runs[1].quality_probes).toEqual(negative.quality_probes);
+    expect(result.runs[2]).toMatchObject({ status: "missing", quality_probes: [] });
+    const uncertain = { ...negative, quality: "indeterminate" as const, quality_probes: [{ id: "robustness", status: "indeterminate" as const, points: null, max_points: null }] };
+    expect(summarizePlan(plan, [positive, uncertain]).runs[1].quality_probes).toEqual(uncertain.quality_probes);
+    const schema = JSON.parse(readFileSync(new URL("../../../../schemas/autonomous-pack-summary-v1.schema.json", import.meta.url), "utf8"));
+    const valid = new Ajv2020({ strict: true }).compile(schema);
+    expect(valid(result)).toBe(true);
+    const previous = { ...result, runs: result.runs.map(({ quality_probes, ...run }) => run) };
+    expect(valid(previous)).toBe(true);
+  });
+
   test("aggregates available token counts independently without treating missing usage as zero", () => {
     const slots = schedulePlan(plan);
     const empty = slots.filter(slot => slot.condition === "empty-store");

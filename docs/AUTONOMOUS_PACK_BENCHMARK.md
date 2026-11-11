@@ -179,7 +179,7 @@ await writeFile(process.env.REVIEWED_OBSERVATION, JSON.stringify(result, null, 2
 
 收取时会重新核对 rubric、索引和 diff 摘要；变动后不能把该评审归到原运行。`quality: observed` 仅表示所有维度均已评审，不表示质量为正；各维度的 `not-observed` 单独保留，任何 `indeterminate` 令总体质量为不可判定。没有隐藏总分；人工证据是主观观察，不能替代语义断言。
 
-更新后的 observation 不覆盖原文件。需要汇总时，调用 `summarizePlan(plan, observations)` 并使用更新后的 observation 替换对应 ordinal；不得同时传入同一 ordinal 的原版和更新版。
+更新后的 observation 不覆盖原文件。需要汇总时，调用 `summarizePlan(plan, observations)` 并使用更新后的 observation 替换对应 ordinal；不得同时传入同一 ordinal 的原版和更新版。汇总逐次保留各质量维度的状态和分值；`quality: observed` 只表示评审完成，不表示各维度均为正面。
 
 ## 检查契约与解释结果
 

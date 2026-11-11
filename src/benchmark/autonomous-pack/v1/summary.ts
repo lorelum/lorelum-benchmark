@@ -72,7 +72,7 @@ export function summarizePlan(plan: AutonomousPlan, observations: readonly unkno
     const totals = conditions[slot.condition];
     totals.planned++;
     const observation = byOrdinal.get(slot.ordinal);
-    if (!observation) { totals.missing++; return { ...slot, status: "missing" as const, reasons: ["No observation supplied"] }; }
+    if (!observation) { totals.missing++; return { ...slot, status: "missing" as const, reasons: ["No observation supplied"], quality_probes: [] }; }
     totals.observed++;
     increment(totals.health, observation.health);
     increment(totals.semantic, observation.semantic);
@@ -98,7 +98,7 @@ export function summarizePlan(plan: AutonomousPlan, observations: readonly unkno
       increment(totals.eligible_semantic, observation.semantic);
       increment(totals.eligible_quality, observation.quality);
     }
-    return { ...slot, status: eligible ? "eligible" as const : "ineligible" as const, reasons };
+    return { ...slot, status: eligible ? "eligible" as const : "ineligible" as const, reasons, quality_probes: observation.quality_probes };
   });
   const pairs = { planned: schedule.length / 2, eligible: 0, semantic_comparable: 0, pack_only_pass: 0, empty_only_pass: 0, both_pass: 0, both_fail: 0 };
   for (let i = 0; i < runs.length; i += 2) {

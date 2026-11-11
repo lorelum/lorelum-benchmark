@@ -31,6 +31,15 @@
     "counts": { "type": "object", "additionalProperties": { "$ref": "#/$defs/count" } },
     "measurement": { "type": "object", "additionalProperties": false, "required": ["available", "sum"], "properties": { "available": { "$ref": "#/$defs/count" }, "sum": { "type": "number", "minimum": 0 } } },
     "token_measurement": { "type": "object", "additionalProperties": false, "required": ["available", "sum"], "properties": { "available": { "$ref": "#/$defs/count" }, "sum": { "$ref": "#/$defs/count" } } },
+    "quality_probe": {
+      "type": "object", "additionalProperties": false, "required": ["id", "status", "points", "max_points"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["observed", "not-observed", "indeterminate", "not-run", "judge-unavailable"] },
+        "points": { "type": ["number", "null"], "minimum": 0 },
+        "max_points": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
     "condition": {
       "type": "object", "additionalProperties": false,
       "required": ["planned", "observed", "missing", "eligible", "health", "semantic", "quality", "eligible_semantic", "eligible_quality", "query", "get_success", "get_failed", "get_indeterminate", "duration_ms", "cost_usd", "input_tokens", "output_tokens", "total_tokens"],
@@ -50,7 +59,8 @@
         "pair_id": { "$ref": "#/$defs/digest" }, "task_id": { "type": "string", "minLength": 1 }, "repetition": { "$ref": "#/$defs/count" },
         "condition": { "enum": ["empty-store", "pack-installed"] }, "ordinal": { "$ref": "#/$defs/count" },
         "input_sha256": { "$ref": "#/$defs/digest" }, "common_sha256": { "$ref": "#/$defs/digest" },
-        "status": { "enum": ["missing", "ineligible", "eligible"] }, "reasons": { "type": "array", "items": { "type": "string" } }
+        "status": { "enum": ["missing", "ineligible", "eligible"] }, "reasons": { "type": "array", "items": { "type": "string" } },
+        "quality_probes": { "type": "array", "items": { "$ref": "#/$defs/quality_probe" } }
       }
     }
   }
