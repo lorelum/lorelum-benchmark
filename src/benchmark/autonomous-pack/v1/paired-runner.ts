@@ -15,17 +15,18 @@ type Profile = {
   schema_version: "autonomous-pack-execution-profile/v1";
   profile_id: string; encoding_id: string; model_sha256: string;
   empty_index_sha256: string; empty_metadata_sha256: string; installed_metadata_sha256: string;
-  proxy_image_sha256: string; audit_image_sha256: string;
+  proxy_image_sha256: string;
 };
 type ModelParameters = { api_model_id: string; context_window: number; max_tokens: number };
 type IndexMetadata = { condition: "empty-store" | "pack-installed"; pack_sha256: string; model_sha256: string; profile_id: string; encoding_id: string; index_sha256: string };
-export type PairedDiagnosticOptions = {
+export type PairedPilotOptions = {
   plan: AutonomousPlan;
   sources: PreparationSources;
   outputDirectory: string;
   modelFile: string;
   indexes: { empty: { archive: string; metadata: string }; installed: { archive: string; metadata: string } };
-  syntheticEndpoint: string;
+  upstreamBaseUrl: string;
+  upstreamApiKey: string;
   auditWaitMs: number;
 };
 const tools = ["read", "bash", "edit", "write", "grep", "find", "ls", "lore_query", "lore_get"];
@@ -34,7 +35,7 @@ const digest = (value: unknown): value is string => typeof value === "string" &&
 const exact = (value: Record<string, unknown>, keys: readonly string[]) => Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 
 function parseProfile(value: unknown): Profile {
-  const keys = ["schema_version", "profile_id", "encoding_id", "model_sha256", "empty_index_sha256", "empty_metadata_sha256", "installed_metadata_sha256", "proxy_image_sha256", "audit_image_sha256"];
+  const keys = ["schema_version", "profile_id", "encoding_id", "model_sha256", "empty_index_sha256", "empty_metadata_sha256", "installed_metadata_sha256", "proxy_image_sha256"];
   if (!object(value) || !exact(value, keys) || value.schema_version !== "autonomous-pack-execution-profile/v1" || keys.slice(1).some(key => !digest(value[key]))) throw new Error("Invalid execution profile");
   return value as Profile;
 }
@@ -52,14 +53,13 @@ async function copyVerified(source: string, destination: string, expected: strin
   if (await sha256File(destination) !== expected) throw new Error("Frozen artifact digest mismatch");
 }
 
-/** Local synthetic diagnostic only. No real model or formal record is allowed;
- * all runs remain ineligible until native audit and isolation are proven. */
-export async function runPairedDiagnostic(options: PairedDiagnosticOptions) {
+/** A pilot does not create a formal record; the upstream and Docker daemon are trusted. */
+export async function runPairedPilot(options: PairedPilotOptions) {
   assertPlan(options.plan);
   const plan = options.plan;
   let endpoint: URL;
-  try { endpoint = new URL(options.syntheticEndpoint); } catch { throw new Error("Invalid synthetic endpoint"); }
-  if (endpoint.protocol !== "https:" || endpoint.hostname !== "host.docker.internal" || !endpoint.port || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw new Error("Diagnostic endpoint must be a local synthetic HTTPS service");
+  try { endpoint = new URL(options.upstreamBaseUrl); } catch { throw new Error("Invalid model endpoint"); }
+  if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password || endpoint.search || endpoint.hash || !options.upstreamApiKey) throw new Error("Invalid model endpoint or credential");
   if (plan.run_kind !== "pilot") throw new Error("Formal runs require the separate lifecycle and isolation gates");
   if (!isAbsolute(options.outputDirectory)) throw new Error("Diagnostic output must be an absolute path");
   const requested = resolve(options.outputDirectory);
@@ -107,7 +107,7 @@ export async function runPairedDiagnostic(options: PairedDiagnosticOptions) {
       schema_version: "autonomous-pack-observation/v1", plan_id: plan.id, plan_sha256: inputs.planSha256,
       pair_id: slot.pair_id, condition: slot.condition, ordinal: slot.ordinal,
       input_sha256: null, common_sha256: null, pack_snapshot_sha256: isInstalled ? plan.pack.snapshot_sha256 : null, index_sha256: isInstalled ? plan.pack.index_sha256 : null,
-      verification: { input: false, isolation: false, treatment: true, reasons: ["Independent process audit and API egress isolation are not proven"] },
+      verification: { input: false, isolation: false, treatment: true, reasons: ["Execution isolation not verified"] },
       health: "execution-failed", failure_reasons: ["Run did not complete"], semantic: "not-run", quality: "not-run", quality_probes: [],
       trace: { complete: false, query: "indeterminate", get_success: 0, get_failed: 0, get_indeterminate: 0 },
       duration_ms: null, cost_usd: null, input_tokens: null, output_tokens: null, total_tokens: null, artifacts: [],
@@ -117,7 +117,9 @@ export async function runPairedDiagnostic(options: PairedDiagnosticOptions) {
       observation.input_sha256 = slot.input_sha256;
       observation.common_sha256 = slot.common_sha256;
       observation.verification.input = true;
-      const run = await executeContainerRun({ agentImage: `sha256:${plan.common.image_sha256}`, proxyImage: `sha256:${profile.proxy_image_sha256}`, auditImage: `sha256:${profile.audit_image_sha256}`, workspace: prepared.workspace, index: isInstalled ? installedArchive : emptyArchive, modelFile, privateRoot: dirname(task.evaluator), artifactRoot: join(runs, String(slot.ordinal)), task: prepared.prompt, system, indexSha256: isInstalled ? plan.pack.index_sha256 : profile.empty_index_sha256, modelSha256: profile.model_sha256, modelId: model.api_model_id, modelProvider, contextWindow: model.context_window, maxTokens: model.max_tokens, maxTurns: plan.common.budget.max_turns, maxDurationMs: plan.common.budget.max_duration_ms, auditWaitMs: options.auditWaitMs, upstreamBaseUrl: endpoint.href, upstreamApiKey: "synthetic-local-only" });
+      const run = await executeContainerRun({ agentImage: `sha256:${plan.common.image_sha256}`, proxyImage: `sha256:${profile.proxy_image_sha256}`, workspace: prepared.workspace, index: isInstalled ? installedArchive : emptyArchive, modelFile, privateRoot: dirname(task.evaluator), artifactRoot: join(runs, String(slot.ordinal)), task: prepared.prompt, system, indexSha256: isInstalled ? plan.pack.index_sha256 : profile.empty_index_sha256, modelSha256: profile.model_sha256, modelId: model.api_model_id, modelProvider, contextWindow: model.context_window, maxTokens: model.max_tokens, maxTurns: plan.common.budget.max_turns, maxDurationMs: plan.common.budget.max_duration_ms, auditWaitMs: options.auditWaitMs, upstreamBaseUrl: endpoint.href, upstreamApiKey: options.upstreamApiKey });
+      observation.verification.isolation = run.isolation === "observed";
+      observation.verification.reasons = run.isolation === "observed" ? [] : ["Execution isolation not verified"];
       observation.duration_ms = run.durationMs;
       if (run.usage.complete && run.usage.totals) {
         observation.input_tokens = run.usage.totals.promptTokens;
@@ -131,7 +133,7 @@ export async function runPairedDiagnostic(options: PairedDiagnosticOptions) {
       } else {
         const trace = auditTrace(await readFile(run.artifacts.pi.path, "utf8"));
         const counts = traceObservation(trace);
-        observation.trace = { ...counts, complete: false, query: "indeterminate" };
+        observation.trace = counts;
         const structuralErrors = trace.errors.filter(error => error !== "Shell access can invoke Lore outside the instrumented tools");
         if (structuralErrors.length) {
           observation.health = "indeterminate";
@@ -175,9 +177,9 @@ if (import.meta.main) {
     const stat = await lstat(process.argv[2]);
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1_048_576) throw new Error("Invalid pilot configuration file");
     const config: unknown = JSON.parse(await readFile(process.argv[2], "utf8"));
-    const keys = ["plan", "sources", "outputDirectory", "modelFile", "indexes", "auditWaitMs", "syntheticEndpoint"];
-    if (!object(config) || !exact(config, keys)) throw new Error("Invalid diagnostic configuration fields");
-    const result = await runPairedDiagnostic(config as unknown as PairedDiagnosticOptions);
+    const keys = ["plan", "sources", "outputDirectory", "modelFile", "indexes", "auditWaitMs"];
+    if (!object(config) || !exact(config, keys)) throw new Error("Invalid pilot configuration fields");
+    const result = await runPairedPilot({ ...config as unknown as Omit<PairedPilotOptions, "upstreamBaseUrl" | "upstreamApiKey">, upstreamBaseUrl: process.env.LORELUM_PI_BASE_URL ?? "", upstreamApiKey: process.env.LORELUM_PI_API_KEY ?? "" });
     console.log(JSON.stringify({ planned_runs: result.summary.planned_runs, eligible_pairs: result.summary.pairs.eligible, output_directory: config.outputDirectory }));
   } catch {
     // Never print configuration, environment, provider errors, or agent output.

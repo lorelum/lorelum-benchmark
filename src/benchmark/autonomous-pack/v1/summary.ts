@@ -91,8 +91,6 @@ export function summarizePlan(plan: AutonomousPlan, observations: readonly unkno
     if (!observation.verification.input || observation.input_sha256 !== slot.input_sha256 || observation.common_sha256 !== slot.common_sha256) reasons.push("Input identity unverified or mismatched");
     if (!observation.verification.isolation) reasons.push("Isolation unverified");
     if (!observation.verification.treatment || (slot.condition === "pack-installed" ? observation.pack_snapshot_sha256 !== plan.pack.snapshot_sha256 || observation.index_sha256 !== plan.pack.index_sha256 : observation.pack_snapshot_sha256 !== null || observation.index_sha256 !== null)) reasons.push("Treatment identity unverified or mismatched");
-    if (!observation.trace.complete) reasons.push("Trace incomplete");
-    if (observation.trace.query === "indeterminate" || observation.trace.get_indeterminate > 0) reasons.push("Trace evidence indeterminate");
     if (observation.health !== "evaluated") reasons.push(`Health: ${observation.health}`);
     const eligible = reasons.length === 0;
     if (eligible) {

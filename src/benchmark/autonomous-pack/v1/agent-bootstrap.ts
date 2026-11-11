@@ -118,7 +118,7 @@ async function run(): Promise<number> {
   const guard = `${AGENT}/turn-limit.mjs`;
   await writeFile(guard, `export default function(pi) { let turns = 0; pi.on("turn_start", () => { if (++turns > ${config.max_turns}) process.exit(86); }); }\n`, { flag: "wx", mode: 0o600 });
 
-  // The runner attaches to this process and all descendants before acknowledging.
+  // The runner checks the per-run container topology before releasing the agent.
   await handshake("/control/attached", "ATTACHED\n", config.audit_wait_ms, `AUDIT_READY ${process.pid}\n`);
   const child = spawn("/usr/local/bin/pi", ["--print", "--mode", "json", "--no-session", "--no-approve", "--offline", "--no-extensions", "--no-mcp", "--no-skills", "--no-prompt-templates", "--no-themes", "--no-context-files", "--extension", `${ROOT}/lore-extension.ts`, "--extension", guard, "--tools", "read,bash,edit,write,grep,find,ls,lore_query,lore_get", "--provider", config.catalog_provider, "--model", config.model_id, "--system-prompt", system], { cwd: "/workspace", env, detached: true, stdio: ["pipe", "inherit", "ignore"] });
   // Stdin avoids Pi's positional @file expansion and preserves task text exactly.

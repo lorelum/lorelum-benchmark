@@ -98,7 +98,7 @@ describe("autonomous Pack plan and summary", () => {
     }
   });
 
-  test("requires identities, trace and healthy paired evidence before comparison", () => {
+  test("requires identities and healthy paired evidence before comparison", () => {
     const slots = schedulePlan(plan);
     const first = observation(slots[0]), second = observation(slots[1]);
     const valid = summarizePlan(plan, [first, second]);
@@ -107,7 +107,6 @@ describe("autonomous Pack plan and summary", () => {
       { ...second, common_sha256: h("9") },
       { ...second, input_sha256: h("9") },
       { ...second, pack_snapshot_sha256: h("9") },
-      { ...second, trace: { ...second.trace, complete: false, query: "indeterminate" as const } },
       { ...second, verification: { ...second.verification, isolation: false, reasons: ["not isolated"] } }
     ]) expect(summarizePlan(plan, [first, changed]).pairs.eligible).toBe(0);
     expect(() => summarizePlan(plan, [first, first])).toThrow();
@@ -117,6 +116,24 @@ describe("autonomous Pack plan and summary", () => {
     const unavailable = { ...second, input_sha256: null, common_sha256: null, health: "not-executable" as const, semantic: "not-run" as const, quality: "not-run" as const, failure_reasons: ["setup failed"] };
     expect(summarizePlan(plan, [first, unavailable]).runs[1].status).toBe("ineligible");
     expect(() => assertObservation({ ...first, verification: { ...first.verification, input: false } })).toThrow();
+  });
+
+  test("compares healthy pairs independently of retrieval uncertainty", () => {
+    const slots = schedulePlan(plan);
+    const first = observation(slots[0]), second = observation(slots[1]);
+    const uncertain = { ...second, semantic: "fail" as const, trace: { ...second.trace, complete: false, query: "indeterminate" as const, get_indeterminate: 1 } };
+    const result = summarizePlan(plan, [first, uncertain]);
+    expect(result.runs[1].status).toBe("eligible");
+    expect(result.pairs).toMatchObject({ eligible: 1, semantic_comparable: 1 });
+    expect(result.conditions[second.condition].query.indeterminate).toBe(1);
+    expect(result.conditions[second.condition].get_indeterminate).toBe(1);
+    expect(result.conditions[second.condition].eligible_semantic.fail).toBe(1);
+    const incompleteNotQueried = { ...uncertain, trace: { ...uncertain.trace, query: "not-queried" as const } };
+    expect(() => assertObservation(incompleteNotQueried)).toThrow();
+    const completeUncertain = { ...uncertain, trace: { ...uncertain.trace, complete: true } };
+    expect(summarizePlan(plan, [first, completeUncertain]).pairs.semantic_comparable).toBe(1);
+    const unhealthy = { ...uncertain, health: "execution-failed" as const, failure_reasons: ["timeout"], semantic: "not-run" as const, quality: "not-run" as const };
+    expect(summarizePlan(plan, [first, unhealthy]).pairs.eligible).toBe(0);
   });
 
   test("distinguishes no query and indeterminate trace without exposing contents", () => {

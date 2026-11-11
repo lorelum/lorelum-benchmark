@@ -26,7 +26,7 @@ const limitations = [
   "Configuration snapshots do not prove firewall behavior, DNS isolation, all protocols, future state or a real provider connection.",
   "Image contents, bind-mount contents, ambient host credentials and successful provider responses are not inspected; a provider can echo the credential.",
   "Proxy has an unrestricted upstream network; application-level endpoint restrictions are not a network egress firewall.",
-  "This evidence alone never authorizes a model request or establishes comparable isolation or cleanup.",
+  "Observed topology is conditional on these trust assumptions; it is not proof of universal network isolation or cleanup.",
 ] as const;
 
 /** Validate raw Docker inspect JSON against the exact identities and mounts of a

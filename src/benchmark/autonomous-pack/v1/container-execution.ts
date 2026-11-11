@@ -11,12 +11,12 @@ import { auditUsageStream, type ProviderUsage } from "./provider-usage";
  * task and system must contain only public text. index and model are read-only
  * prepared artifacts. privateRoot must not overlap any mounted path. artifactRoot
  * must not exist and is created exclusively; its files are sensitive. The Docker
- * daemon and the three specified images must be trusted, local, and support these
+ * daemon and the two specified images must be trusted, local, and support these
  * bind mounts. The upstream is trusted with the key: a malicious upstream could
  * echo it in a successful response, which the existing proxy forwards unchanged.
  * Credentials are sent to the proxy only on stdin, never as argv or environment. */
 export type ContainerExecutionOptions = {
-  agentImage: string; proxyImage: string; auditImage: string;
+  agentImage: string; proxyImage: string;
   workspace: string; index: string; modelFile: string; privateRoot: string; artifactRoot: string;
   task: string; system: string;
   indexSha256: string; modelSha256: string;
@@ -31,15 +31,12 @@ export type ContainerExecutionResult = {
   durationMs: number | null;
   topology: EgressInspectionResult | null;
   usage: { complete: boolean; totals: ProviderUsage | null };
-  // Trace coverage and stdout attribution are not established by this primitive.
-  nativeAudit: "indeterminate";
-  // Neither isolation nor cleanup can be proven by Docker command success.
-  // Callers MUST treat this run as non-comparable while isolation is unverified.
-  isolation: "unverified";
+  // Observation is conditional on trusted Docker, images, proxy and upstream;
+  // command success and a topology snapshot do not prove universal isolation.
+  isolation: "observed" | "unverified";
   cleanup: "unverified";
-  comparable: false;
-  resourceNames: { internal: string; upstream: string; proxy: string; agent: string; tracer: string };
-  artifacts: { pi: Artifact | null; trace: Artifact | null; usage: Artifact | null; agentStderr: Artifact | null; finishLog: Artifact | null; topology: Artifact | null };
+  resourceNames: { internal: string; upstream: string; proxy: string; agent: string };
+  artifacts: { pi: Artifact | null; usage: Artifact | null; agentStderr: Artifact | null; finishLog: Artifact | null; topology: Artifact | null };
 };
 export type Artifact = { path: string; sha256: string };
 type Attached = { child: ChildProcessWithoutNullStreams; exit: Promise<number | null> };
@@ -48,7 +45,7 @@ const rootInImage = "/opt/autonomous-pack/src/benchmark/autonomous-pack/v1";
 const timerMax = 2_147_483_647;
 
 function requireOptions(o: ContainerExecutionOptions) {
-  if (![o.agentImage, o.proxyImage, o.auditImage].every(x => /^sha256:[a-f0-9]{64}$/.test(x)) || ![o.indexSha256, o.modelSha256].every(x => /^[a-f0-9]{64}$/.test(x))) throw Error("invalid image or artifact identity");
+  if (![o.agentImage, o.proxyImage].every(x => /^sha256:[a-f0-9]{64}$/.test(x)) || ![o.indexSha256, o.modelSha256].every(x => /^[a-f0-9]{64}$/.test(x))) throw Error("invalid image or artifact identity");
   if (![o.contextWindow, o.maxTokens, o.maxTurns, o.maxDurationMs, o.auditWaitMs].every(x => Number.isSafeInteger(x) && x > 0 && x <= timerMax) || o.maxTokens > o.contextWindow) throw Error("invalid budget");
   if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(o.modelId) || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(o.modelProvider) || typeof o.task !== "string" || typeof o.system !== "string" || !o.upstreamApiKey) throw Error("invalid public input or proxy configuration");
   let url: URL; try { url = new URL(o.upstreamBaseUrl); } catch { throw Error("invalid upstream URL"); }
@@ -87,7 +84,7 @@ async function command(args: string[], ms = 30_000): Promise<string> {
 }
 
 /** Consume one Docker stream completely into a private file. Markers are only
- * synchronization signals; observing them does not attest audit completeness. */
+ * synchronization signals and do not attest retrieval coverage. */
 async function collect(stream: NodeJS.ReadableStream, path: string, marker?: RegExp) {
   const file = await open(path, "wx", 0o600);
   let text = "";
@@ -125,12 +122,12 @@ function attached(args: string[]): Attached {
 }
 
 /** Execute exactly one explicitly requested run. This does not authorize a model
- * request or establish complete native auditing. It never logs Docker diagnostics,
- * credentials, Pi output, trace data, or proxy output. */
+ * request or establish complete retrieval observation. It never logs Docker
+ * diagnostics, credentials, Pi output, agent stderr, or proxy output. */
 export async function executeContainerRun(o: ContainerExecutionOptions): Promise<ContainerExecutionResult> {
   const suffix = randomUUID();
-  const names = { internal: `ap-in-${suffix}`, upstream: `ap-out-${suffix}`, proxy: `ap-proxy-${suffix}`, agent: `ap-agent-${suffix}`, tracer: `ap-trace-${suffix}` };
-  const result: ContainerExecutionResult = { status: "failed", reason: "execution failed", agentResult: null, durationMs: null, topology: null, usage: { complete: false, totals: null }, nativeAudit: "indeterminate", isolation: "unverified", cleanup: "unverified", comparable: false, resourceNames: names, artifacts: { pi: null, trace: null, usage: null, agentStderr: null, finishLog: null, topology: null } };
+  const names = { internal: `ap-in-${suffix}`, upstream: `ap-out-${suffix}`, proxy: `ap-proxy-${suffix}`, agent: `ap-agent-${suffix}` };
+  const result: ContainerExecutionResult = { status: "failed", reason: "execution failed", agentResult: null, durationMs: null, topology: null, usage: { complete: false, totals: null }, isolation: "unverified", cleanup: "unverified", resourceNames: names, artifacts: { pi: null, usage: null, agentStderr: null, finishLog: null, topology: null } };
   const containers: string[] = [], networks: string[] = [];
   const processes: Attached[] = [];
   const streams: Promise<void>[] = [];
@@ -156,7 +153,7 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     await writeFile(join(publicDir, "system.md"), o.system, { mode: 0o644, flag: "wx" });
     // Supply the nested bind mountpoint before mounting /inputs read-only.
     await writeFile(join(publicDir, "index.tar"), "", { mode: 0o644, flag: "wx" });
-    for (const image of [o.agentImage, o.proxyImage, o.auditImage]) if (await command(["image", "inspect", "--format", "{{.Id}}", image]) !== image) throw Error("image identity mismatch");
+    for (const image of [o.agentImage, o.proxyImage]) if (await command(["image", "inspect", "--format", "{{.Id}}", image]) !== image) throw Error("image identity mismatch");
     networks.push(names.internal); await command(["network", "create", "--label", `lorelum.execution=${suffix}`, "--internal", names.internal]);
     networks.push(names.upstream); await command(["network", "create", "--label", `lorelum.execution=${suffix}`, names.upstream]);
     const hardened = ["--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--user", "65532:65532", "--pull", "never"];
@@ -187,12 +184,6 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     streams.push(agentLog.done);
     const pid = await deadline(agentLog.ready, o.auditWaitMs, "audit readiness timeout");
     if (pid !== "1") throw Error("unexpected bootstrap PID");
-    containers.push(names.tracer);
-    await command(["create", "--name", names.tracer, "--label", `lorelum.execution=${suffix}`, "--pid", `container:${names.agent}`, "--network", "none", "--read-only", "--cap-drop", "ALL", "--cap-add", "SYS_PTRACE", "--security-opt", "seccomp=unconfined", "--security-opt", "no-new-privileges", "--user", "0", "--pull", "never", o.auditImage, "-f", "-s", "65535", "-e", "trace=execve,execveat,write,writev,exit_group", "-p", pid]);
-    const tracer = attached(["start", "-a", names.tracer]); processes.push(tracer); tracer.child.stdin.end(); tracer.child.stdout.resume();
-    const trace = await collect(tracer.child.stderr, join(artifactRoot, "native-trace.log"), /^(?:\/usr\/bin\/)?strace: Process 1 attached(?: with [1-9][0-9]* threads)?\r?$/m);
-    streams.push(trace.done);
-    await deadline(trace.ready, o.auditWaitMs, "tracer attachment timeout");
     const agentInspect: unknown = JSON.parse(await command(["inspect", names.agent]));
     const proxyInspect: unknown = JSON.parse(await command(["inspect", names.proxy]));
     const internalInspect: unknown = JSON.parse(await command(["network", "inspect", names.internal]));
@@ -224,10 +215,6 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     streams.push(finish.done);
     await deadline(finish.ready, Math.min(timerMax, o.maxDurationMs + o.auditWaitMs), "agent finish timeout");
     result.durationMs = Math.round(performance.now() - started);
-    await command(["kill", "--signal", "INT", names.tracer]);
-    const traceCode = await deadline(tracer.exit, o.auditWaitMs, "tracer stop timeout");
-    await deadline(trace.done, o.auditWaitMs, "trace stream timeout");
-    if (traceCode !== 0 && traceCode !== 130) throw Error("tracer stopped unsuccessfully");
     await command(["exec", names.agent, "sh", "-c", "printf 'FINISHED\\n' > /control/finished"], o.auditWaitMs);
     const agentExit = await command(["wait", names.agent], o.auditWaitMs);
     const logCode = await deadline(logs.exit, o.auditWaitMs, "agent log stream timeout");
@@ -246,7 +233,7 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     result.status = "completed"; error = "";
   } catch (e) {
     // Never expose command stderr, credentials, model response or input text.
-    error = e instanceof Error && /^(invalid |unsupported |mounted path|private paths|image identity|docker |proxy readiness|audit readiness|unexpected bootstrap|tracer |agent |trace stream|finish log|proxy stop|proxy stream|proxy usage|isolation topology)/.test(e.message) ? e.message : "execution failed";
+    error = e instanceof Error && /^(?:invalid image or artifact identity|invalid budget|invalid public input or proxy configuration|invalid upstream URL|invalid host path|invalid mount source|invalid proxy network address|unsupported Docker mount path|mounted path overlaps private material|private paths overlap|image identity mismatch|docker (?:image|network|create|start|inspect|exec|wait|kill|rm|ps) failed|docker command timeout|proxy readiness timeout|audit readiness timeout|unexpected bootstrap PID|agent finish timeout|agent log stream timeout|agent log drain timeout|agent did not complete successfully|finish log stream timeout|finish log drain timeout|proxy stop timeout|proxy stream timeout|isolation topology identity unavailable|isolation topology mismatch)$/.test(e.message) ? e.message : "execution failed";
   } finally {
     if (proxyRunning) {
       try { await command(["kill", "--signal", "TERM", names.proxy], 10_000); } catch { /* The container may already have stopped. */ }
@@ -283,12 +270,13 @@ export async function executeContainerRun(o: ContainerExecutionOptions): Promise
     let streamsSettled = true;
     try { await deadline(Promise.allSettled(streams), 30_000, "stream cleanup timeout"); } catch { cleanupFailed = true; streamsSettled = false; }
     if (artifactRoot && artifactOwned && streamsSettled) {
-      [result.artifacts.pi, result.artifacts.trace, result.artifacts.usage, result.artifacts.agentStderr, result.artifacts.finishLog, result.artifacts.topology] = await Promise.all([digest(join(artifactRoot, "pi.jsonl")), digest(join(artifactRoot, "native-trace.log")), digest(join(artifactRoot, "proxy-usage.jsonl")), digest(join(artifactRoot, "agent-stderr.log")), digest(join(artifactRoot, "agent-finish.log")), digest(join(artifactRoot, "topology.json"))]);
+      [result.artifacts.pi, result.artifacts.usage, result.artifacts.agentStderr, result.artifacts.finishLog, result.artifacts.topology] = await Promise.all([digest(join(artifactRoot, "pi.jsonl")), digest(join(artifactRoot, "proxy-usage.jsonl")), digest(join(artifactRoot, "agent-stderr.log")), digest(join(artifactRoot, "agent-finish.log")), digest(join(artifactRoot, "topology.json"))]);
     }
     if (result.status === "completed" && Object.values(result.artifacts).some(artifact => artifact === null)) {
       result.status = "failed"; error = "artifact hashing failed";
     }
     if (cleanupFailed) { result.status = "failed"; error = error ? `${error}; cleanup failed` : "cleanup failed"; }
+    if (result.status === "completed" && result.topology?.status === "observed" && !cleanupFailed) result.isolation = "observed";
     result.reason = error || null;
   }
   return result;

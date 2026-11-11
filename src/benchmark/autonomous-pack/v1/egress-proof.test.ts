@@ -16,10 +16,9 @@ function fixture() {
   };
 }
 
-test("observes only matching raw topology, without authorizing egress", () => {
+test("observes matching container and network topology", () => {
   const result = inspectEgressTopology(fixture());
   expect(result.status).toBe("observed");
-  expect(result.limitations.join(" ")).toContain("never authorizes");
 });
 
 test("missing and malformed inspections are indeterminate", () => {
