@@ -24,7 +24,8 @@
 | [`AGENT_GUIDANCE_MAINTENANCE.md`](AGENT_GUIDANCE_MAINTENANCE.md) | 仅在满足沉淀触发条件时评估如何处理 Agent 纠错与规则更新 | 每次用户纠正都要追加一条规则或日志 |
 | [`BENCHMARK_PROTOCOL.md`](BENCHMARK_PROTOCOL.md) | 固定 Vercel React Skill 的 G0/G1 性能对比轨道及共享结果表达 | 所有 Practice-injection 研究的完整方法；后者还须读 Practice 指南 |
 | [`PRACTICE_BENCHMARK_GUIDE.md`](PRACTICE_BENCHMARK_GUIDE.md) | Practice 候选的设计边界；treatment 投递以 [`treatments/README.md`](../treatments/README.md) 为准，跨变更契约以适用的 stable spec 为准 | 不应把带 candidate 编号的校准/矩阵或独立审查流程当成新 candidate 的默认验收门禁 |
-| [`AUTONOMOUS_PACK_BENCHMARK.md`](AUTONOMOUS_PACK_BENCHMARK.md) | 可复用自主 Pack 配对框架的任务、环境、执行、私有交接与历史 pilot 指南 | pilot 已构成正式结果，或不完整轨迹能证明未查询 |
+| [`AUTONOMOUS_PACK_BENCHMARK.md`](AUTONOMOUS_PACK_BENCHMARK.md) | 当前自主 Pack v2 框架的任务、环境、执行和私有交接指南 | pilot 已构成正式结果，或不完整轨迹能证明未查询 |
+| [`AUTONOMOUS_PACK_V1_HISTORY.md`](AUTONOMOUS_PACK_V1_HISTORY.md) | v1 退款候选与历史 pilot 的操作记录 | 新任务的默认流程，或历史 evaluator 并发风险已解决 |
 | [`TASK_LIFECYCLE.md`](TASK_LIFECYCLE.md) | candidate、pilot、frozen、official、published、retired 的版本生命周期 | 任务语义或 evaluator 的唯一来源 |
 | [`WORKSPACE_LAYOUT.md`](WORKSPACE_LAYOUT.md) | 目录所有权和工作区概览；treatment 交付细节见 `treatments/README.md` | 私有 treatment 可以任意复制到 Agent 输入 |
 | [`PI_RUNNER.md`](PI_RUNNER.md) | Pi adapter、请求、trace 与运行记录契约 | 授权正式运行的充分条件；仍须满足 `AGENTS.md` 与 formal smoke 前置条件 |
