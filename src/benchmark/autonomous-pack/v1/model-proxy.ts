@@ -1,5 +1,6 @@
 import { isIP } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
+import { modelEndpoint } from "./model-endpoint";
 import { UsageCollector } from "./provider-usage";
 
 export { UsageCollector } from "./provider-usage";
@@ -21,41 +22,51 @@ const firstEventLimit = 64 * 1024;
 async function inspectFirstEvent(reader: ReadableStreamDefaultReader<Uint8Array>) {
   const chunks: Uint8Array[] = [];
   const decoder = new TextDecoder();
-  let text = "", size = 0;
+  let line = "", size = 0, afterCR = false;
+  let dataLines: string[] = [];
   while (size < firstEventLimit) {
     const part = await reader.read();
     if (part.done) break;
     chunks.push(part.value);
     size += part.value.byteLength;
     if (size > firstEventLimit) break;
-    text += decoder.decode(part.value, { stream: true });
-    let end: RegExpExecArray | null;
-    while ((end = /\r\n\r\n|\n\n|\r\r/.exec(text))) {
-      const lines = text.slice(0, end.index).split(/\r\n|\r|\n/)
-        .filter(line => line === "data" || line.startsWith("data:"));
-      text = text.slice(end.index + end[0].length);
-      if (!lines.length) continue;
-      const data = lines.map(line => line.slice(5).replace(/^ /, "")).join("\n");
-      try {
-        const event = JSON.parse(data);
-        return { chunks, limited: event?.error?.message === concurrencyError };
-      } catch {
-        return { chunks, limited: false };
+    const text = decoder.decode(part.value, { stream: true });
+    for (const char of text) {
+      if (afterCR) {
+        afterCR = false;
+        if (char === "\n") continue;
       }
+      if (char !== "\r" && char !== "\n") {
+        line += char;
+        continue;
+      }
+      afterCR = char === "\r";
+      if (line === "") {
+        if (dataLines.length) {
+          const data = dataLines.join("\n");
+          try {
+            const event = JSON.parse(data);
+            return { chunks, limited: event?.error?.message === concurrencyError };
+          } catch {
+            return { chunks, limited: false };
+          }
+        }
+        dataLines = [];
+      } else if (line === "data" || line.startsWith("data:")) {
+        dataLines.push(line.slice(5).replace(/^ /, ""));
+      }
+      line = "";
     }
   }
   return { chunks, limited: false };
 }
 
 export function startModelProxy(config: ModelProxyConfig, usage = new UsageCollector()) {
-  let base: URL;
-  try { base = new URL(config.baseUrl); } catch { throw new Error("Invalid model endpoint"); }
-  if (base.protocol !== "https:" || base.username || base.password || base.search || base.hash) throw new Error("Model endpoint must be an HTTPS base URL without credentials, query or fragment");
+  const endpoint = modelEndpoint(config.baseUrl);
   if (!config.apiKey || !config.model || !Number.isSafeInteger(config.port) || config.port < 0 || config.port > 65535 || !Number.isSafeInteger(config.maxRequests) || config.maxRequests < 1) throw new Error("Invalid model proxy configuration");
   // The operator supplies the listen interface; the agent must be on a Docker
   // internal network and must not share the proxy's upstream network.
   if (!config.hostname || (config.hostname !== "localhost" && !isIP(config.hostname))) throw new Error("Proxy listen address must be an IP address or localhost");
-  const endpoint = new URL(`${base.pathname.replace(/\/+$/, "")}/chat/completions`, base.origin);
   let requests = 0;
   const server = Bun.serve({
     hostname: config.hostname,

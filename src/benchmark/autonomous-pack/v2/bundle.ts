@@ -7,6 +7,7 @@ import { hashContract } from "../v1/plan";
 import { sha256SnapshotDirectory, snapshotPack } from "../v1/snapshot";
 import { inspectCodingTask } from "./task";
 import { executionPlan, type AutonomousPackPlanV2, type PairedPilotOptions } from "./paired-runner";
+import { parseExecutionInput } from "./execution-input";
 
 type PilotFile = Omit<PairedPilotOptions, "upstreamBaseUrl" | "upstreamApiKey">;
 type Entry = { key: string; path: string; kind: "file" | "tree"; sha256: string };
@@ -80,9 +81,8 @@ export async function exportBundle(config: PilotFile, destination: string): Prom
   }
 }
 
-/** Reject absolute paths, traversal and links in every component before reading. */
+/** Reject links in entry paths already matched to the plan's fixed paths. */
 async function entryPath(root: string, path: string): Promise<string> {
-  if (!/^data\/[a-zA-Z0-9._/-]+$/.test(path) || path.split("/").some(s => !s || s === "." || s === "..")) throw new Error("Invalid bundle entry path");
   let current = root;
   for (const part of path.split("/")) {
     current = join(current, part);
@@ -120,7 +120,6 @@ export async function verifyBundle(directory: string): Promise<PilotFile> {
   if (manifest.entries.length !== expected.size) throw new Error("Bundle entries do not match plan");
   const paths = new Map<string, string>();
   for (const entry of manifest.entries) {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry) || typeof entry.key !== "string" || typeof entry.path !== "string" || typeof entry.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(entry.sha256)) throw new Error("Invalid bundle entry");
     const spec = expected.get(entry.key);
     if (!spec || paths.has(entry.key) || entry.path !== spec.path || entry.kind !== spec.kind) throw new Error("Unexpected bundle entry");
     const path = await entryPath(root, entry.path);
@@ -145,19 +144,15 @@ export async function verifyBundle(directory: string): Promise<PilotFile> {
   for (const [key, expectedSha] of [["environment", manifest.plan.plan.common.environment_sha256], ["modelParameters", manifest.plan.plan.common.model_parameters_sha256], ["profile", manifest.plan.plan.common.profile_sha256], ["toolPolicy", manifest.plan.plan.common.tool_policy_sha256], ["systemPrompt", manifest.plan.plan.common.system_prompt_sha256]] as const) {
     if (await sha256File(sources.common[key]) !== expectedSha) throw new Error("Bundle common input does not match plan");
   }
-  const environment = Bun.YAML.parse(await readFile(sources.common.environment, "utf8")) as { task_runtimes?: Record<string, unknown> } | null;
-  if (!environment || !environment.task_runtimes || typeof environment.task_runtimes !== "object" || manifest.plan.task_contracts.some(binding => typeof environment.task_runtimes![binding.runtime] !== "string" || !environment.task_runtimes![binding.runtime])) throw new Error("Bundle task runtime does not match environment");
-  const profile = JSON.parse(await readFile(sources.common.profile, "utf8")) as { model_sha256?: string; empty_index_sha256?: string; empty_metadata_sha256?: string; installed_metadata_sha256?: string; profile_id?: string; encoding_id?: string };
-  const empty = JSON.parse(await readFile(get("index:empty:metadata"), "utf8")) as { condition?: string; pack_sha256?: string; model_sha256?: string; profile_id?: string; encoding_id?: string; index_sha256?: string };
-  const installed = JSON.parse(await readFile(get("index:installed:metadata"), "utf8")) as typeof empty;
-  if (!profile || !empty || !installed ||
-      await sha256File(get("model")) !== profile.model_sha256 ||
-      await sha256File(get("index:empty:archive")) !== profile.empty_index_sha256 ||
-      await sha256File(get("index:empty:metadata")) !== profile.empty_metadata_sha256 ||
-      await sha256File(get("index:installed:archive")) !== manifest.plan.plan.pack.index_sha256 ||
-      await sha256File(get("index:installed:metadata")) !== profile.installed_metadata_sha256 ||
-      empty.condition !== "empty-store" || installed.condition !== "pack-installed" ||
-      [empty, installed].some(metadata => metadata.pack_sha256 !== manifest.plan.plan.pack.snapshot_sha256 || metadata.model_sha256 !== profile.model_sha256 || metadata.profile_id !== profile.profile_id || metadata.encoding_id !== profile.encoding_id) ||
-      empty.index_sha256 !== profile.empty_index_sha256 || installed.index_sha256 !== manifest.plan.plan.pack.index_sha256) throw new Error("Bundle model or indexes do not match plan");
+  parseExecutionInput({
+    environment: Bun.YAML.parse(await readFile(sources.common.environment, "utf8")),
+    modelParameters: JSON.parse(await readFile(sources.common.modelParameters, "utf8")),
+    profile: JSON.parse(await readFile(sources.common.profile, "utf8")),
+    emptyMetadata: JSON.parse(await readFile(get("index:empty:metadata"), "utf8")),
+    installedMetadata: JSON.parse(await readFile(get("index:installed:metadata"), "utf8")),
+    runtimes: manifest.plan.task_contracts.map(binding => binding.runtime),
+    identities: { pack: manifest.plan.plan.pack.snapshot_sha256, model: await sha256File(get("model")), emptyArchive: await sha256File(get("index:empty:archive")), installedArchive: await sha256File(get("index:installed:archive")), emptyMetadata: await sha256File(get("index:empty:metadata")), installedMetadata: await sha256File(get("index:installed:metadata")) },
+    expected: { agent: manifest.plan.plan.common.agent, model: manifest.plan.plan.common.model, installedIndex: manifest.plan.plan.pack.index_sha256 },
+  });
   return { plan: manifest.plan, sources, outputDirectory: "", modelFile: get("model"), indexes: { empty: { archive: get("index:empty:archive"), metadata: get("index:empty:metadata") }, installed: { archive: get("index:installed:archive"), metadata: get("index:installed:metadata") } }, auditWaitMs: manifest.auditWaitMs };
 }

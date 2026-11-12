@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { chmod, cp, lstat, mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, sep, posix } from "node:path";
@@ -6,6 +6,7 @@ import { sha256SnapshotDirectory } from "../v1/snapshot";
 import { evaluatorEnvironment } from "../v1/evaluator";
 import type { SemanticEvaluation, SemanticEvaluationOptions } from "../v1/evaluator";
 import { isRecord as object } from "./json";
+import { runEvaluationSession } from "./evaluation-session";
 
 export type { SemanticEvaluation, SemanticEvaluationOptions } from "../v1/evaluator";
 
@@ -60,17 +61,12 @@ async function docker(args: string[], env: NodeJS.ProcessEnv, timeoutMs = 15_000
 }
 
 /** Only this protocol and the final semantic verdict cross the trust boundary. */
-async function broker(contract: Contract, image: string, workspace: string, evaluator: string, env: NodeJS.ProcessEnv, names: [string, string], timeoutMs: number): Promise<SemanticEvaluation> {
-  const args = (name: string, source: string, target: string, cmd: [string, string]) => [
-    "run", "--interactive", "--name", name, "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "128", "--memory", "512m", "--cpus", "1", "--user", "65534:65534", "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=64m", "--mount", `type=bind,src=${source},dst=${target},readonly`, "--entrypoint", cmd[0], image, cmd[1],
-  ];
+async function broker(driver: ChildProcessWithoutNullStreams, candidate: ChildProcessWithoutNullStreams, timeoutMs: number): Promise<SemanticEvaluation> {
   const { promise, resolve } = Promise.withResolvers<SemanticEvaluation>();
-    const driver = spawn("docker", args(names[0], evaluator, "/verifier", contract.driver), { env, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
-    const candidate = spawn("docker", args(names[1], workspace, "/workspace", contract.candidate), { env, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     let finished = false, driverComplete = false, pending: string | undefined, verdict: "pass" | "fail" | undefined, total = 0;
     const ids = new Set<string>();
     const queue: { id: string; input: unknown }[] = [];
-    const finish = (result: SemanticEvaluation) => { if (finished) return; finished = true; clearTimeout(timer); driver.kill(); candidate.kill(); resolve(result); };
+    const finish = (result: SemanticEvaluation) => { if (finished) return; finished = true; clearTimeout(timer); resolve(result); };
     const bad = () => finish(failure("verifier communication or execution failed", "indeterminate"));
     const timer = setTimeout(() => finish(failure("verifier deadline exceeded", "indeterminate")), timeoutMs);
     for (const child of [driver, candidate]) {
@@ -169,16 +165,18 @@ export async function evaluateSemantic(options: SemanticEvaluationOptions): Prom
     const inspect = await docker(["image", "inspect", "--format", "{{.Id}}", imageId], env);
     if (inspect.failed || inspect.code !== 0 || inspect.stdout.trim() !== imageId) throw new Error("verified local image unavailable");
     const names: [string, string] = [`lorelum-verifier-${randomUUID()}`, `lorelum-candidate-${randomUUID()}`];
-    let cleanupFailed = false;
-    try { result = await broker(contract, imageId, work, privateCopy, env, names, Math.min(timeoutMs, contract.timeout_ms)); }
-    finally {
-      for (const name of names) {
-        const cleanup = await docker(["rm", "-f", "-v", name], env, 10_000);
-        if (cleanup.failed || (cleanup.code !== 0 && !/no such container/i.test(cleanup.stderr))) cleanupFailed = true;
-      }
-    }
-    if (cleanupFailed) result = failure("container cleanup could not be verified", "indeterminate");
-    else {
+    const createArgs = (name: string, source: string, target: string, cmd: [string, string]) => [
+      "create", "--interactive", "--name", name, "--label", `lorelum.evaluation=${name}`, "--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "128", "--memory", "512m", "--cpus", "1", "--user", "65534:65534", "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=64m", "--mount", `type=bind,src=${source},dst=${target},readonly`, "--entrypoint", cmd[0], imageId, cmd[1],
+    ];
+    const session = await runEvaluationSession({
+      names,
+      createArgs: [createArgs(names[0], privateCopy, "/verifier", contract.driver), createArgs(names[1], work, "/workspace", contract.candidate)],
+      env, docker, timeoutMs: Math.min(timeoutMs, contract.timeout_ms), communicate: broker,
+    });
+    result = !session.cleanupVerified ? failure(`container cleanup could not be verified: ${names.join(", ")}`, "indeterminate")
+      : session.failed || !session.result ? failure("verifier communication or execution failed", "indeterminate")
+      : session.result;
+    if (session.cleanupVerified) {
       try {
         if (await sha256SnapshotDirectory(evaluator) !== evaluatorSha256 || await sha256SnapshotDirectory(privateCopy) !== evaluatorSha256 || await sha256SnapshotDirectory(work) !== workHash) result = failure("input changed during evaluation", "indeterminate");
       } catch { result = failure("unable to verify input snapshots", "indeterminate"); }

@@ -67,3 +67,17 @@ integration("candidate cannot read verifier files, Docker socket or host sentine
     await rm(root, { recursive: true, force: true });
   }
 }, 60_000);
+
+integration("an unresponsive candidate times out without a semantic verdict", async () => {
+  const root = await mkdtemp(join(tmpdir(), "coding-verifier-timeout-"));
+  try {
+    const workspace = join(root, "workspace"), evaluatorRoot = join(root, "verifier");
+    await mkdir(workspace); await mkdir(evaluatorRoot); await chmod(workspace, 0o755);
+    await writeFile(join(workspace, "candidate.mjs"), "process.stdin.resume();\n");
+    await writeFile(join(evaluatorRoot, "contract.json"), JSON.stringify({ schema_version: "coding-verifier/v1", driver: ["/usr/local/bin/node", "/verifier/driver.mjs"], candidate: ["/usr/local/bin/node", "/workspace/candidate.mjs"], timeout_ms: 5000 }));
+    await writeFile(join(evaluatorRoot, "driver.mjs"), `console.log(JSON.stringify({type:'call',id:'1',input:{}}));process.stdin.resume();\n`);
+    const result = await evaluateSemantic({ workspace, evaluatorRoot, evaluatorSha256: await sha256SnapshotDirectory(evaluatorRoot), imageId, outputDirectory: join(root, "result"), timeoutMs: 5000 });
+    expect(result.health).toBe("indeterminate");
+    expect(result.semantic).toBe("not-run");
+  } finally { await rm(root, { recursive: true, force: true }); }
+}, 60_000);

@@ -17,6 +17,8 @@
 
 Verifier driver 与候选分别在无网络容器中运行，只有 driver 挂载只读私有 evaluator，只有候选挂载只读工作区；它们通过框架中介 JSON Lines。driver 向 stdout 发送 `{"type":"call","id":"唯一字符串","input":<JSON>}`，候选从 stdin 接收一行 JSON 并输出一行 JSON；driver 从 stdin 收到 `{"type":"reply","id":"同一字符串","output":<JSON>}`。完成至少一次交互后，driver 输出 `{"type":"result","semantic":"pass"}` 或 `"fail"`，然后正常退出；框架关闭候选 stdin 并要求候选正常退出。格式错误、意外退出、超时或容器失败记作未评或不可判定，不伪装成语义不通过。私有测试值会作为输入传给候选；不挂载私有文件不等于消除测试交互侧信道。
 
+框架先创建并确认容器身份，再附着执行；同一 session 等待客户端结束并清理其容器。Docker 创建或清理结果无法确认时，评测保持不可判定，失败原因包含本次容器名称；晚到的守护进程操作可能留下容器，需要在可信 Docker 主机上按这些名称检查清理，不能把一次“容器不存在”当作已证明的清理结果。
+
 任务可以使用其他技术栈：在选定镜像安装对应运行时、在环境 manifest 的 `task_runtimes` 中声明，再提供符合上述协议的入口；不需要改 runner。Docker daemon、宿主、镜像和任务作者的 driver 仍是可信基础，不应运行来源不可信的 verifier。
 
 检查任务声明和可选校准（`IMAGE_ID` 是完整 `sha256:...` 镜像 ID，输出目录必须不存在）：
@@ -79,6 +81,8 @@ bun --no-env-file run bench report /absolute/path/to/new-prepared-dir/output
 
 新目录必须不存在、父目录必须存在，且输出不能覆盖输入。`pilot.json` 包含本机路径和执行计划，不含凭据；计划绑定任务声明和校准摘要、公开输入、私有 evaluator、环境、镜像、Pack、索引、模型及预算。`plan.json` 是 v2 外层计划，`execution-plan.json` 是供既有调度器使用的派生计划，`execution.json` 绑定两者身份；历史 v1 计划和结果不会被覆盖。CLI 不向终端回显来源不可信的异常内容；失败时检查本机受控配置和对应私有输出。
 
+准备、交接包校验和运行前冻结输入使用同一执行输入契约；缺少 embedding、模型参数非法或索引身份不匹配都会被拒绝。运行前仍重新核验已冻结的字节及其摘要。
+
 `summary.json` 保留计划总数、不可比较与缺失原因；功能、质量、检索、健康及成本独立解释。默认不运行质量评估，不以零分代替；普通轨迹无法覆盖 shell 内的 Lore CLI 调用时，整体检索仍为 `indeterminate`。模型或 verifier 故障不等于功能失败。固定相同时间和轮次预算，不承诺 token 或费用封顶。
 
 ### 受控交接
@@ -92,6 +96,8 @@ bun --no-env-file run bench bundle run /absolute/path/to/new-bundle /absolute/pa
 ```
 
 该包包含完整 Pack 快照、公开任务、**私有 verifier 和校准解**、embedding 模型及两组索引；它不包含模型凭据、Agent 轨迹、工作区或 diff，不能当成公开报告。镜像本身不在包内，需要另行按计划中的不可变镜像 ID 分发；端点 URL 和凭据也须另行安全配置，且 URL 摘要必须与计划一致。原计划中的本机快照 URI 只保留为来源信息，恢复运行使用 bundle 内的相对内容。导出和校验均比较内容摘要、任务契约与计划，协作者仍应确认 Pack 和模型分发授权。
+
+交接包清单的结构、摘要格式和相对路径格式由 schema 一次校验；随后检查条目与计划的对应关系、路径穿越和符号链接，以及实际内容与计划的身份。恢复执行时重新核验冻结输入，不依赖导出时的检查结果。
 
 ## 历史 v1 pilot 操作
 
@@ -141,7 +147,7 @@ docker image inspect --format '{{.Id}}' lorelum-autonomous-pack:v1
 构建模型代理镜像并记录两个镜像的完整不可变 ID：
 
 ```sh
-tar -cf - Dockerfile.autonomous-pack-proxy src/benchmark/autonomous-pack/v1/model-proxy.ts src/benchmark/autonomous-pack/v1/provider-usage.ts |
+tar -cf - Dockerfile.autonomous-pack-proxy src/benchmark/autonomous-pack/v1/model-proxy.ts src/benchmark/autonomous-pack/v1/model-endpoint.ts src/benchmark/autonomous-pack/v1/provider-usage.ts |
   docker build --platform linux/amd64 -f Dockerfile.autonomous-pack-proxy -t lorelum-autonomous-pack-proxy:v1 -
 docker image inspect --format '{{.Id}}' lorelum-autonomous-pack:v1
 docker image inspect --format '{{.Id}}' lorelum-autonomous-pack-proxy:v1
@@ -407,6 +413,8 @@ openspec validate autonomous-pack-benchmark-242 --type change --strict --json
 Agent 失败时不执行语义评估，也不纳入有效配对；仍保留已完成的可见 Lore 读取计数，整体检索状态为不可判定。代理独立收尾后，如供应商用量事件完整且终态可核验，失败运行仍报告相应用量；缺失或中断时不估算。
 
 模型代理仅在流式响应的首个事件明确报告 `Concurrency limit exceeded for user, please retry later`、尚未向 Agent 交付响应时做有限退避重试，最多额外三次，每次计入相同的请求预算。其他错误及已开始响应的流不重放；重试耗尽时保留原错误。不完整的供应商用量仍不可用，不能把重试次数误当费用。
+
+代理与计划摘要共用同源上游地址构造；路径开头的 `//` 不会更改配置的主机。首事件解析支持跨 chunk 的 LF、CRLF、CR 及其组合。使用修复后的代理必须重新构建并固定新镜像 ID；旧镜像与 pilot 不会被改写。若旧计划的双斜线路径曾产生错误主机的端点摘要，应新建计划，不能沿用该错误身份。
 
 代理的 `Upstream connection failed` 表示连接上游时发生异常；`Upstream returned HTTP <状态码>` 表示上游已返回该 HTTP 状态。二者都不包含上游响应正文或凭据；旧版本的 `Upstream request failed` 未区分这两种情况，不能据此反推原因。
 

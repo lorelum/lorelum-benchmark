@@ -34,6 +34,9 @@ test("pilot rejects invalid credentials, formal runs and overlapping paths befor
 test("endpoint identity binds the effective endpoint to the plan and common hash", () => {
   const expected = createHash("sha256").update("https://example.com/v1/chat/completions", "utf8").digest("hex");
   expect(modelEndpointSha256("https://EXAMPLE.com:443/v1///")).toBe(expected);
+  const sameOrigin = createHash("sha256").update("https://expected.invalid//other.invalid/v1/chat/completions", "utf8").digest("hex");
+  expect(modelEndpointSha256("https://expected.invalid//other.invalid/v1")).toBe(sameOrigin);
+  expect(modelEndpointSha256("https://expected.invalid//other.invalid/v1")).not.toBe(modelEndpointSha256("https://other.invalid/v1"));
   expect(plan.common.model_endpoint_sha256).toBe(expected);
   const alternate = { ...plan, common: { ...plan.common, model_endpoint_sha256: modelEndpointSha256("https://other.example/v1") } };
   expect(hashContract(alternate)).not.toBe(hashContract(plan));

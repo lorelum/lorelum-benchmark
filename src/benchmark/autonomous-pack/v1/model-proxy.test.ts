@@ -23,6 +23,24 @@ test("model proxy rejects insecure and credential-bearing upstream endpoints", (
   expect(() => startModelProxy({ ...config, baseUrl: "https://example.invalid/v1?next=other" })).toThrow();
 });
 
+test("keeps credentials on the configured origin when its path starts with double slash", async () => {
+  const originalFetch = globalThis.fetch;
+  const received: { url: string; authorization: string | null }[] = [];
+  globalThis.fetch = (async (input, init) => {
+    received.push({ url: String(input), authorization: new Headers(init?.headers).get("authorization") });
+    return new Response("ok");
+  }) as typeof fetch;
+  const server = startModelProxy({ baseUrl: "https://expected.invalid//other.invalid/v1", apiKey: "synthetic-key", model: "allowed", hostname: "127.0.0.1", port: 0, maxRequests: 1 });
+  try {
+    const response = await originalFetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ model: "allowed" }) });
+    expect(await response.text()).toBe("ok");
+    expect(received).toEqual([{ url: "https://expected.invalid//other.invalid/v1/chat/completions", authorization: "Bearer synthetic-key" }]);
+  } finally {
+    server.stop(true);
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("failed upstream requests consume the independent request budget", async () => {
   const upstream = createServer(socket => socket.destroy());
   const listening = Promise.withResolvers<void>();
@@ -83,6 +101,33 @@ test("retries only a first-event concurrency rejection and counts every attempt"
     globalThis.fetch = originalFetch;
   }
 }, 10_000);
+
+test("retries a byte-chunked first error across mixed SSE line endings", async () => {
+  const originalFetch = globalThis.fetch;
+  const success = 'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n';
+  try {
+    for (const separator of ["\n\r\n", "\r\n\n", "\r\n\r", "\r\r\n", "\r\r", "\r\n\r\n"]) {
+      let attempts = 0;
+      globalThis.fetch = (async () => {
+        const text = ++attempts === 1
+          ? `: heartbeat${separator}data: {"error":{"message":"Concurrency limit exceeded for user, please retry later"}}${separator}`
+          : success;
+        const bytes = new TextEncoder().encode(text);
+        return new Response(new ReadableStream({ start(controller) { for (const byte of bytes) controller.enqueue(new Uint8Array([byte])); controller.close(); } }), { headers: { "content-type": "text/event-stream" } });
+      }) as typeof fetch;
+      const server = startModelProxy({ baseUrl: "https://example.invalid/v1", apiKey: "test-only", model: "allowed", hostname: "127.0.0.1", port: 0, maxRequests: 2 });
+      try {
+        const response = await originalFetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ model: "allowed", stream: true }) });
+        expect(await response.text()).toBe(success);
+        expect(attempts).toBe(2);
+      } finally {
+        server.stop(true);
+      }
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}, 20_000);
 
 test("does not retry an error after a response event or after budget exhaustion", async () => {
   const originalFetch = globalThis.fetch;

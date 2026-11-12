@@ -1,6 +1,7 @@
 import Ajv2020 from "ajv/dist/2020";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { modelEndpoint } from "./model-endpoint";
 
 export type AutonomousPlan = {
   schema_version: "autonomous-pack-plan/v1";
@@ -42,11 +43,7 @@ export function hashContract(value: unknown): string {
 }
 /** Hash the effective proxy endpoint without retaining the URL or API key in the plan. */
 export function modelEndpointSha256(baseUrl: string): string {
-  let base: URL;
-  try { base = new URL(baseUrl); } catch { throw new Error("Invalid model endpoint"); }
-  if (base.protocol !== "https:" || base.username || base.password || base.search || base.hash) throw new Error("Invalid model endpoint");
-  const endpoint = new URL(`${base.pathname.replace(/\/+$/, "")}/chat/completions`, base.origin);
-  return createHash("sha256").update(endpoint.href, "utf8").digest("hex");
+  return createHash("sha256").update(modelEndpoint(baseUrl).href, "utf8").digest("hex");
 }
 
 

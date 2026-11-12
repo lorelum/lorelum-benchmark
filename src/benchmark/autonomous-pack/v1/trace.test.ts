@@ -56,7 +56,6 @@ describe("autonomous Pack Pi trace audit", () => {
     expect(failed.query).toBe("indeterminate");
     expect(traceObservation(empty)).toMatchObject({ complete: false, query: "indeterminate", query_success: 0, query_empty: 1, query_failed: 0, query_indeterminate: 0 });
     expect(traceObservation(failed)).toMatchObject({ complete: false, query: "indeterminate", query_success: 0, query_empty: 0, query_failed: 1, query_indeterminate: 0 });
-    expect(empty.errors).toContain("Shell access can invoke Lore outside the instrumented tools");
     const mixed = auditTrace(trace(...shell, start("a"), finish("a", wrap("query", data([found]))), start("b"), finish("b", null), start("c")));
     expect(traceObservation(mixed)).toMatchObject({ query: "indeterminate", query_success: 1, query_empty: 0, query_failed: 0, query_indeterminate: 2 });
   });

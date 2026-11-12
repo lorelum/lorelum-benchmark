@@ -9,10 +9,10 @@ import { evaluateSemantic } from "./evaluator";
 import { assertPlan, hashContract, modelEndpointSha256, type AutonomousPlan } from "../v1/plan";
 import { prepareInputs, prepareRunWorkspace, type PreparationSources } from "../v1/runner-preparation";
 import { inspectCodingTask } from "./task";
-import { isRecord as object } from "./json";
 import { sha256SnapshotDirectory } from "../v1/snapshot";
 import { assertObservation, summarizePlan, traceObservation, type AutonomousObservation } from "../v1/summary";
-import { auditTrace } from "../v1/trace";
+import { auditTrace } from "./trace";
+import { parseExecutionInput } from "./execution-input";
 
 /** The outer contract binds runner behavior to the full plan identity. */
 export type AutonomousPackPlanV2 = {
@@ -41,14 +41,6 @@ export function executionPlan(value: unknown): AutonomousPlan {
   return { ...outer.plan, id: `autonomous-pack/v2:${hashContract(outer)}` };
 }
 
-type Profile = {
-  schema_version: "autonomous-pack-execution-profile/v1";
-  profile_id: string; encoding_id: string; model_sha256: string;
-  empty_index_sha256: string; empty_metadata_sha256: string; installed_metadata_sha256: string;
-  proxy_image_sha256: string;
-};
-type ModelParameters = { api_model_id: string; context_window: number; max_tokens: number };
-type IndexMetadata = { condition: "empty-store" | "pack-installed"; pack_sha256: string; model_sha256: string; profile_id: string; encoding_id: string; index_sha256: string };
 export type PairedPilotOptions = {
   plan: AutonomousPackPlanV2;
   sources: PreparationSources;
@@ -60,27 +52,6 @@ export type PairedPilotOptions = {
   auditWaitMs: number;
 };
 const tools = ["read", "bash", "edit", "write", "grep", "find", "ls", "lore_query", "lore_get"];
-const digest = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
-const exact = (value: Record<string, unknown>, keys: readonly string[]) => Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
-
-function parseProfile(value: unknown): Profile {
-  const keys = ["schema_version", "profile_id", "encoding_id", "model_sha256", "empty_index_sha256", "empty_metadata_sha256", "installed_metadata_sha256", "proxy_image_sha256"];
-  if (!object(value) || !exact(value, keys) || value.schema_version !== "autonomous-pack-execution-profile/v1" || keys.slice(1).some(key => !digest(value[key]))) throw new Error("Invalid execution profile");
-  return value as Profile;
-}
-function parseModel(value: unknown): ModelParameters {
-  if (!object(value) || !exact(value, ["api_model_id", "context_window", "max_tokens"]) || typeof value.api_model_id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(value.api_model_id) || !Number.isSafeInteger(value.context_window) || !Number.isSafeInteger(value.max_tokens) || (value.context_window as number) < 1 || (value.max_tokens as number) < 1 || (value.max_tokens as number) > (value.context_window as number)) throw new Error("Invalid model parameters");
-  return value as ModelParameters;
-}
-function parseMetadata(value: unknown, condition: IndexMetadata["condition"], plan: AutonomousPlan, profile: Profile, expected: string): IndexMetadata {
-  const keys = ["condition", "pack_sha256", "model_sha256", "profile_id", "encoding_id", "index_sha256"];
-  if (!object(value) || !exact(value, keys) || value.condition !== condition || value.pack_sha256 !== plan.pack.snapshot_sha256 || value.model_sha256 !== profile.model_sha256 || value.profile_id !== profile.profile_id || value.encoding_id !== profile.encoding_id || value.index_sha256 !== expected) throw new Error("Index provenance mismatch");
-  return value as IndexMetadata;
-}
-async function copyVerified(source: string, destination: string, expected: string) {
-  await copyFile(source, destination, constants.COPYFILE_EXCL);
-  if (await sha256File(destination) !== expected) throw new Error("Frozen artifact digest mismatch");
-}
 
 /** Record observable trace evidence and return whether semantic evaluation may run. */
 export async function observeRunTrace(
@@ -105,8 +76,7 @@ export async function observeRunTrace(
   }
   const trace = auditTrace(await readFile(run.artifacts.pi.path, "utf8"));
   observation.trace = traceObservation(trace);
-  const structuralErrors = trace.errors.filter(error => error !== "Shell access can invoke Lore outside the instrumented tools");
-  if (structuralErrors.length) {
+  if (!trace.structure_complete) {
     observation.health = "indeterminate";
     observation.failure_reasons = ["Pi trace was incomplete or reported an agent error"];
     return false;
@@ -144,27 +114,27 @@ export async function runPairedPilot(options: PairedPilotOptions) {
   }
   await mkdir(root, { mode: 0o700 });
   const inputs = await prepareInputs(plan, options.sources, join(root, "inputs"));
-  const profile = parseProfile(JSON.parse(await readFile(inputs.common.profile, "utf8")));
-  const model = parseModel(JSON.parse(await readFile(inputs.common.modelParameters, "utf8")));
-  const separator = plan.common.model.indexOf("/");
-  const modelProvider = plan.common.model.slice(0, separator);
-  if (separator < 1 || plan.common.model.slice(separator + 1) !== model.api_model_id) throw new Error("Model parameters do not match the planned catalog identity");
   const toolPolicy: unknown = JSON.parse(await readFile(inputs.common.toolPolicy, "utf8"));
   if (JSON.stringify(toolPolicy) !== JSON.stringify(tools)) throw new Error("Tool policy does not match the pinned Pi entrypoint");
-  const environment: unknown = Bun.YAML.parse(await readFile(inputs.common.environment, "utf8"));
-  if (!object(environment) || !object(environment.agent_runtime) || !object(environment.model) || !object(environment.embedding) || environment.agent_runtime.id !== plan.common.agent || environment.model.id !== plan.common.model || environment.embedding.model_sha256 !== profile.model_sha256 || environment.embedding.profile_id !== profile.profile_id || environment.embedding.encoding_id !== profile.encoding_id || environment.embedding.retrieval_method !== "single-vector") throw new Error("Environment and execution profile mismatch");
-  if (!object(environment.task_runtimes) || options.plan.task_contracts.some(binding => typeof environment.task_runtimes[binding.runtime] !== "string" || !environment.task_runtimes[binding.runtime])) throw new Error("Task runtime is not declared in the execution environment");
   const system = await readFile(inputs.common.systemPrompt, "utf8");
   const frozen = join(root, "frozen");
   await mkdir(frozen, { mode: 0o700 });
   const modelFile = join(frozen, "model.gguf"), emptyArchive = join(frozen, "empty.tar"), installedArchive = join(frozen, "installed.tar"), emptyMetadata = join(frozen, "empty.json"), installedMetadata = join(frozen, "installed.json");
-  await copyVerified(options.modelFile, modelFile, profile.model_sha256);
-  await copyVerified(options.indexes.empty.archive, emptyArchive, profile.empty_index_sha256);
-  await copyVerified(options.indexes.installed.archive, installedArchive, plan.pack.index_sha256);
-  await copyVerified(options.indexes.empty.metadata, emptyMetadata, profile.empty_metadata_sha256);
-  await copyVerified(options.indexes.installed.metadata, installedMetadata, profile.installed_metadata_sha256);
-  parseMetadata(JSON.parse(await readFile(emptyMetadata, "utf8")), "empty-store", plan, profile, profile.empty_index_sha256);
-  parseMetadata(JSON.parse(await readFile(installedMetadata, "utf8")), "pack-installed", plan, profile, plan.pack.index_sha256);
+  await Promise.all([
+    [options.modelFile, modelFile], [options.indexes.empty.archive, emptyArchive], [options.indexes.installed.archive, installedArchive],
+    [options.indexes.empty.metadata, emptyMetadata], [options.indexes.installed.metadata, installedMetadata],
+  ].map(([source, destination]) => copyFile(source, destination, constants.COPYFILE_EXCL)));
+  const { profile, model } = parseExecutionInput({
+    environment: Bun.YAML.parse(await readFile(inputs.common.environment, "utf8")),
+    modelParameters: JSON.parse(await readFile(inputs.common.modelParameters, "utf8")),
+    profile: JSON.parse(await readFile(inputs.common.profile, "utf8")),
+    emptyMetadata: JSON.parse(await readFile(emptyMetadata, "utf8")),
+    installedMetadata: JSON.parse(await readFile(installedMetadata, "utf8")),
+    runtimes: options.plan.task_contracts.map(binding => binding.runtime),
+    identities: { pack: plan.pack.snapshot_sha256, model: await sha256File(modelFile), emptyArchive: await sha256File(emptyArchive), installedArchive: await sha256File(installedArchive), emptyMetadata: await sha256File(emptyMetadata), installedMetadata: await sha256File(installedMetadata) },
+    expected: { agent: plan.common.agent, model: plan.common.model, installedIndex: plan.pack.index_sha256 },
+  });
+  const modelProvider = plan.common.model.slice(0, plan.common.model.indexOf("/"));
   const runs = join(root, "runs"), evaluations = join(root, "evaluations");
   await mkdir(runs, { mode: 0o700 }); await mkdir(evaluations, { mode: 0o700 });
   await writeFile(join(root, "plan.json"), JSON.stringify(options.plan, null, 2) + "\n", { flag: "wx", mode: 0o600 });

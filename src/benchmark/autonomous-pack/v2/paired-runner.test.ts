@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
-import { executionPlan, type AutonomousPackPlanV2 } from "./paired-runner";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { executionPlan, observeRunTrace, type AutonomousPackPlanV2 } from "./paired-runner";
 import { hashContract, schedulePlan, type AutonomousPlan } from "../v1/plan";
+import type { AutonomousObservation } from "../v1/summary";
 const digest = "a".repeat(64);
 const base: AutonomousPlan = {
   schema_version: "autonomous-pack-plan/v1", id: "pilot", run_kind: "pilot",
@@ -21,4 +25,39 @@ test("v2 identity binds the complete plan and cannot reuse a v1 schedule identit
   expect(() => executionPlan(base)).toThrow();
   expect(() => executionPlan({ ...outer, execution_contract: "other" })).toThrow();
   expect(() => executionPlan({ ...outer, extra: true })).toThrow();
+});
+
+test("completed shell trace permits evaluation while incomplete structure does not", async () => {
+  const root = await mkdtemp(join(tmpdir(), "v2-trace-decision-"));
+  try {
+    const queryResult = { content: [{ type: "text", text: JSON.stringify({ protocolVersion: 2, toolVersion: "fixture", command: "query", ok: true, data: { mode: "semantic", coverage: "complete", results: [] } }) }], details: { exitCode: 0 } };
+    const events = [
+      { type: "session" }, { type: "agent_start" },
+      { type: "tool_execution_start", toolCallId: "s", toolName: "bash", args: {} },
+      { type: "tool_execution_end", toolCallId: "s", toolName: "bash", result: {}, isError: false },
+      { type: "tool_execution_start", toolCallId: "q", toolName: "lore_query", args: {} },
+      { type: "tool_execution_end", toolCallId: "q", toolName: "lore_query", result: queryResult, isError: false },
+      { type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+      { type: "agent_settled", aborted: false },
+    ];
+    const path = join(root, "trace.jsonl");
+    const observation = (): AutonomousObservation => ({
+      schema_version: "autonomous-pack-observation/v1", plan_id: "pilot", plan_sha256: digest,
+      pair_id: digest, condition: "empty-store", ordinal: 0, input_sha256: digest, common_sha256: digest,
+      pack_snapshot_sha256: null, index_sha256: null, verification: { input: true, isolation: true, treatment: true, reasons: [] },
+      health: "execution-failed", failure_reasons: [], semantic: "not-run", quality: "not-run", quality_probes: [],
+      trace: { complete: false, query: "indeterminate", get_success: 0, get_failed: 0, get_indeterminate: 0 },
+      duration_ms: null, cost_usd: null, input_tokens: null, output_tokens: null, total_tokens: null, artifacts: [],
+    });
+    const run = { status: "completed" as const, reason: null, artifacts: { pi: { path, sha256: digest }, usage: null, agentStderr: null, finishLog: null, topology: null } };
+    await writeFile(path, events.map(event => JSON.stringify(event)).join("\n") + "\n");
+    const completed = observation();
+    expect(await observeRunTrace(completed, run)).toBe(true);
+    expect(completed.trace).toMatchObject({ complete: false, query: "indeterminate", query_empty: 1 });
+    await writeFile(path, events.slice(0, -1).map(event => JSON.stringify(event)).join("\n") + "\n");
+    const incomplete = observation();
+    expect(await observeRunTrace(incomplete, run)).toBe(false);
+    expect(incomplete.health).toBe("indeterminate");
+    expect(incomplete.trace).toMatchObject({ complete: false, query: "indeterminate", query_empty: 1 });
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
