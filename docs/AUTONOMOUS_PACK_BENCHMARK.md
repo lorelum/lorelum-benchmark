@@ -26,6 +26,8 @@
 - **不要强制检索**：两组公开同样的通用工具说明，不指定 query、不预注入 Practice、不要求 Agent 必须调用 Lore。未查询本身也是观察结果；证据不完整时标记不确定。
 - **不要用一题定结论**：实际比较应事先列出多种任务和重复次数，保留失败与缺失运行；一次通过或一次查询不能说明 Pack 整体有效。
 
+当前退款候选已有功能语义校准及匿名盲审材料生成路径，但尚无经独立校准的确定性质量 probe；未完成盲评时，质量保持未评估。不要把功能通过、测试数量或检索次数转成质量分数。
+
 ## 准备运行时与隔离镜像
 
 工作区依赖的 Bun、Node 和 Pi 版本以及安装步骤见 [environments/README.md](../environments/README.md)。在仓库根目录的支持管道的 shell 中：
@@ -35,26 +37,26 @@ bun install --frozen-lockfile
 tar -cf - Dockerfile.autonomous-pack package.json bun.lock environments/autonomous-pack/v1/entrypoint.sh src/benchmark/fs.ts src/benchmark/autonomous-pack/v1/snapshot.ts src/benchmark/autonomous-pack/v1/index-prepare.ts src/benchmark/autonomous-pack/v1/index-archive.ts src/benchmark/autonomous-pack/v1/index-restore.ts src/benchmark/autonomous-pack/v1/agent-bootstrap.ts src/benchmark/autonomous-pack/v1/lore-extension.ts |
   docker build --platform linux/amd64 -f Dockerfile.autonomous-pack -t lorelum-autonomous-pack:v1 -
 docker image inspect --format '{{.Id}}' lorelum-autonomous-pack:v1
-bun --no-env-file run environments/autonomous-pack/v1/isolation-preflight.ts '<上一条输出的完整镜像ID>'
 ```
 
-构建使用固定的 Lore 发行包摘要；preflight 检查无网络容器的工具版本、文件和凭据隔离以及独立临时状态。**它不验证模型 API 的代理出站、语义索引或真实 Agent。** 仅凭镜像构建或离线 preflight 不得将运行记为有效对照。
+构建使用固定的 Lore 发行包摘要。无需在每次 pilot 前单独运行离线预检；排查镜像问题时可执行 `bun --no-env-file run environments/autonomous-pack/v1/isolation-preflight.ts '<完整镜像ID>'`。该预检不验证模型 API、语义索引或真实 Agent。
 
 模型代理只转发到配置的 HTTPS 上游和指定模型；Agent 与代理位于不同网络边界，Agent 不接收上游凭据。Docker daemon、镜像、代理和上游供应商必须可信；代理通过标准输入接收凭据，上游若在响应中回显凭据仍可能泄露。
 
-可单独构建代理镜像并运行仅使用合成凭据与本地 HTTPS 服务的双网络预检。它需要 `openssl` 和 Docker；使用两个镜像的完整不可变 ID：
+构建模型代理镜像并记录两个镜像的完整不可变 ID：
 
 ```sh
 tar -cf - Dockerfile.autonomous-pack-proxy src/benchmark/autonomous-pack/v1/model-proxy.ts src/benchmark/autonomous-pack/v1/provider-usage.ts |
   docker build --platform linux/amd64 -f Dockerfile.autonomous-pack-proxy -t lorelum-autonomous-pack-proxy:v1 -
 docker image inspect --format '{{.Id}}' lorelum-autonomous-pack:v1
 docker image inspect --format '{{.Id}}' lorelum-autonomous-pack-proxy:v1
-bun --no-env-file run environments/autonomous-pack/v1/egress-preflight.ts '<Agent镜像完整ID>' '<代理镜像完整ID>'
 ```
 
-该预检检查 Docker 容器、网络成员、镜像与挂载配置，并覆盖有限的本地连接、代理目标和请求数量限制；输出列出未覆盖项。每次释放 Agent 前重新检查该次拓扑；配置观察不能证明完整网络隔离或上游不会回显凭据。代理的请求数量上限与两组的轮次上限相同，不是 token 或费用上限。
+排查网络问题时，可选用 `bun --no-env-file run environments/autonomous-pack/v1/egress-preflight.ts '<Agent镜像完整ID>' '<代理镜像完整ID>'`；它使用合成凭据、本地 HTTPS 服务、`openssl` 和 Docker，不是 pilot 的额外运行门槛。每次 pilot 仍核对该次容器拓扑；配置观察不能证明完整网络隔离或上游不会回显凭据。代理的请求数量上限与两组的轮次上限相同，不是 token 或费用上限。
 
-Agent 可直接从 shell 使用原生 Lore CLI，也可使用 `lore_query` 和 `lore_get` 工具。普通 Pi 轨迹不能完整覆盖 shell 内的调用；存在可能绕过时，检索状态标为 `indeterminate`，不推断为未查询。轨迹可能包含查询及代码，只能作为受控材料处理。
+Agent 可直接从 shell 使用原生 Lore CLI，也可使用 `lore_query` 和 `lore_get` 工具。`lore_query` 返回 Practice 的标题和适用条件等元数据；Agent 若需要完整内容，可自行用 `lore_get` 按 ID 读取。下面的系统提示向两组提供相同的通用说明，不指定查询内容，也不要求调用。
+
+普通 Pi 轨迹不能完整覆盖 shell 内的调用；存在可能绕过时，检索状态标为 `indeterminate`，不推断为未查询。轨迹可能包含查询及代码，只能作为受控材料处理。
 
 调用方进程中已存在的环境变量可能优先于仓库 `.env`。真实运行前确认实际生效的 `LORELUM_PI_BASE_URL` 和 `LORELUM_PI_API_KEY` 来自预期配置；不要输出、记录或提交 key。纯离线验证使用 `bun --no-env-file` 并移除相关凭据。
 
@@ -136,15 +138,15 @@ docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-
 }
 ```
 
-准备 model parameters JSON，例如 `{"api_model_id":"deepseek-v4.1-flash","context_window":1000000,"max_tokens":8192}`，以及工具策略 JSON 数组 `["read","bash","edit","write","grep","find","ls","lore_query","lore_get"]`。计划中的模型身份必须为 `<Pi 内置 provider>/<api_model_id>`；入口从固定镜像内的 Pi 目录加载模型的 reasoning、compat 和 thinking level 映射，并拒绝不存在或超过目录上限的模型配置。`max_tokens` 是单次模型输出配置，不是总 token 或费用上限。准备两组相同的通用 system prompt。按 [plan schema](../schemas/autonomous-pack-plan-v1.schema.json) 构造 `run_kind: "pilot"` 的计划；`pack.index_sha256` 是安装组归档摘要，`common.profile_sha256` 是上述 profile 文件的字节摘要，`common.image_sha256` 是 Agent 镜像 ID。
+准备 model parameters JSON，例如 `{"api_model_id":"deepseek-v4.1-flash","context_window":1000000,"max_tokens":384000}`，以及工具策略 JSON 数组 `["read","bash","edit","write","grep","find","ls","lore_query","lore_get"]`。示例使用该模型在固定 Pi 镜像目录中的输出上限，避免人为设定过小的输出限制；其他模型应使用其目录声明的上限，供应商仍可能施加更低限制。计划中的模型身份必须为 `<Pi 内置 provider>/<api_model_id>`；入口从固定镜像内的 Pi 目录加载模型的 reasoning、compat 和 thinking level 映射，并拒绝不存在或超过目录上限的模型配置。`max_tokens` 是单次模型输出配置，不是总 token 或费用上限。准备两组相同的通用 system prompt。按 [plan schema](../schemas/autonomous-pack-plan-v1.schema.json) 构造 `run_kind: "pilot"` 的计划；`pack.index_sha256` 是安装组归档摘要，`common.profile_sha256` 是上述 profile 文件的字节摘要，`common.image_sha256` 是 Agent 镜像 ID。
 
-新 pilot 的计划还必须设置 `common.model_endpoint_sha256`。先将预期地址放入进程环境变量 `LORELUM_PI_BASE_URL`，运行以下命令得到有效 `/chat/completions` 地址的摘要；不要将地址中的凭据、API key 或原始地址写进计划。执行时会重新计算并匹配，端点不同或字段缺失时，在创建输出及发请求前拒绝。旧 pilot 计划仍可读取，但不能直接作为新运行的计划。
+下面的完整配置示例会自动从 `LORELUM_PI_BASE_URL` 计算 `common.model_endpoint_sha256`，不需要手动计算或复制。只有自行构造计划时才需要下面的命令；不要将地址中的凭据、API key 或原始地址写进计划。执行时会核对端点身份，旧 pilot 计划仍可读取，但不能直接作为新运行的计划。
 
 ```sh
 bun --no-env-file -e 'import {modelEndpointSha256} from "./src/benchmark/autonomous-pack/v1/plan"; console.log(modelEndpointSha256(process.env.LORELUM_PI_BASE_URL));'
 ```
 
-任务的 `source_sha256` 和 `evaluator_sha256` 使用 `sha256SnapshotDirectory`；`input_sha256` 是 `hashContract({task_sha256, starter_sha256})`，其中 task 摘要与其余普通文件摘要使用 `sha256File`。不要用仓库历史 `sha256Directory` 代替完整树摘要。以下命令可输出一个候选所需的三个任务身份；变量指向绝对路径：
+完整配置示例也会自动计算任务身份。自行构造计划时，`source_sha256` 和 `evaluator_sha256` 使用 `sha256SnapshotDirectory`；`input_sha256` 是 `hashContract({task_sha256, starter_sha256})`，普通文件摘要使用 `sha256File`。不要用仓库历史 `sha256Directory` 代替完整树摘要。以下命令仅供手动生成身份，变量指向绝对路径：
 
 ```sh
 bun --no-env-file -e '
@@ -224,9 +226,9 @@ await mkdir(prep, { mode: 0o700 });
 const profile = join(prep, "profile.json"), modelParams = join(prep, "model.json"), toolPolicy = join(prep, "tools.json"), systemPrompt = join(prep, "system.txt");
 const dump = (path, value) => writeFile(path, JSON.stringify(value, null, 2) + "\n", { flag: "wx", mode: 0o600 });
 await dump(profile, { schema_version: "autonomous-pack-execution-profile/v1", profile_id: treatment.profile_id, encoding_id: treatment.encoding_id, model_sha256: treatment.model_sha256, empty_index_sha256: baseline.index_sha256, empty_metadata_sha256: await sha256File(emptyMeta), installed_metadata_sha256: await sha256File(installedMeta), proxy_image_sha256: proxyImage.slice(7) });
-await dump(modelParams, { api_model_id: "deepseek-v4.1-flash", context_window: 1000000, max_tokens: 8192 });
+await dump(modelParams, { api_model_id: "deepseek-v4.1-flash", context_window: 1000000, max_tokens: 384000 });
 await dump(toolPolicy, ["read", "bash", "edit", "write", "grep", "find", "ls", "lore_query", "lore_get"]);
-await writeFile(systemPrompt, "You are a coding agent. Complete the user task using the available tools. Decide independently which tools to use.\n", { flag: "wx", mode: 0o600 });
+await writeFile(systemPrompt, "You are a coding agent. Complete the user task using the available tools. Lore is an optional knowledge search tool: lore_query returns Practice titles and applicability metadata, while lore_get reads a Practice by ID. Decide independently whether either tool would help.\n", { flag: "wx", mode: 0o600 });
 const publicRoot = join(candidate, "public"), evaluatorRoot = join(candidate, "private", "evaluator");
 const starterSha = await sha256SnapshotDirectory(join(publicRoot, "starter"));
 const taskSha = await sha256File(join(publicRoot, "task.md"));
@@ -308,5 +310,9 @@ openspec validate autonomous-pack-benchmark-242 --type change --strict --json
 `schedulePlan` 生成固定配对次序，`summarizePlan` 将缺失、失败和不可比较的运行保留在计划分母；其输出不是正式 record。完整覆盖时未查询、空结果、查询失败和读取失败是不同状态；trace 截断或无法观测的调用不能判为未查询。shell 可以绕过专用工具调用 Lore，因此出现 shell 调用时检索总体状态保守标为 `indeterminate`；已观察的 query 成功、空结果、失败和不确定次数仍分别记录与汇总，只代表轨迹中可见的调用。旧观测缺少这些计数字段时标为不可得，不当作零。这不单独排除其他条件满足的功能比较。功能是否完成由语义断言决定，架构及可维护性为独立质量证据，不使用隐藏加权总分。
 
 Agent 失败时不执行语义评估，也不纳入有效配对；仍保留已完成的可见 Lore 读取计数，整体检索状态为不可判定。代理独立收尾后，如供应商用量事件完整且终态可核验，失败运行仍报告相应用量；缺失或中断时不估算。
+
+模型代理仅在流式响应的首个事件明确报告 `Concurrency limit exceeded for user, please retry later`、尚未向 Agent 交付响应时做有限退避重试，最多额外三次，每次计入相同的请求预算。其他错误及已开始响应的流不重放；重试耗尽时保留原错误。不完整的供应商用量仍不可用，不能把重试次数误当费用。
+
+代理的 `Upstream connection failed` 表示连接上游时发生异常；`Upstream returned HTTP <状态码>` 表示上游已返回该 HTTP 状态。二者都不包含上游响应正文或凭据；旧版本的 `Upstream request failed` 未区分这两种情况，不能据此反推原因。
 
 用户已取消严格总 token 上限；两组仍须使用相同的时间和轮次预算。用量由代理记录，只有每次请求的事件和终态完整一致时才汇总 token；费用目前仅识别供应商响应中明确以美元命名的 `usage.cost_usd` 数值，并且仅在所有请求都有有效费用时汇总。其他字段、币种、缺失或冲突均不推算为美元费用；token 仍可单独可用。**这不提供严格 token 或费用封顶**；真实模型运行、正式记录和提升为 suite revision 仍需各自的生命周期、安全和授权门禁。

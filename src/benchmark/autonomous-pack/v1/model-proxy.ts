@@ -1,4 +1,5 @@
 import { isIP } from "node:net";
+import { setTimeout as delay } from "node:timers/promises";
 import { UsageCollector } from "./provider-usage";
 
 export { UsageCollector } from "./provider-usage";
@@ -13,6 +14,38 @@ export type ModelProxyConfig = {
   hostname: string;
   maxRequests: number;
 };
+
+const concurrencyError = "Concurrency limit exceeded for user, please retry later";
+const firstEventLimit = 64 * 1024;
+
+async function inspectFirstEvent(reader: ReadableStreamDefaultReader<Uint8Array>) {
+  const chunks: Uint8Array[] = [];
+  const decoder = new TextDecoder();
+  let text = "", size = 0;
+  while (size < firstEventLimit) {
+    const part = await reader.read();
+    if (part.done) break;
+    chunks.push(part.value);
+    size += part.value.byteLength;
+    if (size > firstEventLimit) break;
+    text += decoder.decode(part.value, { stream: true });
+    let end: RegExpExecArray | null;
+    while ((end = /\r\n\r\n|\n\n|\r\r/.exec(text))) {
+      const lines = text.slice(0, end.index).split(/\r\n|\r|\n/)
+        .filter(line => line === "data" || line.startsWith("data:"));
+      text = text.slice(end.index + end[0].length);
+      if (!lines.length) continue;
+      const data = lines.map(line => line.slice(5).replace(/^ /, "")).join("\n");
+      try {
+        const event = JSON.parse(data);
+        return { chunks, limited: event?.error?.message === concurrencyError };
+      } catch {
+        return { chunks, limited: false };
+      }
+    }
+  }
+  return { chunks, limited: false };
+}
 
 export function startModelProxy(config: ModelProxyConfig, usage = new UsageCollector()) {
   let base: URL;
@@ -35,34 +68,62 @@ export function startModelProxy(config: ModelProxyConfig, usage = new UsageColle
       let body: unknown;
       try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
       if (!body || typeof body !== "object" || Array.isArray(body) || (body as Record<string, unknown>).model !== config.model) return new Response("Model not permitted", { status: 403 });
-      // Enforce the equal turn budget independently of Pi extensions. Every
-      // permitted provider request consumes one slot, including failures.
-      if (requests >= config.maxRequests) return new Response("Request budget exhausted", { status: 429 });
-      requests++;
-      const capture = usage.begin();
+      // Every upstream attempt, including a retry, consumes one budget slot.
       const payload = body as Record<string, unknown>;
       if (payload.stream === true) {
         const options = payload.stream_options;
         payload.stream_options = { ...(options && typeof options === "object" && !Array.isArray(options) ? options : {}), include_usage: true };
       }
       let upstream: Response;
-      try {
-        upstream = await fetch(endpoint, {
-          method: "POST",
-          headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
-          body: JSON.stringify(body),
-          redirect: "manual",
-          signal: request.signal,
-        });
-      } catch {
-        capture.finish("error");
-        return new Response("Upstream request failed", { status: 502 });
-      }
-      // Never relay provider error bodies, which may contain sensitive details.
-      if (!upstream.ok) {
-        capture.finish("error");
-        void upstream.body?.cancel().catch(() => {});
-        return new Response("Upstream request failed", { status: upstream.status >= 400 && upstream.status <= 599 ? upstream.status : 502 });
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+      let buffered: Uint8Array[] = [];
+      let capture: ReturnType<UsageCollector["begin"]>;
+      let retryReserved = false;
+      for (let attempt = 0; ; attempt++) {
+        reader = undefined;
+        buffered = [];
+        if (!retryReserved) {
+          if (requests >= config.maxRequests) return new Response("Request budget exhausted", { status: 429 });
+          requests++;
+        }
+        retryReserved = false;
+        capture = usage.begin();
+        try {
+          upstream = await fetch(endpoint, {
+            method: "POST",
+            headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` },
+            body: JSON.stringify(body),
+            redirect: "manual",
+            signal: request.signal,
+          });
+        } catch {
+          capture.finish("error");
+          return new Response("Upstream connection failed", { status: 502 });
+        }
+        // Never relay provider HTTP error bodies, which may contain sensitive details.
+        if (!upstream.ok) {
+          capture.finish("error");
+          void upstream.body?.cancel().catch(() => {});
+          return new Response(`Upstream returned HTTP ${upstream.status}`, { status: upstream.status >= 400 && upstream.status <= 599 ? upstream.status : 502 });
+        }
+        const type = upstream.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+        if (type !== "text/event-stream" || !upstream.body) break;
+        reader = upstream.body.getReader();
+        try {
+          const first = await inspectFirstEvent(reader);
+          buffered = first.chunks;
+          if (!first.limited || attempt >= 3 || requests >= config.maxRequests) break;
+          capture.finish("error");
+          await delay(2_000 * 2 ** attempt, undefined, { signal: request.signal });
+          if (requests >= config.maxRequests) break;
+          requests++;
+          retryReserved = true;
+          await reader.cancel().catch(() => {});
+        } catch {
+          capture.finish("interrupted");
+          await reader.cancel().catch(() => {});
+          return new Response("Upstream response interrupted", { status: 502 });
+        }
       }
       const contentType = upstream.headers.get("content-type");
       const streaming = contentType?.split(";", 1)[0].trim().toLowerCase() === "text/event-stream";
@@ -70,11 +131,14 @@ export function startModelProxy(config: ModelProxyConfig, usage = new UsageColle
         capture.finish("missing");
         return new Response(null, { status: upstream.status, headers: contentType ? { "content-type": contentType } : {} });
       }
-      const reader = upstream.body.getReader();
+      const source = reader ?? upstream.body.getReader();
+      let bufferedIndex = 0;
       const responseBody = new ReadableStream<Uint8Array>({
         async pull(controller) {
           try {
-            const result = await reader.read();
+            const result = bufferedIndex < buffered.length
+              ? { done: false as const, value: buffered[bufferedIndex++]! }
+              : await source.read();
             if (result.done) {
               capture.end(streaming);
               controller.close();
@@ -89,7 +153,7 @@ export function startModelProxy(config: ModelProxyConfig, usage = new UsageColle
         },
         async cancel() {
           capture.finish("interrupted");
-          try { await reader.cancel(); } catch {}
+          try { await source.cancel(); } catch {}
         },
       });
       return new Response(responseBody, { status: upstream.status, headers: contentType ? { "content-type": contentType } : {} });
