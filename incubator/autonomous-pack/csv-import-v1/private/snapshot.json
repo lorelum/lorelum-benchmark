@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "3a82e1ba2be2d8d351c26642ea66015e7fc604b1409683de15bba73716ca6798",
+  "files": {
+    "private/calibration/defect-duplicates/src/importer.py": "8fe59675be440912c1ae0480e9ef96ef27c437b816bfd487f472615160f736a0",
+    "private/calibration/defect-duplicates/src/main.py": "27e02e79727152bfb42e88048045bb371123f38f8b36bd9ea9d43464acaf2895",
+    "private/calibration/defect-email/src/importer.py": "1e80fbf9a12355752d767b1e25155c21c0048852f29fb01717402f456aae9c62",
+    "private/calibration/defect-email/src/main.py": "27e02e79727152bfb42e88048045bb371123f38f8b36bd9ea9d43464acaf2895",
+    "private/calibration/starter/src/importer.py": "0ecb76c3e7cd9f7824e2d499e7887e5beea81b8ff8def156624af2777313ded3",
+    "private/calibration/starter/src/main.py": "df05ffe750f0dfecfcce7e1e98bde346c2157b2bb1a998ccb0333849f4932ba7",
+    "private/calibration/valid-iterator/src/importer.py": "22af9609b78e9c7025abe5029385e620b7e49a50e44c7f74b89553494172aa1d",
+    "private/calibration/valid-iterator/src/main.py": "27e02e79727152bfb42e88048045bb371123f38f8b36bd9ea9d43464acaf2895",
+    "private/calibration/valid-mapping/src/importer.py": "a60441737fa8f6ff35dccb0548e561c050f06bf1e93acebcdc60cdfc030d67ce",
+    "private/calibration/valid-mapping/src/main.py": "27e02e79727152bfb42e88048045bb371123f38f8b36bd9ea9d43464acaf2895",
+    "private/candidate.yaml": "2615147594d8f04a0bba5529db560a9aa466c54f462e5a505d7851d8cc8214e9",
+    "private/evaluator/contract.json": "c592f4a8f7721fdb04f4aa8e575fcb849929f7998919f997f63c2a2fac3bb192",
+    "private/evaluator/driver.py": "bc0168a09f647ef8df06063974a9f68aa0c20eaa153a3d37ad971d325dacc7d4",
+    "public/starter/src/importer.py": "0ecb76c3e7cd9f7824e2d499e7887e5beea81b8ff8def156624af2777313ded3",
+    "public/starter/src/main.py": "df05ffe750f0dfecfcce7e1e98bde346c2157b2bb1a998ccb0333849f4932ba7",
+    "public/task.md": "70a8cac0bc63369378c147fe4886e2b23c2cc75eebe09582331816fee8f29982"
+  }
+}

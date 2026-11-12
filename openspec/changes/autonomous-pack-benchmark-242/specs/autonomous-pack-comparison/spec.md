@@ -45,3 +45,23 @@
 #### Scenario: 历史结果
 - **WHEN** 新比较改变任务、环境、评测器或 treatment 的运行含义
 - **THEN** 使用新版本并保留历史版本及记录
+
+### Requirement: 声明式任务与验证
+
+系统 MUST 支持通过版本化声明指定任务公开输入、任务环境与私有 verifier，使新任务和新 Pack 不必修改配对 runner；MUST 固定这些输入及实际 Pack 快照的身份。支持范围 MUST 真实反映已实现的 Agent、模型协议与运行环境，不得将未实现的 adapter 宣称为可用。
+
+#### Scenario: 不同技术栈的任务
+- **WHEN** 贡献者提供满足任务声明和 verifier 契约的不同技术栈任务
+- **THEN** 相同配对 runner 能执行该任务的两个条件，使用相同的任务环境与非 treatment 配置
+
+#### Scenario: verifier 或环境故障
+- **WHEN** verifier 无法运行、超时、传输失败或输出无效
+- **THEN** 系统记录评测不可判定或执行失败，不将其转换为功能不通过或通过
+
+#### Scenario: 候选执行隔离
+- **WHEN** 私有 verifier 检查 Agent 产生的候选
+- **THEN** 候选在无网络受限环境执行，私有 verifier、oracle 和可信结果文件不进入候选环境，候选不得直接写入可信评测结果
+
+#### Scenario: 未声明质量评估
+- **WHEN** 任务仅声明功能 verifier 而未声明质量证据
+- **THEN** 报告功能结果并将质量标为未评，不构造分数或阻止其他条件满足的配对比较

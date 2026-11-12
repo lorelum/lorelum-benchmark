@@ -2,6 +2,101 @@
 
 本文描述 Issue [#242](https://github.com/lorelum/lorelum-benchmark/issues/242) 的配对 pilot。真实模型执行需要明确授权；pilot 不产生正式 record，不等于正式实验结论。
 
+## 可复用任务框架（v2）
+
+本节面向希望比较其他 Pack、贡献新编码任务或复现实验的使用者。`v2` 将任务输入、任务运行环境、私有 verifier 与配对执行分开；目前真实 Agent adapter 是 Pi 1.5.0，模型必须属于其固定目录中受支持的 `openai-completions` 协议。它不是任意 Agent 或任意模型协议的通用适配器。每个计划使用一个共同的 Agent 镜像；多任务计划的所有任务运行时都要在该镜像及环境声明中提供。
+
+### 制作或选择任务
+
+参考 [`config-migration-v2`](../incubator/autonomous-pack/config-migration-v2/) 和 [`csv-import-v3`](../incubator/autonomous-pack/csv-import-v3/)。新任务放在 `incubator/autonomous-pack/<id>/`：
+
+- `public/task.md` 和 `public/starter/` 是 Agent 唯一可见的任务材料。
+- `private/candidate.yaml` 遵循 [`coding-task/v1`](../schemas/coding-task-v1.schema.json)，绑定公开路径、运行时名称、私有 evaluator 和校准目录；同一计划中的任务 ID 不得重复。
+- `private/evaluator/contract.json` 遵循 [`coding-verifier/v1`](../schemas/coding-verifier-v1.schema.json)，声明两个非 shell 命令和超时。每个命令是两个绝对路径：镜像内 runtime 可执行文件，以及分别位于 `/verifier/` 或 `/workspace/` 的入口文件。可添加 evaluator 辅助文件；它们均计入 verifier 摘要。
+- `private/calibration/expectations.json` 遵循 [`coding-calibration/v1`](../schemas/coding-calibration-v1.schema.json)，列出合理解、对应功能缺陷和预期。校准是作者诊断，不是每次 pilot 都要重复执行的门槛。
+
+Verifier driver 与候选分别在无网络容器中运行，只有 driver 挂载只读私有 evaluator，只有候选挂载只读工作区；它们通过框架中介 JSON Lines。driver 向 stdout 发送 `{"type":"call","id":"唯一字符串","input":<JSON>}`，候选从 stdin 接收一行 JSON 并输出一行 JSON；driver 从 stdin 收到 `{"type":"reply","id":"同一字符串","output":<JSON>}`。完成至少一次交互后，driver 输出 `{"type":"result","semantic":"pass"}` 或 `"fail"`，然后正常退出；框架关闭候选 stdin 并要求候选正常退出。格式错误、意外退出、超时或容器失败记作未评或不可判定，不伪装成语义不通过。私有测试值会作为输入传给候选；不挂载私有文件不等于消除测试交互侧信道。
+
+任务可以使用其他技术栈：在选定镜像安装对应运行时、在环境 manifest 的 `task_runtimes` 中声明，再提供符合上述协议的入口；不需要改 runner。Docker daemon、宿主、镜像和任务作者的 driver 仍是可信基础，不应运行来源不可信的 verifier。
+
+检查任务声明和可选校准（`IMAGE_ID` 是完整 `sha256:...` 镜像 ID，输出目录必须不存在）：
+
+```sh
+bun --no-env-file run bench task inspect /absolute/path/to/csv-import-v3
+bun --no-env-file run bench task calibrate /absolute/path/to/csv-import-v3 "$IMAGE_ID" /absolute/path/to/new-calibration-output
+```
+
+该命令不运行 Agent 或调用模型。`not-run` 与 `fail` 不同：例如 Python 示例的未完成 starter 在协议完成前退出，校准期望其为不可判定；两个具体缺陷解则须被 verifier 判为语义失败。
+
+### 运行环境和 Pack
+
+按下文 v1 环境准备步骤构建基础 Agent 与代理镜像，按“冻结 Pack 与公开输入”和“准备两组索引”建立同一 Pack 快照及空 Store/安装 Pack 索引。`prepare` 会再次复制并核对所给 Pack 的**实际完整树**，所以包含未提交改动；两份索引的 Pack、embedding 模型、profile 与 encoding 必须与之匹配。换 Pack 必须准备与该 Pack 匹配的新索引，不能仅修改配置路径。
+
+Node/Python 示例可在现有基础镜像上构建组合环境：
+
+```sh
+docker build --build-arg AUTONOMOUS_PACK_BASE=lorelum-autonomous-pack:v1 \
+  -f Dockerfile.autonomous-pack-python -t lorelum-autonomous-pack:node-python .
+docker image inspect --format '{{.Id}}' lorelum-autonomous-pack:node-python
+docker image inspect --format '{{.Id}}' lorelum-autonomous-pack-proxy:v1
+```
+
+示例环境 [`environment.yaml`](../environments/autonomous-pack/v2/environment.yaml) 声明 Node 26.13.0 和 Python 3.13.5。Dockerfile 固定 Python 软件包版本，但上游 apt 仓库及其他系统包可能变化；实际计划绑定最终镜像 ID，完整复现仍需保留或受控分发该不可变镜像。更换 embedding profile、模型或运行时，须提供与实际设置一致的版本化环境 manifest 和镜像，不要沿用不匹配的示例声明。
+
+### 准备、运行与报告
+
+先创建本地受控 JSON 配置；以下路径和摘要需替换为本机真实值，不能填入 API key。`modelParameters` 是已有的 JSON 文件，格式为 `{"api_model_id":"...","context_window":1000000,"max_tokens":384000}`，参数必须与环境声明和 Pi 目录模型一致；该输出上限不是费用上限。`systemPrompt` 是两组共用的公开文本，不能包含题目专属 query 或私有材料。
+
+```json
+{
+  "id": "comparison-001",
+  "tasks": ["/absolute/path/to/config-migration-v2", "/absolute/path/to/csv-import-v3"],
+  "packSource": "/absolute/path/to/actual-pack",
+  "environment": "/absolute/path/to/environments/autonomous-pack/v2/environment.yaml",
+  "agentImage": "sha256:<complete-agent-image-id>",
+  "proxyImage": "sha256:<complete-proxy-image-id>",
+  "modelParameters": "/absolute/path/to/model.json",
+  "systemPrompt": "/absolute/path/to/system.txt",
+  "modelFile": "/absolute/path/to/embedding-model.gguf",
+  "indexes": {
+    "empty": {"archive": "/absolute/path/to/empty/index.tar", "metadata": "/absolute/path/to/empty/metadata.json"},
+    "installed": {"archive": "/absolute/path/to/installed/index.tar", "metadata": "/absolute/path/to/installed/metadata.json"}
+  },
+  "repetitions": 1,
+  "orderSeed": 8,
+  "budget": {"max_turns": 20, "max_duration_ms": 480000},
+  "auditWaitMs": 30000
+}
+```
+
+所有路径必须是绝对路径。Windows 上使用 Bun 可识别的 `E:/...` 路径。准备和运行分别从环境变量读取 `LORELUM_PI_BASE_URL`，运行还读取 `LORELUM_PI_API_KEY`；不要将凭据写入 JSON、终端输出或 Git。准备时绑定端点摘要，但不调用模型：
+
+```sh
+bun --no-env-file run bench prepare /absolute/path/to/config.json /absolute/path/to/new-prepared-dir
+bun --no-env-file run bench run /absolute/path/to/new-prepared-dir/pilot.json
+bun --no-env-file run bench report /absolute/path/to/new-prepared-dir/output
+```
+
+新目录必须不存在、父目录必须存在，且输出不能覆盖输入。`pilot.json` 包含本机路径和执行计划，不含凭据；计划绑定任务声明和校准摘要、公开输入、私有 evaluator、环境、镜像、Pack、索引、模型及预算。`plan.json` 是 v2 外层计划，`execution-plan.json` 是供既有调度器使用的派生计划，`execution.json` 绑定两者身份；历史 v1 计划和结果不会被覆盖。CLI 不向终端回显来源不可信的异常内容；失败时检查本机受控配置和对应私有输出。
+
+`summary.json` 保留计划总数、不可比较与缺失原因；功能、质量、检索、健康及成本独立解释。默认不运行质量评估，不以零分代替；普通轨迹无法覆盖 shell 内的 Lore CLI 调用时，整体检索仍为 `indeterminate`。模型或 verifier 故障不等于功能失败。固定相同时间和轮次预算，不承诺 token 或费用封顶。
+
+### 受控交接
+
+仅在有权复制和分享所有内容时导出私有复现包：
+
+```sh
+bun --no-env-file run bench bundle export /absolute/path/to/new-prepared-dir/pilot.json /absolute/path/to/new-bundle --include-private
+bun --no-env-file run bench bundle verify /absolute/path/to/new-bundle
+bun --no-env-file run bench bundle run /absolute/path/to/new-bundle /absolute/path/to/new-output
+```
+
+该包包含完整 Pack 快照、公开任务、**私有 verifier 和校准解**、embedding 模型及两组索引；它不包含模型凭据、Agent 轨迹、工作区或 diff，不能当成公开报告。镜像本身不在包内，需要另行按计划中的不可变镜像 ID 分发；端点 URL 和凭据也须另行安全配置，且 URL 摘要必须与计划一致。原计划中的本机快照 URI 只保留为来源信息，恢复运行使用 bundle 内的相对内容。导出和校验均比较内容摘要、任务契约与计划，协作者仍应确认 Pack 和模型分发授权。
+
+## 历史 v1 pilot 操作
+
+以下保留退款候选和 v1 runner 的原始操作，供历史 pilot 复现；新任务优先使用上面的 v2 入口。v1 的两个文件固定 evaluator 约束不适用于 v2。
+
 ## 对照与结论边界
 
 两组使用相同 task、starter、系统提示、模型、工具、环境和预算；基线使用空 Lore Store，处理组只多安装固定 Pack。Agent 自行选择是否查询和读取 Practice，不由 benchmark 预先查询或注入。记录功能、质量、检索行为、运行健康与成本时分开报告；一次查询或一个成功题目不证明 Pack 提升了代码质量。

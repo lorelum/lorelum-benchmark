@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coding-verification-result-v1.schema.json",
+  "title": "Coding verification result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["health", "semantic", "quality", "quality_probes", "failure_reasons"],
+  "properties": {
+    "health": { "enum": ["evaluated", "execution-failed", "indeterminate"] },
+    "semantic": { "enum": ["pass", "fail", "not-run"] },
+    "quality": { "const": "not-run" },
+    "quality_probes": { "type": "array", "maxItems": 0 },
+    "failure_reasons": { "type": "array", "items": { "type": "string" } }
+  },
+  "allOf": [
+    { "if": { "properties": { "health": { "const": "evaluated" } } }, "then": { "properties": { "semantic": { "enum": ["pass", "fail"] }, "failure_reasons": { "type": "array", "maxItems": 0 } } }, "else": { "properties": { "semantic": { "const": "not-run" }, "failure_reasons": { "type": "array", "minItems": 1 } } } }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "autonomous-pack-bundle-v1.schema.json",
+  "title": "Private autonomous Pack reproduction bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan", "plan_sha256", "auditWaitMs", "entries"],
+  "properties": {
+    "schema_version": { "const": "autonomous-pack-bundle/v1" },
+    "plan": { "$ref": "autonomous-pack-plan-v2.schema.json" },
+    "plan_sha256": { "$ref": "#/$defs/digest" },
+    "auditWaitMs": { "type": "integer", "minimum": 1 },
+    "entries": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["key", "path", "kind", "sha256"],
+        "properties": {
+          "key": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "pattern": "^data/[A-Za-z0-9._/-]+$" },
+          "kind": { "enum": ["file", "tree"] },
+          "sha256": { "$ref": "#/$defs/digest" }
+        }
+      }
+    }
+  },
+  "$defs": { "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+}

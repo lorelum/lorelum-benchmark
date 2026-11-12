@@ -1,0 +1,6 @@
+{
+  "schema_version": "coding-verifier/v1",
+  "driver": ["/usr/local/bin/node", "/verifier/driver.mjs"],
+  "candidate": ["/usr/local/bin/node", "/workspace/src/cli.js"],
+  "timeout_ms": 120000
+}

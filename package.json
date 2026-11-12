@@ -5,6 +5,7 @@
   "scripts": {
     "validate": "bun run src/benchmark/validate.ts && bun run src/benchmark/snapshot.ts",
     "snapshot": "bun run src/benchmark/snapshot.ts --write",
+    "bench": "bun run src/benchmark/autonomous-pack/v2/cli.ts",
     "evaluate": "bun run src/benchmark/evaluate.ts",
     "pi": "bun run src/benchmark/runner/pi/v2/execute.ts",
     "pi:coordinate": "bun run src/benchmark/runner/pi/v2/coordinator.ts",

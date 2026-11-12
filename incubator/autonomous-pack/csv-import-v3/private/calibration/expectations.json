@@ -1,0 +1,10 @@
+{
+  "schema_version": "coding-calibration/v1",
+  "workspaces": [
+    { "path": "valid-iterator", "expected_semantic": "pass", "purpose": "Incremental CSV parsing and accepted-ID set." },
+    { "path": "valid-mapping", "expected_semantic": "pass", "purpose": "Independent validation and mapping-based deduplication." },
+    { "path": "defect-duplicates", "expected_semantic": "fail", "purpose": "Fails to reject previously accepted IDs." },
+    { "path": "defect-email", "expected_semantic": "fail", "purpose": "Accepts malformed email addresses." },
+    { "path": "starter", "expected_semantic": "not-run", "purpose": "Unimplemented starter exits before a complete semantic result." }
+  ]
+}

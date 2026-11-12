@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "snapshot_id": "15a8203f83d56433e555cc21425331f3ef654a9b5b238604a7054c20972514dd",
+  "files": {
+    "private/calibration/defect-legacy/src/cli.js": "fc23ffb28e5d729e0827bc3856a3bb7718b646f1a2819016cc461c48ab6876f6",
+    "private/calibration/defect-legacy/src/migrate.js": "b413a1be5fef077417e33cbfba05cd7bc1b6e57f83dc2f3c06d4f2bbe7498362",
+    "private/calibration/defect-precedence/src/cli.js": "fc23ffb28e5d729e0827bc3856a3bb7718b646f1a2819016cc461c48ab6876f6",
+    "private/calibration/defect-precedence/src/migrate.js": "345136837ed91bcf451e95bb510e6e55ea08c12d4d7ea7a79c23c446fd19c392",
+    "private/calibration/expectations.json": "2bb47af404c4ceb49b39d44ae4a7de2fd2141051236129606edf88a0d484e479",
+    "private/calibration/starter/src/cli.js": "fc23ffb28e5d729e0827bc3856a3bb7718b646f1a2819016cc461c48ab6876f6",
+    "private/calibration/starter/src/migrate.js": "6555e12fed5727ced9a4ea0da92b6994092dbc6f1db3f5b73965ebd2e9b838b2",
+    "private/calibration/valid-clone/src/cli.js": "fc23ffb28e5d729e0827bc3856a3bb7718b646f1a2819016cc461c48ab6876f6",
+    "private/calibration/valid-clone/src/migrate.js": "f87316e47f6aa4a49138d5e67ba7b9126e72a11713fe41f3d1f5df5dbfbc6cca",
+    "private/calibration/valid-spread/src/cli.js": "fc23ffb28e5d729e0827bc3856a3bb7718b646f1a2819016cc461c48ab6876f6",
+    "private/calibration/valid-spread/src/migrate.js": "d02d5bee5bfc4b826f6401a26c40326cad0174664ead2dabe02b0b6d3f25a80f",
+    "private/candidate.yaml": "283da5c8954927f38b15004fac66696d5a76ed418b09b6bf35ca3c4ea221c10d",
+    "private/evaluator/contract.json": "45bbe32e0b43ef72a3de62cb9fdfe4c089febea082a8205dc7008ce640f705fb",
+    "private/evaluator/driver.mjs": "3c11c4e2a329f4da5d1104e0198e247456d463955246a6761119329480e904c4",
+    "public/starter/src/cli.js": "fc23ffb28e5d729e0827bc3856a3bb7718b646f1a2819016cc461c48ab6876f6",
+    "public/starter/src/migrate.js": "6555e12fed5727ced9a4ea0da92b6994092dbc6f1db3f5b73965ebd2e9b838b2",
+    "public/task.md": "9e500f17a60aa6bba94a3e91c9eca60c4e9104b192bf1d4ce208a7922f496d0d"
+  }
+}
