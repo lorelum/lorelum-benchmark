@@ -5,6 +5,8 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const snapshot = join(root, "src", "benchmark", "snapshot.ts");
+// Snapshot tests perform multiple filesystem and CLI operations under shared CI load.
+const SNAPSHOT_TEST_TIMEOUT_MS = 30_000;
 
 async function createCandidateWorkspace(): Promise<string> {
   const workspace = await mkdtemp(join(tmpdir(), "lorelum-snapshot-"));
@@ -113,7 +115,7 @@ test("writes and verifies a complete incubator candidate snapshot", async () => 
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 
 test("binds validated Practice inputs to the resolved snapshot without exposing text or paths", async () => {
   const workspace = await createInjectionCandidateWorkspace();
@@ -140,13 +142,13 @@ test("binds validated Practice inputs to the resolved snapshot without exposing 
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 
 test("keeps the legacy #75 candidate on its non-kernel snapshot path", async () => {
   const result = await runSnapshot(root, "--incubator", "practice-injection", "login-page-layered-api-v1");
   expect(result.exitCode).toBe(0);
   expect(result.output).toContain("Snapshots are intact.");
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 test("normal verification preserves the raw-byte policy of a stored v2 snapshot", async () => {
   const workspace = await createCandidateWorkspace();
   const candidate = join(workspace, "incubator", "candidates", "example-candidate");
@@ -163,7 +165,7 @@ test("normal verification preserves the raw-byte policy of a stored v2 snapshot"
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 
 test("valid UTF-8 control-heavy payloads remain byte-exact as binary input", async () => {
   const workspace = await createCandidateWorkspace();
@@ -178,7 +180,7 @@ test("valid UTF-8 control-heavy payloads remain byte-exact as binary input", asy
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 
 test("v1 snapshot identity is stable across text line endings but byte-exact for binary and invalid UTF-8", async () => {
   const lfWorkspace = await createCandidateWorkspace();
@@ -222,7 +224,7 @@ test("v1 snapshot identity is stable across text line endings but byte-exact for
     await rm(lfWorkspace, { force: true, recursive: true });
     await rm(alternateWorkspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 test("v2 writes a canonical tree root without a files manifest and verifies across clean checkouts", async () => {
   const workspace1 = await createCandidateWorkspace();
   const workspace2 = await createCandidateWorkspace();
@@ -250,7 +252,7 @@ test("v2 writes a canonical tree root without a files manifest and verifies acro
     await rm(workspace1, { force: true, recursive: true });
     await rm(workspace2, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 
 test("v2 fails when content changes, files are added, deleted, or renamed", async () => {
   const workspace = await createCandidateWorkspace();
@@ -289,7 +291,7 @@ test("v2 fails when content changes, files are added, deleted, or renamed", asyn
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 
 test("v2 rejects symbolic links and excludes generated output", async () => {
   const workspace = await createCandidateWorkspace();
@@ -318,7 +320,7 @@ test("v2 rejects symbolic links and excludes generated output", async () => {
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 
 test("v2 coexists with v1 and does not touch v1 snapshots", async () => {
   const workspace = await createCandidateWorkspace();
@@ -346,7 +348,7 @@ test("v2 coexists with v1 and does not touch v1 snapshots", async () => {
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 
 test("v2 rejects malformed snapshot schema", async () => {
   const workspace = await createCandidateWorkspace();
@@ -365,7 +367,7 @@ test("v2 rejects malformed snapshot schema", async () => {
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);
 
 test("v2 excludes Practice text and private/practices paths for injection-calibration profile", async () => {
   const workspace = await createInjectionCandidateWorkspace();
@@ -396,4 +398,4 @@ test("v2 excludes Practice text and private/practices paths for injection-calibr
   } finally {
     await rm(workspace, { force: true, recursive: true });
   }
-});
+}, SNAPSHOT_TEST_TIMEOUT_MS);

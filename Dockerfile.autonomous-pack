@@ -1,0 +1,36 @@
+FROM node:26.13.0-trixie-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072
+
+# Lore's Linux release is built on Ubuntu 24.04; trixie supplies a compatible
+# glibc. Keep the release binary beside its native runtime, as upstream requires.
+RUN apt-get update && apt-get install --yes --no-install-recommends ca-certificates curl libstdc++6 procps && rm -rf /var/lib/apt/lists/* && \
+    npm install --global bun@1.4.4 && \
+    curl --fail --location --silent --show-error --output /tmp/lore.tar.gz https://github.com/lorelum/lorelum/releases/download/v0.1.0-alpha.7/lore-0.1.0-alpha.7-linux-x64.tar.gz && \
+    echo '675b837c378e9af3400bbcdb15af25d2bd021b9ea31f76c52a8660cb4aabec0f  /tmp/lore.tar.gz' | sha256sum -c - && \
+    mkdir -p /opt/lorelum && \
+    tar -xzf /tmp/lore.tar.gz --strip-components=1 -C /opt/lorelum && \
+    rm /tmp/lore.tar.gz && \
+    test -x /opt/lorelum/lore && test -x /opt/lorelum/native/linux-x64/lore-model && ln -s /opt/lorelum/lore /usr/local/bin/lore
+
+WORKDIR /opt/autonomous-pack
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile && ln -s /opt/autonomous-pack/node_modules/.bin/pi /usr/local/bin/pi && \
+    test "$(bun --version)" = "1.4.4" && test "$(node --version)" = "v26.13.0" && test "$(pi --version)" = "1.5.0"
+COPY src/benchmark/fs.ts /opt/autonomous-pack/src/benchmark/fs.ts
+COPY src/benchmark/autonomous-pack/v1/snapshot.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/snapshot.ts
+COPY src/benchmark/autonomous-pack/v1/index-prepare.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/index-prepare.ts
+COPY src/benchmark/autonomous-pack/v1/index-archive.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/index-archive.ts
+COPY src/benchmark/autonomous-pack/v1/index-restore.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/index-restore.ts
+COPY src/benchmark/autonomous-pack/v1/agent-bootstrap.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/agent-bootstrap.ts
+COPY src/benchmark/autonomous-pack/v1/lore-extension.ts /opt/autonomous-pack/src/benchmark/autonomous-pack/v1/lore-extension.ts
+COPY environments/autonomous-pack/v1/entrypoint.sh /usr/local/bin/autonomous-pack-entrypoint
+RUN chmod 755 /usr/local/bin/autonomous-pack-entrypoint
+ENV HOME=/tmp/lorelum/home \
+    XDG_CONFIG_HOME=/tmp/lorelum/home/.config \
+    XDG_CACHE_HOME=/tmp/lorelum/home/.cache \
+    XDG_DATA_HOME=/tmp/lorelum/home/.local/share \
+    LORE_CLI_PATH=/opt/lorelum/lore \
+    LORE_STORE_ROOT=/tmp/lorelum/home/.lorelum \
+    LORE_CACHE_ROOT=/tmp/lorelum/home/.lorelum/cache
+USER 65532:65532
+WORKDIR /workspace
+ENTRYPOINT ["/usr/local/bin/autonomous-pack-entrypoint"]

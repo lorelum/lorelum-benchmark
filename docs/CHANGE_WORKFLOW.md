@@ -43,5 +43,7 @@
   不得作为 stable spec delta 归档。纯文字纠错适用直接 PR 例外时，无需单独 Plan，但 PR 仍须说明其跨任务适用性。
 - 实现按 `tasks.md` 的依赖顺序推进。完成每项任务后立即勾选；触及 suite、任务、schema 或
   benchmark 代码时运行 `bun run validate`，并在 PR 中保留验证证据和未执行原因。
+  `bun run test:contracts` 按 core、runner 顺序运行；snapshot CLI 集成测试逐项使用 30 秒
+  上限，以覆盖共享负载下的文件系统及子进程操作，其他测试不因此延长超时。
 - OpenSpec 的 strict validation、public/private 泄露审计及生命周期门禁未通过前，不得执行
   模型调用、创建正式 record，或将 candidate 升级为 suite revision。

@@ -1,0 +1,10 @@
+{
+  "schema_version": "coding-calibration/v1",
+  "workspaces": [
+    { "path": "valid-spread", "expected_semantic": "pass", "purpose": "Migration using object spread and modern-first fallback." },
+    { "path": "valid-clone", "expected_semantic": "pass", "purpose": "Migration using an independent clone and explicit presence checks." },
+    { "path": "defect-legacy", "expected_semantic": "fail", "purpose": "Drops legacy values instead of migrating them; legacy-only and mixed-field cases detect it." },
+    { "path": "defect-precedence", "expected_semantic": "fail", "purpose": "Legacy values override existing modern values; conflicting and mixed-field cases detect it." },
+    { "path": "starter", "expected_semantic": "fail", "purpose": "Unfinished public starter returns the input; default and legacy cases detect it." }
+  ]
+}

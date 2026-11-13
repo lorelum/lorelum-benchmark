@@ -1,0 +1,13 @@
+schema_version: coding-task/v1
+id: csv-import-v2
+lifecycle_stage: candidate
+public:
+  task: public/task.md
+  starter: public/starter
+environment:
+  runtime: python
+verifier:
+  root: private/evaluator
+  contract: private/evaluator/contract.json
+calibration:
+  root: private/calibration

@@ -1,0 +1,9 @@
+FROM node:26.13.0-trixie-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072
+
+RUN npm install --global bun@1.4.4 && test "$(bun --version)" = "1.4.4"
+WORKDIR /opt/autonomous-pack
+COPY src/benchmark/autonomous-pack/v1/model-proxy.ts src/benchmark/autonomous-pack/v1/model-proxy.ts
+COPY src/benchmark/autonomous-pack/v1/model-endpoint.ts src/benchmark/autonomous-pack/v1/model-endpoint.ts
+COPY src/benchmark/autonomous-pack/v1/provider-usage.ts src/benchmark/autonomous-pack/v1/provider-usage.ts
+USER 65532:65532
+ENTRYPOINT ["bun", "run", "src/benchmark/autonomous-pack/v1/model-proxy.ts"]

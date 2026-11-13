@@ -1,0 +1,202 @@
+import { describe, expect, test } from "bun:test";
+import Ajv2020 from "ajv/dist/2020";
+import { readFileSync } from "node:fs";
+import { assertPlan, hashContract, schedulePlan, type AutonomousPlan, type ScheduledRun } from "./plan";
+import { assertObservation, summarizePlan, traceObservation, type AutonomousObservation } from "./summary";
+import { auditTrace } from "./trace";
+
+const h = (char: string) => char.repeat(64);
+const plan: AutonomousPlan = {
+  schema_version: "autonomous-pack-plan/v1", id: "pilot", run_kind: "pilot",
+  tasks: ["one", "two", "three"].map(id => ({ id, source_sha256: h("a"), input_sha256: h("b"), evaluator_sha256: h("c") })),
+  repetitions: 3, order_seed: 71,
+  common: { environment_sha256: h("d"), image_sha256: h("e"), agent: "pi/1.5.0", model: "provider/model@version", model_parameters_sha256: h("4"), profile_sha256: h("f"), tool_policy_sha256: h("0"), system_prompt_sha256: h("1"), budget: { max_turns: 3, max_duration_ms: 60000 } },
+  pack: { source: "local working tree", snapshot_uri: "snapshots/pack", snapshot_sha256: h("2"), index_sha256: h("3") }
+};
+const observation = (slot: ScheduledRun): AutonomousObservation => ({
+  schema_version: "autonomous-pack-observation/v1", plan_id: plan.id, plan_sha256: hashContract(plan), pair_id: slot.pair_id,
+  condition: slot.condition, ordinal: slot.ordinal, input_sha256: slot.input_sha256, common_sha256: slot.common_sha256,
+  pack_snapshot_sha256: slot.condition === "pack-installed" ? plan.pack.snapshot_sha256 : null,
+  index_sha256: slot.condition === "pack-installed" ? plan.pack.index_sha256 : null,
+  verification: { input: true, isolation: true, treatment: true, reasons: [] },
+  health: "evaluated", failure_reasons: [], semantic: "pass", quality: "judge-unavailable", quality_probes: [],
+  trace: { complete: true, query: "not-queried", get_success: 0, get_failed: 0, get_indeterminate: 0 },
+  duration_ms: null, cost_usd: null, input_tokens: null, output_tokens: null, total_tokens: null, artifacts: []
+});
+
+describe("autonomous Pack plan and summary", () => {
+  test("rejects unregistered fields, incomplete identities and duplicate task IDs", () => {
+    assertPlan(plan);
+    expect(() => assertPlan({ ...plan, typo: 1 })).toThrow();
+    expect(() => assertPlan({ ...plan, common: { ...plan.common, image_sha256: "" } })).toThrow();
+    expect(() => assertPlan({ ...plan, tasks: [plan.tasks[0], plan.tasks[0]] })).toThrow();
+    expect(() => assertPlan({ ...plan, order_seed: -1 })).toThrow();
+  });
+
+  test("schedules stable adjacent pairs and balances each task and odd remainder", () => {
+    const runs = schedulePlan(plan);
+    expect(runs).toEqual(schedulePlan(plan));
+    expect(runs.length).toBe(18);
+    for (let i = 0; i < runs.length; i += 2) {
+      expect(runs[i].pair_id).toBe(runs[i + 1].pair_id);
+      expect(runs[i].condition).not.toBe(runs[i + 1].condition);
+      expect(runs[i].input_sha256).toBe(runs[i + 1].input_sha256);
+    }
+    for (const task of plan.tasks) {
+      const first = runs.filter((run, i) => i % 2 === 0 && run.task_id === task.id);
+      expect(first.filter(run => run.condition === "empty-store").length).toBeGreaterThanOrEqual(1);
+      expect(first.filter(run => run.condition === "pack-installed").length).toBeGreaterThanOrEqual(1);
+    }
+    expect(Math.abs(runs.filter((run, i) => i % 2 === 0 && run.condition === "empty-store").length - runs.filter((run, i) => i % 2 === 0 && run.condition === "pack-installed").length)).toBe(1);
+    expect(hashContract({ b: 2, a: 1 })).toBe(hashContract({ a: 1, b: 2 }));
+  });
+
+  test("retains missing and failed planned slots, and separates semantic from quality", () => {
+    const slots = schedulePlan(plan);
+    const good = observation(slots[0]);
+    const failure = { ...observation(slots[1]), health: "execution-failed" as const, failure_reasons: ["timeout"], semantic: "not-run" as const, quality: "not-run" as const };
+    const result = summarizePlan(plan, [good, failure]);
+    expect(result.planned_runs).toBe(18);
+    expect(result.runs.filter(run => run.status === "missing").length).toBe(16);
+    expect(result.pairs.eligible).toBe(0);
+    expect(result.conditions[good.condition].semantic.pass).toBe(1);
+    expect(result.conditions[good.condition].quality["judge-unavailable"]).toBe(1);
+    expect(result.conditions[failure.condition].health["execution-failed"]).toBe(1);
+    expect(result.runs[1].reasons).toContain("timeout");
+    const schema = JSON.parse(readFileSync(new URL("../../../../schemas/autonomous-pack-summary-v1.schema.json", import.meta.url), "utf8"));
+    expect(new Ajv2020({ strict: true }).compile(schema)(result)).toBe(true);
+  });
+
+  test("preserves each reviewed quality probe in the per-run summary", () => {
+    const slots = schedulePlan(plan);
+    const positive = { ...observation(slots[0]), quality: "observed" as const, quality_probes: [{ id: "robustness", status: "observed" as const, points: 1, max_points: 2 }] };
+    const negative = { ...observation(slots[1]), quality: "observed" as const, quality_probes: [{ id: "robustness", status: "not-observed" as const, points: 0, max_points: 2 }] };
+    const result = summarizePlan(plan, [positive, negative]);
+    expect(result.runs[0].quality_probes).toEqual(positive.quality_probes);
+    expect(result.runs[1].quality_probes).toEqual(negative.quality_probes);
+    expect(result.runs[2]).toMatchObject({ status: "missing", quality_probes: [] });
+    const uncertain = { ...negative, quality: "indeterminate" as const, quality_probes: [{ id: "robustness", status: "indeterminate" as const, points: null, max_points: null }] };
+    expect(summarizePlan(plan, [positive, uncertain]).runs[1].quality_probes).toEqual(uncertain.quality_probes);
+    const schema = JSON.parse(readFileSync(new URL("../../../../schemas/autonomous-pack-summary-v1.schema.json", import.meta.url), "utf8"));
+    const valid = new Ajv2020({ strict: true }).compile(schema);
+    expect(valid(result)).toBe(true);
+    const previous = { ...result, runs: result.runs.map(({ quality_probes, ...run }) => run) };
+    expect(valid(previous)).toBe(true);
+  });
+
+  test("aggregates available token counts independently without treating missing usage as zero", () => {
+    const slots = schedulePlan(plan);
+    const empty = slots.filter(slot => slot.condition === "empty-store");
+    const pack = slots.filter(slot => slot.condition === "pack-installed");
+    const result = summarizePlan(plan, [
+      { ...observation(empty[0]), input_tokens: 0, output_tokens: null, total_tokens: null, cost_usd: 0 },
+      { ...observation(empty[1]), input_tokens: 12, output_tokens: 3, total_tokens: 15, cost_usd: 0.25 },
+      { ...observation(pack[0]), input_tokens: null, output_tokens: 0, total_tokens: 0 },
+      { ...observation(pack[1]), input_tokens: 8, output_tokens: 2, total_tokens: 10, health: "execution-failed", failure_reasons: ["timeout"], semantic: "not-run", quality: "not-run" }
+    ]);
+    expect(result.conditions["empty-store"].input_tokens).toEqual({ available: 2, sum: 12 });
+    expect(result.conditions["empty-store"].output_tokens).toEqual({ available: 1, sum: 3 });
+    expect(result.conditions["empty-store"].total_tokens).toEqual({ available: 1, sum: 15 });
+    expect(result.conditions["empty-store"].cost_usd).toEqual({ available: 2, sum: 0.25 });
+    expect(result.conditions["pack-installed"].input_tokens).toEqual({ available: 1, sum: 8 });
+    expect(result.conditions["pack-installed"].output_tokens).toEqual({ available: 2, sum: 2 });
+    expect(result.conditions["pack-installed"].total_tokens).toEqual({ available: 2, sum: 10 });
+    expect(result.conditions["pack-installed"].cost_usd).toEqual({ available: 0, sum: 0 });
+    const noUsage = summarizePlan(plan, [observation(empty[0])]);
+    expect(noUsage.conditions["empty-store"].input_tokens).toEqual({ available: 0, sum: 0 });
+    const zeroUsage = summarizePlan(plan, [{ ...observation(empty[0]), input_tokens: 0 }]);
+    expect(zeroUsage.conditions["empty-store"].input_tokens).toEqual({ available: 1, sum: 0 });
+    const schema = JSON.parse(readFileSync(new URL("../../../../schemas/autonomous-pack-summary-v1.schema.json", import.meta.url), "utf8"));
+    expect(new Ajv2020({ strict: true }).compile(schema)(result)).toBe(true);
+    for (const field of ["input_tokens", "output_tokens", "total_tokens"] as const) {
+      expect(() => assertObservation({ ...observation(empty[0]), [field]: undefined })).toThrow();
+      expect(() => assertObservation({ ...observation(empty[0]), [field]: -1 })).toThrow();
+      expect(() => assertObservation({ ...observation(empty[0]), [field]: 0.5 })).toThrow();
+    }
+  });
+
+  test("requires identities and healthy paired evidence before comparison", () => {
+    const slots = schedulePlan(plan);
+    const first = observation(slots[0]), second = observation(slots[1]);
+    const valid = summarizePlan(plan, [first, second]);
+    expect(valid.pairs).toMatchObject({ planned: 9, eligible: 1, semantic_comparable: 1, both_pass: 1 });
+    for (const changed of [
+      { ...second, common_sha256: h("9") },
+      { ...second, input_sha256: h("9") },
+      { ...second, pack_snapshot_sha256: h("9") },
+      { ...second, verification: { ...second.verification, isolation: false, reasons: ["not isolated"] } }
+    ]) expect(summarizePlan(plan, [first, changed]).pairs.eligible).toBe(0);
+    expect(() => summarizePlan(plan, [first, first])).toThrow();
+    expect(() => summarizePlan(plan, [{ ...first, plan_sha256: h("9") }])).toThrow();
+    expect(() => assertObservation({ ...first, health: "execution-failed", semantic: "pass" })).toThrow();
+    expect(() => assertObservation({ ...first, quality_probes: [{ id: "probe", status: "observed", points: 2, max_points: 1 }] })).toThrow();
+    const unavailable = { ...second, input_sha256: null, common_sha256: null, health: "not-executable" as const, semantic: "not-run" as const, quality: "not-run" as const, failure_reasons: ["setup failed"] };
+    expect(summarizePlan(plan, [first, unavailable]).runs[1].status).toBe("ineligible");
+    expect(() => assertObservation({ ...first, verification: { ...first.verification, input: false } })).toThrow();
+  });
+
+  test("compares healthy pairs independently of retrieval uncertainty", () => {
+    const slots = schedulePlan(plan);
+    const first = observation(slots[0]), second = observation(slots[1]);
+    const uncertain = { ...second, semantic: "fail" as const, trace: { ...second.trace, complete: false, query: "indeterminate" as const, get_indeterminate: 1 } };
+    const result = summarizePlan(plan, [first, uncertain]);
+    expect(result.runs[1].status).toBe("eligible");
+    expect(result.pairs).toMatchObject({ eligible: 1, semantic_comparable: 1 });
+    expect(result.conditions[second.condition].query.indeterminate).toBe(1);
+    expect(result.conditions[second.condition].get_indeterminate).toBe(1);
+    expect(result.conditions[second.condition].eligible_semantic.fail).toBe(1);
+    const incompleteNotQueried = { ...uncertain, trace: { ...uncertain.trace, query: "not-queried" as const } };
+    expect(() => assertObservation(incompleteNotQueried)).toThrow();
+    const completeUncertain = { ...uncertain, trace: { ...uncertain.trace, complete: true } };
+    expect(summarizePlan(plan, [first, completeUncertain]).pairs.semantic_comparable).toBe(1);
+    const unhealthy = { ...uncertain, health: "execution-failed" as const, failure_reasons: ["timeout"], semantic: "not-run" as const, quality: "not-run" as const };
+    expect(summarizePlan(plan, [first, unhealthy]).pairs.eligible).toBe(0);
+  });
+
+  test("distinguishes no query and indeterminate trace without exposing contents", () => {
+    const complete = auditTrace('{"type":"session","version":3}\n{"type":"agent_start"}\n{"type":"agent_end","messages":[{"role":"assistant","stopReason":"stop","content":[]}]}\n{"type":"agent_settled","aborted":false}\n');
+    expect(traceObservation(complete)).toEqual({ complete: true, query: "not-queried", query_success: 0, query_empty: 0, query_failed: 0, query_indeterminate: 0, get_success: 0, get_failed: 0, get_indeterminate: 0 });
+    expect(traceObservation(auditTrace("")).query).toBe("indeterminate");
+  });
+
+  test("aggregates observed queries including failed runs while preserving legacy unavailability", () => {
+    const slots = schedulePlan(plan).filter(slot => slot.condition === "empty-store");
+    const makeTrace = (ok: boolean) => {
+      const result = { content: [{ type: "text", text: JSON.stringify({ protocolVersion: 2, toolVersion: "0.1.0-alpha.7", command: "query", ok, data: ok ? { mode: "semantic", coverage: "complete", results: [] } : { message: "failed" } }) }], details: { exitCode: ok ? 0 : 2 } };
+      return auditTrace([
+        { type: "session", version: 3 }, { type: "agent_start" },
+        { type: "tool_execution_start", toolCallId: "shell", toolName: "bash", args: {} },
+        { type: "tool_execution_end", toolCallId: "shell", toolName: "bash", result: {}, isError: false },
+        { type: "tool_execution_start", toolCallId: "q", toolName: "lore_query", args: {} },
+        { type: "tool_execution_end", toolCallId: "q", toolName: "lore_query", result, isError: false },
+        { type: "agent_end", messages: [{ role: "assistant", stopReason: "stop", content: [] }] },
+        { type: "agent_settled", aborted: false }
+      ].map(event => JSON.stringify(event)).join("\n"));
+    };
+    const empty = { ...observation(slots[0]), trace: traceObservation(makeTrace(true)) };
+    const failed = { ...observation(slots[1]), trace: traceObservation(makeTrace(false)), health: "execution-failed" as const, failure_reasons: ["timeout"], semantic: "not-run" as const, quality: "not-run" as const };
+    const legacy = observation(slots[2]);
+    const zero = { ...observation(slots[3]), trace: traceObservation(auditTrace('{"type":"session"}\n{"type":"agent_start"}\n{"type":"agent_end","messages":[{"role":"assistant","stopReason":"stop","content":[]}]}\n{"type":"agent_settled","aborted":false}\n')) };
+    const summary = summarizePlan(plan, [empty, failed, legacy, zero]);
+    const totals = summary.conditions["empty-store"];
+    expect(totals.query.indeterminate).toBe(2);
+    expect(totals.query_empty).toEqual({ available: 3, sum: 1 });
+    expect(totals.query_failed).toEqual({ available: 3, sum: 1 });
+    expect(totals.query_success).toEqual({ available: 3, sum: 0 });
+    expect(totals.query_indeterminate).toEqual({ available: 3, sum: 0 });
+    expect(summary.runs[slots[1].ordinal]).toMatchObject({ status: "ineligible", reasons: ["timeout", "Health: execution-failed"] });
+    expect(summarizePlan(plan, [legacy]).conditions["empty-store"].query_empty).toEqual({ available: 0, sum: 0 });
+    expect(summarizePlan(plan, [zero]).conditions["empty-store"].query_empty).toEqual({ available: 1, sum: 0 });
+    assertObservation(legacy);
+    for (const field of ["query_success", "query_empty", "query_failed", "query_indeterminate"] as const) {
+      expect(() => assertObservation({ ...zero, trace: { ...zero.trace, [field]: -1 } })).toThrow();
+      expect(() => assertObservation({ ...zero, trace: { ...zero.trace, [field]: 0.5 } })).toThrow();
+      expect(() => assertObservation({ ...zero, trace: { ...zero.trace, [field]: null } })).toThrow();
+    }
+    const schema = JSON.parse(readFileSync(new URL("../../../../schemas/autonomous-pack-summary-v1.schema.json", import.meta.url), "utf8"));
+    const valid = new Ajv2020({ strict: true }).compile(schema);
+    expect(valid(summary)).toBe(true);
+    const oldConditions = Object.fromEntries(Object.entries(summary.conditions).map(([key, { query_success, query_empty, query_failed, query_indeterminate, ...condition }]) => [key, condition]));
+    expect(valid({ ...summary, conditions: oldConditions })).toBe(true);
+  });
+});

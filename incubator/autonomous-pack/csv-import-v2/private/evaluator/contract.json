@@ -1,0 +1,6 @@
+{
+  "schema_version": "coding-verifier/v1",
+  "driver": ["/usr/bin/python3", "/verifier/driver.py"],
+  "candidate": ["/usr/bin/python3", "/workspace/src/main.py"],
+  "timeout_ms": 120000
+}

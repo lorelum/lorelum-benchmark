@@ -1,0 +1,6 @@
+# Build from the immutable local Agent image selected for the experiment.
+ARG AUTONOMOUS_PACK_BASE
+FROM ${AUTONOMOUS_PACK_BASE}
+USER root
+RUN apt-get update && apt-get install --yes --no-install-recommends python3=3.13.5-1 python3.13=3.13.5-2+deb13u5 && rm -rf /var/lib/apt/lists/* && test "$(python3 --version)" = "Python 3.13.5"
+USER 65532:65532
