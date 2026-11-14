@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { evaluateSemantic } from "./evaluator";
@@ -9,6 +9,17 @@ import { sha256SnapshotDirectory } from "../v1/snapshot";
 // These tests execute candidate code in Docker, not on the host.
 const imageId = process.env.LORELUM_TEST_CODING_IMAGE ?? "";
 const integration = test.skipIf(!/^sha256:[a-f0-9]{64}$/.test(imageId));
+
+async function removeTestRoot(root: string): Promise<void> {
+  async function makeDirectoriesWritable(directory: string): Promise<void> {
+    await chmod(directory, 0o700);
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      if (entry.isDirectory()) await makeDirectoriesWritable(join(directory, entry.name));
+    }
+  }
+  await makeDirectoriesWritable(root);
+  await rm(root, { recursive: true, force: true });
+}
 
 integration("isolated Node and Python verifiers accept reasonable solutions and reject defects", async () => {
   const output = await mkdtemp(join(tmpdir(), "coding-verifier-integration-"));
@@ -25,7 +36,7 @@ integration("isolated Node and Python verifiers accept reasonable solutions and 
         expect(result.semantic).toBe(expected);
       }
     }
-  } finally { await rm(output, { recursive: true, force: true }); }
+  } finally { await removeTestRoot(output); }
 }, 120_000);
 
 integration("a verdict cannot hide candidate exit or bypass candidate execution", async () => {
@@ -47,7 +58,7 @@ integration("a verdict cannot hide candidate exit or bypass candidate execution"
     const noCall = await evaluateSemantic({ workspace, evaluatorRoot, evaluatorSha256, imageId, outputDirectory: join(root, "no-call"), timeoutMs: 15000 });
     expect(noCall.health).not.toBe("evaluated");
     expect(noCall.semantic).toBe("not-run");
-  } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { await removeTestRoot(root); }
 }, 60_000);
 
 integration("candidate cannot read verifier files, Docker socket or host sentinel", async () => {
@@ -64,7 +75,7 @@ integration("candidate cannot read verifier files, Docker socket or host sentine
     expect(result).toEqual({ health: "evaluated", semantic: "pass", quality: "not-run", quality_probes: [], failure_reasons: [] });
   } finally {
     if (previous === undefined) delete process.env.LORELUM_PRIVATE_SENTINEL; else process.env.LORELUM_PRIVATE_SENTINEL = previous;
-    await rm(root, { recursive: true, force: true });
+    await removeTestRoot(root);
   }
 }, 60_000);
 
@@ -79,5 +90,5 @@ integration("an unresponsive candidate times out without a semantic verdict", as
     const result = await evaluateSemantic({ workspace, evaluatorRoot, evaluatorSha256: await sha256SnapshotDirectory(evaluatorRoot), imageId, outputDirectory: join(root, "result"), timeoutMs: 5000 });
     expect(result.health).toBe("indeterminate");
     expect(result.semantic).toBe("not-run");
-  } finally { await rm(root, { recursive: true, force: true }); }
+  } finally { await removeTestRoot(root); }
 }, 60_000);

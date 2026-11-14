@@ -1,0 +1,17 @@
+{
+  "schema_version": "judge-autonomous-pack-case/v1",
+  "id": "judge-config-migration-v1",
+  "task": "incubator/autonomous-pack/config-migration-v2",
+  "judge_commit": "56c0794209277f34fa7906e5d5f63b9c8acd2be4",
+  "lore_release_sha256": "675b837c378e9af3400bbcdb15af25d2bd021b9ea31f76c52a8660cb4aabec0f",
+  "conditions": ["empty-store", "pack-installed"],
+  "node_major": 22,
+  "budget": {
+    "totalTimeMs": 600000,
+    "commandTimeMs": 90000,
+    "modelCalls": 50,
+    "actions": 50,
+    "commandLimit": 20,
+    "outputBytes": 2000000
+  }
+}
