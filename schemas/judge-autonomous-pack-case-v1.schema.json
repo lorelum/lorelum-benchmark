@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "judge-autonomous-pack-case-v1.schema.json",
+  "title": "Interactive Judge Pack acceptance case v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "id", "task", "judge_commit", "lore_release_sha256", "conditions", "node_major", "budget"],
+  "properties": {
+    "schema_version": { "const": "judge-autonomous-pack-case/v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "task": { "type": "string", "pattern": "^incubator/autonomous-pack/[a-z0-9-]+$" },
+    "judge_commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "lore_release_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "conditions": { "const": ["empty-store", "pack-installed"] },
+    "node_major": { "type": "integer", "minimum": 1 },
+    "budget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["totalTimeMs", "commandTimeMs", "modelCalls", "actions", "commandLimit", "outputBytes"],
+      "properties": {
+        "totalTimeMs": { "type": "integer", "minimum": 1 },
+        "commandTimeMs": { "type": "integer", "minimum": 1 },
+        "modelCalls": { "type": "integer", "minimum": 1 },
+        "actions": { "type": "integer", "minimum": 1 },
+        "commandLimit": { "type": "integer", "minimum": 1 },
+        "outputBytes": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

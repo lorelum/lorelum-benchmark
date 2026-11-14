@@ -1,0 +1,4 @@
+id: judge-config-migration-v1
+lifecycle_stage: candidate
+case_contract: v1/case.json
+task: incubator/autonomous-pack/config-migration-v2

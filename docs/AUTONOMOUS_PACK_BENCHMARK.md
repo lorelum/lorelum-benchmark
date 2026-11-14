@@ -2,6 +2,60 @@
 
 本文介绍如何设计任务、准备环境并运行自主 Pack 配对 pilot。真实模型执行需要明确授权；pilot 不产生正式 record，不等于正式实验结论。历史退款候选和 v1 runner 请参阅 [v1 操作记录](AUTONOMOUS_PACK_V1_HISTORY.md)。
 
+## 互动式 Judge 验收案例
+
+[`judge-config-migration-v1`](../incubator/judge-autonomous-pack/config-migration/v1/case.json) 是独立的 Judge 工作流验收案例，不改变下面的 Pi v2 runner。它引用 `config-migration-v2` 的公开题面和 starter，以及运行结束后由 Benchmark 独立执行的私有 verifier。用户可在终端查看任务、模型计划和 revision，提出调整，分别决定规划披露、计划确认、执行披露和文件／命令授权；执行结果展示 Judge 检查与差异。随后显示独立功能结果，并单独询问是否保留候选副本。始终不写回原项目，也不提供跨进程恢复。
+
+### 环境和依赖
+
+- Linux x64 或 WSL Linux，支持用户 namespace、`bubblewrap`、`openat2`、Git、C 编译器、Bun 和真正的 Node.js 22。WSL 中若 `/usr/bin/node` 实际是 Bun 兼容包装器，应提供真正的 Node 22 二进制。
+- Judge #64/#67 仍是未发布草稿；案例固定 #67 commit `56c0794209277f34fa7906e5d5f63b9c8acd2be4`，从可信 Git 仓库构建并记录源码、锁文件、工具链、公共 Node ESM 包及原生 helper 的身份。Bun 包导出指向未打包的源码，不能把此产物当作 Bun 包使用。构建会运行该源码和依赖的安装脚本，必须信任来源。
+- 真实 Lore `v0.1.0-alpha.7` Linux x64 发行归档、embedding 模型、冻结 Pack 目录及其空 Store／安装组索引和 metadata；准备方式见下方“冻结 Pack 并准备两组索引”。案例核验实际摘要和两组 metadata，不接收预选 query 或预注入 Practice。
+- 独立 verifier 需要可用的 Docker daemon、当前 Linux 环境可调用的 Docker 客户端和用户提供的不可变镜像 ID；WSL 用户需启用 Docker Desktop 的对应发行版集成。镜像须在 `/usr/local/bin/node` 提供 Node 22，且不得包含私有 evaluator 或 Docker socket。运行时不可用会明确显示 `not-run`，不会被记成语义失败或通过。
+
+Agent 停止后先按 Judge 公共协议重新计算完整候选的文件内容与模式身份，必须与 Judge 检查所用身份一致。Benchmark 再复制去除工具支持目录的代码候选，保留内容摘要和文件可执行位，将目录／文件分别归一为 `0755`／`0644`（原本可执行的文件为 `0755`），供 verifier 的非特权用户只读访问；该处理不改变 Judge 工作副本。
+
+在 Linux 仓库根目录构建 Judge 环境；目标目录必须不存在：
+
+```sh
+bun --no-env-file src/benchmark/autonomous-pack/judge/v1/cli.ts prepare-judge \
+  /absolute/path/to/trusted/lorelum-judge \
+  56c0794209277f34fa7906e5d5f63b9c8acd2be4 \
+  /absolute/path/to/new-judge-environment
+```
+
+准备一个仅包含以下字段的本地 JSON 配置，路径均为 Linux 绝对路径；`outputDirectory` 必须不存在，并位于支持 owner-only 权限的 Linux 文件系统，不能使用默认权限的 Windows 挂载。`nodeSha256` 为所给 Node 二进制的 SHA-256，`verifierImage` 为完整 `sha256:...` 镜像 ID：
+
+```json
+{
+  \"judgeEnvironment\": \"/absolute/path/to/new-judge-environment\",
+  \"nodeBinary\": \"/absolute/path/to/node-22\",
+  \"nodeSha256\": \"<node binary sha256>\",
+  \"loreRelease\": \"/absolute/path/to/lore-linux-x64.tar.gz\",
+  \"embeddingModel\": \"/absolute/path/to/model.gguf\",
+  \"packDirectory\": \"/absolute/path/to/frozen-pack\",
+  \"emptyArchive\": \"/absolute/path/to/empty.tar\",
+  \"emptyMetadata\": \"/absolute/path/to/empty.json\",
+  \"installedArchive\": \"/absolute/path/to/installed.tar\",
+  \"installedMetadata\": \"/absolute/path/to/installed.json\",
+  \"outputDirectory\": \"/home/user/private-new-output\",
+  \"verifierImage\": \"sha256:<immutable image id>\",
+  \"endpoint\": \"https://model-provider.example/v1\",
+  \"provider\": \"provider-name\",
+  \"model\": \"model-name\"
+}
+```
+
+真实模型调用须另获授权。调用方将对应 key 放入进程环境变量 `BENCHMARK_JUDGE_API_KEY`，不要写入配置文件、命令行、报告或仓库。外部 endpoint 必须使用 HTTPS；HTTP 只允许回环地址，用于本地服务。运行下面的命令本身不会在用户同意规划资料披露之前联系模型：
+
+```sh
+bun --no-env-file src/benchmark/autonomous-pack/judge/v1/cli.ts run /absolute/path/to/config.json
+```
+
+两组随机排序，共享任务、工具和执行预算；实际用户调整、检查选择、拒绝、中断及计划分母均保留。用户可在授权时增加 `src/` 下的具体文件路径；最终路径会展示并提供给执行模型，新增文件的父目录必须已存在。若用户调整、文件权限或检查命令不同、Judge 未完成或任一功能结果不确定，配对标为不可比较。查询通过 Agent 自己写入请求文件并调用固定命令实现；每次在隔离沙箱中恢复只读基线到临时 Store，缓存不跨调用保留，故会增加启动时间。可见 query/get 单独记录，但由于命令可读取整个副本，整体检索覆盖仍为 `indeterminate`，不因此自动排除功能比较。Judge 自评和 `completed` 均不是功能通过；本地模拟操作不是真人验收，一对结果也不证明 Pack 因果效果或 Judge 的跨任务质量。
+
+输出目录包含本地计划、用户决定、原始 Judge 报告、可见检索与功能结果，可能包含代码和查询。容器清理已确认时，临时私有 verifier 快照会移除；清理状态无法确认时保留在受控目录，按返回的容器名称检查后再处理。不要提交或公开这些材料。配置、计划、单次结果和配对汇总分别遵循 [`judge-autonomous-pack-case/v1`](../schemas/judge-autonomous-pack-case-v1.schema.json)、[`plan/v1`](../schemas/judge-autonomous-pack-plan-v1.schema.json)、[`observation/v1`](../schemas/judge-autonomous-pack-observation-v1.schema.json) 和 [`summary/v1`](../schemas/judge-autonomous-pack-summary-v1.schema.json)；终端输入来源记录为未验证，不把模拟输入冒称真人决定。运行环境记录内核、Node、bubblewrap 和相关源码身份，但不固定 Linux 宿主的完整 `/usr` 及动态库，复现仍须控制宿主环境。
+
 ## 可复用任务框架（v2）
 
 本节面向希望比较其他 Pack、贡献新编码任务或复现实验的使用者。`v2` 将任务输入、任务运行环境、私有 verifier 与配对执行分开；目前真实 Agent adapter 是 Pi 1.5.0，模型必须属于其固定目录中受支持的 `openai-completions` 协议。它不是任意 Agent 或任意模型协议的通用适配器。每个计划使用一个共同的 Agent 镜像；多任务计划的所有任务运行时都要在该镜像及环境声明中提供。

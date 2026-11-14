@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "judge-autonomous-pack-summary-v1.schema.json",
+  "title": "Interactive Judge Pack pair summary v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema", "results", "comparison", "interpretation"],
+  "properties": {
+    "schema": { "const": "judge-autonomous-pack-summary/v1" },
+    "results": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "judge-autonomous-pack-observation-v1.schema.json" } },
+    "comparison": {
+      "type": "object", "additionalProperties": false, "required": ["status", "reasons"],
+      "properties": { "status": { "enum": ["eligible", "excluded"] }, "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } } }
+    },
+    "interpretation": { "type": "string", "minLength": 1 }
+  }
+}
